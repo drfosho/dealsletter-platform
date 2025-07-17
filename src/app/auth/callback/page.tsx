@@ -13,6 +13,43 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // First, check the URL hash for tokens
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const access_token = hashParams.get('access_token')
+        const refresh_token = hashParams.get('refresh_token')
+        
+        if (access_token && refresh_token) {
+          // Set the session with the tokens from the URL
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token,
+            refresh_token
+          })
+          
+          if (sessionError) {
+            console.error('Error setting session:', sessionError)
+            setError(sessionError.message)
+            setStatus('error')
+            return
+          }
+          
+          if (sessionData.session?.user) {
+            // Check if this is from email verification or regular login
+            const isEmailVerification = searchParams.get('type') === 'signup'
+            
+            setStatus('success')
+            
+            if (isEmailVerification) {
+              // Email verification flow - go to success page
+              router.push('/auth/verify-success')
+            } else {
+              // Regular login - go directly to dashboard
+              router.push('/dashboard')
+            }
+            return
+          }
+        }
+        
+        // If no tokens in URL, check for existing session
         const { data, error } = await supabase.auth.getSession()
         
         if (error) {
@@ -47,7 +84,7 @@ export default function AuthCallback() {
     }
 
     handleAuthCallback()
-  }, [router])
+  }, [router, searchParams])
 
   if (status === 'loading') {
     return (

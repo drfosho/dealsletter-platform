@@ -9,7 +9,7 @@ type AuthContextType = {
   session: Session | null
   loading: boolean
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error: AuthError | null }>
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null; session: Session | null }>
   signOut: () => Promise<{ error: AuthError | null }>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
 }
@@ -68,11 +68,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log('Attempting to sign in with email:', email)
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
-    return { error }
+    
+    console.log('Sign in response:', { data, error })
+    
+    if (!error && data.session) {
+      console.log('Login successful, session created:', data.session.user.email)
+      // Immediately update the local state
+      setSession(data.session)
+      setUser(data.session.user)
+      
+      // Return the session data so the login page knows it was successful
+      return { error: null, session: data.session }
+    }
+    
+    return { error, session: null }
   }
 
   const signOut = async () => {

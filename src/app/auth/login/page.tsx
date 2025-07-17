@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -11,23 +11,51 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { signIn } = useAuth()
+  const { signIn, user, session } = useAuth()
   const router = useRouter()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && session) {
+      console.log('User already logged in, redirecting to dashboard')
+      router.push('/dashboard')
+    }
+  }, [user, session, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const { error } = await signIn(email, password)
-    
-    if (error) {
-      setError(error.message)
-    } else {
-      router.push('/dashboard')
+    try {
+      console.log('Login form submitted with email:', email)
+      const { error, session } = await signIn(email, password)
+      
+      if (error) {
+        console.error('Login failed with error:', error)
+        // Check for specific error cases
+        if (error.message.includes('Email not confirmed')) {
+          setError('Please verify your email before signing in. Check your inbox for the verification link.')
+        } else if (error.message.includes('Invalid login credentials')) {
+          setError('Invalid email or password. Please check your credentials and try again.')
+        } else {
+          setError(error.message)
+        }
+        setLoading(false)
+      } else if (session) {
+        console.log('Login successful, session created, redirecting...')
+        // Use window.location for a hard redirect to ensure the session is picked up
+        window.location.href = '/dashboard'
+      } else {
+        console.error('No error but no session either')
+        setError('An unexpected error occurred. Please try again.')
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('An unexpected error occurred. Please try again.')
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   return (
