@@ -113,6 +113,123 @@ export default function Dashboard() {
       timeframe: "Long-term",
       cashRequired: 938000,
       totalROI: 6.9
+    },
+    {
+      id: 4,
+      title: "673 Doreen Way",
+      location: "Lafayette, CA 94549",
+      type: "Premium Flip",
+      strategy: "Fix & Flip",
+      price: 999900,
+      downPayment: 230000,
+      recommendedOffer: 1150000,
+      arv: 1700000,
+      rehabBudget: 165000,
+      netProfit: 227627,
+      roi: 75.3,
+      annualizedROI: 225.9,
+      status: "active",
+      daysOnMarket: 0,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: 4,
+      bathrooms: 2,
+      sqft: 1635,
+      yearBuilt: null,
+      features: ["Spectacular Views", "A+ Schools", "Cosmetic Only"],
+      description: "Located in highly coveted Lafayette Hills with spectacular views in Acalanes School District (all 10-rated schools).",
+      riskLevel: "low",
+      timeframe: "4 months",
+      cashRequired: 302373,
+      totalROI: 75.3
+    },
+    {
+      id: 5,
+      title: "1206 Viola St",
+      location: "San Diego, CA 92110",
+      type: "Duplex",
+      strategy: "House Hack",
+      price: 895000,
+      downPayment: 44750,
+      currentRent: 2850,
+      effectiveMortgage: 4476,
+      walkScore: 86,
+      status: "active",
+      daysOnMarket: 1,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "2x 1BR",
+      bathrooms: "2x 1BA",
+      units: 2,
+      sqft: null,
+      yearBuilt: null,
+      features: ["FHA 5% Down", "Near USD", "Turnkey"],
+      description: "Perfect house hack opportunity - live in one unit while tenant pays 40% of mortgage. Walk Score 86.",
+      riskLevel: "low",
+      timeframe: "Long-term",
+      cashRequired: 54750,
+      totalROI: null
+    },
+    {
+      id: 6,
+      title: "8110 MacArthur Blvd",
+      location: "Oakland, CA 94605",
+      type: "Value-Add Multifamily",
+      strategy: "Buy & Hold",
+      price: 1850000,
+      downPayment: 462500,
+      pricePerUnit: 74000,
+      units: 25,
+      currentCapRate: 9.62,
+      proFormaCapRate: 17.88,
+      currentIncome: 24591,
+      proFormaIncome: 42500,
+      monthlyIncome: 24591,
+      proFormaCashFlow: 22279,
+      status: "active",
+      daysOnMarket: 1,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "25x 1BR",
+      bathrooms: "25x 1BA",
+      sqft: "900 sq ft each",
+      yearBuilt: null,
+      features: ["100% Occupied", "Section 8 Opportunity", "$546/unit Below Market"],
+      description: "25-unit building with massive upside - current rents $546/unit below market. Section 8 conversion opportunity.",
+      riskLevel: "medium",
+      timeframe: "3 years",
+      cashRequired: 518000,
+      totalROI: 55.22
+    },
+    {
+      id: 7,
+      title: "16118-16152 Mateo St",
+      location: "San Leandro, CA 94578",
+      type: "Premium Multifamily",
+      strategy: "Buy & Hold",
+      price: 1625000,
+      downPayment: 406250,
+      pricePerUnit: 270833,
+      units: 6,
+      currentCapRate: 5.36,
+      proFormaCapRate: 6.06,
+      monthlyIncome: 11772,
+      proFormaCashFlow: -111,
+      currentCashFlow: -1059,
+      status: "active",
+      daysOnMarket: 2,
+      confidence: "medium",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "4x 1BR, 2x 2BR",
+      bathrooms: "6x 1BA",
+      sqft: null,
+      yearBuilt: null,
+      features: ["No Shared Walls", "Tenant Pays ALL Utilities", "0.6mi to BART"],
+      description: "Unique 6-unit property with private garages, no shared walls, and ultra-low 35.5% OpEx ratio. In-unit W/D.",
+      riskLevel: "low",
+      timeframe: "Long-term",
+      cashRequired: 431250,
+      totalROI: 51.2
     }
   ], []);
 
@@ -177,6 +294,7 @@ export default function Dashboard() {
                     height={48}
                     className="h-12 w-auto"
                     priority
+                    suppressHydrationWarning
                   />
                   <div className="absolute top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 </div>
@@ -197,6 +315,9 @@ export default function Dashboard() {
               </Link>
               <Link href="/faq" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
                 FAQ
+              </Link>
+              <Link href="/profile" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
+                Profile
               </Link>
               <span className="text-sm text-muted">
                 Welcome, {user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'User'}
@@ -268,12 +389,13 @@ export default function Dashboard() {
                 >
                   FAQ
                 </Link>
-                <button 
-                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10 text-left"
+                <Link 
+                  href="/profile" 
+                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   My Portfolio
-                </button>
+                </Link>
                 <button 
                   className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -363,6 +485,7 @@ export default function Dashboard() {
               <option value="flip">Fix & Flip</option>
               <option value="hold">Buy & Hold</option>
               <option value="multifamily">Multifamily</option>
+              <option value="house hack">House Hack</option>
             </select>
             
             <select 

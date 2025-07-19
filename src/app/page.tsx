@@ -25,6 +25,7 @@ export default function Home() {
                   height={100}
                   className="h-16 md:h-20 w-auto"
                   priority
+                  suppressHydrationWarning
                 />
                 <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
               </div>
@@ -38,9 +39,9 @@ export default function Home() {
                 <Link href="/dashboard" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
                   Dashboard
                 </Link>
-                <button className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
+                <Link href="/profile" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
                   My Portfolio
-                </button>
+                </Link>
                 <Link href="/blog" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
                   Blog
                 </Link>
@@ -110,12 +111,13 @@ export default function Home() {
                     >
                       Dashboard
                     </Link>
-                    <button 
-                      className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10 text-left"
+                    <Link 
+                      href="/profile"
+                      className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       My Portfolio
-                    </button>
+                    </Link>
                     <Link 
                       href="/blog" 
                       className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
@@ -580,6 +582,7 @@ export default function Home() {
                       width={120}
                       height={32}
                       className="h-8 w-auto"
+                      suppressHydrationWarning
                     />
                     <div className="px-3 py-1 bg-accent/10 text-accent rounded-full text-sm font-semibold">
                       ✨ Premium
@@ -952,6 +955,7 @@ export default function Home() {
                 width={500}
                 height={400}
                 className="w-full h-auto opacity-90"
+                suppressHydrationWarning
               />
             </div>
             
@@ -987,6 +991,7 @@ export default function Home() {
               width={120}
               height={32}
               className="h-8 w-auto"
+              suppressHydrationWarning
             />
           </div>
           <p className="text-muted mb-4">
