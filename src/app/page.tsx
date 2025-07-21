@@ -42,6 +42,9 @@ export default function Home() {
                 <Link href="/profile" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
                   My Portfolio
                 </Link>
+                <Link href="/pricing" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
+                  Pricing
+                </Link>
                 <Link href="/blog" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
                   Blog
                 </Link>
@@ -60,6 +63,9 @@ export default function Home() {
               </>
             ) : (
               <>
+                <Link href="/pricing" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
+                  Pricing
+                </Link>
                 <Link href="/blog" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center">
                   Blog
                 </Link>
@@ -119,6 +125,13 @@ export default function Home() {
                       My Portfolio
                     </Link>
                     <Link 
+                      href="/pricing" 
+                      className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Pricing
+                    </Link>
+                    <Link 
                       href="/blog" 
                       className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
                       onClick={() => setIsMobileMenuOpen(false)}
@@ -151,6 +164,13 @@ export default function Home() {
                   </>
                 ) : (
                   <>
+                    <Link 
+                      href="/pricing" 
+                      className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Pricing
+                    </Link>
                     <Link 
                       href="/blog" 
                       className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"

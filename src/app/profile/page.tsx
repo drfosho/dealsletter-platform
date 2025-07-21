@@ -26,9 +26,26 @@ interface SavedFilter {
     strategy: string[];
     minROI?: number;
     minCashFlow?: number;
+    maxCapRate?: number;
   };
   createdDate: string;
   notifications: boolean;
+  isDraft?: boolean;
+}
+
+interface FilterFormData {
+  name: string;
+  priceRange: { min: string; max: string };
+  propertyTypes: string[];
+  strategies: string[];
+  locations: string[];
+  customLocations: string;
+  minROI: string;
+  minCashFlow: string;
+  maxCapRate: string;
+  emailNotifications: boolean;
+  smsAlerts: boolean;
+  pushNotifications: boolean;
 }
 
 interface InvestmentStats {
@@ -45,6 +62,25 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [filterToDelete, setFilterToDelete] = useState<SavedFilter | null>(null);
+  
+  // Filter form state
+  const [filterForm, setFilterForm] = useState<FilterFormData>({
+    name: '',
+    priceRange: { min: '', max: '' },
+    propertyTypes: [],
+    strategies: [],
+    locations: [],
+    customLocations: '',
+    minROI: '',
+    minCashFlow: '',
+    maxCapRate: '',
+    emailNotifications: true,
+    smsAlerts: false,
+    pushNotifications: false,
+  });
   
   // User profile data
   const [userProfile, setUserProfile] = useState({
@@ -90,7 +126,7 @@ export default function ProfilePage() {
     }
   ]);
 
-  const [savedFilters] = useState<SavedFilter[]>([
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([
     {
       id: 1,
       name: "Bay Area Multifamily",
@@ -154,6 +190,138 @@ export default function ProfilePage() {
     const first = userProfile.firstName?.[0] || user?.email?.[0] || 'U';
     const last = userProfile.lastName?.[0] || '';
     return (first + last).toUpperCase();
+  };
+
+  // Filter management functions
+  const resetFilterForm = () => {
+    setFilterForm({
+      name: '',
+      priceRange: { min: '', max: '' },
+      propertyTypes: [],
+      strategies: [],
+      locations: [],
+      customLocations: '',
+      minROI: '',
+      minCashFlow: '',
+      maxCapRate: '',
+      emailNotifications: true,
+      smsAlerts: false,
+      pushNotifications: false,
+    });
+  };
+
+  const handleCreateFilter = () => {
+    if (!filterForm.name.trim()) {
+      alert('Please enter a filter name');
+      return;
+    }
+
+    const allLocations = [...filterForm.locations];
+    if (filterForm.customLocations.trim()) {
+      const customLocs = filterForm.customLocations.split(',').map(loc => loc.trim()).filter(Boolean);
+      allLocations.push(...customLocs);
+    }
+
+    const newFilter: SavedFilter = {
+      id: Date.now(),
+      name: filterForm.name,
+      criteria: {
+        priceRange: {
+          min: parseInt(filterForm.priceRange.min) || 0,
+          max: parseInt(filterForm.priceRange.max) || 999999999
+        },
+        propertyTypes: filterForm.propertyTypes,
+        locations: allLocations,
+        strategy: filterForm.strategies,
+        minROI: filterForm.minROI ? parseInt(filterForm.minROI) : undefined,
+        minCashFlow: filterForm.minCashFlow ? parseInt(filterForm.minCashFlow) : undefined,
+        maxCapRate: filterForm.maxCapRate ? parseInt(filterForm.maxCapRate) : undefined,
+      },
+      createdDate: new Date().toISOString().split('T')[0],
+      notifications: filterForm.emailNotifications,
+      isDraft: false
+    };
+
+    setSavedFilters(prev => [...prev, newFilter]);
+    resetFilterForm();
+    setShowFilterModal(false);
+  };
+
+  const handleSaveAsDraft = () => {
+    if (!filterForm.name.trim()) {
+      alert('Please enter a filter name');
+      return;
+    }
+
+    const allLocations = [...filterForm.locations];
+    if (filterForm.customLocations.trim()) {
+      const customLocs = filterForm.customLocations.split(',').map(loc => loc.trim()).filter(Boolean);
+      allLocations.push(...customLocs);
+    }
+
+    const draftFilter: SavedFilter = {
+      id: Date.now(),
+      name: filterForm.name,
+      criteria: {
+        priceRange: {
+          min: parseInt(filterForm.priceRange.min) || 0,
+          max: parseInt(filterForm.priceRange.max) || 999999999
+        },
+        propertyTypes: filterForm.propertyTypes,
+        locations: allLocations,
+        strategy: filterForm.strategies,
+        minROI: filterForm.minROI ? parseInt(filterForm.minROI) : undefined,
+        minCashFlow: filterForm.minCashFlow ? parseInt(filterForm.minCashFlow) : undefined,
+        maxCapRate: filterForm.maxCapRate ? parseInt(filterForm.maxCapRate) : undefined,
+      },
+      createdDate: new Date().toISOString().split('T')[0],
+      notifications: false,
+      isDraft: true
+    };
+
+    setSavedFilters(prev => [...prev, draftFilter]);
+    resetFilterForm();
+    setShowFilterModal(false);
+  };
+
+  const handleCloseModal = () => {
+    resetFilterForm();
+    setShowFilterModal(false);
+  };
+
+  const updateFilterForm = (field: keyof FilterFormData, value: any) => {
+    setFilterForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const toggleArrayValue = (field: 'propertyTypes' | 'strategies' | 'locations', value: string) => {
+    setFilterForm(prev => ({
+      ...prev,
+      [field]: prev[field].includes(value) 
+        ? prev[field].filter(item => item !== value)
+        : [...prev[field], value]
+    }));
+  };
+
+  // Delete functionality
+  const handleDeleteFilter = (filter: SavedFilter) => {
+    setFilterToDelete(filter);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteFilter = () => {
+    if (filterToDelete) {
+      setSavedFilters(prev => prev.filter(f => f.id !== filterToDelete.id));
+      setShowDeleteModal(false);
+      setFilterToDelete(null);
+    }
+  };
+
+  const cancelDeleteFilter = () => {
+    setShowDeleteModal(false);
+    setFilterToDelete(null);
   };
 
   if (!user) {
@@ -259,7 +427,7 @@ export default function ProfilePage() {
             <div className="relative">
               <div className="w-32 h-32 rounded-full bg-accent/10 flex items-center justify-center overflow-hidden border-4 border-accent/20">
                 {profileImage ? (
-                  <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                  <Image src={profileImage} alt="Profile" className="w-full h-full object-cover" width={128} height={128} />
                 ) : (
                   <span className="text-4xl font-bold text-accent">{getInitials()}</span>
                 )}
@@ -596,91 +764,300 @@ export default function ProfilePage() {
 
         {activeTab === 'filters' && (
           <div className="space-y-6">
+            {/* Beta Phase Banner */}
+            <div className="bg-gradient-to-r from-accent/10 to-accent/5 rounded-xl border border-accent/20 p-6 mb-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="px-3 py-1 bg-accent/20 text-accent rounded-full text-sm font-semibold">
+                  BETA
+                </div>
+                <h3 className="text-lg font-semibold text-primary">Smart Filters Coming Soon!</h3>
+              </div>
+              <p className="text-muted mb-4">
+                We&apos;re building an intelligent notification system that will alert you instantly when properties matching your criteria hit the market. Be the first to know about the best deals!
+              </p>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-muted">Phase 2.0 Feature</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-muted">Real-time Notifications</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-muted">AI-Powered Matching</span>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-primary">Saved Filters</h2>
-              <button className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium">
+              <div>
+                <h2 className="text-2xl font-semibold text-primary">Property Alert Filters</h2>
+                <p className="text-sm text-muted mt-1">Set up custom filters to get notified about your ideal investment properties</p>
+              </div>
+              <button 
+                onClick={() => setShowFilterModal(true)}
+                className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
                 Create New Filter
               </button>
             </div>
 
+            {/* Active Filters */}
             <div className="space-y-4">
-              {savedFilters.map((filter) => (
-                <div key={filter.id} className="bg-card rounded-xl border border-border/60 p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-primary mb-1">{filter.name}</h3>
-                      <p className="text-sm text-muted">Created {new Date(filter.createdDate).toLocaleDateString()}</p>
+              <h3 className="text-lg font-semibold text-primary">Active Filters</h3>
+              {savedFilters.filter(filter => !filter.isDraft).map((filter) => (
+                <div key={filter.id} className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-lg transition-all duration-200">
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-lg font-semibold text-primary">{filter.name}</h3>
+                          {filter.notifications && (
+                            <span className="px-2 py-1 bg-green-500/20 text-green-600 rounded-md text-xs font-medium">
+                              ACTIVE
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted">Created {new Date(filter.createdDate).toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" className="sr-only peer" defaultChecked={filter.notifications} />
+                          <div className="w-11 h-6 bg-muted/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                          <span className="ml-2 text-sm text-muted">Alerts</span>
+                        </label>
+                        <button className="p-2 text-muted hover:text-primary transition-colors">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteFilter(filter)}
+                          className="p-2 text-red-500 hover:text-red-600 transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked={filter.notifications} />
-                        <div className="w-11 h-6 bg-muted/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
-                        <span className="ml-2 text-sm text-muted">Alerts</span>
-                      </label>
-                      <button className="p-2 text-muted hover:text-primary transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button className="p-2 text-red-500 hover:text-red-600 transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="bg-muted/10 rounded-lg p-3">
+                        <p className="text-xs text-muted mb-1">Price Range</p>
+                        <p className="font-medium text-primary">
+                          ${filter.criteria.priceRange.min.toLocaleString()} - ${filter.criteria.priceRange.max.toLocaleString()}
+                        </p>
+                      </div>
+                      
+                      <div className="bg-muted/10 rounded-lg p-3">
+                        <p className="text-xs text-muted mb-1">Property Types</p>
+                        <p className="font-medium text-primary">{filter.criteria.propertyTypes.join(', ')}</p>
+                      </div>
+                      
+                      <div className="bg-muted/10 rounded-lg p-3">
+                        <p className="text-xs text-muted mb-1">Locations</p>
+                        <p className="font-medium text-primary">{filter.criteria.locations.join(', ')}</p>
+                      </div>
+                      
+                      {filter.criteria.minROI && (
+                        <div className="bg-muted/10 rounded-lg p-3">
+                          <p className="text-xs text-muted mb-1">Min ROI</p>
+                          <p className="font-medium text-primary">{filter.criteria.minROI}%</p>
+                        </div>
+                      )}
+                      
+                      {filter.criteria.minCashFlow && (
+                        <div className="bg-muted/10 rounded-lg p-3">
+                          <p className="text-xs text-muted mb-1">Min Cash Flow</p>
+                          <p className="font-medium text-primary">${filter.criteria.minCashFlow}/mo</p>
+                        </div>
+                      )}
+                      
+                      <div className="bg-muted/10 rounded-lg p-3">
+                        <p className="text-xs text-muted mb-1">Strategy</p>
+                        <p className="font-medium text-primary">{filter.criteria.strategy.join(', ')}</p>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-muted/10 rounded-lg p-3">
-                      <p className="text-xs text-muted mb-1">Price Range</p>
-                      <p className="font-medium text-primary">
-                        ${filter.criteria.priceRange.min.toLocaleString()} - ${filter.criteria.priceRange.max.toLocaleString()}
+                  
+                  {/* Preview Section */}
+                  <div className="bg-muted/5 border-t border-border/20 px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted">
+                        <span className="font-medium">23 properties</span> match this filter
                       </p>
-                    </div>
-                    
-                    <div className="bg-muted/10 rounded-lg p-3">
-                      <p className="text-xs text-muted mb-1">Property Types</p>
-                      <p className="font-medium text-primary">{filter.criteria.propertyTypes.join(', ')}</p>
-                    </div>
-                    
-                    <div className="bg-muted/10 rounded-lg p-3">
-                      <p className="text-xs text-muted mb-1">Locations</p>
-                      <p className="font-medium text-primary">{filter.criteria.locations.join(', ')}</p>
-                    </div>
-                    
-                    {filter.criteria.minROI && (
-                      <div className="bg-muted/10 rounded-lg p-3">
-                        <p className="text-xs text-muted mb-1">Min ROI</p>
-                        <p className="font-medium text-primary">{filter.criteria.minROI}%</p>
-                      </div>
-                    )}
-                    
-                    {filter.criteria.minCashFlow && (
-                      <div className="bg-muted/10 rounded-lg p-3">
-                        <p className="text-xs text-muted mb-1">Min Cash Flow</p>
-                        <p className="font-medium text-primary">${filter.criteria.minCashFlow}/mo</p>
-                      </div>
-                    )}
-                    
-                    <div className="bg-muted/10 rounded-lg p-3">
-                      <p className="text-xs text-muted mb-1">Strategy</p>
-                      <p className="font-medium text-primary">{filter.criteria.strategy.join(', ')}</p>
+                      <button className="text-sm text-accent hover:text-accent/80 font-medium transition-colors">
+                        Preview Results →
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
+            {/* Draft Filters */}
+            {savedFilters.some(filter => filter.isDraft) && (
+              <div className="space-y-4 mt-8">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-semibold text-primary">Draft Filters</h3>
+                  <span className="px-2 py-1 bg-muted/20 text-muted rounded-md text-xs font-medium">
+                    {savedFilters.filter(filter => filter.isDraft).length}
+                  </span>
+                </div>
+                <p className="text-sm text-muted mb-4">
+                  Draft filters are saved but not active. Activate them to start receiving notifications.
+                </p>
+                {savedFilters.filter(filter => filter.isDraft).map((filter) => (
+                  <div key={filter.id} className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-lg transition-all duration-200 opacity-75">
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-semibold text-primary">{filter.name}</h3>
+                            <span className="px-2 py-1 bg-yellow-500/20 text-yellow-600 rounded-md text-xs font-medium">
+                              DRAFT
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted">Created {new Date(filter.createdDate).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => {
+                              setSavedFilters(prev => 
+                                prev.map(f => 
+                                  f.id === filter.id 
+                                    ? { ...f, isDraft: false, notifications: true }
+                                    : f
+                                )
+                              );
+                            }}
+                            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors font-medium text-sm"
+                          >
+                            Activate
+                          </button>
+                          <button className="p-2 text-muted hover:text-primary transition-colors">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteFilter(filter)}
+                            className="p-2 text-red-500 hover:text-red-600 transition-colors"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="bg-muted/10 rounded-lg p-3">
+                          <p className="text-xs text-muted mb-1">Price Range</p>
+                          <p className="font-medium text-primary">
+                            ${filter.criteria.priceRange.min.toLocaleString()} - ${filter.criteria.priceRange.max.toLocaleString()}
+                          </p>
+                        </div>
+                        
+                        <div className="bg-muted/10 rounded-lg p-3">
+                          <p className="text-xs text-muted mb-1">Property Types</p>
+                          <p className="font-medium text-primary">{filter.criteria.propertyTypes.join(', ')}</p>
+                        </div>
+                        
+                        <div className="bg-muted/10 rounded-lg p-3">
+                          <p className="text-xs text-muted mb-1">Locations</p>
+                          <p className="font-medium text-primary">{filter.criteria.locations.join(', ')}</p>
+                        </div>
+                        
+                        {filter.criteria.minROI && (
+                          <div className="bg-muted/10 rounded-lg p-3">
+                            <p className="text-xs text-muted mb-1">Min ROI</p>
+                            <p className="font-medium text-primary">{filter.criteria.minROI}%</p>
+                          </div>
+                        )}
+                        
+                        {filter.criteria.minCashFlow && (
+                          <div className="bg-muted/10 rounded-lg p-3">
+                            <p className="text-xs text-muted mb-1">Min Cash Flow</p>
+                            <p className="font-medium text-primary">${filter.criteria.minCashFlow}/mo</p>
+                          </div>
+                        )}
+                        
+                        <div className="bg-muted/10 rounded-lg p-3">
+                          <p className="text-xs text-muted mb-1">Strategy</p>
+                          <p className="font-medium text-primary">{filter.criteria.strategy.join(', ')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {savedFilters.length === 0 && (
               <div className="text-center py-12">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-semibold text-primary mb-2">No saved filters yet</h3>
-                <p className="text-muted mb-4">Create custom filters to get notified about matching properties!</p>
-                <button className="inline-flex px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                <div className="w-24 h-24 mx-auto mb-6 bg-accent/10 rounded-full flex items-center justify-center">
+                  <svg className="w-12 h-12 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-primary mb-2">No filters created yet</h3>
+                <p className="text-muted mb-6 max-w-md mx-auto">
+                  Create your first filter to start receiving notifications when properties matching your criteria become available.
+                </p>
+                <button 
+                  onClick={() => setShowFilterModal(true)}
+                  className="inline-flex px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                >
                   Create Your First Filter
                 </button>
               </div>
             )}
+
+            {/* Feature Preview */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-card rounded-xl border border-border/60 p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-primary mb-2">Instant Notifications</h4>
+                <p className="text-sm text-muted">Get alerted the moment a property matching your criteria hits the market</p>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border/60 p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 bg-green-500/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-primary mb-2">Smart Matching</h4>
+                <p className="text-sm text-muted">Our AI analyzes deals to find hidden gems that match your investment goals</p>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border/60 p-6 text-center">
+                <div className="w-12 h-12 mx-auto mb-4 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <h4 className="font-semibold text-primary mb-2">Lightning Fast</h4>
+                <p className="text-sm text-muted">Be the first to know and act on the best investment opportunities</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -798,6 +1175,345 @@ export default function ProfilePage() {
           </div>
         )}
       </main>
+
+      {/* Filter Creation Modal */}
+      {showFilterModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-xl border border-border/60 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-card border-b border-border/20 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-primary">Create Property Alert Filter</h3>
+                <p className="text-sm text-muted mt-1">Set up criteria to get notified about matching properties</p>
+              </div>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 text-muted hover:text-primary transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-8">
+              {/* Filter Name */}
+              <div>
+                <label className="text-sm font-medium text-primary block mb-3">Filter Name</label>
+                <input
+                  type="text"
+                  value={filterForm.name}
+                  onChange={(e) => updateFilterForm('name', e.target.value)}
+                  className="w-full p-4 bg-muted/10 border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30"
+                  placeholder="e.g., Bay Area Multifamily Properties"
+                />
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <label className="text-sm font-medium text-primary block mb-3">Price Range</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-muted block mb-2">Minimum Price</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted">$</span>
+                      <input
+                        type="number"
+                        value={filterForm.priceRange.min}
+                        onChange={(e) => updateFilterForm('priceRange', { ...filterForm.priceRange, min: e.target.value })}
+                        className="w-full pl-8 pr-4 py-3 bg-muted/10 border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20"
+                        placeholder="500,000"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted block mb-2">Maximum Price</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted">$</span>
+                      <input
+                        type="number"
+                        value={filterForm.priceRange.max}
+                        onChange={(e) => updateFilterForm('priceRange', { ...filterForm.priceRange, max: e.target.value })}
+                        className="w-full pl-8 pr-4 py-3 bg-muted/10 border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20"
+                        placeholder="2,000,000"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Property Types */}
+              <div>
+                <label className="text-sm font-medium text-primary block mb-3">Property Types</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {['Single Family', 'Duplex', 'Triplex', 'Fourplex', 'Multifamily', 'Condo', 'Townhouse', 'Mobile Home'].map((type) => (
+                    <label key={type} className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={filterForm.propertyTypes.includes(type)}
+                        onChange={() => toggleArrayValue('propertyTypes', type)}
+                      />
+                      <span className="w-full px-4 py-3 bg-muted/10 border border-border/60 rounded-lg cursor-pointer transition-colors hover:border-accent/50 peer-checked:bg-accent/10 peer-checked:border-accent peer-checked:text-accent flex items-center justify-center text-sm font-medium text-muted">
+                        {type}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Investment Strategy */}
+              <div>
+                <label className="text-sm font-medium text-primary block mb-3">Investment Strategy</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {['BRRRR', 'Fix & Flip', 'Buy & Hold', 'House Hack', 'Short-term Rental', 'Value-Add'].map((strategy) => (
+                    <label key={strategy} className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={filterForm.strategies.includes(strategy)}
+                        onChange={() => toggleArrayValue('strategies', strategy)}
+                      />
+                      <span className="w-full px-4 py-3 bg-muted/10 border border-border/60 rounded-lg cursor-pointer transition-colors hover:border-accent/50 peer-checked:bg-accent/10 peer-checked:border-accent peer-checked:text-accent flex items-center justify-center text-sm font-medium text-muted">
+                        {strategy}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="text-sm font-medium text-primary block mb-3">Preferred Locations</label>
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={filterForm.customLocations}
+                    onChange={(e) => updateFilterForm('customLocations', e.target.value)}
+                    className="w-full p-4 bg-muted/10 border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30"
+                    placeholder="Enter cities, neighborhoods, or zip codes (comma separated)"
+                  />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {['San Francisco', 'Oakland', 'San Jose', 'San Diego', 'Los Angeles', 'Sacramento', 'Fresno', 'Long Beach'].map((city) => (
+                      <label key={city} className="flex items-center">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer" 
+                          checked={filterForm.locations.includes(city)}
+                          onChange={() => toggleArrayValue('locations', city)}
+                        />
+                        <span className="w-full px-3 py-2 bg-muted/10 border border-border/60 rounded-lg cursor-pointer transition-colors hover:border-accent/50 peer-checked:bg-accent/10 peer-checked:border-accent peer-checked:text-accent flex items-center justify-center text-sm text-muted">
+                          {city}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Criteria */}
+              <div>
+                <label className="text-sm font-medium text-primary block mb-3">Financial Criteria (Optional)</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs text-muted block mb-2">Minimum ROI (%)</label>
+                    <input
+                      type="number"
+                      value={filterForm.minROI}
+                      onChange={(e) => updateFilterForm('minROI', e.target.value)}
+                      className="w-full p-3 bg-muted/10 border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      placeholder="15"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted block mb-2">Min Cash Flow ($/month)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted">$</span>
+                      <input
+                        type="number"
+                        value={filterForm.minCashFlow}
+                        onChange={(e) => updateFilterForm('minCashFlow', e.target.value)}
+                        className="w-full pl-8 pr-3 py-3 bg-muted/10 border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20"
+                        placeholder="500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted block mb-2">Max Cap Rate (%)</label>
+                    <input
+                      type="number"
+                      value={filterForm.maxCapRate}
+                      onChange={(e) => updateFilterForm('maxCapRate', e.target.value)}
+                      className="w-full p-3 bg-muted/10 border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      placeholder="8"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Notification Settings */}
+              <div>
+                <label className="text-sm font-medium text-primary block mb-3">Notification Settings</label>
+                <div className="space-y-4">
+                  <label className="flex items-center justify-between p-4 bg-muted/10 rounded-lg">
+                    <div>
+                      <p className="font-medium text-primary">Email Notifications</p>
+                      <p className="text-sm text-muted">Get emailed when properties match this filter</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 text-accent" 
+                      checked={filterForm.emailNotifications}
+                      onChange={(e) => updateFilterForm('emailNotifications', e.target.checked)}
+                    />
+                  </label>
+                  
+                  <label className="flex items-center justify-between p-4 bg-muted/10 rounded-lg">
+                    <div>
+                      <p className="font-medium text-primary">SMS Alerts</p>
+                      <p className="text-sm text-muted">Get instant text alerts for hot deals</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 text-accent" 
+                      checked={filterForm.smsAlerts}
+                      onChange={(e) => updateFilterForm('smsAlerts', e.target.checked)}
+                    />
+                  </label>
+                  
+                  <label className="flex items-center justify-between p-4 bg-muted/10 rounded-lg">
+                    <div>
+                      <p className="font-medium text-primary">Push Notifications</p>
+                      <p className="text-sm text-muted">Browser notifications for new matches</p>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 text-accent" 
+                      checked={filterForm.pushNotifications}
+                      onChange={(e) => updateFilterForm('pushNotifications', e.target.checked)}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Beta Notice */}
+              <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-primary mb-1">Beta Feature</p>
+                    <p className="text-sm text-muted">
+                      This filter will be saved to your profile but notifications are coming in Phase 2.0. 
+                      You&apos;ll be notified when the notification system goes live!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-card border-t border-border/20 px-6 py-4 flex items-center justify-between">
+              <button
+                onClick={handleCloseModal}
+                className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={handleSaveAsDraft}
+                  className="px-6 py-3 bg-muted/20 text-muted rounded-lg hover:bg-muted/30 transition-colors font-medium"
+                >
+                  Save as Draft
+                </button>
+                <button 
+                  onClick={handleCreateFilter}
+                  className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                >
+                  Create Filter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && filterToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-xl border border-border/60 max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-primary mb-1">Delete Filter</h3>
+                  <p className="text-sm text-muted">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <div className="bg-muted/10 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <h4 className="font-medium text-primary">{filterToDelete.name}</h4>
+                  {filterToDelete.isDraft && (
+                    <span className="px-2 py-1 bg-yellow-500/20 text-yellow-600 rounded-md text-xs font-medium">
+                      DRAFT
+                    </span>
+                  )}
+                  {filterToDelete.notifications && !filterToDelete.isDraft && (
+                    <span className="px-2 py-1 bg-green-500/20 text-green-600 rounded-md text-xs font-medium">
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted">
+                  Created {new Date(filterToDelete.createdDate).toLocaleDateString()}
+                </p>
+                <div className="mt-2 text-xs text-muted">
+                  <span className="inline-block mr-4">
+                    {filterToDelete.criteria.propertyTypes.length} property types
+                  </span>
+                  <span className="inline-block mr-4">
+                    {filterToDelete.criteria.locations.length} locations
+                  </span>
+                  <span className="inline-block">
+                    {filterToDelete.criteria.strategy.length} strategies
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-sm text-muted mb-6">
+                Are you sure you want to delete &quot;<strong>{filterToDelete.name}</strong>&quot;? 
+                {!filterToDelete.isDraft && ' You will stop receiving notifications for this filter.'}
+              </p>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={cancelDeleteFilter}
+                  className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteFilter}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete Filter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
