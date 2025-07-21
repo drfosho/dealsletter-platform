@@ -43,9 +43,10 @@ export async function middleware(request: NextRequest) {
   const isContactPage = request.nextUrl.pathname === '/contact'
   const isFAQPage = request.nextUrl.pathname === '/faq'
   const isBlogPage = request.nextUrl.pathname.startsWith('/blog')
+  const isPricingPage = request.nextUrl.pathname === '/pricing'
 
   // If user is not logged in and trying to access protected routes
-  if (!user && !isAuthPage && !isApiRoute && !isHomePage && !isContactPage && !isFAQPage && !isBlogPage) {
+  if (!user && !isAuthPage && !isApiRoute && !isHomePage && !isContactPage && !isFAQPage && !isBlogPage && !isPricingPage) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
