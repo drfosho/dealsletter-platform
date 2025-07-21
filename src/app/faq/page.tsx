@@ -33,7 +33,7 @@ const faqData: FAQItem[] = [
   {
     id: 4,
     question: "Do I need to verify my email to access deals?",
-    answer: "Yes, email verification is required to access the full platform and deal analysis. After signing up, check your email for a verification link. Once verified, you'll have complete access to the dashboard and all deal details.",
+    answer: "Yes, email verification is required to access the full platform and deal analysis. After signing up, check your email for a verification link. Once verified, you&apos;ll have complete access to the dashboard and all deal details.",
     category: "account"
   },
   {
@@ -44,7 +44,7 @@ const faqData: FAQItem[] = [
   },
   {
     id: 6,
-    question: "Can I save and track deals I'm interested in?",
+    question: "Can I save and track deals I&apos;m interested in?",
     answer: "Yes, you can save deals to your portfolio for easy tracking. The platform allows you to bookmark properties, take notes, and compare multiple opportunities side-by-side.",
     category: "platform"
   },
@@ -57,19 +57,19 @@ const faqData: FAQItem[] = [
   {
     id: 8,
     question: "What if I forgot my password?",
-    answer: "Click the 'Forgot Password' link on the login page. Enter your email address and we'll send you a reset link. Follow the instructions in the email to create a new password and regain access to your account.",
+    answer: "Click the &apos;Forgot Password&apos; link on the login page. Enter your email address and we&apos;ll send you a reset link. Follow the instructions in the email to create a new password and regain access to your account.",
     category: "account"
   },
   {
     id: 9,
     question: "Are there any fees to use the platform?",
-    answer: "Currently, the platform is in beta and access is free for early members. We'll announce any pricing updates well in advance and existing members will receive priority access to new features.",
+    answer: "Currently, the platform is in beta and access is free for early members. We&apos;ll announce any pricing updates well in advance and existing members will receive priority access to new features.",
     category: "pricing"
   },
   {
     id: 10,
     question: "Can I get help with financing these deals?",
-    answer: "While we don't provide financing directly, each deal analysis includes detailed financing scenarios with different loan options. We also provide information about hard money lenders, conventional financing, and creative financing strategies for each property type.",
+    answer: "While we don&apos;t provide financing directly, each deal analysis includes detailed financing scenarios with different loan options. We also provide information about hard money lenders, conventional financing, and creative financing strategies for each property type.",
     category: "deals"
   },
   {
@@ -226,7 +226,7 @@ export default function FAQPage() {
               Still have questions?
             </h3>
             <p className="text-muted mb-6">
-              Can't find what you're looking for? Our team is here to help with any questions about the platform or real estate investing.
+              Can&apos;t find what you&apos;re looking for? Our team is here to help with any questions about the platform or real estate investing.
             </p>
             <Link 
               href="/contact" 

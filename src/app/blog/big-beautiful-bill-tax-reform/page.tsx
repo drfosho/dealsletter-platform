@@ -73,7 +73,7 @@ export default function BigBeautifulBillArticle() {
             </div>
             
             <h1 className="text-3xl md:text-4xl font-bold text-primary mb-6 leading-tight">
-              The "One Big, Beautiful Bill" Just Passed — What It Means for Investors, Founders, and People
+              The &quot;One Big, Beautiful Bill&quot; Just Passed &mdash; What It Means for Investors, Founders, and People
             </h1>
 
             {/* Featured Image */}
@@ -93,17 +93,17 @@ export default function BigBeautifulBillArticle() {
           <div className="prose prose-lg max-w-none">
             <div className="text-muted leading-relaxed space-y-6">
               <p className="text-lg font-medium text-primary">
-                On May 22, the House passed what they're calling the "One Big, Beautiful Bill"—a sweeping tax reform that could reshape the game for entrepreneurs, investors, and working-class families alike.
+                On May 22, the House passed what they&apos;re calling the &quot;One Big, Beautiful Bill&quot;&mdash;a sweeping tax reform that could reshape the game for entrepreneurs, investors, and working-class families alike.
               </p>
 
-              <p>As the founder of Dealsletter and an active real estate investor, I've spent the last 48 hours diving deep into this bill. Here's what actually matters:</p>
+              <p>As the founder of Dealsletter and an active real estate investor, I&apos;ve spent the last 48 hours diving deep into this bill. Here&apos;s what actually matters:</p>
 
               <div className="bg-green-500/10 rounded-lg p-6 border border-green-500/20 my-8">
                 <h2 className="text-2xl font-bold text-primary mb-4">Business Owners Win Big</h2>
                 <ul className="space-y-3">
                   <li className="flex items-start space-x-3">
                     <span className="text-green-600">•</span>
-                    <span>The 199A QBI deduction just got juiced—from 20% to 23%, and it's permanent now.</span>
+                    <span>The 199A QBI deduction just got juiced&mdash;from 20% to 23%, and it&apos;s permanent now.</span>
                   </li>
                   <li className="flex items-start space-x-3">
                     <span className="text-green-600">•</span>
@@ -129,7 +129,7 @@ export default function BigBeautifulBillArticle() {
                   </li>
                   <li className="flex items-start space-x-3">
                     <span className="text-accent">•</span>
-                    <span>While 1031 wasn't touched, exchanges will heat up—especially as rate cuts approach.</span>
+                    <span>While 1031 wasn&apos;t touched, exchanges will heat up&mdash;especially as rate cuts approach.</span>
                   </li>
                 </ul>
               </div>
@@ -158,21 +158,21 @@ export default function BigBeautifulBillArticle() {
 
               <div className="bg-purple-500/10 rounded-lg p-6 border border-purple-500/20 my-8">
                 <h2 className="text-2xl font-bold text-primary mb-4">Estate & Wealth Strategy</h2>
-                <p>The estate tax exemption doubles to <strong>$15M per person</strong> starting in 2026. That's generational wealth planning unlocked.</p>
+                <p>The estate tax exemption doubles to <strong>$15M per person</strong> starting in 2026. That&apos;s generational wealth planning unlocked.</p>
               </div>
 
               <div className="bg-red-500/10 rounded-lg p-6 border border-red-500/20 my-8">
                 <p className="text-lg font-semibold text-primary">
-                  But here's the kicker: this bill adds between <strong>$3.3T and $4.6T to the deficit</strong>. It passed the House, but the Senate's gonna be a battleground.
+                  But here&apos;s the kicker: this bill adds between <strong>$3.3T and $4.6T to the deficit</strong>. It passed the House, but the Senate&apos;s gonna be a battleground.
                 </p>
               </div>
 
-              <p>Whether you're flipping homes, building a startup, or just grinding a 9-to-5—these changes affect you.</p>
+              <p>Whether you&apos;re flipping homes, building a startup, or just grinding a 9-to-5&mdash;these changes affect you.</p>
 
-              <p>At <strong>Dealsletter</strong>, we're building more than a newsletter. We're building an ecosystem that makes navigating things like this <em>automatic</em>. If you invest, you need to be paying attention now—not in 2026 when it's too late to plan.</p>
+              <p>At <strong>Dealsletter</strong>, we&apos;re building more than a newsletter. We&apos;re building an ecosystem that makes navigating things like this <em>automatic</em>. If you invest, you need to be paying attention now&mdash;not in 2026 when it&apos;s too late to plan.</p>
 
               <blockquote className="border-l-4 border-accent pl-6 py-4 my-8 bg-accent/5 rounded-r-lg">
-                <p className="text-lg text-primary font-medium">What do you think—smart tax strategy or political bait-and-switch?</p>
+                <p className="text-lg text-primary font-medium">What do you think&mdash;smart tax strategy or political bait-and-switch?</p>
               </blockquote>
 
               <div className="bg-card rounded-lg border border-border/60 p-6 my-8">
@@ -238,7 +238,7 @@ export default function BigBeautifulBillArticle() {
                     Missouri Just Changed the Game for Investors
                   </h4>
                   <p className="text-muted text-sm">
-                    How Missouri's capital gains tax elimination creates new opportunities for investors.
+                    How Missouri&apos;s capital gains tax elimination creates new opportunities for investors.
                   </p>
                 </div>
               </Link>
@@ -252,7 +252,7 @@ export default function BigBeautifulBillArticle() {
                     June Property Recap — 12 Killer Real Estate Deals
                   </h4>
                   <p className="text-muted text-sm">
-                    What's sold, what's pending, and what this tells us about the market.
+                    What&apos;s sold, what&apos;s pending, and what this tells us about the market.
                   </p>
                 </div>
               </Link>

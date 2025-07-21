@@ -289,7 +289,7 @@ export default function ProfilePage() {
     setShowFilterModal(false);
   };
 
-  const updateFilterForm = (field: keyof FilterFormData, value: any) => {
+  const updateFilterForm = (field: keyof FilterFormData, value: unknown) => {
     setFilterForm(prev => ({
       ...prev,
       [field]: value
@@ -612,7 +612,7 @@ export default function ProfilePage() {
                               } else {
                                 setUserProfile({
                                   ...userProfile,
-                                  preferredStrategy: userProfile.preferredStrategy.filter(s => s !== strategy)
+                                  preferredStrategy: userProfile.preferredStrategy.filter((s: string) => s !== strategy)
                                 });
                               }
                             }}
@@ -630,7 +630,7 @@ export default function ProfilePage() {
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {userProfile.preferredStrategy.length > 0 ? (
-                        userProfile.preferredStrategy.map((strategy) => (
+                        userProfile.preferredStrategy.map((strategy: string) => (
                           <span key={strategy} className="px-4 py-2 bg-accent/10 text-accent rounded-lg">
                             {strategy}
                           </span>
@@ -834,7 +834,7 @@ export default function ProfilePage() {
                       <div className="flex items-center gap-2">
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" className="sr-only peer" defaultChecked={filter.notifications} />
-                          <div className="w-11 h-6 bg-muted/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
+                          <div className="w-11 h-6 bg-muted/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[&apos;&apos;] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent"></div>
                           <span className="ml-2 text-sm text-muted">Alerts</span>
                         </label>
                         <button className="p-2 text-muted hover:text-primary transition-colors">

@@ -36,7 +36,7 @@ function VerifyEmailContent() {
     const checkVerification = async () => {
       if (!user) return
 
-      const { data, error } = await supabase.auth.getUser()
+      const { data } = await supabase.auth.getUser()
       if (data?.user?.email_confirmed_at) {
         router.push('/dashboard')
       }
@@ -65,7 +65,7 @@ function VerifyEmailContent() {
       } else {
         setResendSuccess(true)
       }
-    } catch (err) {
+    } catch {
       setResendError('Failed to resend email. Please try again.')
     } finally {
       setResendLoading(false)
@@ -76,14 +76,14 @@ function VerifyEmailContent() {
     setCheckingVerification(true)
     
     try {
-      const { data, error } = await supabase.auth.getUser()
+      const { data } = await supabase.auth.getUser()
       if (data?.user?.email_confirmed_at) {
         router.push('/dashboard')
       } else {
         // Show a brief message that verification is still pending
         setTimeout(() => setCheckingVerification(false), 1000)
       }
-    } catch (err) {
+    } catch {
       setCheckingVerification(false)
     }
   }
@@ -107,7 +107,7 @@ function VerifyEmailContent() {
           </h1>
           
           <p className="text-muted mb-6">
-            We've sent a verification link to:
+            We&apos;ve sent a verification link to:
           </p>
           
           <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 mb-6">
@@ -116,7 +116,7 @@ function VerifyEmailContent() {
           
           <p className="text-sm text-muted mb-8">
             Click the verification link in your email to complete your account setup. 
-            Once verified, you'll be automatically redirected to your dashboard.
+            Once verified, you&apos;ll be automatically redirected to your dashboard.
           </p>
 
           {/* Action Buttons */}
@@ -126,7 +126,7 @@ function VerifyEmailContent() {
               disabled={checkingVerification}
               className="w-full px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {checkingVerification ? 'Checking...' : 'I\'ve Verified - Check Now'}
+              {checkingVerification ? 'Checking...' : 'I&apos;ve Verified - Check Now'}
             </button>
 
             <button

@@ -8,7 +8,7 @@ type AuthContextType = {
   user: User | null
   session: Session | null
   loading: boolean
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, metadata?: Record<string, unknown>) => Promise<{ error: AuthError | null }>
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null; session: Session | null }>
   signOut: () => Promise<{ error: AuthError | null }>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signUp = async (email: string, password: string, metadata?: any) => {
+  const signUp = async (email: string, password: string, metadata?: Record<string, unknown>) => {
     console.log('AuthContext signUp called with:', { email, metadata })
     
     const { data, error } = await supabase.auth.signUp({
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           ...metadata,
           // Convert deal_types array to string for user_meta_data
-          deal_types: metadata?.deal_types?.join(',') || '',
+          deal_types: Array.isArray(metadata?.deal_types) ? metadata.deal_types.join(',') : '',
         },
       },
     })

@@ -74,7 +74,7 @@ export default function VerifySuccess() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-border/60">
-            <h3 className="font-semibold text-primary mb-3">What's Next?</h3>
+            <h3 className="font-semibold text-primary mb-3">What&apos;s Next?</h3>
             <div className="text-sm text-muted space-y-2">
               <p>🏠 Start analyzing real estate deals</p>
               <p>📊 Access your personalized dashboard</p>

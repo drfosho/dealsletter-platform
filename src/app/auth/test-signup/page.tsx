@@ -8,7 +8,7 @@ import Link from 'next/link'
 export default function TestSignup() {
   const [email, setEmail] = useState('test@example.com')
   const [password, setPassword] = useState('testpassword123')
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<{ error?: string; success?: boolean; message?: string; user?: unknown; users?: unknown[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const { signUp } = useAuth()
 
@@ -51,7 +51,7 @@ export default function TestSignup() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser()
       console.log('Current user:', user)
-      setResult({ user, error })
+      setResult({ user, error: error?.message })
     } catch (err) {
       console.error('Get user error:', err)
       setResult({ error: err instanceof Error ? err.message : 'Unknown error' })
@@ -66,7 +66,7 @@ export default function TestSignup() {
         .select('*')
       
       console.log('All users:', data)
-      setResult({ users: data, error })
+      setResult({ users: data || undefined, error: error?.message })
     } catch (err) {
       console.error('Get all users error:', err)
       setResult({ error: err instanceof Error ? err.message : 'Cannot fetch users - need service role' })
@@ -151,7 +151,7 @@ export default function TestSignup() {
           <h3 className="font-semibold mb-2 text-yellow-700">Troubleshooting Tips</h3>
           <ul className="text-sm text-muted space-y-1">
             <li>• Check Supabase dashboard → Authentication → Users</li>
-            <li>• Users may need email verification to appear as "confirmed"</li>
+            <li>• Users may need email verification to appear as &quot;confirmed&quot;</li>
             <li>• Check browser console for detailed error messages</li>
             <li>• Ensure email confirmation is disabled in Supabase Auth settings for testing</li>
           </ul>

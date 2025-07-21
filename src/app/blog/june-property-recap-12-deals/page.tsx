@@ -93,10 +93,10 @@ export default function JunePropertyRecapArticle() {
           <div className="prose prose-lg max-w-none">
             <div className="text-muted leading-relaxed space-y-6">
               <p className="text-lg font-medium text-primary">
-                What's sold. What's pending. What's still available, and what this tells us about where the market is headed.
+                What&apos;s sold. What&apos;s pending. What&apos;s still available, and what this tells us about where the market is headed.
               </p>
 
-              <p>Here's the details:</p>
+              <p>Here&apos;s the details:</p>
 
               {/* Deal Grid */}
               <div className="grid grid-cols-1 gap-6 my-12">
@@ -209,7 +209,7 @@ export default function JunePropertyRecapArticle() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <p className="text-sm"><strong>7. Oakland BRRRR Duplex</strong> - 10711 Russet St (Active) - ROI: 166%</p>
-                    <p className="text-sm"><strong>8. Lee's Summit Flip</strong> - 4407 SW Briarbrook Dr (Active) - ROI: 85%</p>
+                    <p className="text-sm"><strong>8. Lee&apos;s Summit Flip</strong> - 4407 SW Briarbrook Dr (Active) - ROI: 85%</p>
                     <p className="text-sm"><strong>9. Warrensburg BRRRR/Flip</strong> - 603 Broad St (Pending) - COC: 18.5%</p>
                   </div>
                   <div className="space-y-2">
@@ -251,7 +251,7 @@ export default function JunePropertyRecapArticle() {
                 <h3 className="text-lg font-semibold text-primary mb-3">Dealsletter PRO was built for serious investors who want to move faster, analyze smarter, and stop wasting time on bad deals.</h3>
                 
                 <div className="space-y-2 text-sm">
-                  <p>With PRO, you'll get:</p>
+                  <p>With PRO, you&apos;ll get:</p>
                   <ul className="space-y-1 ml-4">
                     <li>• 2–3x more vetted BRRRRs, flips, and house hacks each week</li>
                     <li>• Early access to exclusive off-market deals before they go public</li>
@@ -265,7 +265,7 @@ export default function JunePropertyRecapArticle() {
                 </div>
               </div>
 
-              <p className="text-lg font-semibold text-primary">If you're trying to build a real portfolio, this is the edge.</p>
+              <p className="text-lg font-semibold text-primary">If you&apos;re trying to build a real portfolio, this is the edge.</p>
             </div>
           </div>
 
@@ -322,7 +322,7 @@ export default function JunePropertyRecapArticle() {
                     Missouri Just Changed the Game for Investors
                   </h4>
                   <p className="text-muted text-sm">
-                    How Missouri's capital gains tax elimination creates new opportunities.
+                    How Missouri&apos;s capital gains tax elimination creates new opportunities.
                   </p>
                 </div>
               </Link>

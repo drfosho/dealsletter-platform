@@ -29,7 +29,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   const sanDiegoDetails = {
     whyStrategic: {
       title: "Why This is a Strategic Investment",
-      description: "This Logan Heights fourplex presents a rare triple-zone investment opportunity located within an Opportunity Zone, Transit Priority Area, and San Diego Promise Zone—providing significant tax advantages and development incentives. Just 5 minutes from Downtown San Diego, PETCO Park, and the Convention Center, this property sits in the path of San Diego's eastward gentrification wave.",
+      description: "This Logan Heights fourplex presents a rare triple-zone investment opportunity located within an Opportunity Zone, Transit Priority Area, and San Diego Promise Zone—providing significant tax advantages and development incentives. Just 5 minutes from Downtown San Diego, PETCO Park, and the Convention Center, this property sits in the path of San Diego&apos;s eastward gentrification wave.",
       valueAdd: "The 42% rent upside potential ($2,495 current monthly income vs. $5,905 market potential) creates immediate value-add opportunities without major capital improvements. The detached single-car garage offers ADU conversion potential for additional income streams, while the 7,325 sq ft corner lot provides expansion possibilities.",
       location: "Located near the newly redeveloped Rodriguez Elementary School and within walking distance of public transit, this property benefits from ongoing neighborhood improvements and infrastructure investments. The combination of below-market rents, strategic location, and multiple tax incentive zones makes this an ideal acquisition for investors seeking both immediate upside and long-term appreciation."
     },
@@ -90,8 +90,8 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   const tampaDetails = {
     whyGreatInvestment: {
       title: "Why This is a Great Investment",
-      description: "This fully renovated 16-unit multifamily property combines 1920s architectural charm with modern upgrades in one of South Tampa's most desirable neighborhoods. Recent capital improvements include new roof (2024), all-new mini split AC systems, granite countertops, stainless steel appliances, and remodeled bathrooms. Each unit features in-unit washer/dryer connections with machines included—a premium amenity that commands higher rents and attracts quality tenants.",
-      location: "Located in the heart of South Tampa, residents enjoy walkable access to trendy SoHo district and Hyde Park Village's upscale dining and shopping. The property benefits from top-ranked schools, luxury residential surroundings, and excellent connectivity to Downtown Tampa, Westshore Business District, and Tampa International Airport via nearby I-275 and Bayshore Boulevard."
+      description: "This fully renovated 16-unit multifamily property combines 1920s architectural charm with modern upgrades in one of South Tampa&apos;s most desirable neighborhoods. Recent capital improvements include new roof (2024), all-new mini split AC systems, granite countertops, stainless steel appliances, and remodeled bathrooms. Each unit features in-unit washer/dryer connections with machines included—a premium amenity that commands higher rents and attracts quality tenants.",
+      location: "Located in the heart of South Tampa, residents enjoy walkable access to trendy SoHo district and Hyde Park Village&apos;s upscale dining and shopping. The property benefits from top-ranked schools, luxury residential surroundings, and excellent connectivity to Downtown Tampa, Westshore Business District, and Tampa International Airport via nearby I-275 and Bayshore Boulevard."
     },
     financing: {
       loanType: "30-year, Amortizing",
@@ -144,9 +144,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   const oaklandDetails = {
     whyFlipOnly: {
       title: "Why This is a Flip-Only Investment",
-      description: "This 1920s Oakland house offers a solid flip opportunity with significant profit potential, but the numbers don't support a BRRRR strategy due to Oakland's high operating costs and debt service requirements. Based on the listing photos, the property needs comprehensive updating but has attractive bones including original hardwood floors and a brick fireplace.",
-      photoAnalysis: "The dated peach tile bathrooms, dark wood kitchen cabinets, burgundy carpeting, and bright blue paint throughout indicate a property that's been lived in but not updated for decades. The exterior shows good structural condition with recent mechanical updates (water heater, piping, drains in 2022).",
-      whyBRRRFails: "With estimated rent of $3,350/month and Oakland's high property taxes (1.1% of value) plus insurance and maintenance costs, the property would generate negative cash flow of $1,373/month and a DSCR of only 0.55—far below lending requirements."
+      description: "This 1920s Oakland house offers a solid flip opportunity with significant profit potential, but the numbers don&apos;t support a BRRRR strategy due to Oakland&apos;s high operating costs and debt service requirements. Based on the listing photos, the property needs comprehensive updating but has attractive bones including original hardwood floors and a brick fireplace.",
+      photoAnalysis: "The dated peach tile bathrooms, dark wood kitchen cabinets, burgundy carpeting, and bright blue paint throughout indicate a property that&apos;s been lived in but not updated for decades. The exterior shows good structural condition with recent mechanical updates (water heater, piping, drains in 2022).",
+      whyBRRRFails: "With estimated rent of $3,350/month and Oakland&apos;s high property taxes (1.1% of value) plus insurance and maintenance costs, the property would generate negative cash flow of $1,373/month and a DSCR of only 0.55—far below lending requirements."
     },
     financing: {
       loanType: "Hard Money, Interest-Only",
@@ -228,9 +228,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   const lafayetteDetails = {
     whyPremiumFlip: {
       title: "Why This is a Premium Flip Opportunity",
-      description: "Located in highly coveted Lafayette Hills with spectacular views, this property sits in the Acalanes School District (all 10-rated schools). The seller has explicitly priced it 'well below market for quick sale' - expect heavy competition. Features radiant floor heating, dual-pane windows, Anderson doors, and a private court location. Currently configured as 3BR but easily converts back to 4BR.",
-      marketAnalysis: "Lafayette Hills Recent Sales: Homes with views command 15-20% premium, Acalanes schools add 10-15% premium. 'Below market' listings typically sell 10-15% over ask with average DOM of 7-14 days. Court locations are highly desirable.",
-      competitiveOffer: "Listed at $999,900 (clearly underpriced). Seller states 'priced well below market'. Expect 5-10 offers minimum. Similar view homes selling $1.5M+ as-is. $1,150,000 = 15% over ask (realistic win)."
+      description: "Located in highly coveted Lafayette Hills with spectacular views, this property sits in the Acalanes School District (all 10-rated schools). The seller has explicitly priced it &apos;well below market for quick sale&apos; - expect heavy competition. Features radiant floor heating, dual-pane windows, Anderson doors, and a private court location. Currently configured as 3BR but easily converts back to 4BR.",
+      marketAnalysis: "Lafayette Hills Recent Sales: Homes with views command 15-20% premium, Acalanes schools add 10-15% premium. &apos;Below market&apos; listings typically sell 10-15% over ask with average DOM of 7-14 days. Court locations are highly desirable.",
+      competitiveOffer: "Listed at $999,900 (clearly underpriced). Seller states &apos;priced well below market&apos;. Expect 5-10 offers minimum. Similar view homes selling $1.5M+ as-is. $1,150,000 = 15% over ask (realistic win)."
     },
     financing: {
       loanType: "12-month Interest-Only",
@@ -293,7 +293,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
       "$100k earnest money (shows strength)",
       "Waive all contingencies except basic inspection",
       "Pre-approval letter from hard money lender",
-      "Personal letter emphasizing maintenance of home's character"
+      "Personal letter emphasizing maintenance of home&apos;s character"
     ]
   };
 
@@ -364,7 +364,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
     whyGreatInvestment: {
       title: "Oakland 25-Unit Value-Add - Massive Upside Potential",
       description: "This is the ultimate value-add opportunity - a 25-unit building priced at just $74,000/unit with current rents averaging only $984/month, while market rents are $1,530+! With 100% occupancy and stable income, you can methodically increase rents through natural turnover and Section 8 conversion.",
-      section8Opportunity: "The City of Oakland's Section 8 program pays ABOVE market rates ($1,600-1,800 for 1BR), creating a unique opportunity to maximize income while providing quality housing. At just $119/sq ft, this is priced well below replacement cost in a rapidly gentrifying area.",
+      section8Opportunity: "The City of Oakland&apos;s Section 8 program pays ABOVE market rates ($1,600-1,800 for 1BR), creating a unique opportunity to maximize income while providing quality housing. At just $119/sq ft, this is priced well below replacement cost in a rapidly gentrifying area.",
       currentBelowMarket: "Current rents are $546/unit/month below market!"
     },
     financing: {
@@ -462,7 +462,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   const sanLeandro6UnitDetails = {
     whyGreatInvestment: {
       title: "San Leandro 6-Unit - Premium Multifamily Investment",
-      description: "This unique 6-unit property offers an exceptional combination of privacy, modern amenities, and low operating expenses that's rare in today's market. Each unit is separated by its own garage (no shared walls!), features in-unit laundry, and tenants pay ALL utilities including water and garbage - dramatically reducing your operating expenses.",
+      description: "This unique 6-unit property offers an exceptional combination of privacy, modern amenities, and low operating expenses that&apos;s rare in today&apos;s market. Each unit is separated by its own garage (no shared walls!), features in-unit laundry, and tenants pay ALL utilities including water and garbage - dramatically reducing your operating expenses.",
       location: "Located just 0.6 miles from BART with easy access to I-580/880, this property attracts quality tenants who value the single-family home feel with apartment convenience. With 3 recently remodeled units and immediate pro-forma upside, this turnkey asset delivers strong day-one cash flow with built-in value-add potential.",
       competitiveAdvantages: "No shared walls = fewer tenant conflicts. Direct garage access = premium tenant appeal. 35.5% OpEx ratio vs 45-50% typical."
     },
@@ -2041,7 +2041,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                 <p className="font-bold text-primary">{sanLeandro6UnitDetails.operatingExpenses.opexRatio}% OpEx ratio</p>
               </div>
             </div>
-            <p className="text-xs text-muted mt-3">Perfect for investors who understand that great real estate isn't just about today's cash flow - it's about tomorrow's wealth.</p>
+            <p className="text-xs text-muted mt-3">Perfect for investors who understand that great real estate isn&apos;t just about today&apos;s cash flow - it&apos;s about tomorrow&apos;s wealth.</p>
           </div>
         </div>
       )}
@@ -2163,7 +2163,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                 <>
                   <p className="text-sm font-medium text-primary">🏢 Premium Multifamily</p>
                   <p className="text-xs text-muted mt-1">
-                    Unique no-shared-walls design with 35.5% OpEx ratio. Tomorrow's wealth, not just today's cash flow.
+                    Unique no-shared-walls design with 35.5% OpEx ratio. Tomorrow&apos;s wealth, not just today&apos;s cash flow.
                   </p>
                 </>
               )}

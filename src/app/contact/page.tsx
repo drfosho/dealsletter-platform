@@ -54,7 +54,7 @@ export default function ContactPage() {
               Get in Touch
             </h1>
             <p className="text-lg text-muted max-w-2xl mx-auto">
-              Have questions about the platform? Need help with deal analysis? We're here to help you succeed in real estate investing.
+              Have questions about the platform? Need help with deal analysis? We&apos;re here to help you succeed in real estate investing.
             </p>
           </div>
 

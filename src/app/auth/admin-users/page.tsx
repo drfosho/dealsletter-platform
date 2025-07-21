@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -31,11 +31,7 @@ export default function AdminUsers() {
     fetchProfiles()
   }, [])
 
-  useEffect(() => {
-    filterProfiles()
-  }, [profiles, searchTerm, experienceFilter, budgetFilter])
-
-  const filterProfiles = () => {
+  const filterProfiles = useCallback(() => {
     let filtered = profiles
 
     if (searchTerm) {
@@ -54,7 +50,11 @@ export default function AdminUsers() {
     }
 
     setFilteredProfiles(filtered)
-  }
+  }, [profiles, searchTerm, experienceFilter, budgetFilter])
+
+  useEffect(() => {
+    filterProfiles()
+  }, [filterProfiles])
 
   const fetchProfiles = async () => {
     try {
@@ -223,7 +223,7 @@ export default function AdminUsers() {
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
             <p className="text-red-600">{error}</p>
             <p className="text-sm text-red-500 mt-2">
-              Make sure you've run the SQL setup script to create the user_profiles table.
+              Make sure you&apos;ve run the SQL setup script to create the user_profiles table.
             </p>
           </div>
         )}

@@ -73,7 +73,7 @@ export default function MissouriCapitalGainsArticle() {
             </div>
             
             <h1 className="text-3xl md:text-4xl font-bold text-primary mb-6 leading-tight">
-              Missouri Just Changed the Game for Investors—Here's What It Means for You
+              Missouri Just Changed the Game for Investors&mdash;Here&apos;s What It Means for You
             </h1>
 
             {/* Featured Image */}
@@ -93,20 +93,20 @@ export default function MissouriCapitalGainsArticle() {
           <div className="prose prose-lg max-w-none">
             <div className="text-muted leading-relaxed space-y-6">
               <p className="text-lg font-medium text-primary">
-                Big news in the world of investing and wealth building—Missouri is about to become the first state in the nation to <strong>completely eliminate capital gains tax for individuals</strong>. And if you're paying attention, this isn't just a tax update… it's a massive shift in how smart investors should start thinking about where they do business.
+                Big news in the world of investing and wealth building&mdash;Missouri is about to become the first state in the nation to <strong>completely eliminate capital gains tax for individuals</strong>. And if you&apos;re paying attention, this isn&apos;t just a tax update&hellip; it&apos;s a massive shift in how smart investors should start thinking about where they do business.
               </p>
 
-              <p>Let's break down why this matters, and why it's more than just a policy change.</p>
+              <p>Let&apos;s break down why this matters, and why it&apos;s more than just a policy change.</p>
 
               <div className="bg-accent/10 rounded-lg p-6 border border-accent/20 my-8">
-                <h3 className="text-xl font-semibold text-primary mb-3">What's Happening?</h3>
+                <h3 className="text-xl font-semibold text-primary mb-3">What&apos;s Happening?</h3>
                 <p>Starting in <strong>2025</strong>, Missourians can deduct <strong>100% of their capital gains income</strong> from their state taxes. That means no state tax on profits from selling real estate, stocks, crypto, or any other assets. Zero. Nada.</p>
-                <p className="mt-3">And it doesn't stop there. Corporations might be next in line if Missouri's income tax rate drops further. In short, Missouri is planting its flag as <strong>the most investor-friendly state in the country</strong>.</p>
+                <p className="mt-3">And it doesn&apos;t stop there. Corporations might be next in line if Missouri&apos;s income tax rate drops further. In short, Missouri is planting its flag as <strong>the most investor-friendly state in the country</strong>.</p>
               </div>
 
               <h2 className="text-2xl font-bold text-primary mt-8 mb-4">Why This Matters for Real Estate Investors</h2>
               
-              <p>If you're in real estate like I am, you know capital gains taxes are one of the biggest hurdles to building long-term wealth. Missouri just knocked that wall down.</p>
+              <p>If you&apos;re in real estate like I am, you know capital gains taxes are one of the biggest hurdles to building long-term wealth. Missouri just knocked that wall down.</p>
 
               <div className="bg-card rounded-lg border border-border/60 p-6 my-6">
                 <ul className="space-y-3">
@@ -127,29 +127,29 @@ export default function MissouriCapitalGainsArticle() {
 
               <p>This is a <strong>huge win for real estate entrepreneurs</strong>, making Missouri one of the most attractive markets for long-term investing and wealth transfer strategies.</p>
 
-              <h2 className="text-2xl font-bold text-primary mt-8 mb-4">Stocks, Crypto, and Digital Assets—It's All Covered</h2>
+              <h2 className="text-2xl font-bold text-primary mt-8 mb-4">Stocks, Crypto, and Digital Assets&mdash;It&apos;s All Covered</h2>
               
-              <p>It's not just real estate. Whether you're trading crypto, managing a portfolio of stocks, or cashing out bonds, Missouri wants you to keep more of your gains.</p>
+              <p>It&apos;s not just real estate. Whether you&apos;re trading crypto, managing a portfolio of stocks, or cashing out bonds, Missouri wants you to keep more of your gains.</p>
 
-              <p>This policy isn't just about money—it's about attracting innovation. Missouri is now positioned to become a hub for blockchain startups, crypto investors, and high-net-worth individuals looking for a better tax environment.</p>
+              <p>This policy isn&apos;t just about money&mdash;it&apos;s about attracting innovation. Missouri is now positioned to become a hub for blockchain startups, crypto investors, and high-net-worth individuals looking for a better tax environment.</p>
 
               <h2 className="text-2xl font-bold text-primary mt-8 mb-4">A New Era of State Tax Competition</h2>
               
-              <p>Missouri's move sends a clear message:</p>
+              <p>Missouri&apos;s move sends a clear message:</p>
 
               <blockquote className="border-l-4 border-accent pl-6 py-4 my-6 bg-accent/5 rounded-r-lg">
-                <p className="text-lg italic text-primary">"If you're building wealth, we want you here."</p>
+                <p className="text-lg italic text-primary">&quot;If you&apos;re building wealth, we want you here.&quot;</p>
               </blockquote>
 
-              <p>While other states raise taxes and tighten regulations, Missouri is doing the opposite. And like any smart investor knows, you don't fight the trend—you follow the opportunity.</p>
+              <p>While other states raise taxes and tighten regulations, Missouri is doing the opposite. And like any smart investor knows, you don&apos;t fight the trend&mdash;you follow the opportunity.</p>
 
               <h2 className="text-2xl font-bold text-primary mt-8 mb-4">So… What Should You Do?</h2>
               
-              <p>If you're an investor, entrepreneur, or someone who's serious about building generational wealth, this is your wake-up call to start exploring opportunities beyond the usual markets.</p>
+              <p>If you&apos;re an investor, entrepreneur, or someone who&apos;s serious about building generational wealth, this is your wake-up call to start exploring opportunities beyond the usual markets.</p>
 
-              <p>We are actively investing and growing our footprint in Missouri through <strong>Dealsletter</strong>, and we're seeing firsthand how this kind of policy unlocks new doors.</p>
+              <p>We are actively investing and growing our footprint in Missouri through <strong>Dealsletter</strong>, and we&apos;re seeing firsthand how this kind of policy unlocks new doors.</p>
 
-              <p className="text-lg font-semibold text-primary">Whether it's buying your first rental, flipping homes, or repositioning your portfolio for tax efficiency—<strong>Missouri just became one of the most profitable places to do it</strong>.</p>
+              <p className="text-lg font-semibold text-primary">Whether it&apos;s buying your first rental, flipping homes, or repositioning your portfolio for tax efficiency&mdash;<strong>Missouri just became one of the most profitable places to do it</strong>.</p>
             </div>
           </div>
 
@@ -189,7 +189,7 @@ export default function MissouriCapitalGainsArticle() {
                     Policy Update
                   </span>
                   <h4 className="text-lg font-semibold text-primary mt-3 mb-2 group-hover:text-accent transition-colors">
-                    The "One Big, Beautiful Bill" Just Passed
+                    The &quot;One Big, Beautiful Bill&quot; Just Passed
                   </h4>
                   <p className="text-muted text-sm">
                     What this sweeping tax reform means for investors, founders, and everyday people.

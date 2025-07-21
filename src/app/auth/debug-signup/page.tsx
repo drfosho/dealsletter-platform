@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 export default function DebugSignup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<{ data?: unknown; error?: unknown; currentUser?: unknown } | null>(null)
   const [loading, setLoading] = useState(false)
 
   const testSignup = async () => {

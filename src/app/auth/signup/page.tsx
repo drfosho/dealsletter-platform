@@ -123,7 +123,7 @@ export default function SignUpPage() {
             </div>
             <h1 className="text-2xl font-bold text-primary mb-2">Account Created!</h1>
             <p className="text-muted mb-6">
-              We've sent a verification email to <strong>{email}</strong>. 
+              We&apos;ve sent a verification email to <strong>{email}</strong>. 
               Click the link in your email to verify your account and access your dashboard.
             </p>
             <p className="text-sm text-muted">
@@ -194,7 +194,7 @@ export default function SignUpPage() {
             <div>
               <div className="text-center mb-6">
                 <h1 className="text-2xl font-bold text-primary mb-2">Create Account</h1>
-                <p className="text-muted">Let's get started with your basic information</p>
+                <p className="text-muted">Let&apos;s get started with your basic information</p>
               </div>
 
               <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-4">
@@ -401,7 +401,7 @@ export default function SignUpPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-primary mb-4">
-                    What's your primary investment goal?
+                    What&apos;s your primary investment goal?
                   </label>
                   <div className="space-y-3">
                     {[
@@ -430,7 +430,7 @@ export default function SignUpPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-primary mb-4">
-                    What's your typical investment budget per deal?
+                    What&apos;s your typical investment budget per deal?
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
