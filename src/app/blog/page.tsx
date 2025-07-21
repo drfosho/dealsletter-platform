@@ -54,6 +54,16 @@ const blogPosts: BlogPost[] = [
     category: 'Market Analysis',
     imageUrl: '/api/placeholder/600/400',
     slug: 'real-state-housing-2025'
+  },
+  {
+    id: '5',
+    title: 'Bay Area Real Estate: The Market Shift Every Investor Must Know',
+    excerpt: 'The Bay Area real estate market is experiencing its most significant transformation since the pandemic. After years of frenzied seller\'s markets, we\'re seeing increased inventory, moderate price corrections, and genuine buyer leverage.',
+    date: 'October 15, 2025',
+    readTime: '8 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/bay area article header.png',
+    slug: 'bay-area-real-estate-shift'
   }
 ]
 
@@ -136,7 +146,7 @@ export default function BlogPage() {
                 <div className="md:w-1/2">
                   <div className="relative aspect-[5/3] bg-muted/10">
                     <Image
-                      src="/logos/article 1 (1).png"
+                      src="/logos/ARTICLE 1 (1).png"
                       alt="Housing Market Analysis 2025"
                       fill
                       className="object-cover rounded-l-xl md:rounded-l-none"
@@ -177,27 +187,34 @@ export default function BlogPage() {
 
           {/* Article Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogPosts.slice(0, 3).map((post) => (
+            {blogPosts.filter(post => post.id !== '4').map((post) => (
               <article key={post.id} className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-xl transition-all duration-300 group">
                 <div className="h-48 relative bg-muted/10">
                   {post.slug === 'big-beautiful-bill-tax-reform' ? (
                     <Image
-                      src="/logos/article 2.png"
+                      src="/logos/Article 2.png"
                       alt="Tax Reform Legislation"
                       fill
                       className="object-cover"
                     />
                   ) : post.slug === 'june-property-recap-12-deals' ? (
                     <Image
-                      src="/logos/article 3.png"
+                      src="/logos/ARTICLE 3.png"
                       alt="Property Deals Recap"
                       fill
                       className="object-cover"
                     />
                   ) : post.slug === 'missouri-capital-gains-elimination' ? (
                     <Image
-                      src="/logos/article 4.png"
+                      src="/logos/ARTICLE 4.png"
                       alt="Missouri Tax Strategy"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'bay-area-real-estate-shift' ? (
+                    <Image
+                      src="/logos/bay area article header.png"
+                      alt="Bay Area Real Estate Market"
                       fill
                       className="object-cover"
                     />
