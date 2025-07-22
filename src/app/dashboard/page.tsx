@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useState, useMemo } from 'react';
 import DealModal from './DealModal';
 import { useAuth } from '@/contexts/AuthContext';
+import FavoriteButton from '@/components/FavoriteButton';
+import SavePropertyButton from '@/components/SavePropertyButton';
 
 interface Deal {
   id: number;
@@ -547,10 +549,11 @@ export default function Dashboard() {
                       {deal.confidence.toUpperCase()}
                     </span>
                   </div>
-                  <div className="absolute top-4 right-4 z-10">
+                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
                     <span className="px-2 py-1 bg-accent/20 text-accent rounded-md text-xs font-medium">
                       {deal.type}
                     </span>
+                    <FavoriteButton propertyId={deal.id} size="medium" />
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                   <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -578,9 +581,12 @@ export default function Dashboard() {
                     </div>
                   </div>
                   {viewMode === 'list' && (
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary">${deal.price.toLocaleString()}</div>
-                      <div className="text-sm text-muted">Purchase Price</div>
+                    <div className="flex items-start gap-4">
+                      <FavoriteButton propertyId={deal.id} size="medium" />
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-primary">${deal.price.toLocaleString()}</div>
+                        <div className="text-sm text-muted">Purchase Price</div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -645,9 +651,10 @@ export default function Dashboard() {
                   >
                     View Details
                   </button>
-                  <button className="px-6 py-3 border border-border text-primary rounded-lg hover:bg-muted/5 transition-colors font-medium text-sm min-h-[44px] flex items-center justify-center">
-                    Save
-                  </button>
+                  <SavePropertyButton 
+                    propertyId={deal.id} 
+                    variant="outline"
+                  />
                 </div>
               </div>
             </div>

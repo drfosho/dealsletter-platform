@@ -1,10 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import MyAnalyzedProperties from '@/components/MyAnalyzedProperties';
+import { getUserFavoriteProperties } from '@/lib/supabase/favorites';
+import FavoriteButton from '@/components/FavoriteButton';
+import DealModal from '@/app/dashboard/DealModal';
 
 interface SavedProperty {
   id: number;
@@ -14,6 +18,18 @@ interface SavedProperty {
   savedDate: string;
   type: string;
   status: 'active' | 'sold' | 'pending';
+}
+
+interface Deal {
+  id: number;
+  title: string;
+  location: string;
+  type: string;
+  strategy: string;
+  price: number;
+  downPayment: number;
+  confidence: string;
+  [key: string]: unknown;
 }
 
 interface SavedFilter {
@@ -51,8 +67,10 @@ interface FilterFormData {
 interface InvestmentStats {
   totalSaved: number;
   activeFilters: number;
-  viewedThisMonth: number;
-  avgTimeOnSite: string;
+  analysesUsedThisMonth: number;
+  analysesLimitThisMonth: number;
+  avgROISaved: number;
+  bestDealROI: number;
 }
 
 export default function ProfilePage() {
@@ -65,6 +83,8 @@ export default function ProfilePage() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [filterToDelete, setFilterToDelete] = useState<SavedFilter | null>(null);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   // Filter form state
   const [filterForm, setFilterForm] = useState<FilterFormData>({
@@ -95,36 +115,212 @@ export default function ProfilePage() {
     preferredStrategy: user?.user_metadata?.preferred_strategy || [],
   });
 
-  // Mock data - in production this would come from your database
-  const [savedProperties] = useState<SavedProperty[]>([
+  // Saved properties from favorites
+  const [savedProperties, setSavedProperties] = useState<SavedProperty[]>([]);
+  // Removed unused variable: loadingSavedProperties
+
+  // The curated deals data (same as in dashboard) - full data for modal
+  const curatedDeals = useMemo(() => [
     {
       id: 1,
       title: "853 S 32nd Street",
       location: "San Diego, CA 92113",
-      price: 1295000,
-      savedDate: "2024-01-15",
       type: "Opportunity Zone",
-      status: 'active'
+      strategy: "BRRRR",
+      price: 1295000,
+      downPayment: 647500,
+      currentCapRate: 3.39,
+      proFormaCapRate: 5.63,
+      monthlyRent: 5905,
+      proFormaCashFlow: 1938,
+      rentUpside: 2495,
+      status: "active",
+      daysOnMarket: 2,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "Mixed",
+      bathrooms: "Mixed",
+      sqft: "7,325 sq ft lot",
+      yearBuilt: 1950,
+      features: ["Promise Zone", "Transit Priority", "ADU Potential"],
+      description: "4-unit mixed configuration property in an Opportunity Zone with significant value-add potential.",
+      riskLevel: "medium",
+      timeframe: "6-12 months",
+      cashRequired: 647500,
+      totalROI: 42.3
+    },
+    {
+      id: 2,
+      title: "6522 Bancroft Ave",
+      location: "Oakland, CA 94605",
+      type: "Premium Flip",
+      strategy: "Fix & Flip",
+      price: 979000,
+      downPayment: 979000,
+      arv: 1500000,
+      rehabBudget: 145000,
+      netProfit: 189000,
+      roi: 15.46,
+      annualizedROI: 31,
+      status: "active",
+      daysOnMarket: 3,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: 6,
+      bathrooms: 4,
+      sqft: 4280,
+      yearBuilt: 2005,
+      features: ["All Cash Only", "Luxury Finishes", "View Property"],
+      description: "High-end flip opportunity with tremendous upside in prime Oakland hills location.",
+      riskLevel: "low",
+      timeframe: "6 months",
+      cashRequired: 1124000,
+      totalROI: 16.82
+    },
+    {
+      id: 3,
+      title: "5815 Highland Ave",
+      location: "Richmond, CA 94804",
+      type: "House Hack",
+      strategy: "House Hack",
+      price: 975000,
+      downPayment: 33913,
+      monthlyRent: 3700,
+      units: 2,
+      cashFlow: 750,
+      status: "active",
+      daysOnMarket: 1,
+      confidence: "medium",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "3 + 1",
+      bathrooms: "2 + 1", 
+      sqft: 1656,
+      yearBuilt: 1953,
+      features: ["FHA 3.5%", "Separate Units", "Owner Occupied"],
+      description: "Perfect house hack opportunity with separate units and strong rental income.",
+      riskLevel: "low",
+      timeframe: "Immediate",
+      cashRequired: 68913,
+      totalROI: 45.5
     },
     {
       id: 4,
       title: "673 Doreen Way",
       location: "Lafayette, CA 94549",
-      price: 999900,
-      savedDate: "2024-01-18",
       type: "Premium Flip",
-      status: 'active'
+      strategy: "Fix & Flip",
+      price: 999900,
+      downPayment: 999900,
+      arv: 1650000,
+      rehabBudget: 200000,
+      netProfit: 246750,
+      roi: 20.56,
+      annualizedROI: 61.68,
+      status: "active",
+      daysOnMarket: 5,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: 3,
+      bathrooms: 2,
+      sqft: 1576,
+      yearBuilt: 1952,
+      features: ["Top Schools", "Cash Only", "Major Renovation"],
+      description: "Premium location flip in Lafayette with excellent schools and high-end buyer demand.",
+      riskLevel: "medium",
+      timeframe: "4 months",
+      cashRequired: 1199900,
+      totalROI: 20.56
+    },
+    {
+      id: 5,
+      title: "153 Burlwood Dr",
+      location: "San Francisco, CA 94127",
+      type: "Value-Add",
+      strategy: "Buy & Hold",
+      price: 1295000,
+      downPayment: 323750,
+      monthlyRent: 5600,
+      proFormaRent: 7200,
+      currentCapRate: 3.82,
+      proFormaCapRate: 5.04,
+      cashFlow: -672,
+      proFormaCashFlow: 928,
+      status: "active",
+      daysOnMarket: 1,
+      confidence: "medium",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: 3,
+      bathrooms: 2,
+      sqft: 1600,
+      yearBuilt: 1941,
+      features: ["ADU Potential", "SF Location", "Long-term Play"],
+      description: "San Francisco value-add opportunity with ADU potential in desirable West Portal.",
+      riskLevel: "medium",
+      timeframe: "12-18 months",
+      cashRequired: 373750,
+      totalROI: 38.5
     },
     {
       id: 6,
       title: "8110 MacArthur Blvd",
       location: "Oakland, CA 94605",
-      price: 1850000,
-      savedDate: "2024-01-20",
       type: "Value-Add Multifamily",
-      status: 'active'
+      strategy: "Buy & Hold",
+      price: 1850000,
+      downPayment: 462500,
+      units: 25,
+      pricePerUnit: 74000,
+      currentCapRate: 6.76,
+      proFormaCapRate: 7.84,
+      monthlyIncome: 18600,
+      proFormaCashFlow: 1693,
+      currentCashFlow: -1185,
+      status: "active",
+      daysOnMarket: 4,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "25x Studio",
+      bathrooms: "25x 1BA",
+      sqft: null,
+      yearBuilt: null,
+      features: ["Below Market Rents", "Value-Add", "Strong Cash Flow"],
+      description: "25-unit multifamily with significant rental upside in improving Oakland neighborhood.",
+      riskLevel: "medium",
+      timeframe: "3 years",
+      cashRequired: 518000,
+      totalROI: 55.22
+    },
+    {
+      id: 7,
+      title: "16118-16152 Mateo St",
+      location: "San Leandro, CA 94578",
+      type: "Premium Multifamily",
+      strategy: "Buy & Hold",
+      price: 1625000,
+      downPayment: 406250,
+      pricePerUnit: 270833,
+      units: 6,
+      currentCapRate: 5.36,
+      proFormaCapRate: 6.06,
+      monthlyIncome: 11772,
+      proFormaCashFlow: -111,
+      currentCashFlow: -1059,
+      status: "active",
+      daysOnMarket: 2,
+      confidence: "medium",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "4x 1BR, 2x 2BR",
+      bathrooms: "6x 1BA",
+      sqft: null,
+      yearBuilt: null,
+      features: ["No Shared Walls", "Tenant Pays ALL Utilities", "0.6mi to BART"],
+      description: "Unique 6-unit property with private garages, no shared walls, and ultra-low 35.5% OpEx ratio. In-unit W/D.",
+      riskLevel: "low",
+      timeframe: "Long-term",
+      cashRequired: 431250,
+      totalROI: 51.2
     }
-  ]);
+  ], []);
 
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([
     {
@@ -156,18 +352,53 @@ export default function ProfilePage() {
     }
   ]);
 
+  const fetchSavedProperties = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data: favorites } = await getUserFavoriteProperties(user.id);
+      
+      // Map the favorites to include deal details
+      const propertiesWithDetails = favorites
+        .map(fav => {
+          const deal = curatedDeals.find(d => d.id === fav.property_id);
+          if (deal) {
+            return {
+              id: fav.property_id,
+              title: deal.title,
+              location: deal.location,
+              price: deal.price,
+              type: deal.type,
+              savedDate: fav.saved_at,
+              status: 'active' as const
+            };
+          }
+          return null;
+        })
+        .filter((prop): prop is SavedProperty => prop !== null);
+      
+      setSavedProperties(propertiesWithDetails);
+    } catch (error) {
+      console.error('Error fetching saved properties:', error);
+    }
+  }, [user, curatedDeals]);
+
   const investmentStats: InvestmentStats = {
     totalSaved: savedProperties.length,
     activeFilters: savedFilters.filter(f => f.notifications).length,
-    viewedThisMonth: 47,
-    avgTimeOnSite: "12m 34s"
+    analysesUsedThisMonth: 8,
+    analysesLimitThisMonth: 15,
+    avgROISaved: 32.4,
+    bestDealROI: 67.2
   };
 
   useEffect(() => {
     if (!user) {
-      router.push('/login');
+      router.push('/auth/login');
+    } else {
+      fetchSavedProperties();
     }
-  }, [user, router]);
+  }, [user, router, fetchSavedProperties]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -648,45 +879,51 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-card rounded-xl border border-border/60 p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted">Member Since</span>
+                  <span className="text-sm text-muted">Analyses Used</span>
                   <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <p className="text-2xl font-bold text-primary">Jan 2024</p>
+                <p className="text-2xl font-bold text-primary">{investmentStats.analysesUsedThisMonth}/{investmentStats.analysesLimitThisMonth}</p>
+                <p className="text-xs text-muted mt-1">This month</p>
               </div>
 
               <div className="bg-card rounded-xl border border-border/60 p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted">Properties Viewed</span>
+                  <span className="text-sm text-muted">Average ROI</span>
                   <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
-                <p className="text-2xl font-bold text-primary">156</p>
+                <p className="text-2xl font-bold text-primary">{investmentStats.avgROISaved}%</p>
+                <p className="text-xs text-muted mt-1">Saved properties</p>
               </div>
 
               <div className="bg-card rounded-xl border border-border/60 p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted">Avg. Time on Site</span>
+                  <span className="text-sm text-muted">Best Deal ROI</span>
+                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
+                </div>
+                <p className="text-2xl font-bold text-primary">{investmentStats.bestDealROI}%</p>
+                <p className="text-xs text-muted mt-1">Your best find</p>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border/60 p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted">Remaining</span>
                   <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="text-2xl font-bold text-primary">{investmentStats.avgTimeOnSite}</p>
-              </div>
-
-              <div className="bg-card rounded-xl border border-border/60 p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted">Profile Views</span>
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <p className="text-2xl font-bold text-primary">23</p>
+                <p className="text-2xl font-bold text-primary">{investmentStats.analysesLimitThisMonth - investmentStats.analysesUsedThisMonth}</p>
+                <p className="text-xs text-muted mt-1">Analyses left</p>
               </div>
             </div>
+
+            {/* My Analyzed Properties */}
+            <MyAnalyzedProperties userId={user.id} />
           </div>
         )}
 
@@ -704,7 +941,17 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {savedProperties.map((property) => (
-                <div key={property.id} className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-lg transition-all duration-200">
+                <div 
+                  key={property.id} 
+                  className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  onClick={() => {
+                    const fullDeal = curatedDeals.find(d => d.id === property.id);
+                    if (fullDeal) {
+                      setSelectedDeal(fullDeal);
+                      setIsModalOpen(true);
+                    }
+                  }}
+                >
                   <div className="relative h-48 bg-muted/20">
                     <div className="absolute top-4 left-4 z-10">
                       <span className={`px-2 py-1 rounded-md text-xs font-medium ${
@@ -716,11 +963,11 @@ export default function ProfilePage() {
                       </span>
                     </div>
                     <div className="absolute top-4 right-4 z-10">
-                      <button className="w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                        <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                      </button>
+                      <FavoriteButton 
+                        propertyId={property.id} 
+                        size="medium"
+                        showTooltip={false}
+                      />
                     </div>
                     <div className="absolute bottom-4 left-4 text-white">
                       <p className="text-xs opacity-80">Saved {new Date(property.savedDate).toLocaleDateString()}</p>
@@ -1514,6 +1761,16 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Deal Modal */}
+      <DealModal 
+        deal={selectedDeal}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedDeal(null);
+        }}
+      />
     </div>
   );
 }

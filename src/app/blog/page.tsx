@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import Logo from '@/components/Logo'
+import { useState } from 'react'
 
 interface BlogPost {
   id: string
@@ -71,6 +72,8 @@ const blogPosts: BlogPost[] = [
 const categories = ['All', 'Tax Strategy', 'Market Analysis', 'Deal Recap', 'Policy Update']
 
 export default function BlogPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -110,7 +113,76 @@ export default function BlogPage() {
               Start Analyzing Deals
             </Link>
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-3 text-primary hover:text-accent transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Toggle mobile menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isMobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-6 py-4 bg-background/95 backdrop-blur-xl border-b border-border/20">
+              <div className="flex flex-col space-y-3">
+                <Link 
+                  href="/" 
+                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Home
+                </Link>
+                <Link 
+                  href="/blog"
+                  className="px-6 py-3 text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg bg-primary/10"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Blog
+                </Link>
+                <Link 
+                  href="/contact"
+                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Contact
+                </Link>
+                <Link 
+                  href="/faq"
+                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  FAQ
+                </Link>
+                <Link 
+                  href="/auth/login"
+                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Log In
+                </Link>
+                <Link 
+                  href="/auth/signup"
+                  className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Start Analyzing Deals
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Blog Content */}
