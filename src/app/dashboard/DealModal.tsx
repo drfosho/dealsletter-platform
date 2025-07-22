@@ -2052,11 +2052,11 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 md:p-4">
       <div className="bg-background w-full max-w-full md:max-w-5xl h-full md:max-h-[90vh] md:rounded-xl shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-border/20">
+        <div className="p-4 md:p-6 border-b border-border/20 flex-shrink-0">
           <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-primary">{deal.title}</h2>
-              <p className="text-muted">{deal.location}</p>
+            <div className="flex-1 pr-4">
+              <h2 className="text-xl md:text-2xl font-bold text-primary leading-tight">{deal.title}</h2>
+              <p className="text-muted text-sm md:text-base">{deal.location}</p>
             </div>
             <button
               onClick={onClose}
@@ -2070,11 +2070,11 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex gap-1 md:gap-2 mt-6 overflow-x-auto">
+          <div className="flex gap-1 md:gap-2 mt-4 md:mt-6 overflow-x-auto">
             {['overview', 'financing', 'rehab', 'returns'].map((tab) => (
               <button
                 key={tab}
-                className={`px-4 md:px-6 py-3 rounded-lg font-medium text-sm transition-colors min-h-[44px] flex items-center justify-center whitespace-nowrap ${
+                className={`px-3 md:px-6 py-2 md:py-3 rounded-lg font-medium text-xs md:text-sm transition-colors min-h-[40px] md:min-h-[44px] flex items-center justify-center whitespace-nowrap ${
                   activeTab === tab
                     ? 'bg-accent/10 text-accent'
                     : 'text-muted hover:text-primary hover:bg-muted/10'
@@ -2088,7 +2088,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
           {deal.id === 1 && renderSanDiegoDetails()}
           {deal.id === 2 && renderOaklandFlipDetails()}
           {deal.id === 3 && renderTampaDetails()}
@@ -2108,9 +2108,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-border/20">
-          <div className="flex items-center justify-between">
-            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20 flex-1 mr-4">
+        <div className="p-4 md:p-6 border-t border-border/20">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="bg-accent/10 rounded-lg p-3 md:p-4 border border-accent/20 flex-1 md:mr-4">
               {deal.id === 1 && (
                 <>
                   <p className="text-sm font-medium text-accent">🎯 Strategic Investment</p>
@@ -2176,11 +2176,11 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                 </>
               )}
             </div>
-            <div className="flex gap-3">
-              <button className="px-6 py-3 border border-border text-primary rounded-lg hover:bg-muted/5 transition-colors font-medium min-h-[44px] flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <button className="px-4 md:px-6 py-3 border border-border text-primary rounded-lg hover:bg-muted/5 transition-colors font-medium min-h-[44px] flex items-center justify-center text-sm md:text-base">
                 Download Analysis
               </button>
-              <button className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center">
+              <button className="px-4 md:px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center text-sm md:text-base">
                 Contact Agent
               </button>
             </div>
