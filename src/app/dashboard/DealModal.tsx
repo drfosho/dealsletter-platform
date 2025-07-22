@@ -2049,8 +2049,8 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 md:p-4">
-      <div className="bg-background w-full max-w-full md:max-w-5xl h-full md:max-h-[90vh] md:rounded-xl shadow-2xl flex flex-col">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 md:p-4 overflow-hidden">
+      <div className="bg-background w-full max-w-full md:max-w-5xl h-full md:max-h-[90vh] md:rounded-xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-4 md:p-6 border-b border-border/20 flex-shrink-0">
           <div className="flex items-start justify-between">
@@ -2108,9 +2108,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 md:p-6 border-t border-border/20">
+        <div className="p-4 md:p-6 border-t border-border/20 flex-shrink-0 bg-background shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="bg-accent/10 rounded-lg p-3 md:p-4 border border-accent/20 flex-1 md:mr-4">
+            <div className="bg-accent/10 rounded-lg p-2 sm:p-3 md:p-4 border border-accent/20 flex-1 sm:mr-2 md:mr-4">
               {deal.id === 1 && (
                 <>
                   <p className="text-sm font-medium text-accent">🎯 Strategic Investment</p>
