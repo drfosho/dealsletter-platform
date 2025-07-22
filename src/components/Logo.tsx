@@ -9,14 +9,14 @@ interface LogoProps {
 
 export default function Logo({ width = 400, height = 100, className = "", priority = false }: LogoProps) {
   return (
-    <div className={`relative ${className}`}>
+    <div className="relative">
       {/* Light mode logo */}
       <Image 
         src="/logos/websiteMainLogoLight.png" 
         alt="Dealsletter Logo" 
         width={width}
         height={height}
-        className="block dark:hidden w-full h-auto"
+        className={`block dark:hidden ${className}`}
         priority={priority}
       />
       {/* Dark mode logo */}
@@ -25,7 +25,7 @@ export default function Logo({ width = 400, height = 100, className = "", priori
         alt="Dealsletter Logo" 
         width={width}
         height={height}
-        className="hidden dark:block w-full h-auto"
+        className={`hidden dark:block ${className}`}
         priority={priority}
       />
     </div>
