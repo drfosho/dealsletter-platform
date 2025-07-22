@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import Logo from '@/components/Logo'
 import { useState } from 'react'
 
 interface FAQItem {
@@ -118,9 +118,7 @@ export default function FAQPage() {
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="relative">
-                <Image 
-                  src="/logos/Footer2.svg" 
-                  alt="Dealsletter Logo" 
+                <Logo 
                   width={400}
                   height={100}
                   className="h-16 md:h-20 w-auto"

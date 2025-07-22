@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import Logo from '@/components/Logo';
 
 export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -18,14 +19,11 @@ export default function Home() {
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="relative">
-                <Image 
-                  src="/logos/Footer2.svg" 
-                  alt="Dealsletter Logo" 
+                <Logo 
                   width={400}
                   height={100}
                   className="h-16 md:h-20 w-auto"
                   priority
-                  suppressHydrationWarning
                 />
                 <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
               </div>
@@ -969,13 +967,10 @@ export default function Home() {
             {/* Left side - Image */}
             <div className="hidden lg:block relative">
               <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/80 z-10"></div>
-              <Image 
-                src="/logos/Footer2.svg" 
-                alt="Dealsletter Illustration" 
+              <Logo 
                 width={500}
                 height={400}
                 className="w-full h-auto opacity-90"
-                suppressHydrationWarning
               />
             </div>
             
