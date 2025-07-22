@@ -1642,6 +1642,16 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           </div>
         </div>
       )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">✅</div>
+            <h3 className="text-xl font-semibold text-primary mb-2">No Rehab Needed</h3>
+            <p className="text-muted">This property is move-in ready and requires no immediate renovations</p>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -1862,6 +1872,16 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           </div>
         </div>
       )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">✅</div>
+            <h3 className="text-xl font-semibold text-primary mb-2">No Rehab Needed</h3>
+            <p className="text-muted">This property is currently generating income and requires no immediate renovations</p>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -2042,6 +2062,16 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
               </div>
             </div>
             <p className="text-xs text-muted mt-3">Perfect for investors who understand that great real estate isn&apos;t just about today&apos;s cash flow - it&apos;s about tomorrow&apos;s wealth.</p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">✅</div>
+            <h3 className="text-xl font-semibold text-primary mb-2">No Rehab Needed</h3>
+            <p className="text-muted">This property is well-maintained and requires no immediate renovations</p>
           </div>
         </div>
       )}
