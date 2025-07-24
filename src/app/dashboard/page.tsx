@@ -10,6 +10,7 @@ import FavoriteButton from '@/components/FavoriteButton';
 import SavePropertyButton from '@/components/SavePropertyButton';
 import ViewerTracker from '@/components/ViewerTracker';
 import ActivityBadges from '@/components/ActivityBadges';
+import MapView from './MapView';
 
 interface Deal {
   id: number;
@@ -27,7 +28,7 @@ export default function Dashboard() {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date');
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid');
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -602,6 +603,15 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
               </button>
+              <button
+                className={`px-4 py-3 min-h-[44px] min-w-[44px] flex items-center justify-center ${viewMode === 'map' ? 'bg-accent/10 text-accent' : 'text-muted hover:text-primary'}`}
+                onClick={() => setViewMode('map')}
+                aria-label="Map view"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -613,9 +623,19 @@ export default function Dashboard() {
           onClearFilters={handleClearFilters}
         />
 
-        {/* Deals Grid */}
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
-          {filteredDeals.map((deal) => (
+        {/* Content Area */}
+        {viewMode === 'map' ? (
+          <MapView 
+            deals={filteredDeals} 
+            onDealClick={(deal) => {
+              setSelectedDeal(deal);
+              setIsModalOpen(true);
+            }}
+          />
+        ) : (
+          /* Deals Grid/List */
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
+            {filteredDeals.map((deal) => (
             <div 
               key={deal.id} 
               className={`bg-card rounded-xl border border-border/60 transition-all duration-300 hover:shadow-2xl hover:shadow-accent/10 hover:border-accent/30 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer group ${viewMode === 'list' ? 'p-6' : 'overflow-hidden'}`}
@@ -754,11 +774,12 @@ export default function Dashboard() {
                   />
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-        {filteredDeals.length === 0 && (
+        {viewMode !== 'map' && filteredDeals.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-semibold text-primary mb-2">No deals found</h3>
