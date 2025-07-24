@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useRef, useCallback, useMemo } from 'react';
-import Map, { 
-  Marker, 
-  Popup, 
-  NavigationControl, 
-  FullscreenControl, 
-  ScaleControl,
-  GeolocateControl,
-  MapRef
-} from 'react-map-gl/mapbox';
+import { useState, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import { Icon, DivIcon } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import Supercluster from 'supercluster';
-import 'mapbox-gl/dist/mapbox-gl.css';
+
+// Dynamic imports for Leaflet components to avoid SSR issues
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
 
 interface Deal {
   id: number;
@@ -32,33 +31,33 @@ interface MapViewProps {
   onDealClick: (deal: Deal) => void;
 }
 
-// Mapbox public token - in production, use environment variable
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGVhbHNsZXR0ZXIiLCJhIjoiY2x3bGF2OGp4MDM0cDJqbnh4Z3NrMzdwdiJ9.J4j9J6iZ2yIpD4tTD9Y0vw';
+// Fix default icon issue with Leaflet
+if (typeof window !== 'undefined') {
+  delete (Icon.Default.prototype as { _getIconUrl?: unknown })._getIconUrl;
+  Icon.Default.mergeOptions({
+    iconRetinaUrl: '/leaflet/marker-icon-2x.png',
+    iconUrl: '/leaflet/marker-icon.png',
+    shadowUrl: '/leaflet/marker-shadow.png',
+  });
+}
 
 const MapView = ({ deals, onDealClick }: MapViewProps) => {
-  const [popupInfo, setPopupInfo] = useState<Deal | null>(null);
-  const [viewState, setViewState] = useState({
-    longitude: -117.1611, // San Diego center
-    latitude: 32.7157,
-    zoom: 9
-  });
-
-  const mapRef = useRef<MapRef>(null);
+  const [zoom, setZoom] = useState(9);
 
   // Convert location strings to coordinates (simplified geocoding)
   const dealsWithCoords = useMemo(() => {
     const locationCoords: { [key: string]: [number, number] } = {
-      'San Diego, CA 92113': [-117.1276, 32.7030],
-      'San Diego, CA 92110': [-117.2073, 32.7767],
-      'Oakland, CA 94605': [-122.1430, 37.7516],
-      'Tampa, FL 33609': [-82.5107, 27.9407],
-      'Lafayette, CA 94549': [-122.1180, 37.8857],
-      'San Leandro, CA 94578': [-122.1561, 37.7249]
+      'San Diego, CA 92113': [32.7030, -117.1276],
+      'San Diego, CA 92110': [32.7767, -117.2073],
+      'Oakland, CA 94605': [37.7516, -122.1430],
+      'Tampa, FL 33609': [27.9407, -82.5107],
+      'Lafayette, CA 94549': [37.8857, -122.1180],
+      'San Leandro, CA 94578': [37.7249, -122.1561]
     };
 
     return deals.map(deal => ({
       ...deal,
-      coordinates: locationCoords[deal.location] || [-117.1611, 32.7157] // Default to San Diego
+      coordinates: locationCoords[deal.location] || [32.7157, -117.1611] // Default to San Diego
     }));
   }, [deals]);
 
@@ -73,7 +72,7 @@ const MapView = ({ deals, onDealClick }: MapViewProps) => {
       },
       geometry: {
         type: 'Point' as const,
-        coordinates: deal.coordinates
+        coordinates: [deal.coordinates![1], deal.coordinates![0]] // Note: Leaflet uses [lat, lng]
       }
     }));
 
@@ -84,10 +83,10 @@ const MapView = ({ deals, onDealClick }: MapViewProps) => {
 
     supercluster.load(points);
 
-    const clusters = supercluster.getClusters([-180, -85, 180, 85], Math.floor(viewState.zoom));
+    const clusters = supercluster.getClusters([-180, -85, 180, 85], Math.floor(zoom));
 
     return { clusters, supercluster };
-  }, [dealsWithCoords, viewState.zoom]);
+  }, [dealsWithCoords, zoom]);
 
   // Get pin color based on ROI
   const getPinColor = useCallback((deal: Deal) => {
@@ -97,82 +96,80 @@ const MapView = ({ deals, onDealClick }: MapViewProps) => {
     return '#EF4444'; // Red for low ROI
   }, []);
 
-  // Dark theme map style
-  const mapStyle = 'mapbox://styles/mapbox/dark-v11';
-
-  const onMapClick = useCallback(() => {
-    setPopupInfo(null);
+  // Create custom icon for markers
+  const createIcon = useCallback((color: string) => {
+    return new Icon({
+      iconUrl: `data:image/svg+xml;base64,${btoa(`
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="${color}" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="2"/>
+          <circle cx="12" cy="12" r="3" fill="white"/>
+        </svg>
+      `)}`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12]
+    });
   }, []);
 
-  const onMarkerClick = useCallback((deal: Deal, event: { originalEvent: { stopPropagation: () => void } }) => {
-    event.originalEvent.stopPropagation();
-    setPopupInfo(deal);
+  // Create cluster icon
+  const createClusterIcon = useCallback((count: number) => {
+    const size = 10 + (count / 100) * 20;
+    return new DivIcon({
+      html: `<div style="
+        background: #3b82f6;
+        color: white;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        width: ${Math.max(32, size)}px;
+        height: ${Math.max(32, size)}px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+      ">${count}</div>`,
+      className: 'leaflet-cluster-icon',
+      iconSize: [Math.max(32, size), Math.max(32, size)]
+    });
   }, []);
 
-  const onClusterClick = useCallback((clusterId: number, event: { originalEvent: { stopPropagation: () => void } }) => {
-    event.originalEvent.stopPropagation();
+  const onClusterClick = useCallback((clusterId: number) => {
     const expansionZoom = Math.min(supercluster.getClusterExpansionZoom(clusterId), 20);
-    const cluster = clusters.find(c => c.properties.cluster_id === clusterId);
-    
-    if (cluster) {
-      setViewState({
-        ...viewState,
-        longitude: cluster.geometry.coordinates[0],
-        latitude: cluster.geometry.coordinates[1],
-        zoom: expansionZoom,
-      });
-    }
-  }, [clusters, supercluster, viewState]);
+    // Update zoom state for cluster recalculation
+    setZoom(expansionZoom);
+  }, [supercluster]);
 
   return (
-    <div className="w-full h-[600px] bg-card rounded-lg overflow-hidden border border-border/60 relative">
-      
-      <Map
-        ref={mapRef}
-        {...viewState}
-        onMove={evt => setViewState(evt.viewState)}
+    <div className="w-full h-[600px] bg-card rounded-lg overflow-hidden border border-border/60">
+      <MapContainer
+        center={[32.7157, -117.1611]} // San Diego center
+        zoom={9}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={mapStyle}
-        mapboxAccessToken={MAPBOX_TOKEN}
-        onClick={onMapClick}
-        interactiveLayerIds={[]}
+        className="leaflet-dark"
       >
-        {/* Map Controls */}
-        <NavigationControl position="top-right" />
-        <FullscreenControl position="top-right" />
-        <ScaleControl position="bottom-left" />
-        <GeolocateControl
-          position="top-right"
-          trackUserLocation={true}
-          showUserHeading={true}
+        
+        {/* Dark themed tile layer using CartoDB Dark Matter */}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
-        {/* Clustered Markers */}
+        {/* Render markers */}
         {clusters.map((cluster) => {
-          const [longitude, latitude] = cluster.geometry.coordinates;
+          const [lng, lat] = cluster.geometry.coordinates;
           const { cluster: isCluster, point_count: pointCount } = cluster.properties;
 
           if (isCluster) {
             return (
               <Marker
                 key={`cluster-${cluster.id}`}
-                longitude={longitude}
-                latitude={latitude}
-                anchor="center"
-                onClick={(e) => onClusterClick(cluster.id as number, e)}
-              >
-                <div
-                  className="bg-accent text-white rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200 flex items-center justify-center font-bold text-sm"
-                  style={{
-                    width: `${10 + (pointCount / 100) * 20}px`,
-                    height: `${10 + (pointCount / 100) * 20}px`,
-                    minWidth: '32px',
-                    minHeight: '32px'
-                  }}
-                >
-                  {pointCount}
-                </div>
-              </Marker>
+                position={[lat, lng]}
+                icon={createClusterIcon(pointCount)}
+                eventHandlers={{
+                  click: () => onClusterClick(cluster.id as number)
+                }}
+              />
             );
           }
 
@@ -180,80 +177,57 @@ const MapView = ({ deals, onDealClick }: MapViewProps) => {
           return (
             <Marker
               key={`deal-${deal.id}`}
-              longitude={longitude}
-              latitude={latitude}
-              anchor="bottom"
-              onClick={(e) => onMarkerClick(deal, e)}
+              position={[lat, lng]}
+              icon={createIcon(getPinColor(deal))}
             >
-              <div
-                className="w-6 h-6 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200 flex items-center justify-center"
-                style={{ backgroundColor: getPinColor(deal) }}
-              >
-                <div className="w-2 h-2 bg-white rounded-full"></div>
-              </div>
+              <Popup className="leaflet-dark-popup">
+                <div className="min-w-[280px] p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-sm">{deal.title}</h3>
+                      <p className="text-xs text-gray-400 mt-1">{deal.location}</p>
+                    </div>
+                    <span className="px-2 py-1 bg-blue-900 text-blue-300 rounded text-xs font-medium">
+                      {deal.type}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2 mb-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-400">Price</span>
+                      <span className="text-sm font-semibold">
+                        ${deal.price.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-400">Strategy</span>
+                      <span className="text-sm font-medium">{deal.strategy}</span>
+                    </div>
+                    {deal.totalROI && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-400">ROI</span>
+                        <span 
+                          className="text-sm font-semibold"
+                          style={{ color: getPinColor(deal) }}
+                        >
+                          {deal.totalROI.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={() => onDealClick(deal)}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </Popup>
             </Marker>
           );
         })}
-
-        {/* Popup */}
-        {popupInfo && (
-          <Popup
-            longitude={popupInfo.coordinates?.[0] || 0}
-            latitude={popupInfo.coordinates?.[1] || 0}
-            anchor="top"
-            onClose={() => setPopupInfo(null)}
-            closeButton={true}
-            closeOnClick={false}
-            className="map-popup"
-          >
-            <div className="bg-card p-4 rounded-lg border border-border/60 min-w-[280px]">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-primary text-sm">{popupInfo.title}</h3>
-                  <p className="text-xs text-muted mt-1">{popupInfo.location}</p>
-                </div>
-                <span className="px-2 py-1 bg-accent/10 text-accent rounded text-xs font-medium">
-                  {popupInfo.type}
-                </span>
-              </div>
-              
-              <div className="space-y-2 mb-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted">Price</span>
-                  <span className="text-sm font-semibold text-primary">
-                    ${popupInfo.price.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted">Strategy</span>
-                  <span className="text-sm font-medium text-primary">{popupInfo.strategy}</span>
-                </div>
-                {popupInfo.totalROI && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted">ROI</span>
-                    <span 
-                      className="text-sm font-semibold"
-                      style={{ color: getPinColor(popupInfo) }}
-                    >
-                      {popupInfo.totalROI.toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              <button
-                onClick={() => {
-                  onDealClick(popupInfo);
-                  setPopupInfo(null);
-                }}
-                className="w-full px-4 py-2 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
-              >
-                View Details
-              </button>
-            </div>
-          </Popup>
-        )}
-      </Map>
+      </MapContainer>
     </div>
   );
 };

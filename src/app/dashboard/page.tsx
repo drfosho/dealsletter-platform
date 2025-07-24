@@ -10,7 +10,14 @@ import FavoriteButton from '@/components/FavoriteButton';
 import SavePropertyButton from '@/components/SavePropertyButton';
 import ViewerTracker from '@/components/ViewerTracker';
 import ActivityBadges from '@/components/ActivityBadges';
-import MapView from './MapView';
+import dynamic from 'next/dynamic';
+
+const MapView = dynamic(() => import('./MapView'), { 
+  ssr: false,
+  loading: () => <div className="w-full h-[600px] bg-card rounded-lg overflow-hidden border border-border/60 flex items-center justify-center">
+    <div className="text-muted">Loading map...</div>
+  </div>
+});
 
 interface Deal {
   id: number;
