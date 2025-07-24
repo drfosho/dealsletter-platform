@@ -120,9 +120,9 @@ export default function FAQPage() {
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="relative">
                 <Logo 
-                  width={400}
-                  height={100}
-                  className="h-16 md:h-20 w-auto"
+                  width={300}
+                  height={75}
+                  className="h-12 md:h-16 w-auto"
                   priority
                 />
                 <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
