@@ -2,11 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import DealModal from './DealModal';
+import FilterBar from './FilterBar';
 import { useAuth } from '@/contexts/AuthContext';
 import FavoriteButton from '@/components/FavoriteButton';
 import SavePropertyButton from '@/components/SavePropertyButton';
+import ViewerTracker from '@/components/ViewerTracker';
+import ActivityBadges from '@/components/ActivityBadges';
 
 interface Deal {
   id: number;
@@ -28,6 +31,12 @@ export default function Dashboard() {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    market: 'all',
+    strategy: 'all',
+    priceRange: [0, 2000000] as [number, number],
+    minROI: 0
+  });
   const { user, signOut } = useAuth();
 
   // Sample deals data - in real app this would come from API
@@ -131,7 +140,7 @@ export default function Dashboard() {
       roi: 75.3,
       annualizedROI: 225.9,
       status: "active",
-      daysOnMarket: 0,
+      daysOnMarket: 0, // This will show NEW badge
       confidence: "high",
       images: ["/api/placeholder/400/300"],
       bedrooms: 4,
@@ -255,6 +264,48 @@ export default function Dashboard() {
       );
     }
 
+    // Market filter
+    if (filters.market !== 'all') {
+      const marketMap: { [key: string]: string[] } = {
+        'san-diego': ['San Diego'],
+        'bay-area': ['Oakland', 'Lafayette', 'San Leandro'],
+        'los-angeles': ['Los Angeles'],
+        'kansas-city': ['Kansas City'],
+        'tampa': ['Tampa']
+      };
+      
+      const targetCities = marketMap[filters.market] || [];
+      filtered = filtered.filter(deal =>
+        targetCities.some(city => deal.location.includes(city))
+      );
+    }
+
+    // Strategy filter
+    if (filters.strategy !== 'all') {
+      const strategyMap: { [key: string]: string } = {
+        'fix-flip': 'Fix & Flip',
+        'brrrr': 'BRRRR',
+        'buy-hold': 'Buy & Hold',
+        'house-hack': 'House Hack'
+      };
+      
+      filtered = filtered.filter(deal =>
+        deal.strategy === strategyMap[filters.strategy]
+      );
+    }
+
+    // Price range filter
+    filtered = filtered.filter(deal =>
+      deal.price >= filters.priceRange[0] && deal.price <= filters.priceRange[1]
+    );
+
+    // Min ROI filter
+    if (filters.minROI > 0) {
+      filtered = filtered.filter(deal =>
+        (deal.totalROI || 0) >= filters.minROI
+      );
+    }
+
     // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -271,7 +322,7 @@ export default function Dashboard() {
     });
 
     return filtered;
-  }, [selectedFilter, searchTerm, sortBy, deals]);
+  }, [selectedFilter, searchTerm, sortBy, deals, filters]);
 
   const stats = {
     totalDeals: deals.length,
@@ -279,6 +330,27 @@ export default function Dashboard() {
     avgROI: deals.reduce((sum, deal) => sum + (deal.totalROI || 0), 0) / deals.length,
     highConfidence: deals.filter(deal => deal.confidence === 'high').length
   };
+
+  const handleFiltersChange = useCallback((newFilters: {
+    market: string;
+    strategy: string;
+    priceRange: [number, number];
+    minROI: number;
+  }) => {
+    setFilters(newFilters);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    const maxPrice = deals.length > 0 ? Math.max(...deals.map(deal => deal.price)) : 2000000;
+    const roundedMaxPrice = Math.ceil(maxPrice / 100000) * 100000;
+    
+    setFilters({
+      market: 'all',
+      strategy: 'all',
+      priceRange: [0, roundedMaxPrice],
+      minROI: 0
+    });
+  }, [deals]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -534,13 +606,24 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Filter Bar */}
+        <FilterBar 
+          deals={deals}
+          onFiltersChange={handleFiltersChange}
+          onClearFilters={handleClearFilters}
+        />
+
         {/* Deals Grid */}
         <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
           {filteredDeals.map((deal) => (
-            <div key={deal.id} className={`bg-card rounded-xl border border-border/60 hover:shadow-lg transition-all duration-200 ${viewMode === 'list' ? 'p-6' : 'overflow-hidden'}`}>
+            <div 
+              key={deal.id} 
+              className={`bg-card rounded-xl border border-border/60 transition-all duration-300 hover:shadow-2xl hover:shadow-accent/10 hover:border-accent/30 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer group ${viewMode === 'list' ? 'p-6' : 'overflow-hidden'}`}
+            >
               {viewMode === 'grid' && (
-                <div className="relative h-48 bg-muted/20">
-                  <div className="absolute top-4 left-4 z-10">
+                <div className="relative h-48 bg-muted/20 overflow-hidden">
+                  {/* Top overlay - confidence and activity badges */}
+                  <div className="absolute top-4 left-4 z-10 flex items-start gap-2">
                     <span className={`px-2 py-1 rounded-md text-xs font-medium ${
                       deal.confidence === 'high' ? 'bg-green-500/20 text-green-600' :
                       deal.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-600' :
@@ -548,16 +631,28 @@ export default function Dashboard() {
                     }`}>
                       {deal.confidence.toUpperCase()}
                     </span>
+                    <ActivityBadges deal={deal} />
                   </div>
+                  
+                  {/* Top right - deal type and favorite */}
                   <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
                     <span className="px-2 py-1 bg-accent/20 text-accent rounded-md text-xs font-medium">
                       {deal.type}
                     </span>
                     <FavoriteButton propertyId={deal.id} size="medium" />
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <div className="text-xs opacity-80">{deal.daysOnMarket} days ago</div>
+                  
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                  
+                  {/* Bottom overlay - viewer count and time */}
+                  <div className="absolute bottom-4 left-4 right-4 z-10">
+                    <div className="flex items-end justify-between">
+                      <ViewerTracker dealId={deal.id} />
+                      <div className="text-white text-xs opacity-80">
+                        {deal.daysOnMarket} days ago
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -567,7 +662,7 @@ export default function Dashboard() {
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-primary mb-1">{deal.title}</h3>
                     <p className="text-sm text-muted mb-2">{deal.location}</p>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <span className="px-2 py-1 bg-accent/10 text-accent rounded-md text-xs font-medium">
                         {deal.strategy}
                       </span>
@@ -578,6 +673,8 @@ export default function Dashboard() {
                       }`}>
                         {deal.riskLevel.toUpperCase()} RISK
                       </span>
+                      <ActivityBadges deal={deal} />
+                      {viewMode === 'list' && <ViewerTracker dealId={deal.id} />}
                     </div>
                   </div>
                   {viewMode === 'list' && (
