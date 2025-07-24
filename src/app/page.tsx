@@ -53,8 +53,7 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // Current page detection (simplified for homepage)
-  const currentPage = '/';
+  // Homepage component - no current page highlighting needed
   return (
     <div className="min-h-screen bg-background">
       {/* Enhanced Navigation */}
@@ -84,81 +83,39 @@ export default function Home() {
               <>
                 <Link 
                   href="/dashboard" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/dashboard' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   Dashboard
-                  {currentPage === '/dashboard' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/profile" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/profile' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   My Portfolio
-                  {currentPage === '/profile' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/pricing" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/pricing' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   Pricing
-                  {currentPage === '/pricing' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/blog" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/blog' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   Blog
-                  {currentPage === '/blog' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/contact" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/contact' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   Contact
-                  {currentPage === '/contact' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/faq" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/faq' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   FAQ
-                  {currentPage === '/faq' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <button 
                   onClick={() => signOut()}
@@ -171,55 +128,27 @@ export default function Home() {
               <>
                 <Link 
                   href="/pricing" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/pricing' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   Pricing
-                  {currentPage === '/pricing' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/blog" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/blog' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   Blog
-                  {currentPage === '/blog' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/contact" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/contact' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   Contact
-                  {currentPage === '/contact' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/faq" 
-                  className={`relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center ${
-                    currentPage === '/faq' 
-                      ? 'text-accent bg-accent/10 shadow-sm' 
-                      : 'text-primary/80 hover:text-primary hover:bg-primary/5'
-                  }`}
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
                 >
                   FAQ
-                  {currentPage === '/faq' && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
-                  )}
                 </Link>
                 <Link 
                   href="/auth/login" 
@@ -271,11 +200,7 @@ export default function Home() {
                   <>
                     <Link 
                       href="/dashboard"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/dashboard' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,94 +208,56 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 15v-4a2 2 0 012-2h4a2 2 0 012 2v4" />
                       </svg>
                       Dashboard
-                      {currentPage === '/dashboard' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/profile"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/profile' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       My Portfolio
-                      {currentPage === '/profile' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/pricing"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/pricing' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                       </svg>
                       Pricing
-                      {currentPage === '/pricing' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/blog"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/blog' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                       </svg>
                       Blog
-                      {currentPage === '/blog' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/contact"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/contact' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                       Contact
-                      {currentPage === '/contact' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/faq"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/faq' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       FAQ
-                      {currentPage === '/faq' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <button 
                       onClick={() => {
@@ -389,71 +276,43 @@ export default function Home() {
                   <>
                     <Link 
                       href="/pricing"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/pricing' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                       </svg>
                       Pricing
-                      {currentPage === '/pricing' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/blog"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/blog' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
                       </svg>
                       Blog
-                      {currentPage === '/blog' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/contact"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/contact' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                       Contact
-                      {currentPage === '/contact' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/faq"
-                      className={`relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center ${
-                        currentPage === '/faq' 
-                          ? 'text-accent bg-accent/15 shadow-sm border border-accent/20' 
-                          : 'text-primary/80 hover:text-primary hover:bg-primary/8'
-                      }`}
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       FAQ
-                      {currentPage === '/faq' && (
-                        <div className="absolute right-4 w-2 h-2 bg-accent rounded-full"></div>
-                      )}
                     </Link>
                     <Link 
                       href="/auth/login"

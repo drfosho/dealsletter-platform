@@ -71,6 +71,7 @@ interface InvestmentStats {
   analysesLimitThisMonth: number;
   avgROISaved: number;
   bestDealROI: number;
+  viewedThisMonth: number;
 }
 
 export default function ProfilePage() {
@@ -375,7 +376,7 @@ export default function ProfilePage() {
           }
           return null;
         })
-        .filter((prop): prop is SavedProperty => prop !== null);
+        .filter((prop): prop is NonNullable<typeof prop> => prop !== null) as SavedProperty[];
       
       setSavedProperties(propertiesWithDetails);
     } catch (error) {
@@ -389,7 +390,8 @@ export default function ProfilePage() {
     analysesUsedThisMonth: 8,
     analysesLimitThisMonth: 15,
     avgROISaved: 32.4,
-    bestDealROI: 67.2
+    bestDealROI: 67.2,
+    viewedThisMonth: 24
   };
 
   useEffect(() => {

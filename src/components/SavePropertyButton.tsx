@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   savePropertyToFavorites, 
@@ -23,18 +23,18 @@ export default function SavePropertyButton({
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      checkSaveStatus();
-    }
-  }, [user, propertyId]);
-
-  const checkSaveStatus = async () => {
+  const checkSaveStatus = useCallback(async () => {
     if (!user) return;
     
     const { isFavorited } = await isPropertyFavorited(user.id, propertyId);
     setIsSaved(isFavorited);
-  };
+  }, [user, propertyId]);
+
+  useEffect(() => {
+    if (user) {
+      checkSaveStatus();
+    }
+  }, [user, checkSaveStatus]);
 
   const handleToggleSave = async (e: React.MouseEvent) => {
     e.preventDefault();

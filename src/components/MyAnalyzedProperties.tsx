@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { 
   getUserAnalyzedProperties, 
@@ -18,11 +18,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchProperties();
-  }, [userId]);
-
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await getUserAnalyzedProperties(userId, 4);
@@ -40,7 +36,11 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    fetchProperties();
+  }, [fetchProperties]);
 
   const handleToggleFavorite = async (propertyId: string) => {
     try {
@@ -53,7 +53,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
         )
       );
 
-      const { error } = await togglePropertyFavorite(propertyId, userId);
+      const { error } = await togglePropertyFavorite(propertyId);
       
       if (error) {
         // Revert on error
@@ -89,7 +89,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
       const originalProperties = properties;
       setProperties(prev => prev.filter(property => property.id !== propertyId));
 
-      const { error } = await removeAnalyzedProperty(propertyId, userId);
+      const { error } = await removeAnalyzedProperty(propertyId);
       
       if (error) {
         // Revert on error

@@ -9,7 +9,7 @@ export interface AnalyzedProperty {
   profit: number;
   deal_type: string;
   is_favorite: boolean;
-  analysis_data?: any; // Store full analysis results as JSON
+  analysis_data?: Record<string, unknown>; // Store full analysis results as JSON
   created_at: string;
   updated_at: string;
 }
@@ -162,7 +162,7 @@ export async function saveAnalyzedProperty(property: Omit<AnalyzedProperty, 'id'
  * @param propertyId - The property ID
  * @param userId - The user's ID (for security)
  */
-export async function togglePropertyFavorite(propertyId: string, userId: string) {
+export async function togglePropertyFavorite(propertyId: string) {
   try {
     // Mock implementation - just return success
     console.log('Toggle favorite for property:', propertyId);
@@ -215,7 +215,7 @@ export async function togglePropertyFavorite(propertyId: string, userId: string)
  * @param propertyId - The property ID
  * @param userId - The user's ID (for security)
  */
-export async function removeAnalyzedProperty(propertyId: string, userId: string) {
+export async function removeAnalyzedProperty(propertyId: string) {
   try {
     // Mock implementation - just return success
     console.log('Remove property:', propertyId);

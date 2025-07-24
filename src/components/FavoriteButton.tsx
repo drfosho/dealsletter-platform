@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   savePropertyToFavorites, 
@@ -33,18 +33,18 @@ export default function FavoriteButton({
     large: 'w-6 h-6'
   };
 
-  useEffect(() => {
-    if (user) {
-      checkFavoriteStatus();
-    }
-  }, [user, propertyId]);
-
-  const checkFavoriteStatus = async () => {
+  const checkFavoriteStatus = useCallback(async () => {
     if (!user) return;
     
     const { isFavorited } = await isPropertyFavorited(user.id, propertyId);
     setIsFavorited(isFavorited);
-  };
+  }, [user, propertyId]);
+
+  useEffect(() => {
+    if (user) {
+      checkFavoriteStatus();
+    }
+  }, [user, checkFavoriteStatus]);
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
