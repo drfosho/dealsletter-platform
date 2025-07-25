@@ -1,7 +1,5 @@
 'use client';
 
-import Image from 'next/image';
-import Link from 'next/link';
 import { useState, useMemo, useCallback } from 'react';
 import DealModal from './DealModal';
 import FilterBar from './FilterBar';
@@ -45,7 +43,7 @@ export default function Dashboard() {
     priceRange: [0, 2000000] as [number, number],
     minROI: 0
   });
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   // Sample deals data - in real app this would come from API
   const deals = useMemo(() => [

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +23,7 @@ export default function Navigation({ variant = 'default' }: NavigationProps) {
     if (user?.id) {
       fetchUserData();
     }
-  }, [user?.id]);
+  }, [user?.id, fetchUserData]);
 
   useEffect(() => {
     // Close dropdown when clicking outside
@@ -37,7 +37,7 @@ export default function Navigation({ variant = 'default' }: NavigationProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user?.id) return;
 
     try {
@@ -59,7 +59,7 @@ export default function Navigation({ variant = 'default' }: NavigationProps) {
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
-  };
+  }, [user?.id]);
 
   const getInitials = () => {
     const firstName = user?.user_metadata?.first_name;

@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { 
   checkAnalysisUsage, 
   getCurrentMonthUsage,
-  getRemainingAnalysesMessage,
-  calculateRemainingAnalyses,
   type UsageCheckResult 
 } from '@/lib/supabase/usage-tracking';
 
@@ -29,9 +27,9 @@ export default function UsageTracker({
 
   useEffect(() => {
     fetchUsage();
-  }, [userId]);
+  }, [userId, fetchUsage]);
 
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -49,7 +47,7 @@ export default function UsageTracker({
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   if (loading) {
     return (

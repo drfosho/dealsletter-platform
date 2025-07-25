@@ -168,7 +168,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
           <p className="text-sm text-muted mb-4">Unable to load analyzed properties</p>
           {process.env.NODE_ENV === 'development' && (
             <div className="text-xs text-muted/60 max-w-md mx-auto">
-              <p className="mb-2">This is likely because the database table hasn't been created yet.</p>
+              <p className="mb-2">This is likely because the database table hasn&apos;t been created yet.</p>
               <p>Run the migration in <code className="bg-muted/20 px-1 py-0.5 rounded">supabase/migrations/create_analyzed_properties_table.sql</code> in your Supabase dashboard.</p>
             </div>
           )}

@@ -390,7 +390,26 @@ export default function ProfilePage() {
   }, [user, curatedDeals]);
 
   const subscriptionLimit = SUBSCRIPTION_LIMITS[subscriptionTier];
-  const remainingAnalyses = calculateRemainingAnalyses(subscriptionTier, monthlyUsage);
+
+  const fetchProfileAndUsage = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      // Fetch user profile
+      const { data: profile } = await getUserProfile(user.id);
+      if (profile) {
+        setSubscriptionTier(profile.subscription_tier || 'basic');
+      }
+
+      // Fetch current month usage
+      const { data: usage } = await getCurrentMonthUsage(user.id);
+      if (usage) {
+        setMonthlyUsage(usage.analysis_count);
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+    }
+  }, [user?.id]);
 
   const investmentStats: InvestmentStats = {
     totalSaved: savedProperties.length,
@@ -409,27 +428,7 @@ export default function ProfilePage() {
       fetchSavedProperties();
       fetchProfileAndUsage();
     }
-  }, [user, router, fetchSavedProperties]);
-
-  const fetchProfileAndUsage = async () => {
-    if (!user?.id) return;
-
-    try {
-      // Fetch user profile
-      const { data: profile } = await getUserProfile(user.id);
-      if (profile) {
-        setSubscriptionTier(profile.subscription_tier || 'basic');
-      }
-
-      // Fetch current month usage
-      const { data: usage } = await getCurrentMonthUsage(user.id);
-      if (usage) {
-        setMonthlyUsage(usage.analysis_count);
-      }
-    } catch (error) {
-      console.error('Error fetching profile data:', error);
-    }
-  };
+  }, [user, router, fetchSavedProperties, fetchProfileAndUsage]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

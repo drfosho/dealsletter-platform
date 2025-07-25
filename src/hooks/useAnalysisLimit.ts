@@ -9,7 +9,7 @@ interface UseAnalysisLimitReturn {
   canAnalyze: boolean;
   remainingAnalyses: number;
   checkAndIncrementUsage: () => Promise<boolean>;
-  saveAnalysis: (analysisData: any) => Promise<boolean>;
+  saveAnalysis: (analysisData: Record<string, unknown>) => Promise<boolean>;
   loading: boolean;
   error: string | null;
   showUpgradePrompt: boolean;
@@ -67,7 +67,7 @@ export function useAnalysisLimit(): UseAnalysisLimitReturn {
     }
   }, [user?.id]);
 
-  const saveAnalysis = useCallback(async (analysisData: any): Promise<boolean> => {
+  const saveAnalysis = useCallback(async (analysisData: Record<string, unknown>): Promise<boolean> => {
     if (!user?.id) {
       setError('You must be logged in to save analyses');
       return false;

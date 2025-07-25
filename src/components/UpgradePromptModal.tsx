@@ -21,7 +21,7 @@ export default function UpgradePromptModal({
     if (subscriptionTier === 'basic') {
       return {
         title: 'Unlock Property Analysis',
-        description: 'Your Basic plan doesn\'t include property analysis. Upgrade to start analyzing deals and finding profitable investments.',
+        description: 'Your Basic plan doesn&apos;t include property analysis. Upgrade to start analyzing deals and finding profitable investments.',
         features: [
           '15 property analyses per month with Pro',
           'Unlimited analyses with Premium',
@@ -35,7 +35,7 @@ export default function UpgradePromptModal({
     } else {
       return {
         title: 'Monthly Limit Reached',
-        description: 'You\'ve used all 15 analyses for this month. Upgrade to Premium for unlimited access.',
+        description: 'You&apos;ve used all 15 analyses for this month. Upgrade to Premium for unlimited access.',
         features: [
           'Unlimited property analyses',
           'No monthly restrictions',
