@@ -11,6 +11,7 @@ import SavePropertyButton from '@/components/SavePropertyButton';
 import ViewerTracker from '@/components/ViewerTracker';
 import ActivityBadges from '@/components/ActivityBadges';
 import dynamic from 'next/dynamic';
+import Navigation from '@/components/Navigation';
 
 const MapView = dynamic(() => import('./MapView'), { 
   ssr: false,
@@ -38,7 +39,6 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid');
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [filters, setFilters] = useState({
     market: 'all',
     strategy: 'all',
@@ -362,164 +362,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border/20 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="hover:opacity-80 transition-opacity">
-                <div className="relative">
-                  <Image 
-                    src="/logos/Copy of Dealsletter Official Logo Black.svg"
-                    alt="Dealsletter Logo"
-                    width={180}
-                    height={48}
-                    className="h-12 w-auto"
-                    priority
-                    suppressHydrationWarning
-                  />
-                  <div className="absolute top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                </div>
-              </Link>
-              <div className="hidden md:flex items-center space-x-2 ml-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-muted">PRO DASHBOARD</span>
-              </div>
-            </div>
-            
-            {/* Desktop User Menu */}
-            <div className="hidden md:flex items-center space-x-4">
-              <Link href="/pricing" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                Pricing
-              </Link>
-              <Link href="/blog" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                Blog
-              </Link>
-              <Link href="/contact" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                Contact
-              </Link>
-              <Link href="/faq" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                FAQ
-              </Link>
-              <Link href="/profile" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                Profile
-              </Link>
-              <span className="text-sm text-muted">
-                Welcome, {user?.user_metadata?.first_name || user?.email?.split('@')[0] || 'User'}
-              </span>
-              <button 
-                onClick={() => signOut()}
-                className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium"
-              >
-                Sign Out
-              </button>
-              <div className="relative">
-                <div className="w-8 h-8 bg-accent/10 rounded-full flex items-center justify-center">
-                  <span className="text-accent font-semibold text-sm">
-                    {user?.user_metadata?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <div className="md:hidden">
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-3 text-muted hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-                aria-label="Toggle mobile menu"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {isMobileMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Menu Dropdown */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-6 py-4 bg-card/95 backdrop-blur-xl border-b border-border/20">
-              <div className="flex flex-col space-y-3">
-                <Link 
-                  href="/" 
-                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Home
-                </Link>
-                <Link 
-                  href="/pricing" 
-                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Pricing
-                </Link>
-                <Link 
-                  href="/blog" 
-                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Blog
-                </Link>
-                <Link 
-                  href="/contact" 
-                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Contact
-                </Link>
-                <Link 
-                  href="/faq" 
-                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  FAQ
-                </Link>
-                <Link 
-                  href="/profile" 
-                  className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  My Portfolio
-                </Link>
-                <button 
-                  className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Add Deal
-                </button>
-                <div className="pt-3 border-t border-border/20">
-                  <div className="flex items-center space-x-3 px-6 py-3">
-                    <div className="w-8 h-8 bg-accent/10 rounded-full flex items-center justify-center">
-                      <span className="text-accent font-semibold text-sm">
-                        {user?.user_metadata?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-muted">
-                      {user?.user_metadata?.full_name || user?.email || 'User'}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      signOut();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10 text-left"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </header>
+      <Navigation variant="dashboard" />
 
       {/* Stats Bar */}
       <section className="bg-muted/5 border-b border-border/20">

@@ -2079,7 +2079,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 md:p-4 overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-0 md:p-4 overflow-hidden">
       <div className="bg-background w-full max-w-full md:max-w-5xl h-full md:max-h-[90vh] md:rounded-xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-4 md:p-6 border-b border-border/20 flex-shrink-0">

@@ -9,6 +9,9 @@ import MyAnalyzedProperties from '@/components/MyAnalyzedProperties';
 import { getUserFavoriteProperties } from '@/lib/supabase/favorites';
 import FavoriteButton from '@/components/FavoriteButton';
 import DealModal from '@/app/dashboard/DealModal';
+import { getUserProfile } from '@/lib/supabase/profiles';
+import { getCurrentMonthUsage, calculateRemainingAnalyses, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
+import UsageTracker from '@/components/UsageTracker';
 
 interface SavedProperty {
   id: number;
@@ -86,6 +89,8 @@ export default function ProfilePage() {
   const [filterToDelete, setFilterToDelete] = useState<SavedFilter | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<'basic' | 'pro' | 'premium'>('basic');
+  const [monthlyUsage, setMonthlyUsage] = useState(0);
   
   // Filter form state
   const [filterForm, setFilterForm] = useState<FilterFormData>({
@@ -384,11 +389,14 @@ export default function ProfilePage() {
     }
   }, [user, curatedDeals]);
 
+  const subscriptionLimit = SUBSCRIPTION_LIMITS[subscriptionTier];
+  const remainingAnalyses = calculateRemainingAnalyses(subscriptionTier, monthlyUsage);
+
   const investmentStats: InvestmentStats = {
     totalSaved: savedProperties.length,
     activeFilters: savedFilters.filter(f => f.notifications).length,
-    analysesUsedThisMonth: 8,
-    analysesLimitThisMonth: 15,
+    analysesUsedThisMonth: monthlyUsage,
+    analysesLimitThisMonth: subscriptionLimit === -1 ? 999 : subscriptionLimit, // Show 999 for unlimited
     avgROISaved: 32.4,
     bestDealROI: 67.2,
     viewedThisMonth: 24
@@ -399,8 +407,29 @@ export default function ProfilePage() {
       router.push('/auth/login');
     } else {
       fetchSavedProperties();
+      fetchProfileAndUsage();
     }
   }, [user, router, fetchSavedProperties]);
+
+  const fetchProfileAndUsage = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Fetch user profile
+      const { data: profile } = await getUserProfile(user.id);
+      if (profile) {
+        setSubscriptionTier(profile.subscription_tier || 'basic');
+      }
+
+      // Fetch current month usage
+      const { data: usage } = await getCurrentMonthUsage(user.id);
+      if (usage) {
+        setMonthlyUsage(usage.analysis_count);
+      }
+    } catch (error) {
+      console.error('Error fetching profile data:', error);
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -921,6 +950,53 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-2xl font-bold text-primary">{investmentStats.analysesLimitThisMonth - investmentStats.analysesUsedThisMonth}</p>
                 <p className="text-xs text-muted mt-1">Analyses left</p>
+              </div>
+            </div>
+
+            {/* Usage Tracker */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <UsageTracker 
+                userId={user.id} 
+                subscriptionTier={subscriptionTier}
+                variant="detailed"
+              />
+              
+              {/* Subscription Details */}
+              <div className="bg-card rounded-xl border border-border/60 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-primary">Subscription Details</h3>
+                  <Link 
+                    href="/pricing"
+                    className="text-sm text-accent hover:text-accent/80 transition-colors"
+                  >
+                    Manage Plan
+                  </Link>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between py-3 border-b border-border/20">
+                    <span className="text-sm text-muted">Current Plan</span>
+                    <span className="font-medium capitalize">{subscriptionTier}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-3 border-b border-border/20">
+                    <span className="text-sm text-muted">Monthly Limit</span>
+                    <span className="font-medium">
+                      {subscriptionTier === 'premium' ? 'Unlimited' : 
+                       subscriptionTier === 'pro' ? '15 analyses' : 
+                       '0 analyses'}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm text-muted">Billing</span>
+                    <span className="font-medium">
+                      {subscriptionTier === 'basic' ? 'Free' :
+                       subscriptionTier === 'pro' ? '$29/month' :
+                       '$49/month'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 

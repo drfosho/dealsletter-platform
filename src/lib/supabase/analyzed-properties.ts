@@ -21,49 +21,6 @@ export interface AnalyzedProperty {
  */
 export async function getUserAnalyzedProperties(userId: string, limit: number = 4) {
   try {
-    // For now, return mock data until the table is created
-    // This prevents errors during development
-    const mockData: AnalyzedProperty[] = [
-      {
-        id: '1',
-        user_id: userId,
-        address: '1234 Oak Street, San Francisco, CA 94102',
-        analysis_date: '2024-01-15',
-        roi: 18.5,
-        profit: 125000,
-        deal_type: 'Fix & Flip',
-        is_favorite: true,
-        created_at: '2024-01-15T10:30:00Z',
-        updated_at: '2024-01-15T10:30:00Z'
-      },
-      {
-        id: '2',
-        user_id: userId,
-        address: '5678 Pine Avenue, Oakland, CA 94610',
-        analysis_date: '2024-01-12',
-        roi: 22.3,
-        profit: 89000,
-        deal_type: 'BRRRR',
-        is_favorite: false,
-        created_at: '2024-01-12T14:45:00Z',
-        updated_at: '2024-01-12T14:45:00Z'
-      },
-      {
-        id: '3',
-        user_id: userId,
-        address: '9012 Elm Drive, San Jose, CA 95110',
-        analysis_date: '2024-01-08',
-        roi: 15.2,
-        profit: 67500,
-        deal_type: 'Buy & Hold',
-        is_favorite: true,
-        created_at: '2024-01-08T09:15:00Z',
-        updated_at: '2024-01-08T09:15:00Z'
-      }
-    ];
-
-    // Uncomment this when the table is created in Supabase
-    /*
     const { data, error } = await supabase
       .from('analyzed_properties')
       .select('*')
@@ -73,19 +30,18 @@ export async function getUserAnalyzedProperties(userId: string, limit: number = 
 
     if (error) {
       console.error('Error fetching analyzed properties:', error);
-      // Return mock data for now instead of throwing
-      return { data: mockData.slice(0, limit), error: null };
+      // Check if table doesn't exist
+      if (error.code === '42P01') {
+        console.log('Analyzed properties table not yet created. Run the migration in Supabase.');
+        return { data: [], error: null }; // Return empty data instead of error
+      }
+      return { data: [], error };
     }
 
     return { data: data || [], error: null };
-    */
-
-    // Return mock data for now
-    return { data: mockData.slice(0, limit), error: null };
   } catch (error) {
     console.error('Error in getUserAnalyzedProperties:', error);
-    // Return empty array instead of error to prevent UI issues
-    return { data: [], error: null };
+    return { data: [], error };
   }
 }
 
@@ -162,13 +118,8 @@ export async function saveAnalyzedProperty(property: Omit<AnalyzedProperty, 'id'
  * @param propertyId - The property ID
  * @param userId - The user's ID (for security)
  */
-export async function togglePropertyFavorite(propertyId: string) {
+export async function togglePropertyFavorite(propertyId: string, userId: string) {
   try {
-    // Mock implementation - just return success
-    console.log('Toggle favorite for property:', propertyId);
-    
-    // Uncomment this when the table is created in Supabase
-    /*
     // First get the current favorite status
     const { data: currentData, error: fetchError } = await supabase
       .from('analyzed_properties')
@@ -200,13 +151,9 @@ export async function togglePropertyFavorite(propertyId: string) {
     }
 
     return { data, error: null };
-    */
-
-    // Return success for mock
-    return { data: null, error: null };
   } catch (error) {
     console.error('Error in togglePropertyFavorite:', error);
-    return { data: null, error: null };
+    return { data: null, error };
   }
 }
 
@@ -215,13 +162,8 @@ export async function togglePropertyFavorite(propertyId: string) {
  * @param propertyId - The property ID
  * @param userId - The user's ID (for security)
  */
-export async function removeAnalyzedProperty(propertyId: string) {
+export async function removeAnalyzedProperty(propertyId: string, userId: string) {
   try {
-    // Mock implementation - just return success
-    console.log('Remove property:', propertyId);
-    
-    // Uncomment this when the table is created in Supabase
-    /*
     const { error } = await supabase
       .from('analyzed_properties')
       .delete()
@@ -234,13 +176,9 @@ export async function removeAnalyzedProperty(propertyId: string) {
     }
 
     return { error: null };
-    */
-
-    // Return success for mock
-    return { error: null };
   } catch (error) {
     console.error('Error in removeAnalyzedProperty:', error);
-    return { error: null };
+    return { error };
   }
 }
 
@@ -305,41 +243,3 @@ export async function getAnalyzedPropertiesStats(userId: string) {
   }
 }
 
-/* 
-SQL Schema for the analyzed_properties table:
-
-CREATE TABLE analyzed_properties (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  address TEXT NOT NULL,
-  analysis_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  roi DECIMAL(5,2) NOT NULL,
-  profit INTEGER NOT NULL,
-  deal_type TEXT NOT NULL CHECK (deal_type IN ('Fix & Flip', 'BRRRR', 'Buy & Hold', 'House Hack', 'Short-term Rental', 'Value-Add')),
-  is_favorite BOOLEAN DEFAULT FALSE,
-  analysis_data JSONB, -- Store full analysis results
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create indexes for better performance
-CREATE INDEX idx_analyzed_properties_user_id ON analyzed_properties(user_id);
-CREATE INDEX idx_analyzed_properties_analysis_date ON analyzed_properties(analysis_date DESC);
-CREATE INDEX idx_analyzed_properties_is_favorite ON analyzed_properties(user_id, is_favorite) WHERE is_favorite = true;
-
--- Enable Row Level Security
-ALTER TABLE analyzed_properties ENABLE ROW LEVEL SECURITY;
-
--- Create RLS policies
-CREATE POLICY "Users can view their own analyzed properties" ON analyzed_properties
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert their own analyzed properties" ON analyzed_properties
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update their own analyzed properties" ON analyzed_properties
-  FOR UPDATE USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete their own analyzed properties" ON analyzed_properties
-  FOR DELETE USING (auth.uid() = user_id);
-*/

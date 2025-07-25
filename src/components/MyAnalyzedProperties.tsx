@@ -53,7 +53,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
         )
       );
 
-      const { error } = await togglePropertyFavorite(propertyId);
+      const { error } = await togglePropertyFavorite(propertyId, userId);
       
       if (error) {
         // Revert on error
@@ -89,7 +89,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
       const originalProperties = properties;
       setProperties(prev => prev.filter(property => property.id !== propertyId));
 
-      const { error } = await removeAnalyzedProperty(propertyId);
+      const { error } = await removeAnalyzedProperty(propertyId, userId);
       
       if (error) {
         // Revert on error
@@ -156,13 +156,22 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
   if (error) {
     return (
       <div className="bg-card rounded-xl border border-border/60 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-primary">My Analyzed Properties</h2>
+        </div>
         <div className="text-center py-8">
-          <div className="text-red-500 mb-2">
+          <div className="text-yellow-500 mb-2">
             <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <p className="text-sm text-muted">Failed to load analyzed properties</p>
+          <p className="text-sm text-muted mb-4">Unable to load analyzed properties</p>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-muted/60 max-w-md mx-auto">
+              <p className="mb-2">This is likely because the database table hasn't been created yet.</p>
+              <p>Run the migration in <code className="bg-muted/20 px-1 py-0.5 rounded">supabase/migrations/create_analyzed_properties_table.sql</code> in your Supabase dashboard.</p>
+            </div>
+          )}
         </div>
       </div>
     );
