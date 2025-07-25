@@ -21,12 +21,10 @@ const ActivityBadges = ({ deal, className = '' }: ActivityBadgesProps) => {
     // Consider deals hot if they have multiple indicators of high activity
     const hotFactors = [
       deal.daysOnMarket <= 2, // Recently listed
-      // Add other factors based on deal properties that might indicate popularity
+      deal.id % 3 === 0, // Use deal ID for consistent hot badge
     ].filter(Boolean).length;
     
-    // Also add some randomness to simulate varying activity levels
-    const activityScore = Math.random();
-    return hotFactors > 0 && activityScore > 0.7; // 30% chance for qualifying deals
+    return hotFactors >= 2; // Deterministic based on deal properties
   })();
 
   if (!isNew && !isHot) return null;

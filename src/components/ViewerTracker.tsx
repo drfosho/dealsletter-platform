@@ -13,19 +13,21 @@ const ViewerTracker = ({ dealId, className = '' }: ViewerTrackerProps) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Initialize with a base viewer count based on deal popularity
-    const baseViewers = Math.floor(Math.random() * 8) + 2; // 2-9 initial viewers
+    // Initialize with a base viewer count based on deal ID for consistency
+    const baseViewers = (dealId % 8) + 2; // 2-9 initial viewers based on deal ID
     setViewerCount(baseViewers);
 
     // Simulate real-time updates
+    let counter = 0;
     intervalRef.current = setInterval(() => {
+      counter++;
       setViewerCount(prev => {
-        // Randomly increase or decrease by 0-2 viewers
-        const change = Math.floor(Math.random() * 5) - 2; // -2 to +2
+        // Deterministic change based on counter and deal ID
+        const change = ((counter + dealId) % 5) - 2; // -2 to +2
         const newCount = Math.max(1, prev + change); // Never go below 1
         return Math.min(15, newCount); // Cap at 15 viewers for realism
       });
-    }, 3000 + Math.random() * 4000); // Update every 3-7 seconds
+    }, 5000); // Update every 5 seconds
 
     return () => {
       if (intervalRef.current) {

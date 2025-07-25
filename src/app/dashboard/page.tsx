@@ -7,6 +7,9 @@ import FavoriteButton from '@/components/FavoriteButton';
 import SavePropertyButton from '@/components/SavePropertyButton';
 import ViewerTracker from '@/components/ViewerTracker';
 import ActivityBadges from '@/components/ActivityBadges';
+import LocationSearch from '@/components/LocationSearch';
+import MarketNotification from '@/components/MarketNotification';
+import { isLocationSupported } from '@/config/markets';
 import dynamic from 'next/dynamic';
 import Navigation from '@/components/Navigation';
 
@@ -31,9 +34,17 @@ interface Deal {
 
 export default function Dashboard() {
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<{
+    city: string;
+    state: string;
+    fullAddress: string;
+    coordinates?: { lat: number; lng: number };
+  } | null>(null);
+  const [unsupportedLocation, setUnsupportedLocation] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid');
+  const [previousViewMode, setPreviousViewMode] = useState<'grid' | 'list' | 'map'>('grid');
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -259,13 +270,23 @@ export default function Dashboard() {
       );
     }
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(deal =>
-        deal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        deal.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        deal.type.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+
+    // Location filter
+    if (selectedLocation) {
+      filtered = filtered.filter(deal => {
+        const dealLocation = deal.location.toLowerCase();
+        const selectedCity = selectedLocation.city.toLowerCase();
+        
+        // Extract city from deal location (format: "City, State ZIP")
+        const dealParts = dealLocation.split(',');
+        if (dealParts.length > 0) {
+          const dealCity = dealParts[0].trim();
+          return dealCity === selectedCity;
+        }
+        
+        // Fallback to includes check
+        return dealLocation.includes(selectedCity);
+      });
     }
 
     // Market filter
@@ -326,7 +347,7 @@ export default function Dashboard() {
     });
 
     return filtered;
-  }, [selectedFilter, searchTerm, sortBy, deals, filters]);
+  }, [selectedFilter, selectedLocation, sortBy, deals, filters]);
 
   const stats = {
     totalDeals: deals.length,
@@ -355,6 +376,42 @@ export default function Dashboard() {
       minROI: 0
     });
   }, [deals]);
+
+  const handleLocationSelect = useCallback((location: {
+    city: string;
+    state: string;
+    fullAddress: string;
+    coordinates?: { lat: number; lng: number };
+  }) => {
+    // Check if location is supported
+    const supportedMarket = isLocationSupported(location.city, location.state);
+    
+    if (supportedMarket) {
+      setSelectedLocation(location);
+      setUnsupportedLocation(null);
+      
+      // If we were in map view before searching, return to map view
+      if (previousViewMode === 'map' && isSearching) {
+        setViewMode('map');
+      }
+    } else {
+      // Show notification for unsupported location
+      setUnsupportedLocation(location.city);
+      // Don't set the selected location so no filtering happens
+    }
+  }, [previousViewMode, isSearching]);
+
+  const handleSearchStart = useCallback(() => {
+    if (viewMode === 'map') {
+      setPreviousViewMode('map');
+      setViewMode('grid'); // Temporarily switch to grid view
+      setIsSearching(true);
+    }
+  }, [viewMode]);
+
+  const handleSearchEnd = useCallback(() => {
+    setIsSearching(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -386,28 +443,67 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Mobile View Mode Tabs - Visible only on mobile */}
+        <div className="flex md:hidden bg-card border border-border/60 rounded-lg p-1 mb-4">
+          <button
+            className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
+              viewMode === 'grid' 
+                ? 'bg-accent text-secondary font-medium' 
+                : 'text-muted hover:text-primary'
+            }`}
+            onClick={() => setViewMode('grid')}
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            Grid
+          </button>
+          <button
+            className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
+              viewMode === 'list' 
+                ? 'bg-accent text-secondary font-medium' 
+                : 'text-muted hover:text-primary'
+            }`}
+            onClick={() => setViewMode('list')}
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            List
+          </button>
+          <button
+            className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
+              viewMode === 'map' 
+                ? 'bg-accent text-secondary font-medium' 
+                : 'text-muted hover:text-primary'
+            }`}
+            onClick={() => setViewMode('map')}
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            Map
+          </button>
+        </div>
+
         {/* Controls */}
         <div className="flex flex-col lg:flex-row gap-4 mb-8">
-          {/* Search */}
+          {/* Location Search */}
           <div className="flex-1">
-            <div className="relative">
-              <svg className="w-5 h-5 text-muted absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search deals by location, type, or address..."
-                className="w-full pl-10 pr-4 py-3 bg-card border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+            <LocationSearch
+              placeholder="Search by city or location..."
+              value={selectedLocation?.fullAddress || ''}
+              onLocationSelect={handleLocationSelect}
+              onClear={() => setSelectedLocation(null)}
+              onSearchStart={handleSearchStart}
+              onSearchEnd={handleSearchEnd}
+            />
           </div>
 
           {/* Filters */}
           <div className="flex gap-2">
             <select 
-              className="px-4 py-3 bg-card border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="px-4 py-3 bg-card border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 hidden sm:block"
               value={selectedFilter}
               onChange={(e) => setSelectedFilter(e.target.value)}
             >
@@ -430,7 +526,8 @@ export default function Dashboard() {
               <option value="confidence">Confidence</option>
             </select>
 
-            <div className="flex bg-card border border-border/60 rounded-lg overflow-hidden">
+            {/* Desktop view mode toggle */}
+            <div className="hidden md:flex bg-card border border-border/60 rounded-lg overflow-hidden">
               <button
                 className={`px-4 py-3 min-h-[44px] min-w-[44px] flex items-center justify-center ${viewMode === 'grid' ? 'bg-accent/10 text-accent' : 'text-muted hover:text-primary'}`}
                 onClick={() => setViewMode('grid')}
@@ -470,15 +567,17 @@ export default function Dashboard() {
         />
 
         {/* Content Area */}
-        {viewMode === 'map' ? (
-          <MapView 
-            deals={filteredDeals} 
-            onDealClick={(deal) => {
-              setSelectedDeal(deal);
-              setIsModalOpen(true);
-            }}
-          />
-        ) : (
+        <div className="transition-all duration-300">
+          {viewMode === 'map' ? (
+            <MapView 
+              deals={filteredDeals}
+              selectedLocation={selectedLocation}
+              onDealClick={(deal) => {
+                setSelectedDeal(deal);
+                setIsModalOpen(true);
+              }}
+            />
+          ) : (
           /* Deals Grid/List */
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
             {filteredDeals.map((deal) => (
@@ -623,15 +722,16 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        )}
+          )}
 
-        {viewMode !== 'map' && filteredDeals.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-primary mb-2">No deals found</h3>
-            <p className="text-muted">Try adjusting your filters or search terms</p>
-          </div>
-        )}
+          {viewMode !== 'map' && filteredDeals.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-semibold text-primary mb-2">No deals found</h3>
+              <p className="text-muted">Try adjusting your filters or search terms</p>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Deal Modal */}
@@ -643,6 +743,62 @@ export default function Dashboard() {
           setSelectedDeal(null);
         }}
       />
+
+      {/* Mobile Floating View Toggle and Exit Button */}
+      <div className="fixed bottom-6 right-6 md:hidden z-40 flex flex-col gap-3">
+        {/* Exit Map Button - Only show in map view */}
+        {viewMode === 'map' && (
+          <div className="bg-card text-primary rounded-full shadow-lg overflow-hidden border border-border/60">
+            <button
+              className="p-4 min-h-[56px] min-w-[56px] flex items-center justify-center"
+              onClick={() => setViewMode('grid')}
+              aria-label="Exit map view"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+        
+        {/* View Mode Toggle */}
+        <div className="bg-accent text-secondary rounded-full shadow-lg overflow-hidden">
+          <button
+            className="p-4 min-h-[56px] min-w-[56px] flex items-center justify-center"
+            onClick={() => {
+              // Cycle through view modes: grid -> list -> map -> grid
+              if (viewMode === 'grid') setViewMode('list');
+              else if (viewMode === 'list') setViewMode('map');
+              else setViewMode('grid');
+            }}
+            aria-label="Change view mode"
+          >
+            {viewMode === 'grid' && (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+            )}
+            {viewMode === 'list' && (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+            )}
+            {viewMode === 'map' && (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Market Not Available Notification */}
+      {unsupportedLocation && (
+        <MarketNotification 
+          location={unsupportedLocation}
+          onClose={() => setUnsupportedLocation(null)}
+        />
+      )}
     </div>
   );
 }

@@ -167,3 +167,40 @@ body {
 }
 
 /* Logo adaptive styling is no longer needed - using separate images for light/dark mode */
+
+/* Mobile-specific utilities */
+@supports (padding: max(0px)) {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Touch-optimized styles */
+@media (max-width: 768px) {
+  /* Increase tap target size */
+  button, 
+  a, 
+  input, 
+  select {
+    min-height: 44px;
+  }
+  
+  /* Prevent text selection on tap */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Smoother transitions for touch interactions */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Better touch scrolling */
+  .touch-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+  }
+}

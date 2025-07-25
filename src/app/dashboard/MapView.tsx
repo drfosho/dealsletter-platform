@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Icon, DivIcon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -11,6 +11,7 @@ const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapCo
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+const MapController = dynamic(() => import('@/components/MapController'), { ssr: false });
 
 interface Deal {
   id: number;
@@ -28,6 +29,12 @@ interface Deal {
 
 interface MapViewProps {
   deals: Deal[];
+  selectedLocation?: {
+    city: string;
+    state: string;
+    fullAddress: string;
+    coordinates?: { lat: number; lng: number };
+  } | null;
   onDealClick: (deal: Deal) => void;
 }
 
@@ -41,8 +48,18 @@ if (typeof window !== 'undefined') {
   });
 }
 
-const MapView = ({ deals, onDealClick }: MapViewProps) => {
+
+const MapView = ({ deals, selectedLocation, onDealClick }: MapViewProps) => {
   const [zoom, setZoom] = useState(9);
+  const [center, setCenter] = useState<[number, number]>([32.7157, -117.1611]); // Default to San Diego
+
+  // Update map center when location is selected
+  useEffect(() => {
+    if (selectedLocation?.coordinates) {
+      setCenter([selectedLocation.coordinates.lat, selectedLocation.coordinates.lng]);
+      setZoom(12); // Zoom in closer for selected location
+    }
+  }, [selectedLocation]);
 
   // Convert location strings to coordinates (simplified geocoding)
   const dealsWithCoords = useMemo(() => {
@@ -141,13 +158,25 @@ const MapView = ({ deals, onDealClick }: MapViewProps) => {
   }, [supercluster]);
 
   return (
-    <div className="w-full h-[600px] bg-card rounded-lg overflow-hidden border border-border/60">
+    <div className="w-full h-[calc(100vh-200px)] md:h-[600px] bg-card rounded-lg overflow-hidden border border-border/60 relative">
+      {/* Property count indicator */}
+      <div className="absolute top-4 left-4 z-[1000] bg-card/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg border border-border/60">
+        <div className="text-sm font-medium text-primary">
+          {deals.length} {deals.length === 1 ? 'property' : 'properties'}
+          {selectedLocation && (
+            <span className="text-muted ml-1">in {selectedLocation.city}</span>
+          )}
+        </div>
+      </div>
+      
       <MapContainer
-        center={[32.7157, -117.1611]} // San Diego center
-        zoom={9}
+        center={center}
+        zoom={zoom}
         style={{ width: '100%', height: '100%' }}
         className="leaflet-dark"
       >
+        {/* Map controller for centering */}
+        <MapController center={center} zoom={zoom} />
         
         {/* Dark themed tile layer using CartoDB Dark Matter */}
         <TileLayer
