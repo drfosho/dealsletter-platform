@@ -77,7 +77,7 @@ export default function UpgradePromptModal({
         <div className="p-6">
           {/* Features */}
           <div className="space-y-3 mb-6">
-            <h3 className="text-sm font-medium text-primary mb-2">What you'll get:</h3>
+            <h3 className="text-sm font-medium text-primary mb-2">What you&apos;ll get:</h3>
             {content.features.map((feature, index) => (
               <div key={index} className="flex items-start gap-3">
                 <svg className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

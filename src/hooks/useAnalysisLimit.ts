@@ -77,11 +77,11 @@ export function useAnalysisLimit(): UseAnalysisLimitReturn {
       // Format the data for saving
       const propertyData = {
         user_id: user.id,
-        address: analysisData.address || 'Property Analysis',
+        address: (analysisData.address as string) || 'Property Analysis',
         analysis_date: new Date().toISOString().split('T')[0],
-        roi: analysisData.roi || 0,
-        profit: analysisData.profit || 0,
-        deal_type: analysisData.dealType || 'Fix & Flip',
+        roi: Number(analysisData.roi) || 0,
+        profit: Number(analysisData.profit) || 0,
+        deal_type: (analysisData.dealType as string) || 'Fix & Flip',
         is_favorite: false,
         analysis_data: analysisData // Store full analysis results
       };

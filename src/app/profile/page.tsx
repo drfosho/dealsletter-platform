@@ -10,7 +10,7 @@ import { getUserFavoriteProperties } from '@/lib/supabase/favorites';
 import FavoriteButton from '@/components/FavoriteButton';
 import DealModal from '@/app/dashboard/DealModal';
 import { getUserProfile } from '@/lib/supabase/profiles';
-import { getCurrentMonthUsage, calculateRemainingAnalyses, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
+import { getCurrentMonthUsage, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 import UsageTracker from '@/components/UsageTracker';
 
 interface SavedProperty {

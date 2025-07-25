@@ -25,10 +25,6 @@ export default function UsageTracker({
   const [currentCount, setCurrentCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsage();
-  }, [userId, fetchUsage]);
-
   const fetchUsage = useCallback(async () => {
     try {
       setLoading(true);
@@ -48,6 +44,10 @@ export default function UsageTracker({
       setLoading(false);
     }
   }, [userId]);
+
+  useEffect(() => {
+    fetchUsage();
+  }, [userId, fetchUsage]);
 
   if (loading) {
     return (

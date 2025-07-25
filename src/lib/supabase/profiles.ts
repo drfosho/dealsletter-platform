@@ -82,7 +82,7 @@ export async function updateSubscriptionTier(
 export async function getOrCreateUserProfile(userId: string, userData?: Partial<UserProfile>) {
   try {
     // Try to get existing profile
-    let { data: profile, error: fetchError } = await supabase
+    const { data: profile, error: fetchError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', userId)
@@ -105,7 +105,7 @@ export async function getOrCreateUserProfile(userId: string, userData?: Partial<
         return { data: null, error: createError };
       }
 
-      profile = newProfile;
+      return { data: newProfile, error: null };
     } else if (fetchError) {
       return { data: null, error: fetchError };
     }

@@ -3,7 +3,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import DealModal from './DealModal';
 import FilterBar from './FilterBar';
-import { useAuth } from '@/contexts/AuthContext';
 import FavoriteButton from '@/components/FavoriteButton';
 import SavePropertyButton from '@/components/SavePropertyButton';
 import ViewerTracker from '@/components/ViewerTracker';
@@ -43,7 +42,6 @@ export default function Dashboard() {
     priceRange: [0, 2000000] as [number, number],
     minROI: 0
   });
-  const { user } = useAuth();
 
   // Sample deals data - in real app this would come from API
   const deals = useMemo(() => [
