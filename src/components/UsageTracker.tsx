@@ -114,7 +114,7 @@ export default function UsageTracker({
       <div className="space-y-4">
         {/* Usage Message */}
         <p className="text-sm text-muted">
-          {usage.message}
+          {usage && typeof usage.message === 'string' ? usage.message : 'Loading...'}
         </p>
 
         {/* Progress Bar */}
@@ -149,7 +149,7 @@ export default function UsageTracker({
             <div className="text-2xl font-bold text-accent">
               {subscriptionTier === 'premium' ? '∞' : 
                subscriptionTier === 'basic' ? '0' :
-               usage.remaining_analyses}
+               usage?.remaining_analyses || 0}
             </div>
             <div className="text-xs text-muted">Remaining</div>
           </div>

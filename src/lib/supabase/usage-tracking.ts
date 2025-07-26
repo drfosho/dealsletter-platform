@@ -48,7 +48,17 @@ export async function checkAnalysisUsage(userId: string): Promise<UsageCheckResu
       };
     }
 
-    return data as UsageCheckResult;
+    // Ensure we're returning the correct format
+    console.log('[checkAnalysisUsage] Raw RPC response:', data);
+    
+    // If data is wrapped in an array or has a different structure, handle it
+    const result = Array.isArray(data) ? data[0] : data;
+    
+    return {
+      can_analyze: result.can_analyze || false,
+      remaining_analyses: result.remaining_analyses || 0,
+      message: result.message || 'Unknown status'
+    } as UsageCheckResult;
   } catch (error) {
     console.error('Error in checkAnalysisUsage:', error);
     return {
