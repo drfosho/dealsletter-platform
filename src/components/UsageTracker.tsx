@@ -114,7 +114,7 @@ export default function UsageTracker({
       <div className="space-y-4">
         {/* Usage Message */}
         <p className="text-sm text-muted">
-          {usage && typeof usage.message === 'string' ? usage.message : 'Loading...'}
+          {usage ? String(usage.message || 'Loading...') : 'Loading...'}
         </p>
 
         {/* Progress Bar */}

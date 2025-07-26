@@ -1,10 +1,16 @@
-import { logError } from '@/utils/error-utils';
+// import { logError } from '@/utils/error-utils'; // DISABLED FOR DEBUGGING
 
-let isLoading = false;
-let isLoaded = false;
+// let isLoading = false; // DISABLED FOR DEBUGGING
+// let isLoaded = false; // DISABLED FOR DEBUGGING
 
 export const loadGoogleMapsAPI = (): Promise<void> => {
   return new Promise((resolve, reject) => {
+    // TEMPORARILY DISABLED TO DEBUG REACT ERROR #31
+    console.log('[Google Maps] API loading DISABLED for debugging');
+    reject(new Error('Google Maps API temporarily disabled for debugging'));
+    return;
+    
+    /* DISABLED CODE BELOW
     // If already loaded, resolve immediately
     if (isLoaded && window.google?.maps) {
       console.log('[Google Maps] Already loaded');
@@ -84,5 +90,6 @@ export const loadGoogleMapsAPI = (): Promise<void> => {
     };
     
     document.head.appendChild(script);
+    */
   });
 };

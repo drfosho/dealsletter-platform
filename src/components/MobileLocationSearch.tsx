@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { loadGoogleMapsAPI } from '@/lib/google-maps-loader';
+// import { loadGoogleMapsAPI } from '@/lib/google-maps-loader'; // DISABLED FOR DEBUGGING
 import { getErrorMessage, logError } from '@/utils/error-utils';
 
 interface MobileLocationSearchProps {
@@ -46,13 +46,11 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
     return () => clearTimeout(timer);
   }, []);
 
-  // Load Google Places API
+  // TEMPORARILY DISABLED - Load Google Places API
   useEffect(() => {
-    loadGoogleMapsAPI().catch((error) => {
-      logError('MobileLocationSearch - Google Maps Load', error);
-      const errorMessage = getErrorMessage(error);
-      setError(errorMessage);
-    });
+    // DISABLED TO DEBUG REACT ERROR #31
+    console.log('[MobileLocationSearch] Google Maps API DISABLED for debugging');
+    setError('Location search is temporarily disabled');
   }, []);
 
   // Fetch suggestions
@@ -63,11 +61,11 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
     }
 
     const fetchSuggestions = async () => {
-      if (!window.google || !window.google.maps) {
-        setError('Google Maps not loaded');
-        setIsLoading(false);
-        return;
-      }
+      // DISABLED TO DEBUG REACT ERROR #31
+      console.log('[MobileLocationSearch] Google Maps API DISABLED - not fetching suggestions');
+      setIsLoading(false);
+      setSuggestions([]);
+      return;
 
       setIsLoading(true);
       setError(null);
@@ -335,7 +333,7 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
         <div className="overflow-y-auto" style={{ maxHeight: 'calc(90vh - 200px)' }}>
           {error ? (
             <div className="px-6 py-4 text-sm text-red-500">
-              {error}
+              {String(error)}
             </div>
           ) : suggestions.length > 0 ? (
             <ul ref={suggestionsRef} className="pb-safe">
@@ -354,10 +352,10 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-primary text-base">
-                        {suggestion.structured_formatting.main_text}
+                        {String(suggestion.structured_formatting.main_text || '')}
                       </div>
                       <div className="text-sm text-muted mt-0.5">
-                        {suggestion.structured_formatting.secondary_text}
+                        {String(suggestion.structured_formatting.secondary_text || '')}
                       </div>
                     </div>
                   </div>

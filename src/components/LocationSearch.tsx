@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { loadGoogleMapsAPI } from '@/lib/google-maps-loader';
+// import { loadGoogleMapsAPI } from '@/lib/google-maps-loader'; // DISABLED FOR DEBUGGING
 import { getErrorMessage, logError } from '@/utils/error-utils';
 import dynamic from 'next/dynamic';
 
@@ -73,18 +73,11 @@ export default function LocationSearch({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Load Google Places API
+  // TEMPORARILY DISABLED - Load Google Places API
   useEffect(() => {
-    console.log('[LocationSearch] Loading Google Maps API...');
-    loadGoogleMapsAPI()
-      .then(() => {
-        console.log('[LocationSearch] Google Maps API loaded successfully');
-      })
-      .catch((error) => {
-        logError('LocationSearch - Google Maps Load', error);
-        const errorMessage = getErrorMessage(error);
-        setError(`Failed to load Google Maps: ${errorMessage}`);
-      });
+    // DISABLED TO DEBUG REACT ERROR #31
+    console.log('[LocationSearch] Google Maps API DISABLED for debugging');
+    setError('Location search is temporarily disabled');
   }, []);
 
   // Fetch suggestions
@@ -95,17 +88,11 @@ export default function LocationSearch({
     }
 
     const fetchSuggestions = async () => {
-      console.log('[LocationSearch] Fetching suggestions for:', debouncedSearchTerm);
-      
-      if (!window.google || !window.google.maps) {
-        console.error('[LocationSearch] Google Maps not available:', {
-          google: !!window.google,
-          maps: !!window.google?.maps
-        });
-        setError('Google Maps not loaded');
-        setIsLoading(false);
-        return;
-      }
+      // DISABLED TO DEBUG REACT ERROR #31
+      console.log('[LocationSearch] Google Maps API DISABLED - not fetching suggestions');
+      setIsLoading(false);
+      setSuggestions([]);
+      return;
 
       setIsLoading(true);
       setError(null);
@@ -438,7 +425,7 @@ export default function LocationSearch({
         <div className="absolute z-50 w-full mt-1 bg-card border border-border/60 rounded-lg shadow-lg overflow-hidden">
           {error ? (
             <div className="px-4 py-3 text-sm text-red-500">
-              {error}
+              {String(error)}
             </div>
           ) : suggestions.length > 0 ? (
             <ul ref={suggestionsRef} className="max-h-60 overflow-y-auto">
@@ -460,10 +447,10 @@ export default function LocationSearch({
                     </svg>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-primary truncate">
-                        {suggestion.structured_formatting.main_text}
+                        {String(suggestion.structured_formatting.main_text || '')}
                       </div>
                       <div className="text-sm text-muted truncate">
-                        {suggestion.structured_formatting.secondary_text}
+                        {String(suggestion.structured_formatting.secondary_text || '')}
                       </div>
                     </div>
                   </div>
