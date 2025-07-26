@@ -48,25 +48,27 @@ export const loadGoogleMapsAPI = (): Promise<void> => {
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&loading=async&libraries=places&v=weekly`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=weekly&callback=__googleMapsCallback`;
     script.async = true;
     script.defer = true;
     script.id = 'google-maps-script';
     
-    script.onload = async () => {
+    // Define a global callback for Google Maps
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__googleMapsCallback = () => {
+      console.log('[Google Maps] Callback triggered');
+      isLoading = false;
+      isLoaded = true;
+      resolve();
+      // Clean up the global callback
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (window as any).__googleMapsCallback;
+    };
+    
+    script.onload = () => {
       console.log('[Google Maps] Script loaded successfully');
       console.log('[Google Maps] Google object:', !!window.google);
       console.log('[Google Maps] Maps object:', !!window.google?.maps);
-      
-      // Try to load the places library to verify it's available
-      try {
-        if (window.google?.maps) {
-          const placesLibrary = await window.google.maps.importLibrary("places");
-          console.log('[Google Maps] Places library loaded:', !!placesLibrary);
-        }
-      } catch (err) {
-        console.error('[Google Maps] Failed to load places library:', err);
-      }
       
       isLoading = false;
       isLoaded = true;

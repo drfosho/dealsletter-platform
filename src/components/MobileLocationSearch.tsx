@@ -48,7 +48,9 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
   // Load Google Places API
   useEffect(() => {
     loadGoogleMapsAPI().catch((error) => {
-      setError(error.message);
+      // Ensure error message is always a string
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load Google Maps';
+      setError(errorMessage);
     });
   }, []);
 
@@ -129,7 +131,9 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
       } catch (err) {
         console.error('[MobileLocationSearch] Exception in fetchSuggestions:', err);
         setIsLoading(false);
-        setError('An error occurred while searching');
+        // Ensure error is always a string
+        const errorMessage = err instanceof Error ? err.message : 'An error occurred while searching';
+        setError(errorMessage);
         setSuggestions([]);
       }
     };
@@ -186,7 +190,9 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
       onClose();
     } catch (err) {
       console.error('[MobileLocationSearch] Error fetching place details:', err);
-      setError('Failed to fetch place details');
+      // Ensure error is always a string
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch place details';
+      setError(errorMessage);
     }
   }, [onLocationSelect, onClose]);
 

@@ -81,7 +81,9 @@ export default function LocationSearch({
       })
       .catch((error) => {
         console.error('[LocationSearch] Failed to load Google Maps:', error);
-        setError(error.message);
+        // Ensure error message is always a string
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load Google Maps';
+        setError(`Failed to load Google Maps: ${errorMessage}`);
       });
   }, []);
 
@@ -110,8 +112,44 @@ export default function LocationSearch({
 
       try {
         // Import the new Places library
-        const { AutocompleteSuggestion, AutocompleteSessionToken } = 
-          await window.google.maps.importLibrary("places") as google.maps.PlacesLibrary;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let AutocompleteSuggestion: any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let AutocompleteSessionToken: any;
+        
+        try {
+          const placesLibrary = await window.google.maps.importLibrary("places") as google.maps.PlacesLibrary;
+          AutocompleteSuggestion = placesLibrary.AutocompleteSuggestion;
+          AutocompleteSessionToken = placesLibrary.AutocompleteSessionToken;
+        } catch (importError) {
+          console.error('[LocationSearch] Failed to import places library:', importError);
+          // Fallback to legacy API if available
+          if (window.google?.maps?.places?.AutocompleteService) {
+            console.log('[LocationSearch] Falling back to legacy AutocompleteService');
+            // Use legacy API
+            const service = new window.google.maps.places.AutocompleteService();
+            service.getPlacePredictions(
+              {
+                input: debouncedSearchTerm,
+                types: ['(cities)'],
+                componentRestrictions: { country: 'us' }
+              },
+              (predictions, status) => {
+                setIsLoading(false);
+                if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                  setSuggestions(predictions);
+                  setShowSuggestions(true);
+                } else {
+                  setSuggestions([]);
+                  setShowSuggestions(true);
+                }
+              }
+            );
+            return;
+          } else {
+            throw new Error('Google Places API not available');
+          }
+        }
         
         // Create a session token for billing optimization
         const sessionToken = new AutocompleteSessionToken();
@@ -179,7 +217,9 @@ export default function LocationSearch({
       } catch (err) {
         console.error('[LocationSearch] Exception in fetchSuggestions:', err);
         setIsLoading(false);
-        setError('An error occurred while searching');
+        // Ensure error is always a string
+        const errorMessage = err instanceof Error ? err.message : 'An error occurred while searching';
+        setError(errorMessage);
         setSuggestions([]);
       }
     };
@@ -238,7 +278,9 @@ export default function LocationSearch({
       setSuggestions([]);
     } catch (err) {
       console.error('[LocationSearch] Error fetching place details:', err);
-      setError('Failed to fetch place details');
+      // Ensure error is always a string
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch place details';
+      setError(errorMessage);
     }
   }, [onLocationSelect]);
 
