@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { loadGoogleMapsAPI } from '@/lib/google-maps-loader';
+import { getErrorMessage, logError } from '@/utils/error-utils';
 
 interface MobileLocationSearchProps {
   onLocationSelect: (location: { 
@@ -48,8 +49,8 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
   // Load Google Places API
   useEffect(() => {
     loadGoogleMapsAPI().catch((error) => {
-      // Ensure error message is always a string
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load Google Maps';
+      logError('MobileLocationSearch - Google Maps Load', error);
+      const errorMessage = getErrorMessage(error);
       setError(errorMessage);
     });
   }, []);
@@ -129,10 +130,9 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
           setSuggestions([]);
         }
       } catch (err) {
-        console.error('[MobileLocationSearch] Exception in fetchSuggestions:', err);
+        logError('MobileLocationSearch - Fetch Suggestions', err);
         setIsLoading(false);
-        // Ensure error is always a string
-        const errorMessage = err instanceof Error ? err.message : 'An error occurred while searching';
+        const errorMessage = getErrorMessage(err);
         setError(errorMessage);
         setSuggestions([]);
       }
@@ -189,9 +189,8 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
       onLocationSelect(location);
       onClose();
     } catch (err) {
-      console.error('[MobileLocationSearch] Error fetching place details:', err);
-      // Ensure error is always a string
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch place details';
+      logError('MobileLocationSearch - Fetch Place Details', err);
+      const errorMessage = getErrorMessage(err);
       setError(errorMessage);
     }
   }, [onLocationSelect, onClose]);

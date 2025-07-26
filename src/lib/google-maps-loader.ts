@@ -1,3 +1,5 @@
+import { logError } from '@/utils/error-utils';
+
 let isLoading = false;
 let isLoaded = false;
 
@@ -42,7 +44,7 @@ export const loadGoogleMapsAPI = (): Promise<void> => {
     if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
       isLoading = false;
       const error = new Error('Google Maps API key not configured');
-      console.error('[Google Maps] Error:', error);
+      logError('Google Maps Loader - API Key Error', error);
       reject(error);
       return;
     }
@@ -76,7 +78,7 @@ export const loadGoogleMapsAPI = (): Promise<void> => {
     };
     
     script.onerror = (error) => {
-      console.error('[Google Maps] Script load error:', error);
+      logError('Google Maps Loader - Script Load Error', error);
       isLoading = false;
       reject(new Error('Failed to load Google Maps API'));
     };
