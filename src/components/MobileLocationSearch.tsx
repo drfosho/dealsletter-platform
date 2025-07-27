@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-// import { loadGoogleMapsAPI } from '@/lib/google-maps-loader'; // DISABLED FOR DEBUGGING
+import { loadGoogleMapsAPI } from '@/lib/google-maps-loader';
 import { getErrorMessage, logError } from '@/utils/error-utils';
 
 interface MobileLocationSearchProps {
@@ -46,11 +46,18 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
     return () => clearTimeout(timer);
   }, []);
 
-  // TEMPORARILY DISABLED - Load Google Places API
+  // Load Google Places API
   useEffect(() => {
-    // DISABLED TO DEBUG REACT ERROR #31
-    console.log('[MobileLocationSearch] Google Maps API DISABLED for debugging');
-    setError('Location search is temporarily disabled');
+    console.log('[MobileLocationSearch] Attempting to load Google Maps API');
+    loadGoogleMapsAPI()
+      .then(() => {
+        console.log('[MobileLocationSearch] Google Maps API loaded successfully');
+        setError(null);
+      })
+      .catch((error) => {
+        console.error('[MobileLocationSearch] Failed to load Google Maps API:', error);
+        setError(error.message);
+      });
   }, []);
 
   // Fetch suggestions
@@ -61,77 +68,55 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
     }
 
     const fetchSuggestions = async () => {
-      // DISABLED TO DEBUG REACT ERROR #31
-      console.log('[MobileLocationSearch] Google Maps API DISABLED - not fetching suggestions');
-      setIsLoading(false);
-      setSuggestions([]);
-      return;
+      console.log('[MobileLocationSearch] Fetching suggestions for:', debouncedSearchTerm);
+      
+      if (!window.google || !window.google.maps || !window.google.maps.places) {
+        console.error('[MobileLocationSearch] Google Maps API not available:', {
+          google: !!window.google,
+          maps: !!window.google?.maps,
+          places: !!window.google?.maps?.places
+        });
+        setError('Google Maps not loaded');
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        // Import the new Places library
-        const { AutocompleteSuggestion, AutocompleteSessionToken } = 
-          await window.google.maps.importLibrary("places") as google.maps.PlacesLibrary;
+        const service = new window.google.maps.places.AutocompleteService();
+        console.log('[MobileLocationSearch] AutocompleteService created successfully');
         
-        // Create a session token for billing optimization
-        const sessionToken = new AutocompleteSessionToken();
-        
-        // Create the request object
-        const request = {
-          input: debouncedSearchTerm,
-          includedRegionCodes: ['us'],
-          includedPrimaryTypes: ['locality', 'administrative_area_level_1'],
-          sessionToken: sessionToken,
-          language: 'en-US',
-          region: 'us'
-        };
-        
-        // Fetch suggestions using the new API
-        const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions(request);
-        
-        setIsLoading(false);
-        
-        if (suggestions && suggestions.length > 0) {
-          // Transform the new format to match our existing interface
-          const formattedSuggestions = suggestions
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .filter((suggestion: any) => suggestion.placePrediction !== null)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            .map((suggestion: any) => {
-              // Extract the prediction object
-              const prediction = suggestion.placePrediction;
-              
-              // The API might return different property names, so let's handle both cases
-              const mainText = prediction.structuredFormat?.mainText?.text || 
-                             prediction.text?.text || 
-                             prediction.mainText || 
-                             '';
-              
-              const secondaryText = prediction.structuredFormat?.secondaryText?.text || 
-                                   prediction.secondaryText || 
-                                   '';
-              
-              return {
-                place_id: prediction.placeId,
-                description: prediction.text?.text || prediction.description || mainText,
-                structured_formatting: {
-                  main_text: mainText,
-                  secondary_text: secondaryText
-                }
-              };
+        service.getPlacePredictions(
+          {
+            input: debouncedSearchTerm,
+            types: ['(cities)'],
+            componentRestrictions: { country: 'us' }
+          },
+          (predictions, status) => {
+            setIsLoading(false);
+            console.log('[MobileLocationSearch] Places API response:', {
+              status,
+              predictionsCount: predictions?.length || 0
             });
-          
-          setSuggestions(formattedSuggestions);
-        } else {
-          setSuggestions([]);
-        }
-      } catch (err) {
-        logError('MobileLocationSearch - Fetch Suggestions', err);
+            
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+              setSuggestions(predictions);
+            } else if (status === window.google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+              setSuggestions([]);
+            } else {
+              console.error('[MobileLocationSearch] Places API error status:', status);
+              setError(`Failed to fetch suggestions: ${status}`);
+              setSuggestions([]);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('[MobileLocationSearch] Exception in fetchSuggestions:', error);
+        logError('MobileLocationSearch - Fetch Suggestions', error);
         setIsLoading(false);
-        const errorMessage = getErrorMessage(err);
-        setError(errorMessage);
+        setError('An error occurred while searching');
         setSuggestions([]);
       }
     };
@@ -141,56 +126,61 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
 
   // Get place details
   const getPlaceDetails = useCallback(async (placeId: string, description: string) => {
-    if (!window.google || !window.google.maps) {
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
       setError('Google Maps not loaded');
       return;
     }
 
-    try {
-      // Import the new Places library
-      const { Place } = await window.google.maps.importLibrary("places") as google.maps.PlacesLibrary;
-      
-      // Create a new Place instance
-      const place = new Place({
-        id: placeId,
-        requestedLanguage: 'en-US'
-      });
+    console.log('[MobileLocationSearch] Getting place details for:', placeId);
 
-      // Fetch the fields we need
-      await place.fetchFields({
-        fields: ['addressComponents', 'location', 'displayName']
-      });
+    const service = new window.google.maps.places.PlacesService(
+      document.createElement('div')
+    );
 
-      const addressComponents = place.addressComponents || [];
-      let city = '';
-      let state = '';
-
-      addressComponents.forEach((component) => {
-        if (component.types.includes('locality')) {
-          city = component.longText || '';
-        } else if (component.types.includes('administrative_area_level_1')) {
-          state = component.shortText || '';
-        }
-      });
-
-      const location = {
-        city: city || (typeof place.displayName === 'string' ? place.displayName : '') || '',
-        state,
-        fullAddress: description,
+    service.getDetails(
+      {
         placeId,
-        coordinates: place.location ? {
-          lat: place.location.lat(),
-          lng: place.location.lng()
-        } : undefined
-      };
+        fields: ['address_components', 'geometry', 'name']
+      },
+      (place, status) => {
+        console.log('[MobileLocationSearch] Place details response:', {
+          status,
+          hasPlace: !!place
+        });
 
-      onLocationSelect(location);
-      onClose();
-    } catch (err) {
-      logError('MobileLocationSearch - Fetch Place Details', err);
-      const errorMessage = getErrorMessage(err);
-      setError(errorMessage);
-    }
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+          const addressComponents = place.address_components || [];
+          let city = '';
+          let state = '';
+
+          addressComponents.forEach((component) => {
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            } else if (component.types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            }
+          });
+
+          const location = {
+            city: city || place.name || '',
+            state,
+            fullAddress: description,
+            placeId,
+            coordinates: place.geometry?.location ? {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng()
+            } : undefined
+          };
+
+          console.log('[MobileLocationSearch] Selected location:', location);
+          onLocationSelect(location);
+          onClose();
+        } else {
+          console.error('[MobileLocationSearch] Failed to get place details:', status);
+          setError(`Failed to get location details: ${status}`);
+        }
+      }
+    );
   }, [onLocationSelect, onClose]);
 
   // Handle selection
