@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { loadGoogleMapsAPI } from '@/lib/google-maps-loader';
-import { getErrorMessage, logError } from '@/utils/error-utils';
+import { logError } from '@/utils/error-utils';
 
 interface MobileLocationSearchProps {
   onLocationSelect: (location: { 
@@ -94,7 +94,8 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
             types: ['(cities)'],
             componentRestrictions: { country: 'us' }
           },
-          (predictions, status) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (predictions: any[] | null, status: any) => {
             setIsLoading(false);
             console.log('[MobileLocationSearch] Places API response:', {
               status,
@@ -142,7 +143,8 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
         placeId,
         fields: ['address_components', 'geometry', 'name']
       },
-      (place, status) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (place: any, status: any) => {
         console.log('[MobileLocationSearch] Place details response:', {
           status,
           hasPlace: !!place
@@ -153,7 +155,8 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
           let city = '';
           let state = '';
 
-          addressComponents.forEach((component) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          addressComponents.forEach((component: any) => {
             if (component.types.includes('locality')) {
               city = component.long_name;
             } else if (component.types.includes('administrative_area_level_1')) {

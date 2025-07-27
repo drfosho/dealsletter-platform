@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { loadGoogleMapsAPI } from '@/lib/google-maps-loader';
-import { getErrorMessage, logError } from '@/utils/error-utils';
+import { logError } from '@/utils/error-utils';
 import dynamic from 'next/dynamic';
 
 const MobileLocationSearch = dynamic(() => import('./MobileLocationSearch'), { 
@@ -124,7 +124,8 @@ export default function LocationSearch({
         
         service.getPlacePredictions(
           request,
-          (predictions, status) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (predictions: any[] | null, status: any) => {
             setIsLoading(false);
             console.log('[LocationSearch] Places API response:', {
               status,
@@ -184,7 +185,8 @@ export default function LocationSearch({
         placeId,
         fields: ['address_components', 'geometry', 'name']
       },
-      (place, status) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (place: any, status: any) => {
         console.log('[LocationSearch] Place details response:', {
           status,
           hasPlace: !!place,
@@ -196,7 +198,8 @@ export default function LocationSearch({
           let city = '';
           let state = '';
 
-          addressComponents.forEach((component) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          addressComponents.forEach((component: any) => {
             if (component.types.includes('locality')) {
               city = component.long_name;
             } else if (component.types.includes('administrative_area_level_1')) {
