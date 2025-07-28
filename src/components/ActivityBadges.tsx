@@ -2,7 +2,7 @@
 
 interface Deal {
   id: number;
-  daysOnMarket: number;
+  daysOnMarket?: number;
   [key: string]: unknown;
 }
 
@@ -13,14 +13,14 @@ interface ActivityBadgesProps {
 
 const ActivityBadges = ({ deal, className = '' }: ActivityBadgesProps) => {
   // NEW badge for deals less than 24 hours old (less than 1 day on market)
-  const isNew = deal.daysOnMarket < 1;
+  const isNew = (deal.daysOnMarket ?? 0) < 1;
   
   // HOT badge for high-activity deals (simulate based on deal characteristics)
   // In production, this would be based on actual view/activity metrics
   const isHot = (() => {
     // Consider deals hot if they have multiple indicators of high activity
     const hotFactors = [
-      deal.daysOnMarket <= 2, // Recently listed
+      (deal.daysOnMarket ?? 0) <= 2, // Recently listed
       deal.id % 3 === 0, // Use deal ID for consistent hot badge
     ].filter(Boolean).length;
     

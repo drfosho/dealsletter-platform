@@ -3644,7 +3644,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                     </div>
 
                     {/* Expenses Breakdown */}
-                    {(deal.propertyTax || deal.insurance || deal.hoa || deal.expenses) && (
+                    {(deal.propertyTax || deal.insurance || deal.hoa || deal.expenses) ? (
                       <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
                         <h4 className="text-lg font-semibold text-primary mb-4">Monthly Expenses</h4>
                         <div className="space-y-3">
@@ -3701,10 +3701,10 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                           )}
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Investment Timeline */}
-                    {deal.timeline && deal.timeline.length > 0 && (
+                    {deal.timeline && deal.timeline.length > 0 ? (
                       <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
                         <h4 className="text-lg font-semibold text-primary mb-4">Investment Timeline</h4>
                         <div className="space-y-4">
@@ -3719,7 +3719,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                           ))}
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ) : null}

@@ -179,11 +179,15 @@ export function parsePropertyAnalysis(text: string): ParsedProperty {
     if (match) {
       if (pattern.toString().includes('%')) {
         property.downPaymentPercent = parseFloat(match[1]);
-        property.downPayment = property.price * (property.downPaymentPercent / 100);
+        const price = typeof property.price === 'number' ? property.price : 0;
+        const downPaymentPercent = typeof property.downPaymentPercent === 'number' ? property.downPaymentPercent : 0;
+        property.downPayment = price * (downPaymentPercent / 100);
       } else {
         property.downPayment = parseFloat(match[1].replace(/,/g, ''));
-        if (property.price > 0) {
-          property.downPaymentPercent = (property.downPayment / property.price) * 100;
+        const price = typeof property.price === 'number' ? property.price : 0;
+        if (price > 0) {
+          const downPayment = typeof property.downPayment === 'number' ? property.downPayment : 0;
+          property.downPaymentPercent = (downPayment / price) * 100;
         }
       }
       break;
@@ -612,7 +616,7 @@ export function parsePropertyAnalysis(text: string): ParsedProperty {
     if (property.bedrooms && property.bathrooms) {
       parts.push(`${property.bedrooms}bd/${property.bathrooms}ba`);
     }
-    if (property.propertyType) {
+    if (property.propertyType && typeof property.propertyType === 'string') {
       parts.push(property.propertyType.toLowerCase());
     }
     if (property.city && property.state) {
@@ -621,8 +625,9 @@ export function parsePropertyAnalysis(text: string): ParsedProperty {
     if (property.investmentStrategy) {
       parts.push(`${property.investmentStrategy} opportunity`);
     }
-    if (property.capRate > 0) {
-      parts.push(`${property.capRate.toFixed(1)}% cap rate`);
+    const capRate = typeof property.capRate === 'number' ? property.capRate : 0;
+    if (capRate > 0) {
+      parts.push(`${capRate.toFixed(1)}% cap rate`);
     }
     property.description = parts.join(' ');
   }
@@ -676,7 +681,7 @@ export function parsePropertyAnalysis(text: string): ParsedProperty {
   ];
   
   for (const { pattern, feature } of featureKeywords) {
-    if (pattern.test(text) && !property.features.includes(feature)) {
+    if (pattern.test(text) && Array.isArray(property.features) && !property.features.includes(feature)) {
       property.features.push(feature);
     }
   }
@@ -735,8 +740,10 @@ export function parsePropertyAnalysis(text: string): ParsedProperty {
   // Enhanced description
   if (!property.description && property.address) {
     const descriptors = [];
-    if (property.features.includes('Spectacular Views')) descriptors.push('with spectacular views');
-    if (property.features.includes('A+ Schools')) descriptors.push('in A+ rated school district');
+    if (Array.isArray(property.features)) {
+      if (property.features.includes('Spectacular Views')) descriptors.push('with spectacular views');
+      if (property.features.includes('A+ Schools')) descriptors.push('in A+ rated school district');
+    }
     if (property.strategy === 'Fix & Flip') descriptors.push('perfect for flipping');
     if (property.strategy === 'House Hack') descriptors.push('ideal house hack opportunity');
     
@@ -749,34 +756,41 @@ export function parsePropertyAnalysis(text: string): ParsedProperty {
   }
   
   // Calculate any missing metrics
-  if (property.price > 0) {
+  const price = typeof property.price === 'number' ? property.price : 0;
+  if (price > 0) {
     // Calculate loan amount if not found
-    if (!property.loanAmount && property.downPayment > 0) {
-      property.loanAmount = property.price - property.downPayment;
+    const downPayment = typeof property.downPayment === 'number' ? property.downPayment : 0;
+    if (!property.loanAmount && downPayment > 0) {
+      property.loanAmount = price - downPayment;
     }
     
     // Calculate cap rate if not found
-    if (property.monthlyRent > 0 && property.capRate === 0) {
-      const annualNOI = (property.monthlyRent * 12) - 
-        (property.propertyTaxes || 0) - 
-        (property.insurance || 0) - 
-        ((property.hoaFees || 0) * 12);
-      property.capRate = (annualNOI / property.price) * 100;
+    const monthlyRent = typeof property.monthlyRent === 'number' ? property.monthlyRent : 0;
+    const capRate = typeof property.capRate === 'number' ? property.capRate : 0;
+    if (monthlyRent > 0 && capRate === 0) {
+      const propertyTaxes = typeof property.propertyTaxes === 'number' ? property.propertyTaxes : 0;
+      const insurance = typeof property.insurance === 'number' ? property.insurance : 0;
+      const hoaFees = typeof property.hoaFees === 'number' ? property.hoaFees : 0;
+      const annualNOI = (monthlyRent * 12) - propertyTaxes - insurance - (hoaFees * 12);
+      property.capRate = (annualNOI / price) * 100;
     }
     
     // Calculate GRM (Gross Rent Multiplier)
-    if (property.monthlyRent > 0) {
-      property.grm = property.price / (property.monthlyRent * 12);
+    if (monthlyRent > 0) {
+      property.grm = price / (monthlyRent * 12);
     }
     
     // Calculate price per sqft
-    if (property.sqft > 0) {
-      property.pricePerSqFt = property.price / property.sqft;
+    const sqft = typeof property.sqft === 'number' ? property.sqft : 0;
+    if (sqft > 0) {
+      property.pricePerSqFt = price / sqft;
     }
     
     // For flips, calculate ROI
-    if (property.strategy === 'Fix & Flip' && property.netProfit > 0 && property.cashRequired > 0) {
-      property.roi = (property.netProfit / property.cashRequired) * 100;
+    const netProfit = typeof property.netProfit === 'number' ? property.netProfit : 0;
+    const cashRequired = typeof property.cashRequired === 'number' ? property.cashRequired : 0;
+    if (property.strategy === 'Fix & Flip' && netProfit > 0 && cashRequired > 0) {
+      property.roi = (netProfit / cashRequired) * 100;
       property.totalROI = property.roi;
     }
   }

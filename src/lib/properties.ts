@@ -38,8 +38,12 @@ export async function getPublishedProperties() {
   // Return only non-draft properties
   console.log('=== getPublishedProperties called ===');
   console.log('Total properties:', properties.length);
-  console.log('Properties:', properties.map(p => ({ id: p.id, title: p.title, isDraft: p.isDraft })));
-  const published = properties.filter(p => !p.isDraft);
+  console.log('Properties:', properties.map(p => ({ 
+    id: p.id, 
+    title: p.title, 
+    isDraft: 'isDraft' in p ? p.isDraft : undefined 
+  })));
+  const published = properties.filter(p => !('isDraft' in p ? p.isDraft : false));
   console.log('Published properties:', published.length);
   return published;
 }
@@ -55,7 +59,7 @@ export async function getPropertyById(id: string) {
 export async function createProperty(property: Record<string, unknown>) {
   console.log('=== createProperty called ===');
   console.log('Input property:', property);
-  console.log('Input isDraft:', property.isDraft);
+  console.log('Input isDraft:', 'isDraft' in property ? property.isDraft : undefined);
   
   const newProperty = {
     ...property,
@@ -65,11 +69,15 @@ export async function createProperty(property: Record<string, unknown>) {
   };
   
   console.log('New property to save:', newProperty);
-  console.log('New property isDraft:', newProperty.isDraft);
+  console.log('New property isDraft:', 'isDraft' in newProperty ? newProperty.isDraft : undefined);
   
   properties.push(newProperty);
   console.log('Total properties after push:', properties.length);
-  console.log('All properties:', properties.map(p => ({ id: p.id, title: p.title, isDraft: p.isDraft })));
+  console.log('All properties:', properties.map(p => ({ 
+    id: p.id, 
+    title: p.title, 
+    isDraft: 'isDraft' in p ? p.isDraft : undefined 
+  })));
   
   return newProperty;
 }
