@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 // Import the properties from the admin API (in real app, this would be from a database)
 // For now, we'll use a shared module

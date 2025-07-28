@@ -29,6 +29,16 @@ interface Deal {
   price: number;
   downPayment: number;
   confidence: string;
+  totalROI?: number | null;
+  capRate?: number | null;
+  cashFlow?: number | null;
+  daysOnMarket?: number;
+  riskLevel?: string;
+  proFormaCapRate?: string | number;
+  roi?: string | number;
+  proFormaCashFlow?: string | number;
+  features?: string[];
+  images?: string[];
   [key: string]: unknown;
 }
 
@@ -66,7 +76,7 @@ export default function Dashboard() {
           const data = await response.json();
           console.log('Dashboard: Fetched properties:', data.length);
           const formattedProperties = data.map((prop: Deal & Record<string, unknown>, index: number) => ({
-            id: parseInt(prop.id) || 1000 + index,
+            id: typeof prop.id === 'string' ? parseInt(prop.id) : prop.id || 1000 + index,
             title: prop.title,
             location: `${prop.city}, ${prop.state} ${prop.zipCode}`,
             type: prop.propertyType,
@@ -86,13 +96,12 @@ export default function Dashboard() {
             description: prop.description,
             riskLevel: prop.riskLevel,
             timeframe: prop.holdPeriod ? `${prop.holdPeriod} years` : 'Long-term',
-            cashRequired: prop.downPayment + prop.closingCosts + prop.rehabCosts,
+            cashRequired: prop.downPayment + (typeof prop.closingCosts === 'number' ? prop.closingCosts : 0) + (typeof prop.rehabCosts === 'number' ? prop.rehabCosts : 0),
             totalROI: prop.totalROI,
             capRate: prop.capRate,
             cashFlow: prop.monthlyCashFlow,
             monthlyRent: prop.monthlyRent,
-            neighborhood: prop.neighborhood,
-            ...prop
+            neighborhood: prop.neighborhood
           }));
           setDynamicProperties(formattedProperties);
         }
@@ -614,7 +623,7 @@ export default function Dashboard() {
           const confidenceOrder: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
           return confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
         default:
-          return a.daysOnMarket - b.daysOnMarket;
+          return (a.daysOnMarket || 0) - (b.daysOnMarket || 0);
       }
     });
 
@@ -890,7 +899,7 @@ export default function Dashboard() {
                     }`}>
                       {deal.confidence.toUpperCase()}
                     </span>
-                    <ActivityBadges deal={deal} />
+                    <ActivityBadges deal={{ ...deal, daysOnMarket: deal.daysOnMarket || 0 }} />
                   </div>
                   
                   {/* Top right - deal type and favorite */}
@@ -930,9 +939,9 @@ export default function Dashboard() {
                         deal.riskLevel === 'medium' ? 'bg-yellow-500/20 text-yellow-600' :
                         'bg-red-500/20 text-red-600'
                       }`}>
-                        {deal.riskLevel.toUpperCase()} RISK
+                        {(deal.riskLevel || 'medium').toUpperCase()} RISK
                       </span>
-                      <ActivityBadges deal={deal} />
+                      <ActivityBadges deal={{ ...deal, daysOnMarket: deal.daysOnMarket || 0 }} />
                       {viewMode === 'list' && <ViewerTracker dealId={deal.id} />}
                     </div>
                   </div>
@@ -960,19 +969,19 @@ export default function Dashboard() {
                     <span className="font-semibold text-primary">${deal.downPayment.toLocaleString()}</span>
                   </div>
                   
-                  {deal.proFormaCapRate && (
+                  {deal.proFormaCapRate ? (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted">Pro Forma Cap</span>
                       <span className="font-semibold text-accent">{deal.proFormaCapRate}%</span>
                     </div>
-                  )}
+                  ) : null}
                   
-                  {deal.roi && (
+                  {deal.roi ? (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted">ROI</span>
                       <span className="font-semibold text-green-600">{deal.roi}%</span>
                     </div>
-                  )}
+                  ) : null}
                   
                   {deal.capRate && (
                     <div className="flex justify-between items-center">
@@ -981,21 +990,23 @@ export default function Dashboard() {
                     </div>
                   )}
                   
-                  {deal.proFormaCashFlow && (
+                  {deal.proFormaCashFlow ? (
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-muted">Cash Flow</span>
                       <span className="font-semibold text-green-600">${deal.proFormaCashFlow}/mo</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {deal.features.slice(0, 3).map((feature, index) => (
-                    <span key={index} className="text-xs px-2 py-1 bg-muted/10 text-muted rounded-md">
-                      {feature}
-                    </span>
-                  ))}
-                </div>
+                {deal.features && deal.features.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {deal.features.slice(0, 3).map((feature, index) => (
+                      <span key={index} className="text-xs px-2 py-1 bg-muted/10 text-muted rounded-md">
+                        {feature}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <button 

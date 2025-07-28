@@ -83,7 +83,7 @@ export default function ImportPreviewModal({
   // Convert property data to dashboard deal format - EXACTLY matching existing properties
   const dealData = {
     // Core fields that match existing dashboard properties
-    id: parseInt(parsedData.id || Date.now().toString()),
+    id: typeof parsedData.id === 'string' ? parseInt(parsedData.id) || Date.now() : Number(parsedData.id) || Date.now(),
     title: parsedData.title || parsedData.address || 'Property Title',
     location: `${parsedData.city || 'City'}, ${parsedData.state || 'ST'} ${parsedData.zipCode || ''}`.trim(),
     type: parsedData.propertyType || 'Single Family',
@@ -121,7 +121,7 @@ export default function ImportPreviewModal({
     // Additional fields for DealModal tabs
     propertyType: parsedData.propertyType || 'Single Family',
     investmentStrategy: parsedData.investmentStrategy || 'Buy & Hold',
-    holdPeriod: parsedData.holdPeriod,
+    holdPeriod: typeof parsedData.holdPeriod === 'number' ? parsedData.holdPeriod : undefined,
     
     // Financing tab
     interestRate: parsedData.interestRate,
@@ -148,12 +148,13 @@ export default function ImportPreviewModal({
     cons: parsedData.cons || [],
     timeline: parsedData.timeline || [],
     
-    // Contact info
-    contactInfo: parsedData.contactInfo,
-    
-    // Include all other parsed data
-    ...parsedData
-  };
+    // Include all other parsed data (except id and contactInfo to avoid type conflicts)
+    ...((() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, contactInfo, ...rest } = parsedData;
+      return rest;
+    })())
+  } as const;
 
   return (
     <>

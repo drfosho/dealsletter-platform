@@ -179,7 +179,6 @@ export default function AdminProperties() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [parsedData, setParsedData] = useState<Partial<Property> | null>(null);
   const [showImportPreview, setShowImportPreview] = useState(false);
-  const [parsingMessage, setParsingMessage] = useState('');
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -292,7 +291,7 @@ export default function AdminProperties() {
     }
   };
 
-  const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
+  const handleInputChange = (field: string, value: string | number | boolean | string[] | null) => {
     setProperty(prev => ({
       ...prev,
       [field]: value
@@ -347,7 +346,6 @@ export default function AdminProperties() {
 
   const handleQuickImport = async () => {
     try {
-      setParsingMessage('Analyzing property data...');
       
       // Simulate parsing delay for better UX
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -364,7 +362,6 @@ export default function AdminProperties() {
         keyNotes: text, // Also store in notes for reference
         images: uploadedImages.length > 0 ? uploadedImages : ["/api/placeholder/400/300"],
         isDraft: false,
-        status: 'active',
         createdAt: new Date(),
         updatedAt: new Date(),
         // Set some reasonable defaults that can be edited later
@@ -377,69 +374,21 @@ export default function AdminProperties() {
 
       console.log('Parsed property:', property);
       
-      // Update parsing message
-      setParsingMessage('Creating property preview...');
+      // Small delay for UI feedback
       await new Promise(resolve => setTimeout(resolve, 300));
       
       // Store parsed data and show preview
       setParsedData(property);
-      setEditedData(property); // Initialize edited data
       setShowImportPreview(true);
       setIsParsing(false);
-      setParsingMessage('');
       
     } catch (error) {
       console.error('Error in Quick Import:', error);
       setMessage(`Error: ${error instanceof Error ? error.message : 'Failed to parse property data'}`);
       setIsParsing(false);
-      setParsingMessage('');
     }
   };
 
-  const applyParsedData = async () => {
-    if (!parsedData) return;
-    
-    try {
-      // Directly create the property in the database
-      const response = await fetch('/api/admin/properties', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...parsedData,
-          isDraft: false, // Publish immediately
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create property');
-      }
-
-      await response.json();
-      
-      // Close modals and show success message
-      setShowQuickImport(false);
-      setShowImportPreview(false);
-      setImportText('');
-      setParsedData(null);
-      setUploadedImages([]);
-      
-      setMessage('Property added to dashboard successfully! 🎉');
-      
-      // Refresh properties list
-      loadProperties();
-      
-      // Reset form to defaults for next property
-      setProperty(defaultProperty);
-      
-    } catch (error) {
-      console.error('Error creating property:', error);
-      setMessage('Error creating property. Please try again.');
-    }
-  };
 
   if (!isAuthenticated) {
     return (
@@ -464,6 +413,7 @@ export default function AdminProperties() {
     );
   }
 
+  // Define tabs before using them in JSX
   const tabs = [
     { id: 'basic', label: 'Basic Info' },
     { id: 'financial', label: 'Financial Data' },
@@ -475,7 +425,7 @@ export default function AdminProperties() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation variant="admin" />
+      <Navigation variant="dashboard" />
       
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-8">
@@ -526,8 +476,6 @@ export default function AdminProperties() {
             onClose={() => {
               setShowImportPreview(false);
               setParsedData(null);
-              setEditedData(null);
-              setIsEditMode(false);
             }}
             onApprove={async () => {
               console.log('=== QUICK IMPORT APPROVE CLICKED ===');
@@ -536,8 +484,84 @@ export default function AdminProperties() {
               // Create the property with the parsed data
               setIsLoading(true);
               try {
-                const newProperty = {
+                const newProperty: Property = {
+                  // Default values for ALL required fields
+                  title: '',
+                  address: '',
+                  city: '',
+                  state: '',
+                  zipCode: '',
+                  propertyType: 'Single Family',
+                  bedrooms: 0,
+                  bathrooms: 0,
+                  sqft: 0,
+                  yearBuilt: null,
+                  lotSize: '',
+                  parking: '',
+                  condition: '',
+                  images: ["/api/placeholder/400/300"],
+                  
+                  // Financial Data defaults
+                  price: 0,
+                  downPaymentPercent: 25,
+                  downPayment: 0,
+                  loanAmount: 0,
+                  interestRate: 0,
+                  loanTerm: 30,
+                  monthlyRent: 0,
+                  projectedRent: 0,
+                  securityDeposit: 0,
+                  propertyTaxes: 0,
+                  insurance: 0,
+                  hoaFees: 0,
+                  rehabCosts: 0,
+                  closingCosts: 0,
+                  inspectionCosts: 0,
+                  
+                  // Investment Analysis defaults
+                  capRate: 0,
+                  cashOnCashReturn: 0,
+                  totalROI: 0,
+                  monthlyCashFlow: 0,
+                  monthlyCashFlowAfter: 0,
+                  breakEvenYear: 0,
+                  dscr: 0,
+                  grm: 0,
+                  pricePerSqFt: 0,
+                  
+                  // Investment Timeline defaults
+                  investmentStrategy: 'Buy & Hold',
+                  exitStrategy: '',
+                  appreciationRate: 0,
+                  rentGrowthRate: 0,
+                  
+                  // Market & Deal Info defaults
+                  neighborhood: '',
+                  marketAnalysis: '',
+                  comparables: [],
+                  dealSource: '',
+                  dealStatus: '',
+                  competitionLevel: '',
+                  daysOnMarket: 0,
+                  confidence: 'medium',
+                  riskLevel: 'medium',
+                  
+                  // Contact & Notes defaults
+                  listingAgent: '',
+                  agentPhone: '',
+                  agentEmail: '',
+                  sellerInfo: '',
+                  keyNotes: '',
+                  pros: [],
+                  cons: [],
+                  strategyNotes: '',
+                  followUpActions: '',
+                  features: [],
+                  description: '',
+                  
+                  // Override with parsed data
                   ...parsedData,
+                  // Ensure required fields
                   id: Date.now().toString(),
                   createdAt: new Date(),
                   updatedAt: new Date(),
@@ -617,7 +641,7 @@ export default function AdminProperties() {
                       <li>1. Copy your entire Claude Opus property analysis</li>
                       <li>2. Paste it in the text box below</li>
                       <li>3. Upload any property images (optional)</li>
-                      <li>4. Click "Parse & Import" to auto-fill all fields</li>
+                      <li>4. Click &quot;Add Property&quot; to auto-fill all fields</li>
                       <li>5. Review and make any adjustments before saving</li>
                     </ol>
                   </div>
@@ -673,7 +697,7 @@ export default function AdminProperties() {
                             reader.onload = (event) => {
                               if (event.target?.result) {
                                 // Store base64 encoded image
-                                setUploadedImages(prev => [...prev, event.target.result as string]);
+                                setUploadedImages(prev => [...prev, event.target!.result as string]);
                               }
                             };
                             reader.readAsDataURL(file);

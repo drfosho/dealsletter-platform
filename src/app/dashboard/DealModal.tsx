@@ -10,7 +10,40 @@ interface Deal {
   strategy: string;
   price: number;
   downPayment: number;
-  // Add other properties as needed
+  downPaymentPercent?: number;
+  // Optional properties from the codebase
+  bedrooms?: number;
+  bathrooms?: number;
+  sqft?: number;
+  yearBuilt?: number | null;
+  propertyType?: string;
+  investmentStrategy?: string;
+  confidence?: string;
+  riskLevel?: string;
+  holdPeriod?: number;
+  description?: string;
+  interestRate?: number;
+  loanTerm?: number;
+  monthlyPI?: number;
+  closingCosts?: number;
+  rehabCosts?: number;
+  rehabTimeline?: string;
+  rehabDetails?: Record<string, number>;
+  propertyTax?: number;
+  insurance?: number;
+  hoa?: number;
+  propertyManagement?: number;
+  maintenance?: number;
+  monthlyRent?: number;
+  capRate?: number | null;
+  totalROI?: number | null;
+  timeline?: Array<{ period: string; action?: string; event?: string; impact?: string }>;
+  pros?: string[];
+  cons?: string[];
+  features?: string[];
+  neighborhood?: string;
+  images?: string[];
+  // Allow other properties but with proper types
   [key: string]: unknown;
 }
 
@@ -3596,7 +3629,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                       </div>
                       <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
                         <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
-                        <p className={`text-2xl font-bold ${(deal.monthlyCashFlow || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <p className={`text-2xl font-bold ${(typeof deal.monthlyCashFlow === 'number' ? deal.monthlyCashFlow : 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           ${deal.monthlyCashFlow?.toLocaleString() || '0'}
                         </p>
                       </div>
@@ -3675,11 +3708,11 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                       <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
                         <h4 className="text-lg font-semibold text-primary mb-4">Investment Timeline</h4>
                         <div className="space-y-4">
-                          {deal.timeline.map((item: { period: string; action: string; impact: string }, index: number) => (
+                          {deal.timeline.map((item, index) => (
                             <div key={index} className="flex gap-4 items-start">
                               <div className="min-w-[100px] text-sm font-medium text-accent">{item.period}</div>
                               <div className="flex-1">
-                                <p className="font-medium">{item.event}</p>
+                                <p className="font-medium">{item.event || item.action || ''}</p>
                                 {item.impact && <p className="text-sm text-muted mt-1">{item.impact}</p>}
                               </div>
                             </div>
@@ -3696,7 +3729,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                   <h3 className="text-xl font-semibold text-primary mb-4">Property Pictures</h3>
                   {deal.images && deal.images.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {deal.images.map((image: string, index: number) => (
+                      {deal.images.map((image, index) => (
                         <div key={index} className="relative group">
                           <div className="relative w-full h-64 rounded-lg overflow-hidden bg-muted/20">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
