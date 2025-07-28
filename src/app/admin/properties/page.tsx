@@ -179,8 +179,6 @@ export default function AdminProperties() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [parsedData, setParsedData] = useState<Partial<Property> | null>(null);
   const [showImportPreview, setShowImportPreview] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editedData, setEditedData] = useState<Partial<Property> | null>(null);
   const [parsingMessage, setParsingMessage] = useState('');
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -188,6 +186,7 @@ export default function AdminProperties() {
   // Auto-calculate financial metrics
   useEffect(() => {
     calculateFinancials();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     property.price,
     property.downPaymentPercent,
@@ -293,36 +292,15 @@ export default function AdminProperties() {
     }
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | number | boolean | string[]) => {
     setProperty(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleArrayInput = (field: string, value: string) => {
-    const items = value.split(',').map(item => item.trim()).filter(item => item);
-    setProperty(prev => ({
-      ...prev,
-      [field]: items
-    }));
-  };
 
-  const handleComparableAdd = () => {
-    setProperty(prev => ({
-      ...prev,
-      comparables: [...prev.comparables, { address: '', price: 0, sqft: 0, soldDate: '' }]
-    }));
-  };
 
-  const handleComparableChange = (index: number, field: string, value: any) => {
-    setProperty(prev => ({
-      ...prev,
-      comparables: prev.comparables.map((comp, i) => 
-        i === index ? { ...comp, [field]: value } : comp
-      )
-    }));
-  };
 
   const handleSave = async (publish = false) => {
     setIsLoading(true);
@@ -440,7 +418,7 @@ export default function AdminProperties() {
         throw new Error('Failed to create property');
       }
 
-      const created = await response.json();
+      await response.json();
       
       // Close modals and show success message
       setShowQuickImport(false);
@@ -718,7 +696,8 @@ export default function AdminProperties() {
                         <div className="flex gap-2 flex-wrap">
                           {uploadedImages.map((img, index) => (
                             <div key={index} className="relative">
-                              <img 
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
                                 src={img} 
                                 alt={`Upload ${index + 1}`}
                                 className="w-20 h-20 object-cover rounded-lg"
@@ -972,7 +951,8 @@ export default function AdminProperties() {
                         <div className="flex gap-2 flex-wrap">
                           {property.images.map((img, index) => (
                             <div key={index} className="relative">
-                              <img 
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
                                 src={img} 
                                 alt={`Property ${index + 1}`}
                                 className="w-20 h-20 object-cover rounded-lg"
@@ -1202,11 +1182,14 @@ export default function AdminProperties() {
                 <div className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-2xl transition-all">
                   <div className="relative h-48 bg-muted/20">
                     {property.images[0] && (
-                      <img 
-                        src={property.images[0]} 
-                        alt={property.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={property.images[0]} 
+                          alt={property.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </>
                     )}
                     <div className="absolute top-4 left-4 z-10 flex items-start gap-2">
                       <span className={`px-2 py-1 rounded-md text-xs font-medium ${

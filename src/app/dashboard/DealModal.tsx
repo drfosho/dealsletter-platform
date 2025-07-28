@@ -2088,7 +2088,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             <p className="text-muted mb-4">
               This Linda Vista duplex offers the ultimate San Diego house hack - live in one unit while the other pays majority of your mortgage! 
               With each unit capable of renting for $2,295/month and only needing 3.5% down with FHA, this property lets you control 
-              a $1M asset for just $50K while building massive equity in America's Finest City.
+              a $1M asset for just $50K while building massive equity in America&apos;s Finest City.
             </p>
             
             <div className="bg-accent/10 rounded-lg p-4 mb-4 border border-accent/20">
@@ -2271,7 +2271,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             </div>
             
             <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
-              <p className="text-sm font-semibold text-accent mb-2">BUT... You're Buying a $1M Asset!</p>
+              <p className="text-sm font-semibold text-accent mb-2">BUT... You&apos;re Buying a $1M Asset!</p>
               <p className="text-xs text-muted">
                 That extra $3,909/month is building equity, providing tax benefits, and giving you control 
                 over your housing. Plus, you can increase rents, add ADUs, or refinance when rates drop.
@@ -2301,7 +2301,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
               <p className="text-sm text-muted">
                 Current market rates: 7.0-7.5%. Your rate: 3.1%. Monthly savings: $31,000+. Annual savings: $372,000. 
                 This loan creates $3M+ in immediate value through interest rate arbitrage. The assumable loan is worth 
-                more than most investors' entire real estate portfolios!
+                more than most investors&apos; entire real estate portfolios!
               </p>
             </div>
             
@@ -2409,7 +2409,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             <h4 className="font-semibold text-blue-600 mb-2">💡 Loan Value Analysis</h4>
             <p className="text-sm text-muted">
               Market rate debt service would be ~$55,890/month. Your 3.1% rate saves $31,000/month. 
-              That's $372,000 in annual savings, creating over $3M in loan value premium!
+              That&apos;s $372,000 in annual savings, creating over $3M in loan value premium!
             </p>
           </div>
         </div>
@@ -2524,7 +2524,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
               <h4 className="font-semibold text-blue-600 mb-2">💼 Syndication Opportunity</h4>
               <p className="text-sm text-muted">
                 Raise $2.5M from investors at 8% preferred return. Keep $1.26M for yourself. 
-                70/30 split above 8% pref. Control $9.6M asset with other people's money.
+                70/30 split above 8% pref. Control $9.6M asset with other people&apos;s money.
               </p>
             </div>
             
@@ -2548,7 +2548,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           <div>
             <h3 className="text-xl font-semibold text-primary mb-4">30-Unit Mobile Home Cash Flow Machine</h3>
             <p className="text-muted mb-4">
-              This isn't your typical mobile home park - it's 30 INDIVIDUAL mobile homes on single-family lots with 
+              This isn&apos;t your typical mobile home park - it&apos;s 30 INDIVIDUAL mobile homes on single-family lots with 
               SELLER FINANCING at incredible terms! With current rents $200-250 BELOW market and 75% on month-to-month 
               leases, you can increase income IMMEDIATELY. The 14% cash-on-cash return grows to 17% by year 3!
             </p>
@@ -2557,7 +2557,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
               <h4 className="font-semibold text-green-600 mb-2">💰 Seller Financing Terms</h4>
               <p className="text-sm text-muted">
                 $1M seller financing at just 5% interest-only for years 1-2, then 5.5% for years 3-4, with balloon in year 5. 
-                This incredible financing allows you to capture massive cash flow from day one while using the property's 
+                This incredible financing allows you to capture massive cash flow from day one while using the property&apos;s 
                 income to pay down or refinance the loan.
               </p>
             </div>
@@ -2823,7 +2823,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           <div>
             <h3 className="text-xl font-semibold text-primary mb-4">Los Gatos Mountain Estate - 2.2 Acres</h3>
             <p className="text-muted mb-4">
-              This Los Gatos mountain property on 2.2 ACRES needs cosmetic updating but sits in one of Silicon Valley's 
+              This Los Gatos mountain property on 2.2 ACRES needs cosmetic updating but sits in one of Silicon Valley&apos;s 
               most desirable areas. With award-winning Los Gatos schools and massive lot premium, this property can 
               command $1,000+/sq ft when updated to luxury standards targeting tech executives seeking privacy.
             </p>
@@ -2831,7 +2831,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             <div className="bg-accent/10 rounded-lg p-4 mb-4 border border-accent/20">
               <h4 className="font-semibold text-accent mb-2">🏔️ The 2.2 Acre Advantage</h4>
               <p className="text-sm text-muted">
-                Recent comps show $974-$1,510/sq ft with most under 0.5 acres. This property's 2.2 acres provides 
+                Recent comps show $974-$1,510/sq ft with most under 0.5 acres. This property&apos;s 2.2 acres provides 
                 exceptional privacy value for executives working from home. Conservative ARV at $1,064/sq ft = $2.1M, 
                 but premium acreage could push value to $2.5M+.
               </p>
@@ -3118,7 +3118,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
               <h4 className="font-semibold text-blue-600 mb-2">🏗️ Large Lot ADU Opportunity</h4>
               <p className="text-sm text-muted">
-                5,000 sq ft lot provides ample space for future ADU development. Oakland's ADU-friendly policies make 
+                5,000 sq ft lot provides ample space for future ADU development. Oakland&apos;s ADU-friendly policies make 
                 this an excellent long-term hold option. Add an ADU for $150K and rent for $1,800+/month.
               </p>
             </div>
@@ -3282,7 +3282,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             <h4 className="font-semibold text-primary mb-2">🔧 Permits & Contingency - $5,000</h4>
             <p className="text-sm text-muted">
               Building permits, dumpster rental, and 10% contingency for unexpected issues. Focus on cosmetic 
-              improvements that don't require major permits to keep timeline tight.
+              improvements that don&apos;t require major permits to keep timeline tight.
             </p>
           </div>
         </div>
@@ -3324,7 +3324,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-600 mr-2">✓</span>
-                  <span>Market as "turnkey" to owner-occupants</span>
+                  <span>Market as &quot;turnkey&quot; to owner-occupants</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-600 mr-2">✓</span>
@@ -3675,7 +3675,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                       <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
                         <h4 className="text-lg font-semibold text-primary mb-4">Investment Timeline</h4>
                         <div className="space-y-4">
-                          {deal.timeline.map((item: any, index: number) => (
+                          {deal.timeline.map((item: { period: string; action: string; impact: string }, index: number) => (
                             <div key={index} className="flex gap-4 items-start">
                               <div className="min-w-[100px] text-sm font-medium text-accent">{item.period}</div>
                               <div className="flex-1">
@@ -3699,7 +3699,8 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                       {deal.images.map((image: string, index: number) => (
                         <div key={index} className="relative group">
                           <div className="relative w-full h-64 rounded-lg overflow-hidden bg-muted/20">
-                            <img 
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
                               src={image} 
                               alt={`${deal.title} - Image ${index + 1}`}
                               className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"

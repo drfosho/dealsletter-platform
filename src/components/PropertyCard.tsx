@@ -48,14 +48,17 @@ export default function PropertyCard({ deal, viewMode = 'grid', onViewDetails, i
         <div className="relative h-48 bg-muted/20 overflow-hidden">
           {/* Property Image */}
           {deal.images && deal.images.length > 0 && (
-            <img 
-              src={deal.images[0]} 
-              alt={deal.title}
-              className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={deal.images[0]} 
+                alt={deal.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </>
           )}
           
           {/* Top overlay - confidence and activity badges */}

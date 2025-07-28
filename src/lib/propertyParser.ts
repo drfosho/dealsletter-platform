@@ -1,7 +1,7 @@
 // Comprehensive property data parser for investment analysis text
 
 interface ParsedProperty {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export function parsePropertyAnalysis(text: string): ParsedProperty {

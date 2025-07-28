@@ -65,7 +65,7 @@ export default function Dashboard() {
         if (response.ok) {
           const data = await response.json();
           console.log('Dashboard: Fetched properties:', data.length);
-          const formattedProperties = data.map((prop: any, index: number) => ({
+          const formattedProperties = data.map((prop: Deal & Record<string, unknown>, index: number) => ({
             id: parseInt(prop.id) || 1000 + index,
             title: prop.title,
             location: `${prop.city}, ${prop.state} ${prop.zipCode}`,

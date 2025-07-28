@@ -76,8 +76,7 @@ interface ImportPreviewModalProps {
 export default function ImportPreviewModal({ 
   parsedData, 
   onClose, 
-  onApprove,
-  onEdit 
+  onApprove
 }: ImportPreviewModalProps) {
   const [showDetailModal, setShowDetailModal] = useState(false);
 

@@ -1,7 +1,7 @@
 // Shared properties storage (replace with database in production)
 // NOTE: This is an in-memory array that will be reset on server restart
 // In production, this should be replaced with a database
-export const properties: any[] = [
+export const properties: Record<string, unknown>[] = [
   // Add a test property to verify the system is working
   {
     id: 'test-property-1',
@@ -52,7 +52,7 @@ export async function getPropertyById(id: string) {
   return properties.find(p => p.id === id);
 }
 
-export async function createProperty(property: any) {
+export async function createProperty(property: Record<string, unknown>) {
   console.log('=== createProperty called ===');
   console.log('Input property:', property);
   console.log('Input isDraft:', property.isDraft);
@@ -74,7 +74,7 @@ export async function createProperty(property: any) {
   return newProperty;
 }
 
-export async function updateProperty(id: string, updates: any) {
+export async function updateProperty(id: string, updates: Record<string, unknown>) {
   const index = properties.findIndex(p => p.id === id);
   if (index === -1) return null;
   

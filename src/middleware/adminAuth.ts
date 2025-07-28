@@ -17,7 +17,7 @@ export function adminAuthMiddleware(request: NextRequest) {
     const [type, credentials] = authHeader.split(' ');
     if (type === 'Basic' && credentials) {
       const decoded = Buffer.from(credentials, 'base64').toString();
-      const [username, password] = decoded.split(':');
+      const [, password] = decoded.split(':');
       
       if (password === ADMIN_PASSWORD) {
         const response = NextResponse.next();

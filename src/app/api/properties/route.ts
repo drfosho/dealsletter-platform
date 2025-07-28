@@ -4,13 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 // For now, we'll use a shared module
 import { getPublishedProperties } from '@/lib/properties';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get only published properties for public dashboard
     const properties = await getPublishedProperties();
     
     return NextResponse.json(properties);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch properties' },
       { status: 500 }

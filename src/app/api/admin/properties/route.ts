@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const newProperty = await createProperty(body);
 
     return NextResponse.json(newProperty);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to create property' },
       { status: 400 }
@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json(updatedProperty);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to update property' },
       { status: 400 }
@@ -106,7 +106,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Failed to delete property' },
       { status: 400 }
