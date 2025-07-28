@@ -3458,7 +3458,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           {/* Dynamic properties render */}
           {deal.id !== 1 && deal.id !== 2 && deal.id !== 3 && deal.id !== 4 && deal.id !== 5 && deal.id !== 6 && deal.id !== 7 && deal.id !== 8 && deal.id !== 9 && deal.id !== 10 && deal.id !== 11 && deal.id !== 12 && (
             <div className="space-y-8">
-              {activeTab === 'overview' && (
+              {activeTab === 'overview' ? (
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-4">Property Overview</h3>
                   <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
@@ -3505,9 +3505,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
               
-              {activeTab === 'financing' && (
+              {activeTab === 'financing' ? (
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-4">Financing Details</h3>
                   <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
@@ -3574,9 +3574,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : null}
               
-              {activeTab === 'rehab' && (
+              {activeTab === 'rehab' ? (
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-4">Rehab & Renovation</h3>
                   <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
@@ -3615,9 +3615,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
               
-              {activeTab === 'returns' && (
+              {activeTab === 'returns' ? (
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-4">Investment Returns</h3>
                   <div className="space-y-6">
@@ -3722,9 +3722,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
               
-              {activeTab === 'pictures' && (
+              {activeTab === 'pictures' ? (
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-4">Property Pictures</h3>
                   {deal.images && deal.images.length > 0 ? (
@@ -3762,7 +3762,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                     </div>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>
           )}
         </div>
