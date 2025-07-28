@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import PropertyCard from '@/components/PropertyCard';
+import PropertyCardEditable from '@/components/PropertyCardEditable';
 import DealModal from '@/app/dashboard/DealModal';
 import Navigation from '@/components/Navigation';
 import { parsePropertyAnalysis } from '@/lib/propertyParser';
@@ -68,7 +68,7 @@ export default function AdminPropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPropertyId, setEditingPropertyId] = useState<string | number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [analysisText, setAnalysisText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -95,12 +95,18 @@ export default function AdminPropertiesPage() {
     fetchProperties();
   }, []);
 
-  // Handle property deletion
-  const handleDelete = async (propertyId: string | number) => {
-    if (!confirm('Are you sure you want to delete this property?')) return;
+  // Handle property deletion with better confirmation
+  const handleDelete = async (property: Property) => {
+    const confirmDelete = confirm(
+      `Are you sure you want to delete "${property.title || property.address}"?\n\n` +
+      'This will remove the property from both the admin panel and the dashboard.\n' +
+      'This action cannot be undone.'
+    );
+    
+    if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`/api/admin/properties?id=${propertyId}`, {
+      const response = await fetch(`/api/admin/properties?id=${property.id}`, {
         method: 'DELETE'
       });
 
@@ -108,29 +114,46 @@ export default function AdminPropertiesPage() {
       
       // Refresh the list
       await fetchProperties();
+      alert(`Property "${property.title || property.address}" has been deleted successfully.`);
     } catch (error) {
       console.error('Error deleting property:', error);
-      alert('Failed to delete property');
+      alert('Failed to delete property. Please try again.');
     }
   };
 
-  // Handle property update
-  const handleUpdate = async (property: Property) => {
+  // Handle inline property update
+  const handleInlineUpdate = async (updatedDeal: ReturnType<typeof convertToDeal>) => {
     try {
+      // Find the original property to preserve all fields
+      const originalProperty = properties.find(p => 
+        (typeof p.id === 'string' ? parseInt(p.id) : p.id) === updatedDeal.id
+      );
+      
+      if (!originalProperty) throw new Error('Property not found');
+      
+      // Update only the fields that were edited
+      const updatedProperty = {
+        ...originalProperty,
+        title: updatedDeal.title,
+        price: updatedDeal.price,
+        downPayment: updatedDeal.downPayment,
+        updatedAt: new Date()
+      };
+      
       const response = await fetch('/api/admin/properties', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(property)
+        body: JSON.stringify(updatedProperty)
       });
 
       if (!response.ok) throw new Error('Failed to update property');
       
-      setShowEditModal(false);
-      setSelectedProperty(null);
+      setEditingPropertyId(null);
       await fetchProperties();
+      alert('Property updated successfully!');
     } catch (error) {
       console.error('Error updating property:', error);
-      alert('Failed to update property');
+      alert('Failed to update property. Please try again.');
     }
   };
 
@@ -143,8 +166,13 @@ export default function AdminPropertiesPage() {
 
     setIsProcessing(true);
     try {
-      // Parse the property data
+      // Parse the property data using the same logic as Claude Code
       const parsedData = parsePropertyAnalysis(analysisText);
+      
+      // Ensure required fields
+      if (!parsedData.title && !parsedData.address) {
+        throw new Error('Property must have a title or address');
+      }
       
       // Create property with parsed data
       const response = await fetch('/api/admin/properties', {
@@ -158,10 +186,10 @@ export default function AdminPropertiesPage() {
       // Clear form and refresh
       setAnalysisText('');
       await fetchProperties();
-      alert('Property imported successfully!');
+      alert('Property imported successfully! It will now appear on the dashboard.');
     } catch (error) {
       console.error('Error importing property:', error);
-      alert('Failed to import property. Please check the format and try again.');
+      alert('Failed to import property. Please ensure the text contains property details like address, price, rent, etc.');
     } finally {
       setIsProcessing(false);
     }
@@ -223,18 +251,29 @@ export default function AdminPropertiesPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-primary mb-2">Property Management</h1>
-          <p className="text-muted">Manage all dashboard properties</p>
+          <p className="text-muted">Manage all dashboard properties. Changes here affect the main dashboard.</p>
         </div>
 
         {/* Add Property Section */}
         <div className="bg-card rounded-xl border border-border/60 p-6 mb-8">
           <h2 className="text-xl font-semibold text-primary mb-4">Quick Add Property</h2>
+          <p className="text-sm text-muted mb-4">
+            Paste property analysis text just like you would in Claude Code. Include details like address, price, rent, bedrooms, etc.
+          </p>
           <div className="space-y-4">
             <textarea
               value={analysisText}
               onChange={(e) => setAnalysisText(e.target.value)}
-              placeholder="Paste your property analysis here... (address, price, rent, features, etc.)"
-              className="w-full h-48 p-4 bg-background border border-border/60 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent/20"
+              placeholder="Example:
+123 Main St, San Diego, CA 92101
+$450,000 purchase price
+$2,500/month rent
+3 bed 2 bath, 1,500 sqft
+Built in 1985
+Good condition, needs minor updates
+Cap rate: 5.2%
+Cash flow: $500/month"
+              className="w-full h-48 p-4 bg-background border border-border/60 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent/20 font-mono text-sm"
             />
             <button
               onClick={handleQuickImport}
@@ -247,14 +286,14 @@ export default function AdminPropertiesPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Processing...
+                  Analyzing & Adding...
                 </>
               ) : (
                 <>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Add Property
+                  Analyze & Add
                 </>
               )}
             </button>
@@ -263,7 +302,12 @@ export default function AdminPropertiesPage() {
 
         {/* View Mode Toggle */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-primary">All Properties ({properties.length})</h2>
+          <h2 className="text-xl font-semibold text-primary">
+            All Properties ({properties.length})
+            <span className="text-sm text-muted ml-2">
+              {editingPropertyId ? '(Editing mode active)' : ''}
+            </span>
+          </h2>
           <div className="flex bg-card border border-border/60 rounded-lg overflow-hidden">
             <button
               className={`px-4 py-2 ${viewMode === 'grid' ? 'bg-accent text-white' : 'text-muted hover:text-primary'}`}
@@ -297,43 +341,23 @@ export default function AdminPropertiesPage() {
             <p className="text-muted mb-4">No properties yet. Add your first property above!</p>
           </div>
         ) : (
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-4'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
             {properties.map((property) => (
-              <div key={property.id} className="relative group">
-                <PropertyCard 
-                  deal={convertToDeal(property)}
-                  viewMode={viewMode}
-                  onViewDetails={() => {
-                    setSelectedProperty(property);
-                    setShowDetailModal(true);
-                  }}
-                />
-                
-                {/* Admin Actions Overlay */}
-                <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => {
-                      setSelectedProperty(property);
-                      setShowEditModal(true);
-                    }}
-                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg"
-                    title="Edit Property"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(property.id)}
-                    className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-lg"
-                    title="Delete Property"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+              <PropertyCardEditable
+                key={property.id}
+                deal={convertToDeal(property)}
+                viewMode={viewMode}
+                isEditing={editingPropertyId === property.id}
+                showAdminControls={true}
+                onViewDetails={() => {
+                  setSelectedProperty(property);
+                  setShowDetailModal(true);
+                }}
+                onEdit={() => setEditingPropertyId(property.id)}
+                onDelete={() => handleDelete(property)}
+                onSave={handleInlineUpdate}
+                onCancel={() => setEditingPropertyId(null)}
+              />
             ))}
           </div>
         )}
@@ -350,215 +374,6 @@ export default function AdminPropertiesPage() {
           }}
         />
       )}
-
-      {/* Edit Modal */}
-      {showEditModal && selectedProperty && (
-        <EditPropertyModal
-          property={selectedProperty}
-          onSave={handleUpdate}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedProperty(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-// Edit Property Modal Component
-function EditPropertyModal({ 
-  property, 
-  onSave, 
-  onClose 
-}: { 
-  property: Property; 
-  onSave: (property: Property) => void;
-  onClose: () => void;
-}) {
-  const [editedProperty, setEditedProperty] = useState(property);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(editedProperty);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-xl border border-border/60 max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-border/20">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold text-primary">Edit Property</h2>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-muted/10 rounded-lg transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Basic Info */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Title/Address</label>
-              <input
-                type="text"
-                value={editedProperty.title}
-                onChange={(e) => setEditedProperty({...editedProperty, title: e.target.value})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Property Type</label>
-              <input
-                type="text"
-                value={editedProperty.propertyType}
-                onChange={(e) => setEditedProperty({...editedProperty, propertyType: e.target.value})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">City</label>
-              <input
-                type="text"
-                value={editedProperty.city}
-                onChange={(e) => setEditedProperty({...editedProperty, city: e.target.value})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">State</label>
-              <input
-                type="text"
-                value={editedProperty.state}
-                onChange={(e) => setEditedProperty({...editedProperty, state: e.target.value})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            {/* Financial Info */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Price</label>
-              <input
-                type="number"
-                value={editedProperty.price}
-                onChange={(e) => setEditedProperty({...editedProperty, price: Number(e.target.value)})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Down Payment</label>
-              <input
-                type="number"
-                value={editedProperty.downPayment}
-                onChange={(e) => setEditedProperty({...editedProperty, downPayment: Number(e.target.value)})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Monthly Rent</label>
-              <input
-                type="number"
-                value={editedProperty.monthlyRent}
-                onChange={(e) => setEditedProperty({...editedProperty, monthlyRent: Number(e.target.value)})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Cap Rate (%)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={editedProperty.capRate}
-                onChange={(e) => setEditedProperty({...editedProperty, capRate: Number(e.target.value)})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            {/* Property Details */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Bedrooms</label>
-              <input
-                type="number"
-                value={editedProperty.bedrooms}
-                onChange={(e) => setEditedProperty({...editedProperty, bedrooms: Number(e.target.value)})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Bathrooms</label>
-              <input
-                type="number"
-                value={editedProperty.bathrooms}
-                onChange={(e) => setEditedProperty({...editedProperty, bathrooms: Number(e.target.value)})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Square Feet</label>
-              <input
-                type="number"
-                value={editedProperty.sqft}
-                onChange={(e) => setEditedProperty({...editedProperty, sqft: Number(e.target.value)})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Investment Strategy</label>
-              <select
-                value={editedProperty.investmentStrategy}
-                onChange={(e) => setEditedProperty({...editedProperty, investmentStrategy: e.target.value})}
-                className="w-full p-2 bg-card border border-border/60 rounded-lg"
-              >
-                <option value="Buy & Hold">Buy & Hold</option>
-                <option value="Fix & Flip">Fix & Flip</option>
-                <option value="BRRRR">BRRRR</option>
-                <option value="House Hack">House Hack</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-muted mb-1">Description</label>
-            <textarea
-              value={editedProperty.description || ''}
-              onChange={(e) => setEditedProperty({...editedProperty, description: e.target.value})}
-              className="w-full h-24 p-2 bg-card border border-border/60 rounded-lg resize-none"
-            />
-          </div>
-        </form>
-
-        <div className="p-6 border-t border-border/20 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-6 py-2 border border-border/60 rounded-lg hover:bg-muted/10"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90"
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
