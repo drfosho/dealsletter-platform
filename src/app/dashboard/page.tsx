@@ -65,7 +65,7 @@ export default function Dashboard() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [dynamicProperties, setDynamicProperties] = useState<Deal[]>([]);
-  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [lastRefresh] = useState(Date.now());
 
   // Fetch dynamic properties from API
   const fetchProperties = async () => {
@@ -116,429 +116,10 @@ export default function Dashboard() {
     fetchProperties();
   }, [lastRefresh]);
 
-  // Sample deals data - in real app this would come from API
-  const staticDeals = useMemo(() => [
-    {
-      id: 1,
-      title: "853 S 32nd Street",
-      location: "San Diego, CA 92113",
-      type: "Opportunity Zone",
-      strategy: "BRRRR",
-      price: 1295000,
-      downPayment: 647500,
-      currentCapRate: 3.39,
-      proFormaCapRate: 5.63,
-      monthlyRent: 5905,
-      proFormaCashFlow: 1938,
-      rentUpside: 2495,
-      status: "active",
-      daysOnMarket: 2,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "Mixed",
-      bathrooms: "Mixed",
-      sqft: "7,325 sq ft lot",
-      yearBuilt: 1950,
-      features: ["Promise Zone", "Transit Priority", "ADU Potential"],
-      description: "4-unit mixed configuration property in an Opportunity Zone with significant value-add potential.",
-      riskLevel: "medium",
-      timeframe: "6-12 months",
-      cashRequired: 647500,
-      totalROI: 42.3
-    },
-    {
-      id: 2,
-      title: "2570 68th Ave",
-      location: "Oakland, CA 94605", 
-      type: "Flip Opportunity",
-      strategy: "Fix & Flip",
-      price: 410000,
-      downPayment: 41000,
-      arv: 615000,
-      rehabBudget: 79000,
-      netProfit: 65172,
-      roi: 49.06,
-      annualizedROI: 147.17,
-      status: "active",
-      daysOnMarket: 1,
-      confidence: "medium",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: 3,
-      bathrooms: 1.5,
-      sqft: 1293,
-      yearBuilt: 1922,
-      features: ["Hard Money", "4-Month Timeline", "Experienced Only"],
-      description: "1920s character home with strong flip potential in Oakland market.",
-      riskLevel: "high",
-      timeframe: "4 months",
-      cashRequired: 132854,
-      totalROI: 49.06
-    },
-    {
-      id: 3,
-      title: "Hyde Park Arbors",
-      location: "Tampa, FL 33609",
-      type: "Multifamily",
-      strategy: "Buy & Hold", 
-      price: 3350000,
-      downPayment: 837500,
-      capRate: 6.9,
-      monthlyIncome: 29600,
-      cashFlow: 1708,
-      pricePerUnit: 209375,
-      units: 16,
-      status: "active",
-      daysOnMarket: 3,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "8x1BR, 8x2BR",
-      bathrooms: "Mixed",
-      sqft: "16 units",
-      yearBuilt: 1985,
-      features: ["Value-Add", "Premier Location", "South Tampa"],
-      description: "16-unit apartment building in premier South Tampa location with value-add opportunities.",
-      riskLevel: "low",
-      timeframe: "Long-term",
-      cashRequired: 938000,
-      totalROI: 6.9
-    },
-    {
-      id: 4,
-      title: "673 Doreen Way",
-      location: "Lafayette, CA 94549",
-      type: "Premium Flip",
-      strategy: "Fix & Flip",
-      price: 999900,
-      downPayment: 230000,
-      recommendedOffer: 1150000,
-      arv: 1700000,
-      rehabBudget: 165000,
-      netProfit: 227627,
-      roi: 75.3,
-      annualizedROI: 225.9,
-      status: "active",
-      daysOnMarket: 0, // This will show NEW badge
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: 4,
-      bathrooms: 2,
-      sqft: 1635,
-      yearBuilt: null,
-      features: ["Spectacular Views", "A+ Schools", "Cosmetic Only"],
-      description: "Located in highly coveted Lafayette Hills with spectacular views in Acalanes School District (all 10-rated schools).",
-      riskLevel: "low",
-      timeframe: "4 months",
-      cashRequired: 302373,
-      totalROI: 75.3
-    },
-    {
-      id: 5,
-      title: "1206 Viola St",
-      location: "San Diego, CA 92110",
-      type: "Duplex",
-      strategy: "House Hack",
-      price: 895000,
-      downPayment: 44750,
-      currentRent: 2850,
-      effectiveMortgage: 4476,
-      walkScore: 86,
-      status: "active",
-      daysOnMarket: 1,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "2x 1BR",
-      bathrooms: "2x 1BA",
-      units: 2,
-      sqft: null,
-      yearBuilt: null,
-      features: ["FHA 5% Down", "Near USD", "Turnkey"],
-      description: "Perfect house hack opportunity - live in one unit while tenant pays 40% of mortgage. Walk Score 86.",
-      riskLevel: "low",
-      timeframe: "Long-term",
-      cashRequired: 54750,
-      totalROI: null
-    },
-    {
-      id: 6,
-      title: "8110 MacArthur Blvd",
-      location: "Oakland, CA 94605",
-      type: "Value-Add Multifamily",
-      strategy: "Buy & Hold",
-      price: 1850000,
-      downPayment: 462500,
-      pricePerUnit: 74000,
-      units: 25,
-      currentCapRate: 9.62,
-      proFormaCapRate: 17.88,
-      currentIncome: 24591,
-      proFormaIncome: 42500,
-      monthlyIncome: 24591,
-      proFormaCashFlow: 22279,
-      status: "active",
-      daysOnMarket: 1,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "25x 1BR",
-      bathrooms: "25x 1BA",
-      sqft: "900 sq ft each",
-      yearBuilt: null,
-      features: ["100% Occupied", "Section 8 Opportunity", "$546/unit Below Market"],
-      description: "25-unit building with massive upside - current rents $546/unit below market. Section 8 conversion opportunity.",
-      riskLevel: "medium",
-      timeframe: "3 years",
-      cashRequired: 518000,
-      totalROI: 55.22
-    },
-    {
-      id: 7,
-      title: "16118-16152 Mateo St",
-      location: "San Leandro, CA 94578",
-      type: "Premium Multifamily",
-      strategy: "Buy & Hold",
-      price: 1625000,
-      downPayment: 406250,
-      pricePerUnit: 270833,
-      units: 6,
-      currentCapRate: 5.36,
-      proFormaCapRate: 6.06,
-      monthlyIncome: 11772,
-      proFormaCashFlow: -111,
-      currentCashFlow: -1059,
-      status: "active",
-      daysOnMarket: 2,
-      confidence: "medium",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "4x 1BR, 2x 2BR",
-      bathrooms: "6x 1BA",
-      sqft: null,
-      yearBuilt: null,
-      features: ["No Shared Walls", "Tenant Pays ALL Utilities", "0.6mi to BART"],
-      description: "Unique 6-unit property with private garages, no shared walls, and ultra-low 35.5% OpEx ratio. In-unit W/D.",
-      riskLevel: "low",
-      timeframe: "Long-term",
-      cashRequired: 431250,
-      totalROI: 51.2
-    },
-    {
-      id: 8,
-      title: "2216-18 Dunlop St",
-      location: "San Diego, CA 92111",
-      type: "Single Story Duplex",
-      strategy: "House Hack",
-      price: 999000,
-      pricePerUnit: 499500,
-      downPayment: 34965,
-      downPaymentPercent: 3.5,
-      effectiveMonthlyCost: 6109,
-      monthlyPayment: 8289,
-      monthlyRent: 2295,
-      netRentalIncome: 2180,
-      units: 2,
-      principalPaydown5Years: 85000,
-      appreciation5Years: 220000,
-      rentSavings5Years: 138000,
-      totalWealth5Years: 443000,
-      status: "active",
-      daysOnMarket: 0,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "2x 1BR",
-      bathrooms: "2x 1BA",
-      sqft: null,
-      yearBuilt: null,
-      features: ["FHA 3.5% Down", "Near USD & Mesa College", "Live Nearly FREE", "15 min to beaches"],
-      description: "Ultimate San Diego house hack - live in one unit while the other pays majority of your mortgage! Control $1M asset for $50K down. Strong rental demand from university students, young professionals, military personnel.",
-      riskLevel: "low",
-      timeframe: "Long-term",
-      cashRequired: 50000,
-      totalROI: null
-    },
-    {
-      id: 9,
-      title: "13900 Grandboro Ln",
-      location: "Grandview, MO 64030",
-      type: "Institutional Garden Apartments",
-      strategy: "Buy & Hold",
-      price: 9600000,
-      downPayment: 3760357,
-      downPaymentPercent: 39,
-      pricePerUnit: 79339,
-      units: 121,
-      currentCapRate: 6.95,
-      monthlyIncome: 111805,
-      monthlyNOI: 64061,
-      cashFlow: 39171,
-      cashOnCashReturn: 12.5,
-      assumableLoan: "3.1% through 2032",
-      loanBalance: 5839643,
-      monthlyDebtService: 24890,
-      currentAvgRent: 924,
-      marketRentPotential: 1099,
-      rentUpside: 175,
-      vacancyRate: 7,
-      operatingExpenseRatio: 40,
-      stabilizedNOI: 989364,
-      stabilizedValue: 15220985,
-      valueCreated: 5620985,
-      equityMultiple: 2.34,
-      monthlySavingsFromLoan: 31000,
-      annualSavingsFromLoan: 372000,
-      loanValuePremium: 3000000,
-      status: "active",
-      daysOnMarket: 0,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "Mix of 1BR/2BR/3BR",
-      bathrooms: "Mixed",
-      sqft: "8.8 Acres",
-      yearBuilt: null,
-      features: ["3.1% Assumable Loan", "6.95% Cap Rate", "20-30 Unit Development Potential", "$3M+ Loan Value"],
-      description: "Institutional-quality 121-unit complex with holy grail 3.1% assumable loan through 2032! Immediate 12.5% cash-on-cash return. 23 units need renovation ($175/unit rent increase). Excess land for 20-30 additional units.",
-      riskLevel: "medium",
-      timeframe: "Long-term",
-      cashRequired: 3760357,
-      totalROI: 12.5
-    },
-    {
-      id: 10,
-      title: "10116 Lake Ave",
-      location: "Tampa, FL 33619",
-      type: "Mobile Home Park",
-      strategy: "Buy & Hold",
-      price: 3200000,
-      downPayment: 2300000,
-      downPaymentPercent: 72,
-      pricePerUnit: 106667,
-      units: 30,
-      currentCapRate: 11,
-      monthlyIncome: 36442,
-      monthlyNOI: 26211,
-      operatingExpenses: 10793,
-      cashFlow: 22045,
-      cashOnCashReturn: 11.5,
-      sellerFinancing: "5% Years 1-2",
-      sellerFinancingAmount: 1000000,
-      monthlyPayment: 4166,
-      currentAvgRent: 1215,
-      marketAvgRent: 1465,
-      immediateUpside: 250,
-      monthToMonthUnits: 23,
-      year1CashFlow: 319740,
-      year1CashOnCash: 13.9,
-      stabilizedCashFlow: 404532,
-      stabilizedCashOnCash: 17.6,
-      fiveYearCashFlow: 1900000,
-      fiveYearAppreciation: 500000,
-      fiveYearProfit: 2400000,
-      fiveYearROI: 104,
-      status: "active",
-      daysOnMarket: 0,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: "30 Individual Mobile Homes",
-      bathrooms: "Mixed",
-      sqft: "Single-Family Style Lots",
-      yearBuilt: "Renovated 2020-2025",
-      features: ["Seller Financing 5%", "100% Occupied", "$250/unit Below Market", "75% Month-to-Month"],
-      description: "30 INDIVIDUAL mobile homes on single-family lots with SELLER FINANCING! All units renovated 2020-2025. Current 14% cash-on-cash grows to 17.6% by year 3. Own the homes AND land - no pad rent issues!",
-      riskLevel: "low",
-      timeframe: "Long-term",
-      cashRequired: 2300000,
-      totalROI: 11.5
-    },
-    {
-      id: 11,
-      title: "20246 Gist Rd",
-      location: "Los Gatos, CA 95033",
-      type: "Premium Mountain Flip",
-      strategy: "Fix & Flip",
-      price: 899000,
-      offerPrice: 950000,
-      downPayment: 95000,
-      downPaymentPercent: 10,
-      arv: 2100000,
-      arvPerSqFt: 1064,
-      rehabBudget: 275000,
-      hardMoneyLoan: 855000,
-      totalLoanAmount: 1130000,
-      interestRate: 10.45,
-      holdingCosts: 95105,
-      interestPayments: 67005,
-      insuranceUtilitiesTaxes: 28100,
-      totalCosts: 1330105,
-      netProfit: 674895,
-      roi: 710,
-      annualizedROI: 947,
-      kitchenRemodel: 65000,
-      bathroomRemodel: 45000,
-      interiorFinishes: 85000,
-      exteriorCurbAppeal: 50000,
-      systemsPermits: 30000,
-      status: "active",
-      daysOnMarket: 0,
-      confidence: "high",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: 4,
-      bathrooms: 2,
-      sqft: 1974,
-      yearBuilt: null,
-      lotSize: "2.2 Acres",
-      features: ["2.2 ACRES", "Award-Winning Los Gatos Schools", "Mountain Privacy", "Tech Executive Target"],
-      description: "Los Gatos mountain property on 2.2 ACRES! Needs cosmetic updating but sits in Silicon Valley's most desirable area. Comps $974-$1,510/sq ft on lots under 0.5 acres. Conservative ARV targeting $1,064/sq ft.",
-      riskLevel: "medium",
-      timeframe: "9 months",
-      cashRequired: 95000,
-      totalROI: 710
-    },
-    {
-      id: 12,
-      title: "9638 E St",
-      location: "Oakland, CA 94603",
-      type: "HUD Home Flip",
-      strategy: "Fix & Flip",
-      price: 281000,
-      downPayment: 28100,
-      downPaymentPercent: 10,
-      arv: 475000,
-      arvPerSqFt: 550,
-      rehabBudget: 65000,
-      hardMoneyLoan: 252900,
-      totalLoanAmount: 317900,
-      interestRate: 10.45,
-      holdingCosts: 21706,
-      interestPayments: 13206,
-      insuranceUtilitiesStaging: 8500,
-      totalCosts: 368106,
-      netProfit: 78794,
-      roi: 280,
-      annualizedROI: 560,
-      kitchenRemodel: 18000,
-      bathroomRemodel: 8000,
-      interiorUpdates: 22000,
-      exteriorWork: 12000,
-      permitsContingency: 5000,
-      status: "active",
-      daysOnMarket: 0,
-      confidence: "medium",
-      images: ["/api/placeholder/400/300"],
-      bedrooms: 2,
-      bathrooms: 1,
-      sqft: 864,
-      yearBuilt: null,
-      lotSize: "5,000 sq ft",
-      features: ["HUD Home", "FHA 203k Eligible", "Large Lot - ADU Potential", "Cosmetic Rehab Only"],
-      description: "East Oakland HUD home value play. Structurally sound, needs cosmetic renovation. Large 5,000 sq ft lot for future ADU. Comps support $475K ARV ($550/sq ft). Quick 6-month flip potential.",
-      riskLevel: "medium",
-      timeframe: "6 months",
-      cashRequired: 28100,
-      totalROI: 280
-    }
-  ], []);
-
-  // Combine static and dynamic deals
+  // All deals now come from the API (including static deals)
   const deals = useMemo(() => {
-    return [...staticDeals, ...dynamicProperties];
-  }, [staticDeals, dynamicProperties]);
+    return dynamicProperties;
+  }, [dynamicProperties]);
 
   const filteredDeals = useMemo(() => {
     let filtered = deals;
@@ -551,112 +132,72 @@ export default function Dashboard() {
       );
     }
 
-
-    // Location filter
-    if (selectedLocation) {
+    // Filter by location search
+    if (selectedLocation && !isSearching) {
+      const searchCity = selectedLocation.city.toLowerCase();
+      const searchState = selectedLocation.state.toLowerCase();
+      
       filtered = filtered.filter(deal => {
-        const dealLocation = deal.location.toLowerCase();
-        const selectedCity = selectedLocation.city.toLowerCase();
+        const [city = '', stateZip = ''] = deal.location.toLowerCase().split(',').map(s => s.trim());
+        const state = stateZip.split(' ')[0];
         
-        // Extract city from deal location (format: "City, State ZIP")
-        const dealParts = dealLocation.split(',');
-        if (dealParts.length > 0) {
-          const dealCity = dealParts[0].trim();
-          return dealCity === selectedCity;
-        }
-        
-        // Fallback to includes check
-        return dealLocation.includes(selectedCity);
+        return city.includes(searchCity) || 
+               (state && state.includes(searchState)) ||
+               deal.location.toLowerCase().includes(searchCity);
       });
     }
 
-    // Market filter
+    // Apply FilterBar filters
     if (filters.market !== 'all') {
-      const marketMap: { [key: string]: string[] } = {
-        'san-diego': ['San Diego'],
-        'bay-area': ['Oakland', 'Lafayette', 'San Leandro', 'Los Gatos'],
-        'los-angeles': ['Los Angeles'],
-        'kansas-city': ['Kansas City', 'Grandview'],
-        'tampa': ['Tampa']
-      };
-      
-      const targetCities = marketMap[filters.market] || [];
-      filtered = filtered.filter(deal =>
-        targetCities.some(city => deal.location.includes(city))
+      filtered = filtered.filter(deal => 
+        deal.location.toLowerCase().includes(filters.market.toLowerCase())
       );
     }
 
-    // Strategy filter
     if (filters.strategy !== 'all') {
-      const strategyMap: { [key: string]: string } = {
-        'fix-flip': 'Fix & Flip',
-        'brrrr': 'BRRRR',
-        'buy-hold': 'Buy & Hold',
-        'house-hack': 'House Hack'
-      };
-      
-      filtered = filtered.filter(deal =>
-        deal.strategy === strategyMap[filters.strategy]
+      filtered = filtered.filter(deal => 
+        deal.strategy.toLowerCase() === filters.strategy.toLowerCase()
       );
     }
 
-    // Price range filter
-    filtered = filtered.filter(deal =>
-      deal.price >= filters.priceRange[0] && deal.price <= filters.priceRange[1]
+    filtered = filtered.filter(deal => 
+      deal.price >= filters.priceRange[0] && 
+      deal.price <= filters.priceRange[1]
     );
 
-    // Min ROI filter
     if (filters.minROI > 0) {
-      filtered = filtered.filter(deal =>
-        (deal.totalROI || 0) >= filters.minROI
-      );
+      filtered = filtered.filter(deal => {
+        const roi = deal.totalROI || deal.roi || deal.capRate || 0;
+        const roiValue = typeof roi === 'string' ? parseFloat(roi) : roi;
+        return roiValue >= filters.minROI;
+      });
     }
 
     // Sort
-    filtered.sort((a, b) => {
+    filtered = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'price':
           return b.price - a.price;
         case 'roi':
-          return (b.totalROI || 0) - (a.totalROI || 0);
+          const aROI = a.totalROI || 0;
+          const bROI = b.totalROI || 0;
+          return bROI - aROI;
         case 'confidence':
-          const confidenceOrder: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
-          return confidenceOrder[b.confidence] - confidenceOrder[a.confidence];
-        default:
-          return (a.daysOnMarket || 0) - (b.daysOnMarket || 0);
+          const confidenceOrder = { 'very high': 4, 'high': 3, 'medium': 2, 'low': 1 };
+          return (confidenceOrder[b.confidence as keyof typeof confidenceOrder] || 0) - 
+                 (confidenceOrder[a.confidence as keyof typeof confidenceOrder] || 0);
+        default: // date
+          return (b.daysOnMarket || 0) - (a.daysOnMarket || 0);
       }
     });
 
     return filtered;
-  }, [selectedFilter, selectedLocation, sortBy, deals, filters]);
+  }, [deals, selectedFilter, selectedLocation, isSearching, filters, sortBy]);
 
-  const stats = {
-    totalDeals: deals.length,
-    totalValue: deals.reduce((sum, deal) => sum + deal.price, 0),
-    avgROI: deals.reduce((sum, deal) => sum + (deal.totalROI || 0), 0) / deals.length,
-    highConfidence: deals.filter(deal => deal.confidence === 'high').length
-  };
-
-  const handleFiltersChange = useCallback((newFilters: {
-    market: string;
-    strategy: string;
-    priceRange: [number, number];
-    minROI: number;
-  }) => {
-    setFilters(newFilters);
+  const handleDealClick = useCallback((deal: Deal) => {
+    setSelectedDeal(deal);
+    setIsModalOpen(true);
   }, []);
-
-  const handleClearFilters = useCallback(() => {
-    const maxPrice = deals.length > 0 ? Math.max(...deals.map(deal => deal.price)) : 2000000;
-    const roundedMaxPrice = Math.ceil(maxPrice / 100000) * 100000;
-    
-    setFilters({
-      market: 'all',
-      strategy: 'all',
-      priceRange: [0, roundedMaxPrice],
-      minROI: 0
-    });
-  }, [deals]);
 
   const handleLocationSelect = useCallback((location: {
     city: string;
@@ -664,31 +205,44 @@ export default function Dashboard() {
     fullAddress: string;
     coordinates?: { lat: number; lng: number };
   }) => {
-    // Check if location is supported
-    const supportedMarket = isLocationSupported(location.city, location.state);
-    
-    if (supportedMarket) {
+    if (!isLocationSupported(location.city, location.state)) {
+      setUnsupportedLocation(location.fullAddress);
+      setSelectedLocation(null);
+      
+      if (viewMode === 'map') {
+        setPreviousViewMode('map');
+        setViewMode('grid');
+      }
+    } else {
       setSelectedLocation(location);
       setUnsupportedLocation(null);
       
-      // If we were in map view before searching, return to map view
-      if (previousViewMode === 'map' && isSearching) {
+      if (previousViewMode === 'map' && viewMode !== 'map') {
         setViewMode('map');
+        setPreviousViewMode('grid');
       }
-    } else {
-      // Show notification for unsupported location
-      setUnsupportedLocation(location.city);
-      // Don't set the selected location so no filtering happens
     }
-  }, [previousViewMode, isSearching]);
+  }, [viewMode, previousViewMode]);
+
+  const handleFiltersChange = useCallback((newFilters: typeof filters) => {
+    setFilters(newFilters);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setFilters({
+      market: 'all',
+      strategy: 'all',
+      priceRange: [0, 2000000],
+      minROI: 0
+    });
+    setSelectedFilter('all');
+    setSelectedLocation(null);
+    setSortBy('date');
+  }, []);
 
   const handleSearchStart = useCallback(() => {
-    if (viewMode === 'map') {
-      setPreviousViewMode('map');
-      setViewMode('grid'); // Temporarily switch to grid view
-      setIsSearching(true);
-    }
-  }, [viewMode]);
+    setIsSearching(true);
+  }, []);
 
   const handleSearchEnd = useCallback(() => {
     setIsSearching(false);
@@ -697,56 +251,23 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation variant="dashboard" />
-
-      {/* Refresh Notification */}
-      {isLoading && (
-        <div className="bg-accent/10 text-accent px-4 py-2 text-center text-sm">
-          Loading properties...
-        </div>
-      )}
       
-      {/* Debug Refresh Button */}
-      <div className="bg-muted/10 px-4 py-2 flex justify-between items-center">
-        <span className="text-sm text-muted">Properties: {dynamicProperties.length} dynamic + {staticDeals.length} static = {deals.length} total</span>
-        <button 
-          onClick={() => {
-            console.log('Manual refresh triggered');
-            setLastRefresh(Date.now());
-          }}
-          className="px-3 py-1 bg-accent text-white rounded text-sm hover:bg-accent/90"
-        >
-          Refresh Properties
-        </button>
-      </div>
-
-      {/* Stats Bar */}
-      <section className="bg-muted/5 border-b border-border/20">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{stats.totalDeals}</div>
-              <div className="text-sm text-muted">Active Deals</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-accent">${(stats.totalValue / 1000000).toFixed(1)}M</div>
-              <div className="text-sm text-muted">Total Value</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.avgROI.toFixed(1)}%</div>
-              <div className="text-sm text-muted">Avg. ROI</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{stats.highConfidence}</div>
-              <div className="text-sm text-muted">High Confidence</div>
-            </div>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-primary mb-2">Investment Properties</h1>
+          <p className="text-muted">Discover your next profitable real estate investment</p>
         </div>
-      </section>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Mobile View Mode Tabs - Visible only on mobile */}
-        <div className="flex md:hidden bg-card border border-border/60 rounded-lg p-1 mb-4">
+        {/* Unsupported Location Notification */}
+        {unsupportedLocation && (
+          <MarketNotification 
+            location={unsupportedLocation}
+            onClose={() => setUnsupportedLocation(null)}
+          />
+        )}
+
+        {/* Mobile view mode toggle */}
+        <div className="md:hidden mb-4 flex gap-2 bg-card border border-border/60 rounded-lg p-1">
           <button
             className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
               viewMode === 'grid' 
@@ -998,46 +519,43 @@ export default function Dashboard() {
                   ) : null}
                 </div>
 
-                {deal.features && deal.features.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {deal.features.slice(0, 3).map((feature, index) => (
-                      <span key={index} className="text-xs px-2 py-1 bg-muted/10 text-muted rounded-md">
-                        {feature}
-                      </span>
-                    ))}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <SavePropertyButton propertyId={deal.id} />
+                    <button
+                      onClick={() => handleDealClick(deal)}
+                      className="text-sm text-accent hover:text-accent/80 font-medium"
+                    >
+                      View Details
+                    </button>
                   </div>
-                )}
-
-                <div className="flex gap-2">
-                  <button 
-                    className="flex-1 px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm min-h-[44px] flex items-center justify-center"
-                    onClick={() => {
-                      setSelectedDeal(deal);
-                      setIsModalOpen(true);
-                    }}
-                  >
-                    View Details
-                  </button>
-                  <SavePropertyButton 
-                    propertyId={deal.id} 
-                    variant="outline"
-                  />
                 </div>
               </div>
-              </div>
-            ))}
+            </div>
+          ))}
           </div>
           )}
+        </div>
 
-          {viewMode !== 'map' && filteredDeals.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold text-primary mb-2">No deals found</h3>
-              <p className="text-muted">Try adjusting your filters or search terms</p>
-            </div>
+        {/* Results Summary */}
+        <div className="mt-8 text-center text-sm text-muted">
+          {isLoading ? (
+            <span>Loading properties...</span>
+          ) : (
+            <>
+              Showing {filteredDeals.length} of {deals.length} properties
+              {selectedLocation && ` in ${selectedLocation.fullAddress}`}
+            </>
           )}
         </div>
-      </main>
+
+        {/* Debug info - only in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 text-xs text-muted/50 text-center">
+            Properties: {dynamicProperties.length} total = {deals.length} deals
+          </div>
+        )}
+      </div>
 
       {/* Deal Modal */}
       <DealModal 
@@ -1048,62 +566,6 @@ export default function Dashboard() {
           setSelectedDeal(null);
         }}
       />
-
-      {/* Mobile Floating View Toggle and Exit Button */}
-      <div className="fixed bottom-6 right-6 md:hidden z-40 flex flex-col gap-3">
-        {/* Exit Map Button - Only show in map view */}
-        {viewMode === 'map' && (
-          <div className="bg-card text-primary rounded-full shadow-lg overflow-hidden border border-border/60">
-            <button
-              className="p-4 min-h-[56px] min-w-[56px] flex items-center justify-center"
-              onClick={() => setViewMode('grid')}
-              aria-label="Exit map view"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
-        
-        {/* View Mode Toggle */}
-        <div className="bg-accent text-secondary rounded-full shadow-lg overflow-hidden">
-          <button
-            className="p-4 min-h-[56px] min-w-[56px] flex items-center justify-center"
-            onClick={() => {
-              // Cycle through view modes: grid -> list -> map -> grid
-              if (viewMode === 'grid') setViewMode('list');
-              else if (viewMode === 'list') setViewMode('map');
-              else setViewMode('grid');
-            }}
-            aria-label="Change view mode"
-          >
-            {viewMode === 'grid' && (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-            )}
-            {viewMode === 'list' && (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-            )}
-            {viewMode === 'map' && (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Market Not Available Notification */}
-      {unsupportedLocation && (
-        <MarketNotification 
-          location={unsupportedLocation}
-          onClose={() => setUnsupportedLocation(null)}
-        />
-      )}
     </div>
   );
 }
