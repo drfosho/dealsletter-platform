@@ -1,7 +1,11 @@
+import { staticDeals } from './staticDeals';
+
 // Shared properties storage (replace with database in production)
 // NOTE: This is an in-memory array that will be reset on server restart
 // In production, this should be replaced with a database
 export const properties: Record<string, unknown>[] = [
+  // Include all static deals from the dashboard
+  ...staticDeals,
   // Add a test property to verify the system is working
   {
     id: 'test-property-1',

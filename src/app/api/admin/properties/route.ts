@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     return authResponse;
   }
 
-  // Return all properties
+  // Return all properties (including static deals)
   const properties = await getAllProperties();
   return NextResponse.json(properties);
 }
