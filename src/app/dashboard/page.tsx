@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import DealModal from './DealModal';
 import FilterBar from './FilterBar';
 import FavoriteButton from '@/components/FavoriteButton';
@@ -53,9 +53,62 @@ export default function Dashboard() {
     priceRange: [0, 2000000] as [number, number],
     minROI: 0
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [dynamicProperties, setDynamicProperties] = useState<Deal[]>([]);
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+
+  // Fetch dynamic properties from API
+  const fetchProperties = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/properties');
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Dashboard: Fetched properties:', data.length);
+          const formattedProperties = data.map((prop: any, index: number) => ({
+            id: parseInt(prop.id) || 1000 + index,
+            title: prop.title,
+            location: `${prop.city}, ${prop.state} ${prop.zipCode}`,
+            type: prop.propertyType,
+            strategy: prop.investmentStrategy,
+            price: prop.price,
+            downPayment: prop.downPayment,
+            downPaymentPercent: prop.downPaymentPercent,
+            confidence: prop.confidence,
+            status: 'active',
+            daysOnMarket: prop.daysOnMarket,
+            images: prop.images || ["/api/placeholder/400/300"],
+            bedrooms: prop.bedrooms,
+            bathrooms: prop.bathrooms,
+            sqft: prop.sqft,
+            yearBuilt: prop.yearBuilt,
+            features: prop.features,
+            description: prop.description,
+            riskLevel: prop.riskLevel,
+            timeframe: prop.holdPeriod ? `${prop.holdPeriod} years` : 'Long-term',
+            cashRequired: prop.downPayment + prop.closingCosts + prop.rehabCosts,
+            totalROI: prop.totalROI,
+            capRate: prop.capRate,
+            cashFlow: prop.monthlyCashFlow,
+            monthlyRent: prop.monthlyRent,
+            neighborhood: prop.neighborhood,
+            ...prop
+          }));
+          setDynamicProperties(formattedProperties);
+        }
+      } catch (error) {
+        console.error('Error fetching properties:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+  useEffect(() => {
+    fetchProperties();
+  }, [lastRefresh]);
 
   // Sample deals data - in real app this would come from API
-  const deals = useMemo(() => [
+  const staticDeals = useMemo(() => [
     {
       id: 1,
       title: "853 S 32nd Street",
@@ -256,8 +309,227 @@ export default function Dashboard() {
       timeframe: "Long-term",
       cashRequired: 431250,
       totalROI: 51.2
+    },
+    {
+      id: 8,
+      title: "2216-18 Dunlop St",
+      location: "San Diego, CA 92111",
+      type: "Single Story Duplex",
+      strategy: "House Hack",
+      price: 999000,
+      pricePerUnit: 499500,
+      downPayment: 34965,
+      downPaymentPercent: 3.5,
+      effectiveMonthlyCost: 6109,
+      monthlyPayment: 8289,
+      monthlyRent: 2295,
+      netRentalIncome: 2180,
+      units: 2,
+      principalPaydown5Years: 85000,
+      appreciation5Years: 220000,
+      rentSavings5Years: 138000,
+      totalWealth5Years: 443000,
+      status: "active",
+      daysOnMarket: 0,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "2x 1BR",
+      bathrooms: "2x 1BA",
+      sqft: null,
+      yearBuilt: null,
+      features: ["FHA 3.5% Down", "Near USD & Mesa College", "Live Nearly FREE", "15 min to beaches"],
+      description: "Ultimate San Diego house hack - live in one unit while the other pays majority of your mortgage! Control $1M asset for $50K down. Strong rental demand from university students, young professionals, military personnel.",
+      riskLevel: "low",
+      timeframe: "Long-term",
+      cashRequired: 50000,
+      totalROI: null
+    },
+    {
+      id: 9,
+      title: "13900 Grandboro Ln",
+      location: "Grandview, MO 64030",
+      type: "Institutional Garden Apartments",
+      strategy: "Buy & Hold",
+      price: 9600000,
+      downPayment: 3760357,
+      downPaymentPercent: 39,
+      pricePerUnit: 79339,
+      units: 121,
+      currentCapRate: 6.95,
+      monthlyIncome: 111805,
+      monthlyNOI: 64061,
+      cashFlow: 39171,
+      cashOnCashReturn: 12.5,
+      assumableLoan: "3.1% through 2032",
+      loanBalance: 5839643,
+      monthlyDebtService: 24890,
+      currentAvgRent: 924,
+      marketRentPotential: 1099,
+      rentUpside: 175,
+      vacancyRate: 7,
+      operatingExpenseRatio: 40,
+      stabilizedNOI: 989364,
+      stabilizedValue: 15220985,
+      valueCreated: 5620985,
+      equityMultiple: 2.34,
+      monthlySavingsFromLoan: 31000,
+      annualSavingsFromLoan: 372000,
+      loanValuePremium: 3000000,
+      status: "active",
+      daysOnMarket: 0,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "Mix of 1BR/2BR/3BR",
+      bathrooms: "Mixed",
+      sqft: "8.8 Acres",
+      yearBuilt: null,
+      features: ["3.1% Assumable Loan", "6.95% Cap Rate", "20-30 Unit Development Potential", "$3M+ Loan Value"],
+      description: "Institutional-quality 121-unit complex with holy grail 3.1% assumable loan through 2032! Immediate 12.5% cash-on-cash return. 23 units need renovation ($175/unit rent increase). Excess land for 20-30 additional units.",
+      riskLevel: "medium",
+      timeframe: "Long-term",
+      cashRequired: 3760357,
+      totalROI: 12.5
+    },
+    {
+      id: 10,
+      title: "10116 Lake Ave",
+      location: "Tampa, FL 33619",
+      type: "Mobile Home Park",
+      strategy: "Buy & Hold",
+      price: 3200000,
+      downPayment: 2300000,
+      downPaymentPercent: 72,
+      pricePerUnit: 106667,
+      units: 30,
+      currentCapRate: 11,
+      monthlyIncome: 36442,
+      monthlyNOI: 26211,
+      operatingExpenses: 10793,
+      cashFlow: 22045,
+      cashOnCashReturn: 11.5,
+      sellerFinancing: "5% Years 1-2",
+      sellerFinancingAmount: 1000000,
+      monthlyPayment: 4166,
+      currentAvgRent: 1215,
+      marketAvgRent: 1465,
+      immediateUpside: 250,
+      monthToMonthUnits: 23,
+      year1CashFlow: 319740,
+      year1CashOnCash: 13.9,
+      stabilizedCashFlow: 404532,
+      stabilizedCashOnCash: 17.6,
+      fiveYearCashFlow: 1900000,
+      fiveYearAppreciation: 500000,
+      fiveYearProfit: 2400000,
+      fiveYearROI: 104,
+      status: "active",
+      daysOnMarket: 0,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: "30 Individual Mobile Homes",
+      bathrooms: "Mixed",
+      sqft: "Single-Family Style Lots",
+      yearBuilt: "Renovated 2020-2025",
+      features: ["Seller Financing 5%", "100% Occupied", "$250/unit Below Market", "75% Month-to-Month"],
+      description: "30 INDIVIDUAL mobile homes on single-family lots with SELLER FINANCING! All units renovated 2020-2025. Current 14% cash-on-cash grows to 17.6% by year 3. Own the homes AND land - no pad rent issues!",
+      riskLevel: "low",
+      timeframe: "Long-term",
+      cashRequired: 2300000,
+      totalROI: 11.5
+    },
+    {
+      id: 11,
+      title: "20246 Gist Rd",
+      location: "Los Gatos, CA 95033",
+      type: "Premium Mountain Flip",
+      strategy: "Fix & Flip",
+      price: 899000,
+      offerPrice: 950000,
+      downPayment: 95000,
+      downPaymentPercent: 10,
+      arv: 2100000,
+      arvPerSqFt: 1064,
+      rehabBudget: 275000,
+      hardMoneyLoan: 855000,
+      totalLoanAmount: 1130000,
+      interestRate: 10.45,
+      holdingCosts: 95105,
+      interestPayments: 67005,
+      insuranceUtilitiesTaxes: 28100,
+      totalCosts: 1330105,
+      netProfit: 674895,
+      roi: 710,
+      annualizedROI: 947,
+      kitchenRemodel: 65000,
+      bathroomRemodel: 45000,
+      interiorFinishes: 85000,
+      exteriorCurbAppeal: 50000,
+      systemsPermits: 30000,
+      status: "active",
+      daysOnMarket: 0,
+      confidence: "high",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: 4,
+      bathrooms: 2,
+      sqft: 1974,
+      yearBuilt: null,
+      lotSize: "2.2 Acres",
+      features: ["2.2 ACRES", "Award-Winning Los Gatos Schools", "Mountain Privacy", "Tech Executive Target"],
+      description: "Los Gatos mountain property on 2.2 ACRES! Needs cosmetic updating but sits in Silicon Valley's most desirable area. Comps $974-$1,510/sq ft on lots under 0.5 acres. Conservative ARV targeting $1,064/sq ft.",
+      riskLevel: "medium",
+      timeframe: "9 months",
+      cashRequired: 95000,
+      totalROI: 710
+    },
+    {
+      id: 12,
+      title: "9638 E St",
+      location: "Oakland, CA 94603",
+      type: "HUD Home Flip",
+      strategy: "Fix & Flip",
+      price: 281000,
+      downPayment: 28100,
+      downPaymentPercent: 10,
+      arv: 475000,
+      arvPerSqFt: 550,
+      rehabBudget: 65000,
+      hardMoneyLoan: 252900,
+      totalLoanAmount: 317900,
+      interestRate: 10.45,
+      holdingCosts: 21706,
+      interestPayments: 13206,
+      insuranceUtilitiesStaging: 8500,
+      totalCosts: 368106,
+      netProfit: 78794,
+      roi: 280,
+      annualizedROI: 560,
+      kitchenRemodel: 18000,
+      bathroomRemodel: 8000,
+      interiorUpdates: 22000,
+      exteriorWork: 12000,
+      permitsContingency: 5000,
+      status: "active",
+      daysOnMarket: 0,
+      confidence: "medium",
+      images: ["/api/placeholder/400/300"],
+      bedrooms: 2,
+      bathrooms: 1,
+      sqft: 864,
+      yearBuilt: null,
+      lotSize: "5,000 sq ft",
+      features: ["HUD Home", "FHA 203k Eligible", "Large Lot - ADU Potential", "Cosmetic Rehab Only"],
+      description: "East Oakland HUD home value play. Structurally sound, needs cosmetic renovation. Large 5,000 sq ft lot for future ADU. Comps support $475K ARV ($550/sq ft). Quick 6-month flip potential.",
+      riskLevel: "medium",
+      timeframe: "6 months",
+      cashRequired: 28100,
+      totalROI: 280
     }
   ], []);
+
+  // Combine static and dynamic deals
+  const deals = useMemo(() => {
+    return [...staticDeals, ...dynamicProperties];
+  }, [staticDeals, dynamicProperties]);
 
   const filteredDeals = useMemo(() => {
     let filtered = deals;
@@ -293,9 +565,9 @@ export default function Dashboard() {
     if (filters.market !== 'all') {
       const marketMap: { [key: string]: string[] } = {
         'san-diego': ['San Diego'],
-        'bay-area': ['Oakland', 'Lafayette', 'San Leandro'],
+        'bay-area': ['Oakland', 'Lafayette', 'San Leandro', 'Los Gatos'],
         'los-angeles': ['Los Angeles'],
-        'kansas-city': ['Kansas City'],
+        'kansas-city': ['Kansas City', 'Grandview'],
         'tampa': ['Tampa']
       };
       
@@ -417,6 +689,27 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <Navigation variant="dashboard" />
 
+      {/* Refresh Notification */}
+      {isLoading && (
+        <div className="bg-accent/10 text-accent px-4 py-2 text-center text-sm">
+          Loading properties...
+        </div>
+      )}
+      
+      {/* Debug Refresh Button */}
+      <div className="bg-muted/10 px-4 py-2 flex justify-between items-center">
+        <span className="text-sm text-muted">Properties: {dynamicProperties.length} dynamic + {staticDeals.length} static = {deals.length} total</span>
+        <button 
+          onClick={() => {
+            console.log('Manual refresh triggered');
+            setLastRefresh(Date.now());
+          }}
+          className="px-3 py-1 bg-accent text-white rounded text-sm hover:bg-accent/90"
+        >
+          Refresh Properties
+        </button>
+      </div>
+
       {/* Stats Bar */}
       <section className="bg-muted/5 border-b border-border/20">
         <div className="max-w-7xl mx-auto px-6 py-6">
@@ -513,6 +806,7 @@ export default function Dashboard() {
               <option value="hold">Buy & Hold</option>
               <option value="multifamily">Multifamily</option>
               <option value="house hack">House Hack</option>
+              <option value="mobile home">Mobile Home Park</option>
             </select>
             
             <select 

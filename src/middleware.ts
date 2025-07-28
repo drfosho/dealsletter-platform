@@ -1,7 +1,47 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'dealsletter2024!';
+
 export async function middleware(request: NextRequest) {
+  // Check if the request is for the admin area
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const authHeader = request.headers.get('authorization');
+    const cookie = request.cookies.get('admin-auth');
+
+    // Check if already authenticated via cookie
+    if (cookie?.value === ADMIN_PASSWORD) {
+      return NextResponse.next({ request });
+    }
+
+    // Check basic auth header
+    if (authHeader) {
+      const [type, credentials] = authHeader.split(' ');
+      if (type === 'Basic' && credentials) {
+        const decoded = Buffer.from(credentials, 'base64').toString();
+        const [username, password] = decoded.split(':');
+        
+        if (password === ADMIN_PASSWORD) {
+          const response = NextResponse.next({ request });
+          response.cookies.set('admin-auth', ADMIN_PASSWORD, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 60 * 60 * 24 * 7 // 7 days
+          });
+          return response;
+        }
+      }
+    }
+
+    // Require authentication
+    return new NextResponse('Authentication required', {
+      status: 401,
+      headers: {
+        'WWW-Authenticate': 'Basic realm="Admin Area"'
+      }
+    });
+  }
   let supabaseResponse = NextResponse.next({
     request,
   })

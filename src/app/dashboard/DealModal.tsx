@@ -2078,6 +2078,1296 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
     </>
   );
 
+  // Render functions for new properties (IDs 8-12)
+  const renderSanDiegoDuplexHouseHack = () => (
+    <>
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold text-primary mb-4">Ultimate San Diego House Hack Opportunity</h3>
+            <p className="text-muted mb-4">
+              This Linda Vista duplex offers the ultimate San Diego house hack - live in one unit while the other pays majority of your mortgage! 
+              With each unit capable of renting for $2,295/month and only needing 3.5% down with FHA, this property lets you control 
+              a $1M asset for just $50K while building massive equity in America's Finest City.
+            </p>
+            
+            <div className="bg-accent/10 rounded-lg p-4 mb-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-2">🏠 House Hack Economics</h4>
+              <p className="text-sm text-muted">
+                Live for effectively $6,109/month in San Diego while building equity. Your tenant pays $2,180/month (after vacancy) 
+                toward your $8,289 monthly payment. Over 5 years: $85K principal paydown + $220K appreciation + $138K rent savings = $443K wealth created!
+              </p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-2">📍 Prime Location Benefits</h4>
+              <p className="text-sm text-muted">
+                Central San Diego location near USD & Mesa College with quick access to I-8 & I-5, just 15 minutes to beaches 
+                and 10 minutes to downtown. Strong rental demand from university students, young professionals, military personnel, 
+                and healthcare workers.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 text-center">
+              <div className="text-2xl mb-2">💰</div>
+              <h4 className="font-semibold text-green-600 mb-1">3.5% Down FHA</h4>
+              <p className="text-xs text-muted">Only $34,965 down payment</p>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20 text-center">
+              <div className="text-2xl mb-2">🏖️</div>
+              <h4 className="font-semibold text-accent mb-1">15 Min to Beaches</h4>
+              <p className="text-xs text-muted">Perfect San Diego lifestyle</p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 text-center">
+              <div className="text-2xl mb-2">🎓</div>
+              <h4 className="font-semibold text-blue-600 mb-1">Near USD & Mesa</h4>
+              <p className="text-xs text-muted">Strong student rental demand</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'financing' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">FHA House Hack Financing</h3>
+          
+          <div className="bg-card rounded-lg p-6 border border-border/60">
+            <h4 className="font-semibold text-primary mb-4">3.5% Down FHA Terms</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted">Purchase Price</span>
+                <p className="font-semibold text-primary">$999,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Down Payment</span>
+                <p className="font-semibold text-primary">$34,965 (3.5%)</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Loan Amount</span>
+                <p className="font-semibold text-primary">$964,035</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Interest Rate</span>
+                <p className="font-semibold text-primary">6.75% FHA</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="font-semibold text-primary">Monthly Breakdown</h4>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Principal & Interest + MIP</span>
+              <span className="font-semibold">$6,940</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Property Tax</span>
+              <span className="font-semibold">$999</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Insurance & Utilities</span>
+              <span className="font-semibold">$350</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-red-500/10 rounded-lg">
+              <span className="text-muted">Total Monthly Payment</span>
+              <span className="font-semibold text-red-600">$8,289</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg">
+              <span className="text-muted">Rental Income (1 unit)</span>
+              <span className="font-semibold text-green-600">-$2,180</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-accent/10 rounded-lg border border-accent/20">
+              <span className="font-semibold text-primary">Your Effective Cost</span>
+              <span className="font-bold text-accent text-lg">$6,109/month</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Creative House Hack Strategies</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-3">🛋️ Room Rental Strategy</h4>
+              <p className="text-sm text-muted mb-2">
+                Rent your living room for $800/month to further reduce costs
+              </p>
+              <p className="font-semibold text-primary">New effective cost: $5,349/month</p>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-3">🏖️ Airbnb Hybrid</h4>
+              <p className="text-sm text-muted mb-2">
+                Airbnb the other unit for $3,500+/month (peak season)
+              </p>
+              <p className="font-semibold text-primary">Potential: Live for FREE</p>
+            </div>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
+              <h4 className="font-semibold text-green-600 mb-3">💼 Corporate Rental</h4>
+              <p className="text-sm text-muted mb-2">
+                Furnish one unit for traveling professionals
+              </p>
+              <p className="font-semibold text-primary">Premium rent: $3,000+/month</p>
+            </div>
+            
+            <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
+              <h4 className="font-semibold text-purple-600 mb-3">🏗️ Future ADU</h4>
+              <p className="text-sm text-muted mb-2">
+                Convert garage or add unit in backyard
+              </p>
+              <p className="font-semibold text-primary">Additional income: $1,800+/month</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'returns' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">5-Year Wealth Building Analysis</h3>
+          
+          <div className="bg-gradient-to-r from-green-500/10 to-accent/10 rounded-lg p-6 border border-accent/20">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Principal Paydown</p>
+                <p className="text-2xl font-bold text-primary">$85K</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Appreciation (4%)</p>
+                <p className="text-2xl font-bold text-accent">$220K</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Rent Savings</p>
+                <p className="text-2xl font-bold text-green-600">$138K</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Total Wealth</p>
+                <p className="text-2xl font-bold text-primary">$443K</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="font-semibold text-primary">Investment Comparison</h4>
+            
+            <div className="bg-muted/10 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-muted">Renting Similar 1BR</span>
+                <span className="font-semibold">$2,200/month</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-muted">Your House Hack Cost</span>
+                <span className="font-semibold">$6,109/month</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted">Extra Monthly Cost</span>
+                <span className="font-semibold text-red-600">$3,909/month</span>
+              </div>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <p className="text-sm font-semibold text-accent mb-2">BUT... You're Buying a $1M Asset!</p>
+              <p className="text-xs text-muted">
+                That extra $3,909/month is building equity, providing tax benefits, and giving you control 
+                over your housing. Plus, you can increase rents, add ADUs, or refinance when rates drop.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const renderKansasCityApartments = () => (
+    <>
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold text-primary mb-4">Institutional-Quality 121-Unit Complex</h3>
+            <p className="text-muted mb-4">
+              This institutional-quality asset offers the holy grail of apartment investing - a 6.95% cap rate WITH an 
+              assumable 3.1% loan through 2032! With 121 units on 8.8 acres, strong in-place cash flow, and significant 
+              upside through organic rent growth and remaining unit renovations, this property delivers immediate returns 
+              with massive value-add potential.
+            </p>
+            
+            <div className="bg-yellow-500/10 rounded-lg p-4 mb-4 border border-yellow-500/20">
+              <h4 className="font-semibold text-yellow-600 mb-2">🏆 The 3.1% Assumable Loan Advantage</h4>
+              <p className="text-sm text-muted">
+                Current market rates: 7.0-7.5%. Your rate: 3.1%. Monthly savings: $31,000+. Annual savings: $372,000. 
+                This loan creates $3M+ in immediate value through interest rate arbitrage. The assumable loan is worth 
+                more than most investors' entire real estate portfolios!
+              </p>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-2">📈 Value-Add Business Plan</h4>
+              <p className="text-sm text-muted">
+                Current average rent: $924/unit. Market rent potential: $1,099/unit (+$175). 23 units need renovation 
+                at $8-10K each for 18-30% ROI. Excess land allows development of 20-30 additional units. 
+                Stabilized value: $15.2M (creating $5.6M in equity).
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 text-center">
+              <div className="text-2xl mb-2">💰</div>
+              <h4 className="font-semibold text-green-600 mb-1">12.5% Cash-on-Cash</h4>
+              <p className="text-xs text-muted">$39,171/month cash flow</p>
+            </div>
+            
+            <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20 text-center">
+              <div className="text-2xl mb-2">🏦</div>
+              <h4 className="font-semibold text-yellow-600 mb-1">3.1% Loan Rate</h4>
+              <p className="text-xs text-muted">Through Nov 2032</p>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20 text-center">
+              <div className="text-2xl mb-2">📊</div>
+              <h4 className="font-semibold text-accent mb-1">6.95% Cap Rate</h4>
+              <p className="text-xs text-muted">Strong in-place returns</p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 text-center">
+              <div className="text-2xl mb-2">🏗️</div>
+              <h4 className="font-semibold text-blue-600 mb-1">20-30 Unit Potential</h4>
+              <p className="text-xs text-muted">Development opportunity</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'financing' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Assumable Loan Details</h3>
+          
+          <div className="bg-yellow-500/10 rounded-lg p-6 border border-yellow-500/20">
+            <h4 className="font-semibold text-yellow-600 mb-4">🏆 3.1% Fixed Rate Loan</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted">Purchase Price</span>
+                <p className="font-semibold text-primary">$9,600,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Existing Loan Balance</span>
+                <p className="font-semibold text-primary">$5,839,643</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Down Payment Required</span>
+                <p className="font-semibold text-primary">$3,760,357 (39%)</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Interest Rate</span>
+                <p className="font-semibold text-yellow-600">3.1% Fixed!</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Loan Maturity</span>
+                <p className="font-semibold text-primary">November 2032</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Monthly P&I</span>
+                <p className="font-semibold text-primary">$24,890</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="font-semibold text-primary">Monthly Cash Flow Analysis</h4>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Gross Rental Income</span>
+              <span className="font-semibold">$111,805</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Vacancy (7%)</span>
+              <span className="font-semibold">-$8,036</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Operating Expenses (40%)</span>
+              <span className="font-semibold">-$42,708</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg">
+              <span className="text-muted">Net Operating Income</span>
+              <span className="font-semibold text-green-600">$64,061</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Debt Service</span>
+              <span className="font-semibold">-$24,890</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-accent/10 rounded-lg border border-accent/20">
+              <span className="font-semibold text-primary">Monthly Cash Flow</span>
+              <span className="font-bold text-accent text-lg">$39,171</span>
+            </div>
+          </div>
+
+          <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+            <h4 className="font-semibold text-blue-600 mb-2">💡 Loan Value Analysis</h4>
+            <p className="text-sm text-muted">
+              Market rate debt service would be ~$55,890/month. Your 3.1% rate saves $31,000/month. 
+              That's $372,000 in annual savings, creating over $3M in loan value premium!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Value-Add Execution Plan</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-3">🔧 Unit Renovation Program</h4>
+              <p className="text-sm text-muted mb-2">23 classic units remaining</p>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted">Cost per unit:</span>
+                  <span className="font-semibold">$8,000-$10,000</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Rent increase:</span>
+                  <span className="font-semibold text-green-600">+$175/month</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">ROI per unit:</span>
+                  <span className="font-semibold text-accent">18-30%</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-3">🏗️ Development Phase</h4>
+              <p className="text-sm text-muted mb-2">20-30 new units on excess land</p>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted">Development cost:</span>
+                  <span className="font-semibold">$3.6M</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">New NOI:</span>
+                  <span className="font-semibold text-green-600">+$275K/year</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Value created:</span>
+                  <span className="font-semibold text-accent">+$4.2M</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-green-500/10 rounded-lg p-6 border border-green-500/20">
+            <h4 className="font-semibold text-green-600 mb-3">📊 Stabilized Pro Forma (Year 3)</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted">New Monthly Gross</p>
+                <p className="font-semibold text-primary">$132,979</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted">New Annual NOI</p>
+                <p className="font-semibold text-primary">$989,364</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted">New Valuation (6.5% cap)</p>
+                <p className="font-semibold text-accent">$15,220,985</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted">Total Value Created</p>
+                <p className="font-semibold text-green-600">$5,620,985</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'returns' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Investment Returns Analysis</h3>
+          
+          <div className="bg-gradient-to-r from-yellow-500/10 to-accent/10 rounded-lg p-6 border border-accent/20">
+            <h4 className="font-semibold text-primary mb-4">Current Performance</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Cap Rate</p>
+                <p className="text-2xl font-bold text-primary">6.95%</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Cash-on-Cash</p>
+                <p className="text-2xl font-bold text-accent">12.5%</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
+                <p className="text-2xl font-bold text-green-600">$39K</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Loan Savings/Mo</p>
+                <p className="text-2xl font-bold text-yellow-600">$31K</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="font-semibold text-primary">Advanced Exit Strategies</h4>
+            
+            <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
+              <h4 className="font-semibold text-purple-600 mb-2">🏢 Condo Conversion Play</h4>
+              <p className="text-sm text-muted">
+                Convert 47 townhome-style units to condos. Sell for $100K+ each = $5M+ in sales proceeds. 
+                Keep 74 apartments for cash flow.
+              </p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-2">💼 Syndication Opportunity</h4>
+              <p className="text-sm text-muted">
+                Raise $2.5M from investors at 8% preferred return. Keep $1.26M for yourself. 
+                70/30 split above 8% pref. Control $9.6M asset with other people's money.
+              </p>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-2">📈 Hold & Refinance</h4>
+              <p className="text-sm text-muted">
+                Execute value-add plan to $15.2M value. Refinance at 75% LTV = $11.4M loan. 
+                Pull out $5.6M tax-free while keeping the property!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const renderTampaMobileHomePark = () => (
+    <>
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold text-primary mb-4">30-Unit Mobile Home Cash Flow Machine</h3>
+            <p className="text-muted mb-4">
+              This isn't your typical mobile home park - it's 30 INDIVIDUAL mobile homes on single-family lots with 
+              SELLER FINANCING at incredible terms! With current rents $200-250 BELOW market and 75% on month-to-month 
+              leases, you can increase income IMMEDIATELY. The 14% cash-on-cash return grows to 17% by year 3!
+            </p>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 mb-4 border border-green-500/20">
+              <h4 className="font-semibold text-green-600 mb-2">💰 Seller Financing Terms</h4>
+              <p className="text-sm text-muted">
+                $1M seller financing at just 5% interest-only for years 1-2, then 5.5% for years 3-4, with balloon in year 5. 
+                This incredible financing allows you to capture massive cash flow from day one while using the property's 
+                income to pay down or refinance the loan.
+              </p>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-2">🚀 Immediate Income Upside</h4>
+              <p className="text-sm text-muted">
+                Current average rent: $1,215/unit. Market average: $1,465/unit. With 75% of tenants on month-to-month, 
+                you can raise 23 units by $200 immediately for +$4,600/month. Full stabilization adds $7,500/month!
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 text-center">
+              <div className="text-2xl mb-2">💵</div>
+              <h4 className="font-semibold text-green-600 mb-1">11% Cap Rate</h4>
+              <p className="text-xs text-muted">Current performance</p>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20 text-center">
+              <div className="text-2xl mb-2">📈</div>
+              <h4 className="font-semibold text-accent mb-1">17.6% Year 3</h4>
+              <p className="text-xs text-muted">Stabilized returns</p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 text-center">
+              <div className="text-2xl mb-2">🏠</div>
+              <h4 className="font-semibold text-blue-600 mb-1">100% Occupied</h4>
+              <p className="text-xs text-muted">All renovated 2020-2025</p>
+            </div>
+            
+            <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20 text-center">
+              <div className="text-2xl mb-2">🏦</div>
+              <h4 className="font-semibold text-yellow-600 mb-1">5% Financing</h4>
+              <p className="text-xs text-muted">Seller financed</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'financing' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Incredible Seller Financing Deal</h3>
+          
+          <div className="bg-yellow-500/10 rounded-lg p-6 border border-yellow-500/20">
+            <h4 className="font-semibold text-yellow-600 mb-4">🏦 Seller Financing Structure</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted">Purchase Price</span>
+                <p className="font-semibold text-primary">$3,200,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Down Payment</span>
+                <p className="font-semibold text-primary">$2,300,000 (72%)</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Seller Financing</span>
+                <p className="font-semibold text-primary">$1,000,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Years 1-2 Rate</span>
+                <p className="font-semibold text-yellow-600">5.0% (Interest-Only)</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Years 3-4 Rate</span>
+                <p className="font-semibold text-primary">5.5% (Interest-Only)</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Monthly Payment (Yr 1-2)</span>
+                <p className="font-semibold text-green-600">$4,166</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="font-semibold text-primary">Current Cash Flow Analysis</h4>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Gross Rent (30 units)</span>
+              <span className="font-semibold">$36,442</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Operating Expenses</span>
+              <span className="font-semibold">-$10,793</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg">
+              <span className="text-muted">Net Operating Income</span>
+              <span className="font-semibold text-green-600">$26,211</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Debt Service</span>
+              <span className="font-semibold">-$4,166</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-accent/10 rounded-lg border border-accent/20">
+              <span className="font-semibold text-primary">Monthly Cash Flow</span>
+              <span className="font-bold text-accent text-lg">$22,045</span>
+            </div>
+          </div>
+
+          <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
+            <h4 className="font-semibold text-green-600 mb-2">📊 5-Year Total Returns</h4>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-muted">Cash Flow Collected</p>
+                <p className="font-semibold">$1,900,000+</p>
+              </div>
+              <div>
+                <p className="text-muted">Appreciation (3%/yr)</p>
+                <p className="font-semibold">$500,000</p>
+              </div>
+              <div>
+                <p className="text-muted">Total Profit</p>
+                <p className="font-semibold text-green-600">$2,400,000+</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted mt-2">104% ROI on down payment!</p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Income Optimization Strategy</h3>
+          
+          <div className="bg-accent/10 rounded-lg p-6 border border-accent/20">
+            <h4 className="font-semibold text-accent mb-4">📈 Month 1 Action Plan</h4>
+            <p className="text-sm text-muted mb-4">
+              With 75% of tenants on month-to-month leases, you can implement immediate rent increases:
+            </p>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-muted/10 rounded">
+                <span className="text-sm text-muted">Units to raise immediately</span>
+                <span className="font-semibold">23 units</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-muted/10 rounded">
+                <span className="text-sm text-muted">Increase per unit</span>
+                <span className="font-semibold">$200/month</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-green-500/10 rounded">
+                <span className="text-sm text-muted">Additional monthly income</span>
+                <span className="font-semibold text-green-600">$4,600</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-accent/10 rounded">
+                <span className="text-sm text-muted">New Cash-on-Cash Return</span>
+                <span className="font-semibold text-accent">13.9%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-3">Year 2 Full Stabilization</h4>
+              <div className="space-y-2 text-sm">
+                <p className="text-muted">All units at market: +$250/unit</p>
+                <p className="text-muted">Additional income: $7,500/month</p>
+                <p className="font-semibold">Annual cash flow: $404,532</p>
+                <p className="font-semibold text-blue-600">Cash-on-Cash: 17.6%!</p>
+              </div>
+            </div>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
+              <h4 className="font-semibold text-green-600 mb-3">Why This Model Works</h4>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Single-family style lots (privacy)</li>
+                <li>• Own the homes AND land</li>
+                <li>• Recent renovations justify rates</li>
+                <li>• Low turnover with happy tenants</li>
+                <li>• No pad rent collection issues</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-muted/10 rounded-lg p-4">
+            <h4 className="font-semibold text-primary mb-2">🏠 Unit Features (Renovated 2020-2025)</h4>
+            <p className="text-sm text-muted">
+              All 30 units have been renovated with modern amenities, eliminating major CapEx needs while 
+              providing a premium rental experience that feels like renting individual houses rather than 
+              traditional mobile home park living.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'returns' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Exceptional Returns Timeline</h3>
+          
+          <div className="bg-gradient-to-r from-green-500/10 to-accent/10 rounded-lg p-6 border border-accent/20">
+            <h4 className="font-semibold text-primary mb-4">Cash-on-Cash Return Progression</h4>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Current</p>
+                <p className="text-3xl font-bold text-primary">11.5%</p>
+                <p className="text-xs text-muted">$264K annually</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Year 1</p>
+                <p className="text-3xl font-bold text-accent">13.9%</p>
+                <p className="text-xs text-muted">$320K annually</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted mb-1">Year 3</p>
+                <p className="text-3xl font-bold text-green-600">17.6%</p>
+                <p className="text-xs text-muted">$405K annually</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-2">🎯 Investment Highlights</h4>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>$250/unit below market = immediate $90K annual income increase potential</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>75% month-to-month leases = implement increases immediately</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>All units renovated = no major CapEx for years</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Individual lots = premium rental experience</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-2">💰 5-Year Wealth Building</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted">Total cash flow collected</span>
+                  <span className="font-semibold">$1,900,000+</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Property appreciation</span>
+                  <span className="font-semibold">$500,000</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted">Down payment</span>
+                  <span className="font-semibold">-$2,300,000</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="font-semibold">Net profit</span>
+                  <span className="font-semibold text-accent">$2,400,000+</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const renderLosGatosFlip = () => (
+    <>
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold text-primary mb-4">Los Gatos Mountain Estate - 2.2 Acres</h3>
+            <p className="text-muted mb-4">
+              This Los Gatos mountain property on 2.2 ACRES needs cosmetic updating but sits in one of Silicon Valley's 
+              most desirable areas. With award-winning Los Gatos schools and massive lot premium, this property can 
+              command $1,000+/sq ft when updated to luxury standards targeting tech executives seeking privacy.
+            </p>
+            
+            <div className="bg-accent/10 rounded-lg p-4 mb-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-2">🏔️ The 2.2 Acre Advantage</h4>
+              <p className="text-sm text-muted">
+                Recent comps show $974-$1,510/sq ft with most under 0.5 acres. This property's 2.2 acres provides 
+                exceptional privacy value for executives working from home. Conservative ARV at $1,064/sq ft = $2.1M, 
+                but premium acreage could push value to $2.5M+.
+              </p>
+            </div>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
+              <h4 className="font-semibold text-green-600 mb-2">💰 710% ROI Potential</h4>
+              <p className="text-sm text-muted">
+                Offer $950K (competitive over-asking), invest $275K in luxury rehab, sell for $2.1M. 
+                Net profit: $674,895 on $95K down payment. Complete in 9 months for 947% annualized returns!
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20 text-center">
+              <div className="text-2xl mb-2">🌲</div>
+              <h4 className="font-semibold text-accent mb-1">2.2 Acres</h4>
+              <p className="text-xs text-muted">Rare in Los Gatos</p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 text-center">
+              <div className="text-2xl mb-2">🎓</div>
+              <h4 className="font-semibold text-blue-600 mb-1">10-Rated Schools</h4>
+              <p className="text-xs text-muted">Los Gatos excellence</p>
+            </div>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 text-center">
+              <div className="text-2xl mb-2">💵</div>
+              <h4 className="font-semibold text-green-600 mb-1">$675K Profit</h4>
+              <p className="text-xs text-muted">710% ROI</p>
+            </div>
+            
+            <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20 text-center">
+              <div className="text-2xl mb-2">⏱️</div>
+              <h4 className="font-semibold text-yellow-600 mb-1">9 Months</h4>
+              <p className="text-xs text-muted">Quick luxury flip</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'financing' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Hard Money Flip Financing</h3>
+          
+          <div className="bg-card rounded-lg p-6 border border-border/60">
+            <h4 className="font-semibold text-primary mb-4">Financing Structure</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted">Offer Price</span>
+                <p className="font-semibold text-primary">$950,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Down Payment (10%)</span>
+                <p className="font-semibold text-primary">$95,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Purchase Loan</span>
+                <p className="font-semibold text-primary">$855,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Rehab Budget</span>
+                <p className="font-semibold text-primary">$275,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Total Loan Amount</span>
+                <p className="font-semibold text-primary">$1,130,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Interest Rate</span>
+                <p className="font-semibold text-primary">10.45%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="font-semibold text-primary">Investment Breakdown</h4>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Down Payment</span>
+              <span className="font-semibold">$95,000</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Interest Payments (9 mo)</span>
+              <span className="font-semibold">$67,005</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Insurance/Utilities/Taxes</span>
+              <span className="font-semibold">$28,100</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-red-500/10 rounded-lg">
+              <span className="text-muted">Total Holding Costs</span>
+              <span className="font-semibold text-red-600">$95,105</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+              <span className="font-semibold text-primary">Total Cash Required</span>
+              <span className="font-bold text-green-600 text-lg">$95,000</span>
+            </div>
+          </div>
+
+          <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+            <h4 className="font-semibold text-accent mb-2">💡 Profit Analysis</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted">Sale Price (ARV)</p>
+                <p className="font-semibold">$2,100,000</p>
+              </div>
+              <div>
+                <p className="text-muted">Total Costs</p>
+                <p className="font-semibold">-$1,330,105</p>
+              </div>
+              <div>
+                <p className="text-muted">Net Profit</p>
+                <p className="font-semibold text-accent">$674,895</p>
+              </div>
+              <div>
+                <p className="text-muted">ROI</p>
+                <p className="font-semibold text-green-600">710%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Luxury Rehab Scope - $275,000</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-3">🍳 Kitchen - High-End Remodel</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$65,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Custom cabinets to ceiling</li>
+                <li>• Waterfall quartz island</li>
+                <li>• Sub-Zero/Wolf appliances</li>
+                <li>• Designer backsplash</li>
+                <li>• Smart home integration</li>
+              </ul>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-3">🛁 Bathrooms - Spa Quality</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$45,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Master bath gut remodel</li>
+                <li>• Freestanding tub</li>
+                <li>• Frameless glass shower</li>
+                <li>• Heated floors</li>
+                <li>• Designer fixtures</li>
+              </ul>
+            </div>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
+              <h4 className="font-semibold text-green-600 mb-3">🏠 Interior - Luxury Finishes</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$85,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Engineered hardwood throughout</li>
+                <li>• Designer paint & millwork</li>
+                <li>• High-end lighting fixtures</li>
+                <li>• Smart home system</li>
+                <li>• Custom closet systems</li>
+              </ul>
+            </div>
+            
+            <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
+              <h4 className="font-semibold text-yellow-600 mb-3">🌳 Exterior & Curb Appeal</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$50,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Premium exterior paint</li>
+                <li>• Professional landscaping</li>
+                <li>• Deck refinishing</li>
+                <li>• Driveway repair</li>
+                <li>• Outdoor lighting</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-muted/10 rounded-lg p-4">
+            <h4 className="font-semibold text-primary mb-2">🔧 Systems & Permits - $30,000</h4>
+            <p className="text-sm text-muted">
+              HVAC updates, electrical panel upgrade, plumbing fixtures, permits, and contingency. 
+              Focus on cosmetic improvements while ensuring all systems meet luxury home standards.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'returns' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Premium Flip Returns Analysis</h3>
+          
+          <div className="bg-gradient-to-r from-accent/10 to-green-500/10 rounded-lg p-6 border border-accent/20">
+            <h4 className="font-semibold text-primary mb-4">Why $2.1M ARV is Conservative</h4>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-muted mb-2">Recent Comparable Sales</p>
+                <ul className="space-y-1 text-sm">
+                  <li>• Comps range: $974-$1,510/sq ft</li>
+                  <li>• Most comps under 0.5 acres</li>
+                  <li>• This property: 2.2 ACRES</li>
+                  <li>• Target: $1,064/sq ft (conservative)</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm text-muted mb-2">Target Buyer Profile</p>
+                <ul className="space-y-1 text-sm">
+                  <li>• Tech executives (remote work)</li>
+                  <li>• Privacy seekers</li>
+                  <li>• Los Gatos schools priority</li>
+                  <li>• $2M+ budget buyers</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-3">📊 Investment Timeline (9 Months)</h4>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-muted">Months 1-2</p>
+                  <p className="font-semibold">Permits & Planning</p>
+                </div>
+                <div>
+                  <p className="text-muted">Months 3-7</p>
+                  <p className="font-semibold">Full Renovation</p>
+                </div>
+                <div>
+                  <p className="text-muted">Months 8-9</p>
+                  <p className="font-semibold">Marketing & Sale</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-6 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-3">💰 Final Numbers</h4>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted">Total Investment</span>
+                  <span className="font-semibold">$1,330,105</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted">Sale Price</span>
+                  <span className="font-semibold">$2,100,000</span>
+                </div>
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span className="text-primary">Net Profit</span>
+                  <span className="text-green-600">$674,895</span>
+                </div>
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span className="text-primary">ROI on Cash</span>
+                  <span className="text-accent">710%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const renderOaklandHUDFlip = () => (
+    <>
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-xl font-semibold text-primary mb-4">East Oakland HUD Home Value Play</h3>
+            <p className="text-muted mb-4">
+              This HUD home in East Oakland offers solid flip potential with cosmetic renovation needs. Based on photos, 
+              property appears structurally sound but needs updating. With FHA 203k eligibility and strong comps, this 
+              represents manageable value-add opportunity with excellent returns. Large 5,000 sq ft lot provides future 
+              ADU potential.
+            </p>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 mb-4 border border-green-500/20">
+              <h4 className="font-semibold text-green-600 mb-2">💰 280% ROI in 6 Months</h4>
+              <p className="text-sm text-muted">
+                Purchase at $281K, invest $65K in cosmetic rehab, sell for $475K. Net profit of $78,794 on just 
+                $28,100 down payment. Quick 6-month flip with 560% annualized returns focusing on cosmetic improvements.
+              </p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-2">🏗️ Large Lot ADU Opportunity</h4>
+              <p className="text-sm text-muted">
+                5,000 sq ft lot provides ample space for future ADU development. Oakland's ADU-friendly policies make 
+                this an excellent long-term hold option. Add an ADU for $150K and rent for $1,800+/month.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20 text-center">
+              <div className="text-2xl mb-2">🏚️</div>
+              <h4 className="font-semibold text-accent mb-1">HUD Home</h4>
+              <p className="text-xs text-muted">Government owned</p>
+            </div>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 text-center">
+              <div className="text-2xl mb-2">💵</div>
+              <h4 className="font-semibold text-green-600 mb-1">$79K Profit</h4>
+              <p className="text-xs text-muted">280% ROI</p>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20 text-center">
+              <div className="text-2xl mb-2">📐</div>
+              <h4 className="font-semibold text-blue-600 mb-1">5,000 sq ft</h4>
+              <p className="text-xs text-muted">Large lot</p>
+            </div>
+            
+            <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20 text-center">
+              <div className="text-2xl mb-2">⏱️</div>
+              <h4 className="font-semibold text-yellow-600 mb-1">6 Months</h4>
+              <p className="text-xs text-muted">Quick flip</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'financing' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Hard Money Flip Financing</h3>
+          
+          <div className="bg-card rounded-lg p-6 border border-border/60">
+            <h4 className="font-semibold text-primary mb-4">Financing Terms</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-muted">Purchase Price</span>
+                <p className="font-semibold text-primary">$281,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Down Payment (10%)</span>
+                <p className="font-semibold text-primary">$28,100</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Purchase Loan</span>
+                <p className="font-semibold text-primary">$252,900</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Rehab Budget</span>
+                <p className="font-semibold text-primary">$65,000</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Total Loan</span>
+                <p className="font-semibold text-primary">$317,900</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted">Interest Rate</span>
+                <p className="font-semibold text-primary">10.45%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="font-semibold text-primary">Investment Analysis</h4>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Down Payment</span>
+              <span className="font-semibold">$28,100</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Interest (6 months)</span>
+              <span className="font-semibold">$13,206</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-muted/10 rounded-lg">
+              <span className="text-muted">Insurance/Utilities/Staging</span>
+              <span className="font-semibold">$8,500</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-red-500/10 rounded-lg">
+              <span className="text-muted">Total Costs</span>
+              <span className="font-semibold text-red-600">$368,106</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg">
+              <span className="text-muted">Sale Price (ARV)</span>
+              <span className="font-semibold text-green-600">$475,000</span>
+            </div>
+            <div className="flex justify-between items-center p-4 bg-accent/10 rounded-lg border border-accent/20">
+              <span className="font-semibold text-primary">Net Profit</span>
+              <span className="font-bold text-accent text-lg">$78,794</span>
+            </div>
+          </div>
+
+          <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+            <h4 className="font-semibold text-blue-600 mb-2">🏦 Alternative: FHA 203k</h4>
+            <p className="text-sm text-muted">
+              This HUD home is FHA 203k eligible. Owner-occupants could purchase with 3.5% down ($9,835) 
+              and finance the rehab. Live in it during renovation, then sell or rent out.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'rehab' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Realistic Rehab Scope - $65,000</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-3">🍳 Kitchen Update</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$18,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Cabinet refacing/painting</li>
+                <li>• New quartz countertops</li>
+                <li>• Stainless steel appliances</li>
+                <li>• Tile backsplash</li>
+                <li>• Modern fixtures</li>
+              </ul>
+            </div>
+            
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-3">🛁 Bathroom Refresh</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$8,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• New vanity & top</li>
+                <li>• Modern toilet</li>
+                <li>• Tile flooring</li>
+                <li>• Updated fixtures</li>
+                <li>• Fresh tile surround</li>
+              </ul>
+            </div>
+            
+            <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
+              <h4 className="font-semibold text-green-600 mb-3">🏠 Interior Updates</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$22,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Full interior paint</li>
+                <li>• LVP flooring throughout</li>
+                <li>• Modern light fixtures</li>
+                <li>• Interior doors</li>
+                <li>• Window treatments</li>
+              </ul>
+            </div>
+            
+            <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
+              <h4 className="font-semibold text-yellow-600 mb-3">🌳 Exterior Work</h4>
+              <p className="text-2xl font-bold text-primary mb-2">$12,000</p>
+              <ul className="space-y-1 text-sm text-muted">
+                <li>• Exterior paint</li>
+                <li>• Landscaping cleanup</li>
+                <li>• New garage door</li>
+                <li>• Front door & hardware</li>
+                <li>• Fence repairs</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-muted/10 rounded-lg p-4">
+            <h4 className="font-semibold text-primary mb-2">🔧 Permits & Contingency - $5,000</h4>
+            <p className="text-sm text-muted">
+              Building permits, dumpster rental, and 10% contingency for unexpected issues. Focus on cosmetic 
+              improvements that don't require major permits to keep timeline tight.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'returns' && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-semibold text-primary mb-4">Quick Flip Returns</h3>
+          
+          <div className="bg-gradient-to-r from-green-500/10 to-accent/10 rounded-lg p-6 border border-accent/20">
+            <h4 className="font-semibold text-primary mb-4">Comparable Sales Support</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-muted/10 rounded">
+                <span className="text-sm text-muted">9608 D St (0.06 mi)</span>
+                <span className="font-semibold">$534,000</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-muted/10 rounded">
+                <span className="text-sm text-muted">958 106th Ave</span>
+                <span className="font-semibold">$500,000 ($710/sq ft)</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-accent/10 rounded">
+                <span className="text-sm font-semibold">Conservative ARV</span>
+                <span className="font-bold text-accent">$475,000 ($550/sq ft)</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+              <h4 className="font-semibold text-blue-600 mb-3">📈 Value-Add Strategies</h4>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Stage professionally (+$15-20K value)</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Price at $499K (psychological barrier)</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Market as "turnkey" to owner-occupants</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <span>Highlight ADU potential on large lot</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="bg-accent/10 rounded-lg p-4 border border-accent/20">
+              <h4 className="font-semibold text-accent mb-3">💰 Final Numbers</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Total Investment</span>
+                  <span className="font-semibold">$368,106</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Sale Price</span>
+                  <span className="font-semibold">$475,000</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="font-semibold">Net Profit</span>
+                  <span className="font-bold text-green-600">$78,794</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">ROI on Cash</span>
+                  <span className="font-bold text-accent">280%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
+            <h4 className="font-semibold text-yellow-600 mb-2">🏠 Alternative: Buy & Hold with ADU</h4>
+            <p className="text-sm text-muted">
+              Instead of flipping, renovate for $65K, add ADU for $150K. Rent main house for $2,800/month, 
+              ADU for $1,800/month = $4,600/month total. Creates long-term wealth with Oakland appreciation.
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-0 md:p-4 overflow-hidden">
       <div className="bg-background w-full max-w-full md:max-w-5xl h-full md:max-h-[90vh] md:rounded-xl shadow-2xl flex flex-col overflow-hidden">
@@ -2101,7 +3391,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
 
           {/* Tab Navigation */}
           <div className="flex gap-1 md:gap-2 mt-4 md:mt-6 overflow-x-auto">
-            {['overview', 'financing', 'rehab', 'returns'].map((tab) => (
+            {['overview', 'financing', 'rehab', 'returns', 'pictures'].map((tab) => (
               <button
                 key={tab}
                 className={`px-3 md:px-6 py-2 md:py-3 rounded-lg font-medium text-xs md:text-sm transition-colors min-h-[40px] md:min-h-[44px] flex items-center justify-center whitespace-nowrap ${
@@ -2126,13 +3416,319 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           {deal.id === 5 && renderSanDiegoDuplexDetails()}
           {deal.id === 6 && renderOakland25UnitDetails()}
           {deal.id === 7 && renderSanLeandroDetails()}
+          {deal.id === 8 && renderSanDiegoDuplexHouseHack()}
+          {deal.id === 9 && renderKansasCityApartments()}
+          {deal.id === 10 && renderTampaMobileHomePark()}
+          {deal.id === 11 && renderLosGatosFlip()}
+          {deal.id === 12 && renderOaklandHUDFlip()}
           
-          {/* Placeholder for other properties */}
-          {deal.id !== 1 && deal.id !== 2 && deal.id !== 3 && deal.id !== 4 && deal.id !== 5 && deal.id !== 6 && deal.id !== 7 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🚧</div>
-              <h3 className="text-xl font-semibold text-primary mb-2">Detailed Analysis Coming Soon</h3>
-              <p className="text-muted">Full analysis for this property is being prepared</p>
+          {/* Dynamic properties render */}
+          {deal.id !== 1 && deal.id !== 2 && deal.id !== 3 && deal.id !== 4 && deal.id !== 5 && deal.id !== 6 && deal.id !== 7 && deal.id !== 8 && deal.id !== 9 && deal.id !== 10 && deal.id !== 11 && deal.id !== 12 && (
+            <div className="space-y-8">
+              {activeTab === 'overview' && (
+                <div>
+                  <h3 className="text-xl font-semibold text-primary mb-4">Property Overview</h3>
+                  <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="text-lg font-semibold text-primary mb-3">Property Details</h4>
+                        <div className="space-y-2">
+                          {deal.bedrooms && <p className="text-sm"><span className="text-muted">Bedrooms:</span> <span className="font-medium">{deal.bedrooms}</span></p>}
+                          {deal.bathrooms && <p className="text-sm"><span className="text-muted">Bathrooms:</span> <span className="font-medium">{deal.bathrooms}</span></p>}
+                          {deal.sqft && <p className="text-sm"><span className="text-muted">Square Feet:</span> <span className="font-medium">{deal.sqft.toLocaleString()}</span></p>}
+                          {deal.yearBuilt && <p className="text-sm"><span className="text-muted">Year Built:</span> <span className="font-medium">{deal.yearBuilt}</span></p>}
+                          {deal.propertyType && <p className="text-sm"><span className="text-muted">Property Type:</span> <span className="font-medium">{deal.propertyType}</span></p>}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-primary mb-3">Investment Details</h4>
+                        <div className="space-y-2">
+                          {deal.investmentStrategy && <p className="text-sm"><span className="text-muted">Strategy:</span> <span className="font-medium">{deal.investmentStrategy}</span></p>}
+                          {deal.confidence && <p className="text-sm"><span className="text-muted">Confidence Level:</span> <span className="font-medium">{deal.confidence.toUpperCase()}</span></p>}
+                          {deal.riskLevel && <p className="text-sm"><span className="text-muted">Risk Level:</span> <span className="font-medium">{deal.riskLevel.toUpperCase()}</span></p>}
+                          {deal.holdPeriod && <p className="text-sm"><span className="text-muted">Hold Period:</span> <span className="font-medium">{deal.holdPeriod} years</span></p>}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {deal.description && (
+                      <div className="mt-6">
+                        <h4 className="text-lg font-semibold text-primary mb-3">Description</h4>
+                        <p className="text-sm text-muted">{deal.description}</p>
+                      </div>
+                    )}
+                    
+                    {deal.features && deal.features.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-lg font-semibold text-primary mb-3">Features</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {deal.features.map((feature: string, index: number) => (
+                            <span key={index} className="px-3 py-1 bg-accent/10 text-accent rounded-lg text-sm">
+                              {feature}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === 'financing' && (
+                <div>
+                  <h3 className="text-xl font-semibold text-primary mb-4">Financing Details</h3>
+                  <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="text-lg font-semibold text-primary mb-3">Loan Details</h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-muted">Purchase Price</span>
+                            <span className="font-semibold text-2xl">${deal.price?.toLocaleString() || '0'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Down Payment</span>
+                            <span className="font-semibold">${deal.downPayment?.toLocaleString() || '0'} ({deal.downPaymentPercent || 0}%)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Loan Amount</span>
+                            <span className="font-semibold">${((deal.price || 0) - (deal.downPayment || 0)).toLocaleString()}</span>
+                          </div>
+                          {deal.interestRate && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Interest Rate</span>
+                              <span className="font-semibold">{deal.interestRate}%</span>
+                            </div>
+                          )}
+                          {deal.loanTerm && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Loan Term</span>
+                              <span className="font-semibold">{deal.loanTerm} years</span>
+                            </div>
+                          )}
+                          {deal.monthlyPI && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Monthly P&I</span>
+                              <span className="font-semibold">${deal.monthlyPI.toLocaleString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-lg font-semibold text-primary mb-3">Closing Costs</h4>
+                        <div className="space-y-3">
+                          {deal.closingCosts && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Closing Costs</span>
+                              <span className="font-semibold">${deal.closingCosts.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {deal.rehabCosts && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Rehab Budget</span>
+                              <span className="font-semibold">${deal.rehabCosts.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between pt-3 border-t">
+                            <span className="text-muted font-semibold">Total Cash Required</span>
+                            <span className="font-bold text-accent text-xl">
+                              ${((deal.downPayment || 0) + (deal.closingCosts || 0) + (deal.rehabCosts || 0)).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === 'rehab' && (
+                <div>
+                  <h3 className="text-xl font-semibold text-primary mb-4">Rehab & Renovation</h3>
+                  <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
+                    {deal.rehabCosts ? (
+                      <div className="space-y-6">
+                        <div>
+                          <h4 className="text-lg font-semibold text-primary mb-3">Total Rehab Budget</h4>
+                          <p className="text-3xl font-bold text-accent">${deal.rehabCosts.toLocaleString()}</p>
+                        </div>
+                        
+                        {deal.rehabDetails && Object.keys(deal.rehabDetails).length > 0 && (
+                          <div>
+                            <h4 className="text-lg font-semibold text-primary mb-3">Rehab Breakdown</h4>
+                            <div className="space-y-2">
+                              {Object.entries(deal.rehabDetails).map(([key, value]) => (
+                                <div key={key} className="flex justify-between py-2 border-b border-border/10">
+                                  <span className="text-muted capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                  <span className="font-medium">${(value as number).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {deal.rehabTimeline && (
+                          <div>
+                            <h4 className="text-lg font-semibold text-primary mb-3">Timeline</h4>
+                            <p className="text-muted">{deal.rehabTimeline}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted">No rehab or renovation planned for this property</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === 'returns' && (
+                <div>
+                  <h3 className="text-xl font-semibold text-primary mb-4">Investment Returns</h3>
+                  <div className="space-y-6">
+                    {/* Key Metrics Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
+                        <p className="text-sm text-muted mb-1">Monthly Rent</p>
+                        <p className="text-2xl font-bold text-primary">${deal.monthlyRent?.toLocaleString() || '0'}</p>
+                      </div>
+                      <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
+                        <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
+                        <p className={`text-2xl font-bold ${(deal.monthlyCashFlow || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ${deal.monthlyCashFlow?.toLocaleString() || '0'}
+                        </p>
+                      </div>
+                      <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
+                        <p className="text-sm text-muted mb-1">Cap Rate</p>
+                        <p className="text-2xl font-bold text-accent">{deal.capRate?.toFixed(2) || '0'}%</p>
+                      </div>
+                      <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
+                        <p className="text-sm text-muted mb-1">Total ROI</p>
+                        <p className="text-2xl font-bold text-green-600">{deal.totalROI?.toFixed(1) || '0'}%</p>
+                      </div>
+                    </div>
+
+                    {/* Expenses Breakdown */}
+                    {(deal.propertyTax || deal.insurance || deal.hoa || deal.expenses) && (
+                      <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
+                        <h4 className="text-lg font-semibold text-primary mb-4">Monthly Expenses</h4>
+                        <div className="space-y-3">
+                          {deal.propertyTax && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Property Tax</span>
+                              <span className="font-medium">${Math.round(deal.propertyTax / 12).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {deal.insurance && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Insurance</span>
+                              <span className="font-medium">${Math.round(deal.insurance / 12).toLocaleString()}</span>
+                            </div>
+                          )}
+                          {deal.hoa && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">HOA Fees</span>
+                              <span className="font-medium">${deal.hoa.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {deal.propertyManagement && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Property Management</span>
+                              <span className="font-medium">${deal.propertyManagement.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {deal.maintenance && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Maintenance Reserve</span>
+                              <span className="font-medium">${deal.maintenance.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {deal.monthlyPI && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Mortgage P&I</span>
+                              <span className="font-medium">${deal.monthlyPI.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {(deal.totalExpenses || 
+                            (deal.propertyTax || deal.insurance || deal.hoa || deal.propertyManagement || deal.maintenance || deal.monthlyPI)) && (
+                            <div className="flex justify-between pt-3 border-t">
+                              <span className="font-semibold">Total Monthly Expenses</span>
+                              <span className="font-bold text-red-600">
+                                ${(deal.totalExpenses || 
+                                  (Math.round((deal.propertyTax || 0) / 12) + 
+                                   Math.round((deal.insurance || 0) / 12) + 
+                                   (deal.hoa || 0) + 
+                                   (deal.propertyManagement || 0) + 
+                                   (deal.maintenance || 0) + 
+                                   (deal.monthlyPI || 0))).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Investment Timeline */}
+                    {deal.timeline && deal.timeline.length > 0 && (
+                      <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
+                        <h4 className="text-lg font-semibold text-primary mb-4">Investment Timeline</h4>
+                        <div className="space-y-4">
+                          {deal.timeline.map((item: any, index: number) => (
+                            <div key={index} className="flex gap-4 items-start">
+                              <div className="min-w-[100px] text-sm font-medium text-accent">{item.period}</div>
+                              <div className="flex-1">
+                                <p className="font-medium">{item.event}</p>
+                                {item.impact && <p className="text-sm text-muted mt-1">{item.impact}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === 'pictures' && (
+                <div>
+                  <h3 className="text-xl font-semibold text-primary mb-4">Property Pictures</h3>
+                  {deal.images && deal.images.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {deal.images.map((image: string, index: number) => (
+                        <div key={index} className="relative group">
+                          <div className="relative w-full h-64 rounded-lg overflow-hidden bg-muted/20">
+                            <img 
+                              src={image} 
+                              alt={`${deal.title} - Image ${index + 1}`}
+                              className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                              onClick={() => {
+                                // Open in new tab for full view
+                                window.open(image, '_blank');
+                              }}
+                              onError={(e) => {
+                                e.currentTarget.src = '/api/placeholder/400/300';
+                              }}
+                            />
+                          </div>
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors rounded-lg pointer-events-none"></div>
+                          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="px-2 py-1 bg-black/70 text-white text-xs rounded">
+                              Click to enlarge
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-card rounded-lg p-12 shadow-lg border border-border/20 text-center">
+                      <div className="text-6xl mb-4">📷</div>
+                      <p className="text-muted">No property images available</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2197,7 +3793,47 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                   </p>
                 </>
               )}
-              {deal.id !== 1 && deal.id !== 2 && deal.id !== 3 && deal.id !== 4 && deal.id !== 5 && deal.id !== 6 && deal.id !== 7 && (
+              {deal.id === 8 && (
+                <>
+                  <p className="text-sm font-medium text-green-600">🏠 Ultimate House Hack</p>
+                  <p className="text-xs text-muted mt-1">
+                    Live nearly FREE in San Diego! Control $1M asset for $50K down while building $443K wealth over 5 years.
+                  </p>
+                </>
+              )}
+              {deal.id === 9 && (
+                <>
+                  <p className="text-sm font-medium text-yellow-600">🏆 Holy Grail Investment</p>
+                  <p className="text-xs text-muted mt-1">
+                    3.1% assumable loan saves $372K annually! 121 units with immediate 12.5% returns and $5.6M upside.
+                  </p>
+                </>
+              )}
+              {deal.id === 10 && (
+                <>
+                  <p className="text-sm font-medium text-green-600">💰 Cash Flow Machine</p>
+                  <p className="text-xs text-muted mt-1">
+                    30 individual mobile homes with seller financing! 11.5% returns growing to 17.6% with immediate upside.
+                  </p>
+                </>
+              )}
+              {deal.id === 11 && (
+                <>
+                  <p className="text-sm font-medium text-accent">🏔️ Premium Mountain Estate</p>
+                  <p className="text-xs text-muted mt-1">
+                    2.2 acres in Los Gatos! 710% ROI potential targeting tech executives seeking privacy and luxury.
+                  </p>
+                </>
+              )}
+              {deal.id === 12 && (
+                <>
+                  <p className="text-sm font-medium text-blue-600">🏚️ HUD Home Value Play</p>
+                  <p className="text-xs text-muted mt-1">
+                    East Oakland flip with 280% ROI! Large lot with ADU potential for long-term wealth building.
+                  </p>
+                </>
+              )}
+              {deal.id !== 1 && deal.id !== 2 && deal.id !== 3 && deal.id !== 4 && deal.id !== 5 && deal.id !== 6 && deal.id !== 7 && deal.id !== 8 && deal.id !== 9 && deal.id !== 10 && deal.id !== 11 && deal.id !== 12 && (
                 <>
                   <p className="text-sm font-medium text-primary">📊 Professional Analysis</p>
                   <p className="text-xs text-muted mt-1">
