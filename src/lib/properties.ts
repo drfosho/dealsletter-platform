@@ -82,21 +82,22 @@ export async function createProperty(property: Record<string, unknown>) {
   return newProperty;
 }
 
-export async function updateProperty(id: string, updates: Record<string, unknown>) {
-  const index = properties.findIndex(p => p.id === id);
+export async function updateProperty(id: string | number, updates: Record<string, unknown>) {
+  const index = properties.findIndex(p => String(p.id) === String(id));
   if (index === -1) return null;
   
   properties[index] = {
     ...properties[index],
     ...updates,
+    id: properties[index].id, // Preserve original ID
     updatedAt: new Date()
   };
   
   return properties[index];
 }
 
-export async function deleteProperty(id: string) {
-  const index = properties.findIndex(p => p.id === id);
+export async function deleteProperty(id: string | number) {
+  const index = properties.findIndex(p => String(p.id) === String(id));
   if (index === -1) return false;
   
   properties.splice(index, 1);
