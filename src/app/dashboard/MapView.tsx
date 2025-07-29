@@ -22,7 +22,7 @@ interface Deal {
   price: number;
   downPayment: number;
   confidence: string;
-  totalROI?: number | null;
+  totalROI?: number;
   coordinates?: [number, number];
   [key: string]: unknown;
 }

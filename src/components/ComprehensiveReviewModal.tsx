@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import ImageUpload from './ImageUpload';
+import type { PropertyData, FinancingScenario, ProjectionData } from '@/types/property';
 
 interface ComprehensiveReviewModalProps {
   isOpen: boolean;
-  data: any;
+  data: PropertyData | null;
   uploadedImages: string[];
   onImagesChange: (images: string[]) => void;
-  onSave: (data: any) => void;
+  onSave: (data: PropertyData) => void;
   onClose: () => void;
 }
 
@@ -21,7 +22,7 @@ export default function ComprehensiveReviewModal({
   onClose
 }: ComprehensiveReviewModalProps) {
   const [activeTab, setActiveTab] = useState('basic');
-  const [reviewData, setReviewData] = useState<any>(null);
+  const [reviewData, setReviewData] = useState<PropertyData | null>(null);
 
   // Update reviewData when initialData changes or modal opens
   useEffect(() => {
@@ -455,7 +456,7 @@ export default function ComprehensiveReviewModal({
           {activeTab === 'financing' && (
             <div className="space-y-6">
               {reviewData.financingScenarios && reviewData.financingScenarios.length > 0 ? (
-                reviewData.financingScenarios.map((scenario: any, index: number) => (
+                reviewData.financingScenarios.map((scenario: FinancingScenario, index: number) => (
                   <div key={index} className="border border-border/60 rounded-lg p-4">
                     <h4 className="font-semibold text-primary mb-3">{scenario.name}</h4>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -604,8 +605,8 @@ export default function ComprehensiveReviewModal({
                         </thead>
                         <tbody>
                           {reviewData.thirtyYearProjections.projections
-                            .filter((p: any) => [1, 2, 3, 5, 10, 20, 30].includes(p.year))
-                            .map((projection: any) => (
+                            .filter((p: ProjectionData) => [1, 2, 3, 5, 10, 20, 30].includes(p.year))
+                            .map((projection: ProjectionData) => (
                             <tr key={projection.year} className="border-b border-border/30">
                               <td className="px-4 py-2">{projection.year}</td>
                               <td className="px-4 py-2 text-right">

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { trackUsage } from '../analytics/route';
+import { trackUsage } from '@/lib/analytics';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
@@ -759,7 +759,7 @@ Return only valid JSON matching the exact schema provided.`,
         
         // Log usage metrics if available
         if ('usage' in message) {
-          const usage = message.usage as any;
+          const usage = message.usage as { input_tokens?: number; output_tokens?: number };
           metrics.inputTokens = usage?.input_tokens;
           metrics.outputTokens = usage?.output_tokens;
           console.log(`Token usage - Input: ${metrics.inputTokens}, Output: ${metrics.outputTokens}`);
@@ -780,11 +780,11 @@ Return only valid JSON matching the exact schema provided.`,
         propertyData = JSON.parse(jsonMatch[0]);
         
         // Validate the parsed data
-        const validation = validatePropertyData(propertyData);
+        const validation = validatePropertyData(propertyData || {});
         if (!validation.valid) {
           console.warn('Property validation issues:', validation.errors);
           // Continue with partial data if we have at least address/title and price
-          if (!propertyData.address && !propertyData.title) {
+          if (!propertyData?.address && !propertyData?.title) {
             throw new Error(`Invalid property data: ${validation.errors.join(', ')}`);
           }
         }
@@ -825,9 +825,9 @@ Return only valid JSON matching the exact schema provided.`,
 
     // Calculate cash required if not provided
     if (!propertyData.cashRequired && propertyData.downPayment) {
-      const closingCosts = propertyData.financing?.closingCosts || propertyData.closingCosts || 0;
-      const rehabCosts = propertyData.rehabCosts || 0;
-      propertyData.cashRequired = propertyData.downPayment + closingCosts + rehabCosts;
+      const closingCosts = Number(propertyData.financing?.closingCosts || propertyData.closingCosts || 0);
+      const rehabCosts = Number(propertyData.rehabCosts || 0);
+      propertyData.cashRequired = Number(propertyData.downPayment) + closingCosts + rehabCosts;
     }
 
     // Set pro forma values if not provided but calculable
@@ -890,15 +890,15 @@ Return only valid JSON matching the exact schema provided.`,
     trackUsage(true, false, processingTime);
 
     // Prepare for future API integrations
-    const enrichedData = {
-      ...propertyData,
-      // Future: Add RentCast rental estimates
-      rentCastEstimate: null,
-      // Future: Add Homesage property values
-      homesageValue: null,
-      // Future: Add market comparables
-      marketComps: null
-    };
+    // const enrichedData = {
+    //   ...propertyData,
+    //   // Future: Add RentCast rental estimates
+    //   rentCastEstimate: null,
+    //   // Future: Add Homesage property values
+    //   homesageValue: null,
+    //   // Future: Add market comparables
+    //   marketComps: null
+    // };
 
     return NextResponse.json({
       success: true,

@@ -70,11 +70,11 @@ export async function createProperty(property: Record<string, unknown>) {
   
   console.log('New property to save:', newProperty);
   console.log('New property isDraft:', 'isDraft' in newProperty ? newProperty.isDraft : undefined);
-  console.log('New property status:', newProperty.status);
-  console.log('Has strategicOverview:', !!newProperty.strategicOverview);
-  console.log('Has thirtyYearProjections:', !!newProperty.thirtyYearProjections);
-  console.log('Has locationAnalysis:', !!newProperty.locationAnalysis);
-  console.log('Has financingScenarios:', Array.isArray(newProperty.financingScenarios) ? newProperty.financingScenarios.length : 0);
+  console.log('New property status:', 'status' in newProperty ? newProperty.status : undefined);
+  console.log('Has strategicOverview:', 'strategicOverview' in newProperty ? !!newProperty.strategicOverview : false);
+  console.log('Has thirtyYearProjections:', 'thirtyYearProjections' in newProperty ? !!newProperty.thirtyYearProjections : false);
+  console.log('Has locationAnalysis:', 'locationAnalysis' in newProperty ? !!newProperty.locationAnalysis : false);
+  console.log('Has financingScenarios:', 'financingScenarios' in newProperty && Array.isArray((newProperty as Record<string, unknown>).financingScenarios) ? ((newProperty as Record<string, unknown>).financingScenarios as unknown[]).length : 0);
   
   properties.push(newProperty);
   console.log('Total properties after push:', properties.length);

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import type { PropertyData, FinancingScenario, ProjectionData } from '@/types/property';
 
 interface ComprehensivePropertyViewProps {
   isOpen: boolean;
-  property: any;
+  property: PropertyData | null;
   onClose: () => void;
 }
 
@@ -223,7 +224,7 @@ export default function ComprehensivePropertyView({ isOpen, property, onClose }:
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Financing Scenarios</h3>
                   <div className="space-y-4">
-                    {property.financingScenarios.map((scenario: any, index: number) => (
+                    {property.financingScenarios.map((scenario: FinancingScenario, index: number) => (
                       <div key={index} className="border border-border/60 rounded-lg p-4">
                         <h4 className="font-semibold mb-2">{scenario.name}</h4>
                         <p className="text-sm text-muted mb-3">{scenario.description}</p>
@@ -295,15 +296,15 @@ export default function ComprehensivePropertyView({ isOpen, property, onClose }:
                       </thead>
                       <tbody>
                         {property.thirtyYearProjections.projections
-                          .filter((p: any) => [1, 2, 3, 5, 10, 20, 30].includes(p.year))
-                          .map((projection: any) => (
+                          .filter((p: ProjectionData) => [1, 2, 3, 5, 10, 20, 30].includes(p.year))
+                          .map((projection: ProjectionData) => (
                           <tr key={projection.year} className="border-b border-border/30">
                             <td className="px-4 py-2">{projection.year}</td>
                             <td className="px-4 py-2 text-right">
                               ${projection.grossRent?.toLocaleString()}
                             </td>
                             <td className="px-4 py-2 text-right">
-                              <span className={projection.cashFlow >= 0 ? 'text-green-600' : 'text-red-600'}>
+                              <span className={(projection.cashFlow ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
                                 ${projection.cashFlow?.toLocaleString()}
                               </span>
                             </td>

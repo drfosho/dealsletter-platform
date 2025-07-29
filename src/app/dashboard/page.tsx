@@ -27,9 +27,9 @@ interface Deal {
   price: number;
   downPayment: number;
   confidence: string;
-  totalROI?: number | null;
-  capRate?: number | null;
-  cashFlow?: number | null;
+  totalROI?: number;
+  capRate?: number;
+  cashFlow?: number;
   daysOnMarket?: number;
   riskLevel?: string;
   proFormaCapRate?: string | number;
@@ -100,9 +100,9 @@ export default function Dashboard() {
             riskLevel: prop.riskLevel,
             timeframe: prop.holdPeriod ? `${prop.holdPeriod} years` : 'Long-term',
             cashRequired: prop.downPayment + (typeof prop.closingCosts === 'number' ? prop.closingCosts : 0) + (typeof prop.rehabCosts === 'number' ? prop.rehabCosts : 0),
-            totalROI: prop.totalROI,
-            capRate: prop.capRate,
-            cashFlow: prop.monthlyCashFlow,
+            totalROI: prop.totalROI || undefined,
+            capRate: prop.capRate || undefined,
+            cashFlow: prop.monthlyCashFlow || undefined,
             monthlyRent: prop.monthlyRent,
             neighborhood: prop.neighborhood
           }));
@@ -197,10 +197,10 @@ export default function Dashboard() {
     return filtered;
   }, [deals, selectedFilter, selectedLocation, isSearching, filters, sortBy]);
 
-  const handleDealClick = useCallback((deal: Deal) => {
-    setSelectedDeal(deal);
-    setIsModalOpen(true);
-  }, []);
+  // const handleDealClick = useCallback((deal: Deal) => {
+  //   setSelectedDeal(deal);
+  //   setIsModalOpen(true);
+  // }, []);
 
   const handleLocationSelect = useCallback((location: {
     city: string;

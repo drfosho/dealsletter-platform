@@ -6,6 +6,7 @@ import FavoriteButton from '@/components/FavoriteButton';
 import SavePropertyButton from '@/components/SavePropertyButton';
 import ViewerTracker from '@/components/ViewerTracker';
 import ActivityBadges from '@/components/ActivityBadges';
+import type { PropertyData } from '@/types/property';
 
 interface PremiumPropertyCardProps {
   deal: {
@@ -16,6 +17,7 @@ interface PremiumPropertyCardProps {
     strategy: string;
     price: number;
     downPayment: number;
+    downPaymentPercent?: number;
     confidence: string;
     status?: string;
     daysOnMarket?: number;
@@ -26,6 +28,7 @@ interface PremiumPropertyCardProps {
     roi?: string | number;
     totalROI?: number;
     capRate?: string | number;
+    currentCapRate?: number;
     proFormaCashFlow?: string | number;
     monthlyCashFlow?: number;
     cashOnCashReturn?: number;
@@ -41,7 +44,7 @@ interface PremiumPropertyCardProps {
   isEditing?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSave?: (deal: any) => void;
+  onSave?: (deal: PropertyData) => void;
   onCancel?: () => void;
   showAdminControls?: boolean;
 }
@@ -58,7 +61,7 @@ export default function PremiumPropertyCard({
   onCancel,
   showAdminControls = false
 }: PremiumPropertyCardProps) {
-  const [editedDeal, setEditedDeal] = useState(deal);
+  const [editedDeal] = useState(deal);
   const [imageError, setImageError] = useState(false);
 
   const handleSave = () => {
@@ -400,13 +403,13 @@ export default function PremiumPropertyCard({
             {/* Cash Flow */}
             {(deal.monthlyCashFlow !== undefined || deal.proFormaCashFlow) && (
               <div className={`p-3 bg-gradient-to-br ${
-                (deal.monthlyCashFlow || deal.proFormaCashFlow) >= 0 
+                (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
                   ? 'from-emerald-500/5 to-emerald-600/5 border-emerald-500/10' 
                   : 'from-red-500/5 to-red-600/5 border-red-500/10'
               } rounded-lg border`}>
                 <div className="text-xs text-muted mb-1">Monthly Cash Flow</div>
                 <div className={`font-bold text-lg ${
-                  (deal.monthlyCashFlow || parseFloat(deal.proFormaCashFlow as string)) >= 0 
+                  (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
                     ? 'text-emerald-600' 
                     : 'text-red-600'
                 }`}>

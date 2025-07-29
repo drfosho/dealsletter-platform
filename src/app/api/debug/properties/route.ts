@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { properties } from '@/lib/properties';
+import { loadProperties } from '@/lib/storage';
 
 export async function GET() {
+  const properties = await loadProperties();
   return NextResponse.json({
     totalProperties: properties.length,
     properties: properties.map(p => ({

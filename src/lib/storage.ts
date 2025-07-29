@@ -24,10 +24,10 @@ export async function loadProperties(): Promise<Record<string, unknown>[]> {
     
     // Merge static deals with saved properties (avoiding duplicates)
     const staticIds = staticDeals.map(d => d.id);
-    const nonStaticProperties = savedProperties.filter((p: any) => !staticIds.includes(p.id));
+    const nonStaticProperties = savedProperties.filter((p: Record<string, unknown>) => !staticIds.includes(p.id as number));
     
     return [...staticDeals, ...nonStaticProperties];
-  } catch (error) {
+  } catch {
     console.log('No saved properties file found, using static deals only');
     return [...staticDeals];
   }

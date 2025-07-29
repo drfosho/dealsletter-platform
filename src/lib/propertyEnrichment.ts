@@ -51,37 +51,52 @@ interface EnrichedPropertyData {
 
 // Placeholder functions for future implementation
 export async function enrichWithRentCast(
-  address: string,
-  city: string,
-  state: string,
-  zipCode: string,
-  bedrooms: number,
-  bathrooms: number,
-  sqft: number
-): Promise<RentCastData | null> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _address: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _city: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _state: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _zipCode: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _bedrooms: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _bathrooms: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _sqft: number
+): Promise<RentCastData | undefined> {
   // Future implementation will call RentCast API
   console.log('RentCast integration placeholder - will be implemented when API access is available');
-  return null;
+  return undefined;
 }
 
 export async function enrichWithHomesage(
-  address: string,
-  city: string,
-  state: string,
-  zipCode: string,
-  bedrooms: number,
-  bathrooms: number,
-  sqft: number,
-  yearBuilt: number | null
-): Promise<HomesageData | null> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _address: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _city: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _state: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _zipCode: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _bedrooms: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _bathrooms: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _sqft: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _yearBuilt: number | null
+): Promise<HomesageData | undefined> {
   // Future implementation will call Homesage API
   console.log('Homesage integration placeholder - will be implemented when API access is available');
-  return null;
+  return undefined;
 }
 
 // Combined analysis function that will merge Claude AI analysis with external APIs
 export async function enrichPropertyData(
-  basePropertyData: any,
+  basePropertyData: Record<string, unknown>,
   options: {
     useRentCast?: boolean;
     useHomesage?: boolean;
@@ -92,35 +107,35 @@ export async function enrichPropertyData(
   // Future: Call RentCast for rental estimates
   if (options.useRentCast && basePropertyData.address) {
     enrichedData.rentCastData = await enrichWithRentCast(
-      basePropertyData.address,
-      basePropertyData.city,
-      basePropertyData.state,
-      basePropertyData.zipCode,
-      basePropertyData.bedrooms,
-      basePropertyData.bathrooms,
-      basePropertyData.sqft
+      basePropertyData.address as string,
+      basePropertyData.city as string,
+      basePropertyData.state as string,
+      basePropertyData.zipCode as string,
+      basePropertyData.bedrooms as number,
+      basePropertyData.bathrooms as number,
+      basePropertyData.sqft as number
     );
   }
 
   // Future: Call Homesage for property values
   if (options.useHomesage && basePropertyData.address) {
     enrichedData.homesageData = await enrichWithHomesage(
-      basePropertyData.address,
-      basePropertyData.city,
-      basePropertyData.state,
-      basePropertyData.zipCode,
-      basePropertyData.bedrooms,
-      basePropertyData.bathrooms,
-      basePropertyData.sqft,
-      basePropertyData.yearBuilt
+      basePropertyData.address as string,
+      basePropertyData.city as string,
+      basePropertyData.state as string,
+      basePropertyData.zipCode as string,
+      basePropertyData.bedrooms as number,
+      basePropertyData.bathrooms as number,
+      basePropertyData.sqft as number,
+      (basePropertyData.yearBuilt as number) || null
     );
   }
 
   // Combine all data sources for comprehensive analysis
   if (enrichedData.rentCastData || enrichedData.homesageData) {
     enrichedData.combinedAnalysis = {
-      recommendedRent: enrichedData.rentCastData?.estimatedRent || basePropertyData.monthlyRent,
-      recommendedPrice: enrichedData.homesageData?.estimatedValue || basePropertyData.price,
+      recommendedRent: enrichedData.rentCastData?.estimatedRent || (basePropertyData.monthlyRent as number) || 0,
+      recommendedPrice: enrichedData.homesageData?.estimatedValue || (basePropertyData.price as number) || 0,
       investmentScore: calculateInvestmentScore(basePropertyData, enrichedData),
       marketStrength: determineMarketStrength(enrichedData)
     };
@@ -131,21 +146,23 @@ export async function enrichPropertyData(
 
 // Helper function to calculate investment score
 function calculateInvestmentScore(
-  baseData: any,
+  baseData: Record<string, unknown>,
   enrichedData: EnrichedPropertyData
 ): number {
   // Placeholder scoring algorithm
   let score = 50; // Base score
 
   // Adjust based on cap rate
-  if (baseData.capRate > 8) score += 20;
-  else if (baseData.capRate > 6) score += 10;
-  else if (baseData.capRate < 4) score -= 10;
+  const capRate = baseData.capRate as number;
+  if (capRate && capRate > 8) score += 20;
+  else if (capRate && capRate > 6) score += 10;
+  else if (capRate && capRate < 4) score -= 10;
 
   // Adjust based on ROI
-  if (baseData.totalROI > 20) score += 15;
-  else if (baseData.totalROI > 15) score += 10;
-  else if (baseData.totalROI < 10) score -= 10;
+  const totalROI = baseData.totalROI as number;
+  if (totalROI && totalROI > 20) score += 15;
+  else if (totalROI && totalROI > 15) score += 10;
+  else if (totalROI && totalROI < 10) score -= 10;
 
   // Future: Adjust based on RentCast confidence
   if (enrichedData.rentCastData?.confidence) {
@@ -168,10 +185,12 @@ function determineMarketStrength(
 ): 'strong' | 'moderate' | 'weak' {
   // Placeholder logic
   if (enrichedData.homesageData?.marketTrend === 'appreciating' &&
+      enrichedData.homesageData.appreciation12Month && 
       enrichedData.homesageData.appreciation12Month > 5) {
     return 'strong';
   } else if (enrichedData.homesageData?.marketTrend === 'declining' ||
-             enrichedData.homesageData?.appreciation12Month < 0) {
+             (enrichedData.homesageData?.appreciation12Month !== undefined && 
+              enrichedData.homesageData.appreciation12Month < 0)) {
     return 'weak';
   }
   return 'moderate';

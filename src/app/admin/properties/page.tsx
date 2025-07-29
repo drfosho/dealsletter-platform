@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import PropertyCardEditable from '@/components/PropertyCardEditable';
 import PremiumPropertyCard from '@/components/PremiumPropertyCard';
 import DealModal from '@/app/dashboard/DealModal';
 import Navigation from '@/components/Navigation';
-import ImageUpload from '@/components/ImageUpload';
 import ComprehensiveReviewModal from '@/components/ComprehensiveReviewModal';
 import ComprehensivePropertyView from '@/components/ComprehensivePropertyView';
-import PremiumPropertyView from '@/components/PremiumPropertyView';
+import type { PropertyData } from '@/types/property';
 
 interface Property {
   id: string | number;
@@ -43,13 +41,13 @@ interface Property {
   // Premium Newsletter Sections
   strategicOverview?: string;
   valueAddDescription?: string;
-  locationAnalysis?: any;
-  rentAnalysis?: any;
-  propertyMetrics?: any;
-  financingScenarios?: any[];
-  thirtyYearProjections?: any;
-  marketAnalysis?: any;
-  rehabAnalysis?: any;
+  locationAnalysis?: Record<string, unknown>;
+  rentAnalysis?: Record<string, unknown>;
+  propertyMetrics?: Record<string, unknown>;
+  financingScenarios?: Array<Record<string, unknown>>;
+  thirtyYearProjections?: Record<string, unknown>;
+  marketAnalysis?: Record<string, unknown>;
+  rehabAnalysis?: Record<string, unknown>;
   
   // Additional fields for DealModal
   interestRate?: number;
@@ -97,7 +95,7 @@ export default function AdminPropertiesPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewData, setReviewData] = useState<any>(null);
+  const [reviewData, setReviewData] = useState<Property | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [showComprehensiveView, setShowComprehensiveView] = useState(false);
   const [comprehensiveProperty, setComprehensiveProperty] = useState<Property | null>(null);
@@ -294,14 +292,14 @@ export default function AdminPropertiesPage() {
   };
 
   // Handle saving after review
-  const handleSaveReviewedProperty = async (propertyData: any) => {
+  const handleSaveReviewedProperty = async (propertyData: PropertyData) => {
     if (!propertyData) return;
     
     try {
       setProcessingStatus('Saving property...');
       
       // Ensure all required fields for dashboard display
-      const propertyToSave = {
+      const propertyToSave: PropertyData = {
         ...propertyData,
         // Ensure numeric ID for dashboard compatibility
         id: propertyData.id || Date.now(),
@@ -326,7 +324,7 @@ export default function AdminPropertiesPage() {
       console.log('Strategic Overview exists:', !!propertyToSave.strategicOverview);
       console.log('Location Analysis exists:', !!propertyToSave.locationAnalysis);
       console.log('Rent Analysis exists:', !!propertyToSave.rentAnalysis);
-      console.log('Financing Scenarios:', propertyToSave.financingScenarios?.length || 0);
+      console.log('Financing Scenarios:', (propertyToSave.financingScenarios as unknown[])?.length || 0);
       console.log('30-Year Projections exists:', !!propertyToSave.thirtyYearProjections);
       
       const response = await fetch('/api/admin/properties', {
@@ -544,7 +542,7 @@ export default function AdminPropertiesPage() {
       {/* Deal Modal */}
       {selectedDeal && (
         <DealModal 
-          deal={convertToDeal(selectedDeal) as any}
+          deal={convertToDeal(selectedDeal)}
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false);

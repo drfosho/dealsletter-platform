@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import type { PropertyData, FinancingScenario, ProjectionData, ExitStrategy } from '@/types/property';
 
 interface PremiumPropertyViewProps {
   isOpen: boolean;
-  property: any;
+  property: PropertyData | null;
   onClose: () => void;
 }
 
@@ -94,7 +95,7 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                   </button>
                   {/* Image Dots */}
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                    {property.images.map((_: any, index: number) => (
+                    {property.images.map((_: string, index: number) => (
                       <button
                         key={index}
                         onClick={() => setActiveImageIndex(index)}
@@ -577,7 +578,7 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                     Financing Scenarios
                   </h3>
                   <div className="space-y-6">
-                    {property.financingScenarios.map((scenario: any, index: number) => (
+                    {property.financingScenarios.map((scenario: FinancingScenario, index: number) => (
                       <div key={index} className="bg-card rounded-xl border border-border/60 overflow-hidden">
                         <div className="bg-gradient-to-r from-accent/10 to-purple-500/10 p-6 border-b border-border/60">
                           <h4 className="text-lg font-semibold">{scenario.name}</h4>
@@ -618,7 +619,7 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                             <div className="space-y-3">
                               <div className="flex justify-between">
                                 <span className="text-sm text-muted">Monthly Cash Flow</span>
-                                <span className={`font-bold ${scenario.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <span className={`font-bold ${(scenario.monthlyCashFlow ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                   {formatCurrency(scenario.monthlyCashFlow)}
                                 </span>
                               </div>
@@ -754,8 +755,8 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                       </thead>
                       <tbody>
                         {property.thirtyYearProjections.projections
-                          .filter((p: any) => [1, 2, 3, 5, 10, 20, 30].includes(p.year))
-                          .map((projection: any, index: number) => (
+                          .filter((p: ProjectionData) => [1, 2, 3, 5, 10, 20, 30].includes(p.year))
+                          .map((projection: ProjectionData, index: number) => (
                           <tr key={projection.year} className={`border-b border-border/30 hover:bg-muted/5 transition-colors ${
                             index % 2 === 0 ? 'bg-muted/5' : ''
                           }`}>
@@ -763,7 +764,7 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                             <td className="px-6 py-4 text-right">{formatCurrency(projection.grossRent)}</td>
                             <td className="px-6 py-4 text-right">{formatCurrency(projection.netOperatingIncome)}</td>
                             <td className={`px-6 py-4 text-right font-medium ${
-                              projection.cashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                              (projection.cashFlow ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
                               {formatCurrency(projection.cashFlow)}
                             </td>
@@ -814,7 +815,7 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                     Exit Strategies
                   </h3>
                   <div className="grid md:grid-cols-3 gap-6">
-                    {property.exitStrategies.map((strategy: any, index: number) => (
+                    {property.exitStrategies.map((strategy: ExitStrategy, index: number) => (
                       <div key={index} className="bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-xl border border-border/60 p-6">
                         <h4 className="font-semibold mb-2">{strategy.strategy}</h4>
                         <p className="text-sm text-muted mb-4">{strategy.description}</p>
