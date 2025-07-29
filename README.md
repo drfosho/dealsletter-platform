@@ -2,6 +2,22 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Setup
+
+1. Copy the environment example file:
+```bash
+cp .env.local.example .env.local
+```
+
+2. Add your Anthropic API key to `.env.local`:
+```
+ANTHROPIC_API_KEY=your_api_key_here
+```
+
+Get your API key from: https://console.anthropic.com/account/keys
+
+### Running the Development Server
+
 First, run the development server:
 
 ```bash
@@ -16,7 +32,19 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
+
+### AI-Powered Property Analysis
+The admin panel includes Claude AI integration for automated property analysis. Simply paste property information in any format, and the AI will:
+- Extract property details (address, price, rent, features)
+- Calculate investment metrics (cap rate, ROI, cash flow)
+- Assess risk levels and investment strategies
+- Structure data for the dashboard
+
+Access the admin panel at [http://localhost:3000/admin/properties](http://localhost:3000/admin/properties)
+
+### Dashboard
+View all investment properties with filtering, sorting, and detailed analysis at the main dashboard.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

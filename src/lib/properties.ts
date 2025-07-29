@@ -1,69 +1,65 @@
-import { staticDeals } from './staticDeals';
+import { loadProperties, saveProperties } from './storage';
 
-// Shared properties storage (replace with database in production)
-// NOTE: This is an in-memory array that will be reset on server restart
-// In production, this should be replaced with a database
-export const properties: Record<string, unknown>[] = [
-  // Include all static deals from the dashboard
-  ...staticDeals,
-  // Add a test property to verify the system is working
-  {
-    id: 'test-property-1',
-    title: 'Test Property - 456 Debug Lane',
-    address: '456 Debug Lane',
-    city: 'San Francisco',
-    state: 'CA',
-    zipCode: '94102',
-    propertyType: 'Single Family',
-    price: 750000,
-    downPayment: 187500,
-    downPaymentPercent: 25,
-    monthlyRent: 4500,
-    capRate: 5.8,
-    monthlyCashFlow: 800,
-    totalROI: 15.2,
-    investmentStrategy: 'Buy & Hold',
-    confidence: 'high',
-    riskLevel: 'low',
-    daysOnMarket: 3,
-    bedrooms: 3,
-    bathrooms: 2,
-    sqft: 1800,
-    yearBuilt: 1995,
-    features: ['Updated Kitchen', 'New Roof', 'Central AC'],
-    isDraft: false,
-    status: 'active',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01')
+// Shared properties storage with file persistence
+// NOTE: This uses file storage in development, replace with database in production
+let properties: Record<string, unknown>[] = [];
+let isInitialized = false;
+
+// Initialize properties from storage
+async function initializeProperties() {
+  if (!isInitialized) {
+    properties = await loadProperties();
+    isInitialized = true;
+    console.log('Properties initialized with', properties.length, 'items');
   }
-];
+}
 
 export async function getPublishedProperties() {
+  await initializeProperties();
+  
   // Return only non-draft properties
   console.log('=== getPublishedProperties called ===');
   console.log('Total properties:', properties.length);
   console.log('Properties:', properties.map(p => ({ 
     id: p.id, 
     title: p.title, 
-    isDraft: 'isDraft' in p ? p.isDraft : undefined 
+    isDraft: 'isDraft' in p ? p.isDraft : undefined,
+    status: 'status' in p ? p.status : undefined 
   })));
+  
+  // Check each property's draft status
+  properties.forEach((p, index) => {
+    console.log(`Property ${index}:`, {
+      id: p.id,
+      isDraft: p.isDraft,
+      hasDraftKey: 'isDraft' in p,
+      willBeFiltered: 'isDraft' in p ? p.isDraft : false
+    });
+  });
+  
   const published = properties.filter(p => !('isDraft' in p ? p.isDraft : false));
-  console.log('Published properties:', published.length);
+  console.log('Published properties after filter:', published.length);
+  console.log('Published IDs:', published.map(p => p.id));
   return published;
 }
 
 export async function getAllProperties() {
+  await initializeProperties();
   return properties;
 }
 
 export async function getPropertyById(id: string) {
+  await initializeProperties();
   return properties.find(p => p.id === id);
 }
 
 export async function createProperty(property: Record<string, unknown>) {
+  await initializeProperties();
+  
   console.log('=== createProperty called ===');
   console.log('Input property:', property);
   console.log('Input isDraft:', 'isDraft' in property ? property.isDraft : undefined);
+  console.log('Properties array before push:', properties.length);
   
   const newProperty = {
     ...property,
@@ -74,19 +70,35 @@ export async function createProperty(property: Record<string, unknown>) {
   
   console.log('New property to save:', newProperty);
   console.log('New property isDraft:', 'isDraft' in newProperty ? newProperty.isDraft : undefined);
+  console.log('New property status:', newProperty.status);
+  console.log('Has strategicOverview:', !!newProperty.strategicOverview);
+  console.log('Has thirtyYearProjections:', !!newProperty.thirtyYearProjections);
+  console.log('Has locationAnalysis:', !!newProperty.locationAnalysis);
+  console.log('Has financingScenarios:', Array.isArray(newProperty.financingScenarios) ? newProperty.financingScenarios.length : 0);
   
   properties.push(newProperty);
   console.log('Total properties after push:', properties.length);
   console.log('All properties:', properties.map(p => ({ 
     id: p.id, 
     title: p.title, 
-    isDraft: 'isDraft' in p ? p.isDraft : undefined 
+    isDraft: 'isDraft' in p ? p.isDraft : undefined,
+    status: 'status' in p ? p.status : undefined
   })));
+  
+  // Verify the property was actually added
+  const addedProperty = properties.find(p => p.id === newProperty.id);
+  console.log('Verified property was added:', !!addedProperty);
+  
+  // Save to persistent storage
+  await saveProperties(properties);
+  console.log('Properties saved to file');
   
   return newProperty;
 }
 
 export async function updateProperty(id: string | number, updates: Record<string, unknown>) {
+  await initializeProperties();
+  
   const index = properties.findIndex(p => String(p.id) === String(id));
   if (index === -1) return null;
   
@@ -97,13 +109,22 @@ export async function updateProperty(id: string | number, updates: Record<string
     updatedAt: new Date()
   };
   
+  // Save to persistent storage
+  await saveProperties(properties);
+  
   return properties[index];
 }
 
 export async function deleteProperty(id: string | number) {
+  await initializeProperties();
+  
   const index = properties.findIndex(p => String(p.id) === String(id));
   if (index === -1) return false;
   
   properties.splice(index, 1);
+  
+  // Save to persistent storage
+  await saveProperties(properties);
+  
   return true;
 }

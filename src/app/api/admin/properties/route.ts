@@ -29,6 +29,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Log the incoming data to debug images
+    console.log('Creating property with data:', {
+      ...body,
+      images: body.images || 'No images provided'
+    });
+    
     // Create property
     const newProperty = await createProperty(body);
 

@@ -3,10 +3,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import DealModal from './DealModal';
 import FilterBar from './FilterBar';
-import FavoriteButton from '@/components/FavoriteButton';
-import SavePropertyButton from '@/components/SavePropertyButton';
-import ViewerTracker from '@/components/ViewerTracker';
-import ActivityBadges from '@/components/ActivityBadges';
+import PremiumPropertyCard from '@/components/PremiumPropertyCard';
+import PremiumPropertyView from '@/components/PremiumPropertyView';
 import LocationSearch from '@/components/LocationSearch';
 import MarketNotification from '@/components/MarketNotification';
 import { isLocationSupported } from '@/config/markets';
@@ -57,6 +55,8 @@ export default function Dashboard() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showComprehensiveView, setShowComprehensiveView] = useState(false);
+  const [comprehensiveProperty, setComprehensiveProperty] = useState<Deal | null>(null);
   const [filters, setFilters] = useState({
     market: 'all',
     strategy: 'all',
@@ -71,10 +71,13 @@ export default function Dashboard() {
   const fetchProperties = async () => {
       try {
         setIsLoading(true);
+        console.log('Dashboard: Fetching properties from /api/properties');
         const response = await fetch('/api/properties');
+        console.log('Dashboard: Response status:', response.status);
         if (response.ok) {
           const data = await response.json();
           console.log('Dashboard: Fetched properties:', data.length);
+          console.log('Dashboard: Raw properties data:', data);
           const formattedProperties = data.map((prop: Deal & Record<string, unknown>, index: number) => ({
             id: typeof prop.id === 'string' ? parseInt(prop.id) : prop.id || 1000 + index,
             title: prop.title,
@@ -405,134 +408,23 @@ export default function Dashboard() {
           /* Deals Grid/List */
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
             {filteredDeals.map((deal) => (
-            <div 
-              key={deal.id} 
-              className={`bg-card rounded-xl border border-border/60 transition-all duration-300 hover:shadow-2xl hover:shadow-accent/10 hover:border-accent/30 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer group ${viewMode === 'list' ? 'p-6' : 'overflow-hidden'}`}
-            >
-              {viewMode === 'grid' && (
-                <div className="relative h-48 bg-muted/20 overflow-hidden">
-                  {/* Top overlay - confidence and activity badges */}
-                  <div className="absolute top-4 left-4 z-10 flex items-start gap-2">
-                    <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                      deal.confidence === 'high' ? 'bg-green-500/20 text-green-600' :
-                      deal.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-600' :
-                      'bg-red-500/20 text-red-600'
-                    }`}>
-                      {deal.confidence.toUpperCase()}
-                    </span>
-                    <ActivityBadges deal={{ ...deal, daysOnMarket: deal.daysOnMarket || 0 }} />
-                  </div>
-                  
-                  {/* Top right - deal type and favorite */}
-                  <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-                    <span className="px-2 py-1 bg-accent/20 text-accent rounded-md text-xs font-medium">
-                      {deal.type}
-                    </span>
-                    <FavoriteButton propertyId={deal.id} size="medium" />
-                  </div>
-                  
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                  
-                  {/* Bottom overlay - viewer count and time */}
-                  <div className="absolute bottom-4 left-4 right-4 z-10">
-                    <div className="flex items-end justify-between">
-                      <ViewerTracker dealId={deal.id} />
-                      <div className="text-white text-xs opacity-80">
-                        {deal.daysOnMarket} days ago
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              <div className={viewMode === 'grid' ? 'p-6' : ''}>
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-primary mb-1">{deal.title}</h3>
-                    <p className="text-sm text-muted mb-2">{deal.location}</p>
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className="px-2 py-1 bg-accent/10 text-accent rounded-md text-xs font-medium">
-                        {deal.strategy}
-                      </span>
-                      <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                        deal.riskLevel === 'low' ? 'bg-green-500/20 text-green-600' :
-                        deal.riskLevel === 'medium' ? 'bg-yellow-500/20 text-yellow-600' :
-                        'bg-red-500/20 text-red-600'
-                      }`}>
-                        {(deal.riskLevel || 'medium').toUpperCase()} RISK
-                      </span>
-                      <ActivityBadges deal={{ ...deal, daysOnMarket: deal.daysOnMarket || 0 }} />
-                      {viewMode === 'list' && <ViewerTracker dealId={deal.id} />}
-                    </div>
-                  </div>
-                  {viewMode === 'list' && (
-                    <div className="flex items-start gap-4">
-                      <FavoriteButton propertyId={deal.id} size="medium" />
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-primary">${deal.price.toLocaleString()}</div>
-                        <div className="text-sm text-muted">Purchase Price</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3 mb-4">
-                  {viewMode === 'grid' && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted">Purchase Price</span>
-                      <span className="font-semibold text-primary">${deal.price.toLocaleString()}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted">Down Payment</span>
-                    <span className="font-semibold text-primary">${deal.downPayment.toLocaleString()}</span>
-                  </div>
-                  
-                  {deal.proFormaCapRate ? (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted">Pro Forma Cap</span>
-                      <span className="font-semibold text-accent">{deal.proFormaCapRate}%</span>
-                    </div>
-                  ) : null}
-                  
-                  {deal.roi ? (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted">ROI</span>
-                      <span className="font-semibold text-green-600">{deal.roi}%</span>
-                    </div>
-                  ) : null}
-                  
-                  {deal.capRate && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted">Cap Rate</span>
-                      <span className="font-semibold text-accent">{deal.capRate}%</span>
-                    </div>
-                  )}
-                  
-                  {deal.proFormaCashFlow ? (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted">Cash Flow</span>
-                      <span className="font-semibold text-green-600">${deal.proFormaCashFlow}/mo</span>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <SavePropertyButton propertyId={deal.id} />
-                    <button
-                      onClick={() => handleDealClick(deal)}
-                      className="text-sm text-accent hover:text-accent/80 font-medium"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+              <PremiumPropertyCard
+                key={deal.id}
+                deal={deal}
+                viewMode={viewMode}
+                onViewDetails={() => {
+                  // Check if property has comprehensive data
+                  if (deal.strategicOverview || deal.thirtyYearProjections || deal.locationAnalysis) {
+                    setComprehensiveProperty(deal);
+                    setShowComprehensiveView(true);
+                  } else {
+                    // Fall back to regular deal modal
+                    setSelectedDeal(deal);
+                    setIsModalOpen(true);
+                  }
+                }}
+              />
+            ))}
           </div>
           )}
         </div>
@@ -564,6 +456,16 @@ export default function Dashboard() {
         onClose={() => {
           setIsModalOpen(false);
           setSelectedDeal(null);
+        }}
+      />
+
+      {/* Comprehensive Property View Modal */}
+      <PremiumPropertyView
+        isOpen={showComprehensiveView}
+        property={comprehensiveProperty}
+        onClose={() => {
+          setShowComprehensiveView(false);
+          setComprehensiveProperty(null);
         }}
       />
     </div>
