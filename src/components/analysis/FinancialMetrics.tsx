@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
+import type { Analysis } from '@/types';
 
 interface FinancialMetricsProps {
-  analysis: any;
+  analysis: Analysis;
 }
 
 export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
@@ -21,7 +22,7 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
 
     // Get rental income
     const monthlyRent = analysis.rental_estimate?.rent || 
-                       analysis.rental_estimate?.rentEstimate || 0;
+                       (analysis.rental_estimate as any)?.rentEstimate || 0;
 
     // Calculate expenses (simplified)
     const propertyTax = (purchasePrice * 0.012) / 12; // 1.2% annual

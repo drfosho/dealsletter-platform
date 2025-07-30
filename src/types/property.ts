@@ -1,5 +1,4 @@
 // Generic record type for flexible property data
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type PropertyData = Record<string, any>;
 
 // Type for projection data

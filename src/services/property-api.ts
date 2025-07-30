@@ -37,11 +37,11 @@ export interface PropertyDetailsResponse {
 export interface PropertyAnalysisResponse {
   address: string;
   strategy: string;
-  propertyData: any;
+  propertyData: Record<string, unknown>;
   analysis: {
     summary: string;
     marketPosition: string;
-    financialProjections: any;
+    financialProjections: Record<string, unknown>;
     strategyAnalysis: {
       type: string;
       details: string;

@@ -3,7 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { rentCastService } from '@/services/rentcast';
 import { PropertyAnalysisRequest } from '@/types/rentcast';
-import type { UserAnalysis, CreateAnalysisInput } from '@/types/database';
+// These types are imported but not used in this file
 import { logError } from '@/utils/error-utils';
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -104,9 +104,9 @@ export async function POST(request: NextRequest) {
     if (cachedProperty && new Date(cachedProperty.expires_at) > new Date()) {
       // Use cached data
       propertyData = {
-        propertyDetails: cachedProperty.property_data,
-        rentalEstimate: cachedProperty.rental_estimate,
-        marketData: cachedProperty.market_data,
+        property: cachedProperty.property_data,
+        rental: cachedProperty.rental_estimate,
+        market: cachedProperty.market_data,
         comparables: cachedProperty.comparables
       };
       
@@ -127,9 +127,9 @@ export async function POST(request: NextRequest) {
         .from('property_cache')
         .upsert({
           address: body.address,
-          property_data: propertyData.propertyDetails,
-          rental_estimate: propertyData.rentalEstimate,
-          market_data: propertyData.marketData,
+          property_data: propertyData.property,
+          rental_estimate: propertyData.rental,
+          market_data: propertyData.market,
           comparables: propertyData.comparables,
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
         });
@@ -143,13 +143,13 @@ export async function POST(request: NextRequest) {
         address: body.address,
         strategy: body.strategy,
         purchase_price: body.purchasePrice,
-        down_payment_percent: body.downPayment ? (body.downPayment / body.purchasePrice) * 100 : 20,
+        down_payment_percent: body.downPayment && body.purchasePrice ? (body.downPayment / body.purchasePrice) * 100 : 20,
         loan_term: body.loanTerms?.loanTerm || 30,
         interest_rate: body.loanTerms?.interestRate || 7,
         rehab_costs: body.rehabCosts,
-        property_data: propertyData.propertyDetails,
-        market_data: propertyData.marketData,
-        rental_estimate: propertyData.rentalEstimate,
+        property_data: propertyData.property,
+        market_data: propertyData.market,
+        rental_estimate: propertyData.rental,
         comparables: propertyData.comparables,
         status: 'generating',
         ai_analysis: {} // Will be updated after generation
@@ -214,31 +214,45 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-  } catch (error: any) {
+  } catch (error) {
     logError('Property Analysis API', error);
     
-    if (error.message?.includes('not found')) {
+    if (error instanceof Error) {
+      if (error.message?.includes('not found')) {
+        return NextResponse.json(
+          { error: 'Property not found' },
+          { status: 404 }
+        );
+      }
+      
+      if (error.message?.includes('Rate limit')) {
+        return NextResponse.json(
+          { error: 'Too many requests. Please try again later.' },
+          { status: 429 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'Property not found' },
-        { status: 404 }
-      );
-    }
-    
-    if (error.message?.includes('Rate limit')) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
+        { error: 'Failed to generate analysis', details: error.message },
+        { status: 500 }
       );
     }
     
     return NextResponse.json(
-      { error: 'Failed to generate analysis', details: error.message },
+      { error: 'Failed to generate analysis', details: 'Unknown error' },
       { status: 500 }
     );
   }
 }
 
-async function generatePropertyAnalysis(propertyData: any, request: PropertyAnalysisRequest) {
+interface PropertyData {
+  property: Record<string, unknown>;
+  rental?: Record<string, unknown>;
+  market?: Record<string, unknown>;
+  comparables?: Array<Record<string, unknown>>;
+}
+
+async function generatePropertyAnalysis(propertyData: PropertyData, request: PropertyAnalysisRequest) {
   try {
     // Prepare context for AI
     const context = prepareAnalysisContext(propertyData, request);
@@ -268,9 +282,9 @@ async function generatePropertyAnalysis(propertyData: any, request: PropertyAnal
   }
 }
 
-function prepareAnalysisContext(propertyData: any, request: PropertyAnalysisRequest): string {
-  const { propertyDetails, rentalEstimate, comparables, marketData } = propertyData;
-  const property = propertyDetails?.[0] || propertyDetails;
+function prepareAnalysisContext(propertyData: PropertyData, request: PropertyAnalysisRequest): string {
+  const { property: propertyDetails, rental: rentalEstimate, comparables, market: marketData } = propertyData;
+  const property = (Array.isArray(propertyDetails) ? propertyDetails[0] : propertyDetails) as Record<string, unknown>;
   
   let context = `Analyze this property for a ${request.strategy} investment strategy:
 
@@ -283,17 +297,17 @@ PROPERTY DETAILS:
 - Last Sale: $${property?.lastSalePrice?.toLocaleString() || 'Unknown'} on ${property?.lastSaleDate || 'Unknown'}
 
 RENTAL ANALYSIS:
-- Estimated Rent: $${rentalEstimate?.rent || rentalEstimate?.rentEstimate}/month
-- Rent Range: $${rentalEstimate?.rentRangeLow} - $${rentalEstimate?.rentRangeHigh}
+- Estimated Rent: $${(rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate}/month
+- Rent Range: $${(rentalEstimate as any)?.rentRangeLow} - $${(rentalEstimate as any)?.rentRangeHigh}
 
 MARKET DATA:
-- Median Rent: $${marketData?.medianRent}
-- Median Price: $${marketData?.medianSalePrice}
-- Average Days on Market: ${marketData?.averageDaysOnMarket}
+- Median Rent: $${(marketData as any)?.medianRent}
+- Median Price: $${(marketData as any)?.medianSalePrice}
+- Average Days on Market: ${(marketData as any)?.averageDaysOnMarket}
 
 COMPARABLES:
-${comparables?.length > 0 ? comparables.slice(0, 3).map((comp: any) => 
-  `- ${comp.address}: $${comp.price?.toLocaleString()} (${comp.squareFootage} sq ft)`
+${comparables && comparables.length > 0 ? comparables.slice(0, 3).map((comp) => 
+  `- ${(comp as any).address}: $${(comp as any).price?.toLocaleString()} (${(comp as any).squareFootage} sq ft)`
 ).join('\n') : 'No comparable data available'}
 `;
 
@@ -326,7 +340,29 @@ Include specific calculations for all financial metrics.`;
   return context;
 }
 
-function parseAnalysisResponse(analysisText: string, strategy: string): any {
+interface ParsedAnalysisResponse {
+  summary: string;
+  recommendation: string;
+  risks: string[];
+  opportunities: string[];
+  financial_metrics: {
+    monthly_cash_flow?: number;
+    cap_rate?: number;
+    cash_on_cash_return?: number;
+    roi?: number;
+    total_investment?: number;
+    annual_noi?: number;
+    total_profit?: number;
+  };
+  market_analysis: string;
+  investment_strategy: {
+    type: string;
+    details: string;
+  };
+  full_analysis: string;
+}
+
+function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAnalysisResponse {
   // Structure the AI response into sections
   const sections = analysisText.split(/\n(?=\d\.)/);
   
@@ -397,8 +433,18 @@ function extractOpportunities(text: string): string[] {
   return opportunities;
 }
 
-function extractFinancialData(text: string): any {
-  const data: any = {};
+interface FinancialData {
+  cashFlow?: number;
+  capRate?: number;
+  roi?: number;
+  cocReturn?: number;
+  totalInvestment?: number;
+  annualNOI?: number;
+  totalProfit?: number;
+}
+
+function extractFinancialData(text: string): FinancialData {
+  const data: FinancialData = {};
   
   // Extract common financial metrics using regex
   const patterns = {
@@ -414,7 +460,7 @@ function extractFinancialData(text: string): any {
   for (const [key, pattern] of Object.entries(patterns)) {
     const match = text.match(pattern);
     if (match) {
-      data[key] = parseFloat(match[1].replace(/,/g, ''));
+      (data as any)[key] = parseFloat(match[1].replace(/,/g, ''));
     }
   }
   

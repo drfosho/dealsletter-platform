@@ -124,7 +124,6 @@ export default function LocationSearch({
         
         service.getPlacePredictions(
           request,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (predictions: any[] | null, status: any) => {
             setIsLoading(false);
             console.log('[LocationSearch] Places API response:', {
@@ -185,7 +184,6 @@ export default function LocationSearch({
         placeId,
         fields: ['address_components', 'geometry', 'name']
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (place: any, status: any) => {
         console.log('[LocationSearch] Place details response:', {
           status,
@@ -198,7 +196,6 @@ export default function LocationSearch({
           let city = '';
           let state = '';
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           addressComponents.forEach((component: any) => {
             if (component.types.includes('locality')) {
               city = component.long_name;

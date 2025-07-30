@@ -17,7 +17,14 @@ export default function Step1PropertySearch({
   onNext,
   setCanProceed 
 }: Step1PropertySearchProps) {
-  const [usageData, setUsageData] = useState<any>(null);
+  const [usageData, setUsageData] = useState<{
+    analyses_used: number;
+    tier_limit: number;
+    subscription_tier: string;
+    remaining: number;
+    can_analyze: boolean;
+    message?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,13 +52,13 @@ export default function Step1PropertySearch({
     }
   };
 
-  const handlePropertySelect = (address: string, propertyData: any) => {
+  const handlePropertySelect = (address: string, propertyData: Record<string, unknown>) => {
     updateData({ 
       address, 
       propertyData,
       financial: {
         ...data.financial,
-        purchasePrice: propertyData?.comparables?.value || 0
+        purchasePrice: (propertyData?.comparables as any)?.value || 0
       }
     });
     setCanProceed(true);
@@ -138,22 +145,22 @@ export default function Step1PropertySearch({
                   <div>
                     <h3 className="font-semibold text-primary text-lg">{data.address}</h3>
                     <p className="text-muted mt-1">
-                      {data.propertyData.property?.bedrooms || 0} bed • 
-                      {data.propertyData.property?.bathrooms || 0} bath • 
-                      {data.propertyData.property?.squareFootage?.toLocaleString() || 0} sq ft
+                      {(data.propertyData.property as any)?.bedrooms || 0} bed • 
+                      {(data.propertyData.property as any)?.bathrooms || 0} bath • 
+                      {(data.propertyData.property as any)?.squareFootage?.toLocaleString() || 0} sq ft
                     </p>
                     <div className="flex items-center gap-4 mt-3 text-sm">
                       <span className="text-primary font-medium">
-                        Est. Value: ${data.propertyData.comparables?.value?.toLocaleString() || 'N/A'}
+                        Est. Value: ${(data.propertyData.comparables as any)?.value?.toLocaleString() || 'N/A'}
                       </span>
                       <span className="text-muted">
-                        Built: {data.propertyData.property?.yearBuilt || 'N/A'}
+                        Built: {(data.propertyData.property as any)?.yearBuilt || 'N/A'}
                       </span>
                     </div>
                   </div>
                   <button
                     onClick={() => {
-                      updateData({ address: '', propertyData: null });
+                      updateData({ address: '', propertyData: undefined });
                       setCanProceed(false);
                     }}
                     className="text-sm text-muted hover:text-primary"
@@ -164,24 +171,24 @@ export default function Step1PropertySearch({
               </div>
 
               {/* Property Preview */}
-              {data.propertyData.rental && (
+              {(data.propertyData as any).rental && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                   <div className="bg-muted/10 rounded-lg p-4">
                     <p className="text-sm text-muted mb-1">Estimated Rent</p>
                     <p className="text-xl font-bold text-primary">
-                      ${data.propertyData.rental.rentEstimate?.toLocaleString()}/mo
+                      ${(data.propertyData.rental as any).rentEstimate?.toLocaleString()}/mo
                     </p>
                   </div>
                   <div className="bg-muted/10 rounded-lg p-4">
                     <p className="text-sm text-muted mb-1">Price per Sq Ft</p>
                     <p className="text-xl font-bold text-primary">
-                      ${Math.round((data.propertyData.comparables?.value || 0) / (data.propertyData.property?.squareFootage || 1))}
+                      ${Math.round(((data.propertyData.comparables as any)?.value || 0) / ((data.propertyData.property as any)?.squareFootage || 1))}
                     </p>
                   </div>
                   <div className="bg-muted/10 rounded-lg p-4">
                     <p className="text-sm text-muted mb-1">Property Type</p>
                     <p className="text-xl font-bold text-primary capitalize">
-                      {data.propertyData.property?.propertyType || 'Unknown'}
+                      {(data.propertyData.property as any)?.propertyType || 'Unknown'}
                     </p>
                   </div>
                 </div>

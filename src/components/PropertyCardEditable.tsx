@@ -35,7 +35,7 @@ interface PropertyCardEditableProps {
   isEditing?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSave?: (deal: any) => void; // eslint-disable-line @typescript-eslint/no-explicit-any
+  onSave?: (deal: any) => void;
   onCancel?: () => void;
   showAdminControls?: boolean;
 }

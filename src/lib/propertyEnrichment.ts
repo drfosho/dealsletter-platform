@@ -51,19 +51,12 @@ interface EnrichedPropertyData {
 
 // Placeholder functions for future implementation
 export async function enrichWithRentCast(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _address: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _city: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _state: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _zipCode: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _bedrooms: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _bathrooms: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _sqft: number
 ): Promise<RentCastData | undefined> {
   // Future implementation will call RentCast API
@@ -72,21 +65,13 @@ export async function enrichWithRentCast(
 }
 
 export async function enrichWithHomesage(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _address: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _city: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _state: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _zipCode: string,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _bedrooms: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _bathrooms: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _sqft: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _yearBuilt: number | null
 ): Promise<HomesageData | undefined> {
   // Future implementation will call Homesage API

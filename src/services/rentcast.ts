@@ -3,7 +3,6 @@ import {
   RentCastRentalEstimate, 
   RentCastSaleComps,
   RentCastMarketData,
-  RentCastError,
   CachedPropertyData 
 } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
@@ -130,7 +129,7 @@ class RentCastService {
   }
 
   // Get sale comparables
-  async getSaleComparables(address: string, radius: number = 0.5): Promise<RentCastSaleComps> {
+  async getSaleComparables(address: string, _radius: number = 0.5): Promise<RentCastSaleComps> {
     const cacheKey = `comps:${address}`;
     const cached = this.getFromCache(cacheKey);
     

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // Simple test to verify API connectivity
     const apiKey = process.env.RENTCAST_API_KEY;
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     let data;
     try {
       data = JSON.parse(responseText);
-    } catch (e) {
+    } catch {
       data = { rawText: responseText };
     }
 

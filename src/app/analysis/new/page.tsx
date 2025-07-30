@@ -13,7 +13,7 @@ import Step5Results from '@/components/analysis-wizard/Step5Results';
 
 export interface WizardData {
   address: string;
-  propertyData?: any;
+  propertyData?: Record<string, unknown>;
   strategy: string;
   strategyDetails?: {
     timeline?: string;
@@ -29,7 +29,7 @@ export interface WizardData {
     renovationCosts?: number;
     holdingCosts?: number;
   };
-  analysis?: any;
+  analysis?: Record<string, unknown>;
   analysisId?: string;
 }
 
@@ -46,7 +46,7 @@ export default function NewAnalysisPage() {
       loanTerm: 30,
     }
   });
-  const [canProceed, setCanProceed] = useState(false);
+  const [_canProceed, setCanProceed] = useState(false);
 
   // Load draft from localStorage
   useEffect(() => {

@@ -6,7 +6,7 @@ import Navigation from '@/components/Navigation';
 
 export default function TestAPIPage() {
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTest, setActiveTest] = useState<string>('');
   
@@ -59,9 +59,9 @@ export default function TestAPIPage() {
           throw new Error('Invalid test type');
       }
       
-      setResults(response);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setResults(response as unknown as Record<string, unknown>);
+    } catch (err) {
+      setError((err as Error).message || 'An error occurred');
       console.error('Test error:', err);
     } finally {
       setLoading(false);
@@ -168,24 +168,23 @@ export default function TestAPIPage() {
               </pre>
             </div>
             
-            {/* Quick Summary */}
-            {results.property && (
+            {results && 'property' in results && (results as any).property && (
               <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-background p-4 rounded">
                   <p className="text-sm text-muted">Property Type</p>
-                  <p className="font-semibold">{results.property.propertyType}</p>
+                  <p className="font-semibold">{(results as any).property.propertyType}</p>
                 </div>
                 <div className="bg-background p-4 rounded">
                   <p className="text-sm text-muted">Bedrooms/Bathrooms</p>
-                  <p className="font-semibold">{results.property.bedrooms} / {results.property.bathrooms}</p>
+                  <p className="font-semibold">{(results as any).property.bedrooms} / {(results as any).property.bathrooms}</p>
                 </div>
                 <div className="bg-background p-4 rounded">
                   <p className="text-sm text-muted">Square Footage</p>
-                  <p className="font-semibold">{results.property.squareFootage?.toLocaleString()} sq ft</p>
+                  <p className="font-semibold">{(results as any).property.squareFootage?.toLocaleString()} sq ft</p>
                 </div>
                 <div className="bg-background p-4 rounded">
                   <p className="text-sm text-muted">Year Built</p>
-                  <p className="font-semibold">{results.property.yearBuilt}</p>
+                  <p className="font-semibold">{(results as any).property.yearBuilt}</p>
                 </div>
               </div>
             )}

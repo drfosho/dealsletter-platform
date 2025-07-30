@@ -134,5 +134,5 @@ export interface CachedPropertyData {
 export interface RentCastError {
   code: string;
   message: string;
-  details?: any;
+  details?: unknown;
 }

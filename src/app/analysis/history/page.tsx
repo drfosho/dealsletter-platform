@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import DashboardSidebar from '@/components/DashboardSidebar';
@@ -8,11 +8,12 @@ import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import AnalysisHistoryTable from '@/components/analysis/AnalysisHistoryTable';
 import AnalysisFilters from '@/components/analysis/AnalysisFilters';
 import UsageStats from '@/components/analysis/UsageStats';
+import type { Analysis } from '@/types';
 
 export default function AnalysisHistoryPage() {
   const router = useRouter();
-  const [analyses, setAnalyses] = useState<any[]>([]);
-  const [filteredAnalyses, setFilteredAnalyses] = useState<any[]>([]);
+  const [analyses, setAnalyses] = useState<Analysis[]>([]);
+  const [filteredAnalyses, setFilteredAnalyses] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filters, setFilters] = useState({
@@ -29,6 +30,67 @@ export default function AnalysisHistoryPage() {
     nextReset: new Date()
   });
 
+  const applyFilters = useCallback(() => {
+    let filtered = [...analyses];
+
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(a => 
+        a.address.toLowerCase().includes(searchLower) ||
+        a.strategy.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Strategy filter
+    if (filters.strategy !== 'all') {
+      filtered = filtered.filter(a => a.strategy === filters.strategy);
+    }
+
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      const ranges: Record<string, number> = {
+        'today': 0,
+        'week': 7,
+        'month': 30,
+        'quarter': 90,
+        'year': 365
+      };
+      
+      if (ranges[filters.dateRange] !== undefined) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - ranges[filters.dateRange]);
+        filtered = filtered.filter(a => new Date(a.created_at) >= cutoff);
+      }
+    }
+
+    // Property type filter
+    if (filters.propertyType !== 'all') {
+      filtered = filtered.filter(a => 
+        a.property_data?.property?.[0]?.propertyType === filters.propertyType
+      );
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let aVal = a[filters.sortBy as keyof Analysis] as string | number;
+      let bVal = b[filters.sortBy as keyof Analysis] as string | number;
+      
+      if (filters.sortBy === 'created_at') {
+        aVal = new Date(aVal).getTime();
+        bVal = new Date(bVal).getTime();
+      }
+      
+      if (filters.sortOrder === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    setFilteredAnalyses(filtered);
+  }, [analyses, filters]);
+
   useEffect(() => {
     fetchAnalyses();
     fetchUsage();
@@ -36,7 +98,7 @@ export default function AnalysisHistoryPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [analyses, filters]);
+  }, [analyses, filters, applyFilters]);
 
   const fetchAnalyses = async () => {
     try {
@@ -64,67 +126,6 @@ export default function AnalysisHistoryPage() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...analyses];
-
-    // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(a => 
-        a.address.toLowerCase().includes(searchLower) ||
-        a.strategy.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Strategy filter
-    if (filters.strategy !== 'all') {
-      filtered = filtered.filter(a => a.strategy === filters.strategy);
-    }
-
-    // Date range filter
-    if (filters.dateRange !== 'all') {
-      const now = new Date();
-      const ranges: Record<string, number> = {
-        'today': 0,
-        'week': 7,
-        'month': 30,
-        'quarter': 90,
-        'year': 365
-      };
-      
-      if (ranges[filters.dateRange] !== undefined) {
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - ranges[filters.dateRange]);
-        filtered = filtered.filter(a => new Date(a.created_at) >= cutoff);
-      }
-    }
-
-    // Property type filter
-    if (filters.propertyType !== 'all') {
-      filtered = filtered.filter(a => 
-        a.property_data?.property?.[0]?.propertyType === filters.propertyType
-      );
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
-      let aVal = a[filters.sortBy];
-      let bVal = b[filters.sortBy];
-      
-      if (filters.sortBy === 'created_at') {
-        aVal = new Date(aVal).getTime();
-        bVal = new Date(bVal).getTime();
-      }
-      
-      if (filters.sortOrder === 'asc') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    setFilteredAnalyses(filtered);
-  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {

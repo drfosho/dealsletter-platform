@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+// LoadingStates components
 
 // Skeleton loader for cards
 export function CardSkeleton() {

@@ -66,7 +66,6 @@ export const loadGoogleMapsAPI = (): Promise<void> => {
     script.id = 'google-maps-script';
     
     // Define a global callback for Google Maps
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__googleMapsCallback = () => {
       console.log('[Google Maps] Callback triggered - API loaded successfully');
       console.log('[Google Maps] Available libraries:', {
@@ -79,7 +78,6 @@ export const loadGoogleMapsAPI = (): Promise<void> => {
       isLoaded = true;
       resolve();
       // Clean up the global callback
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).__googleMapsCallback;
     };
     

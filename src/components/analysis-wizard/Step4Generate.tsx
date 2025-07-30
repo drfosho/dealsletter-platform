@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { WizardData } from '@/app/analysis/new/page';
 
@@ -25,20 +25,34 @@ export default function Step4Generate({
   onNext, 
   onBack 
 }: Step4GenerateProps) {
-  const router = useRouter();
+  const _router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [_analysisId, setAnalysisId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isGenerating) {
-      startAnalysis();
-    }
-  }, []);
+  const generateAnalysis = useCallback(async () => {
+    return fetch('/api/analysis/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address: data.address,
+        strategy: data.strategy,
+        purchasePrice: data.financial.purchasePrice,
+        downPayment: (data.financial.purchasePrice * data.financial.downPaymentPercent) / 100,
+        loanTerms: {
+          interestRate: data.financial.interestRate,
+          loanTerm: data.financial.loanTerm,
+          loanType: 'conventional'
+        },
+        rehabCosts: data.financial.renovationCosts || 0,
+        strategyDetails: data.strategyDetails
+      })
+    });
+  }, [data]);
 
-  const startAnalysis = async () => {
+  const startAnalysis = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
 
@@ -78,27 +92,14 @@ export default function Step4Generate({
     setTimeout(() => {
       onNext();
     }, 1000);
-  };
+  }, [updateData, onNext, generateAnalysis]);
 
-  const generateAnalysis = async () => {
-    return fetch('/api/analysis/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address: data.address,
-        strategy: data.strategy,
-        purchasePrice: data.financial.purchasePrice,
-        downPayment: (data.financial.purchasePrice * data.financial.downPaymentPercent) / 100,
-        loanTerms: {
-          interestRate: data.financial.interestRate,
-          loanTerm: data.financial.loanTerm,
-          loanType: 'conventional'
-        },
-        rehabCosts: data.financial.renovationCosts || 0,
-        strategyDetails: data.strategyDetails
-      })
-    });
-  };
+  useEffect(() => {
+    if (!isGenerating) {
+      startAnalysis();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRetry = () => {
     setError(null);

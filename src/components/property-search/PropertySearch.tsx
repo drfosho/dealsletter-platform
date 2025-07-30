@@ -8,17 +8,17 @@ import ErrorMessage from './ErrorMessage';
 import { propertyAPI } from '@/services/property-api';
 
 interface PropertySearchProps {
-  onPropertySelect?: (address: string, propertyData: any) => void;
+  onPropertySelect?: (address: string, propertyData: Record<string, unknown>) => void;
   className?: string;
 }
 
 export default function PropertySearch({ onPropertySelect, className = '' }: PropertySearchProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [propertyData, setPropertyData] = useState<any>(null);
+  const [propertyData, setPropertyData] = useState<Record<string, unknown> | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<string>('');
 
-  const handleAddressSelect = async (address: string, placeId: string) => {
+  const handleAddressSelect = async (address: string, _placeId: string) => {
     setIsLoading(true);
     setError(null);
     setPropertyData(null);
@@ -33,14 +33,14 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
         includeMarketData: true
       });
 
-      if (!searchResults.property || searchResults.property.length === 0) {
+      if (!searchResults.property) {
         throw new Error('Property not found at this address');
       }
 
       // Format the data for display
       const formattedData = {
         address,
-        property: searchResults.property[0],
+        property: searchResults.property,
         rental: searchResults.rental,
         comparables: searchResults.comparables,
         market: searchResults.market
@@ -52,9 +52,9 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
       if (onPropertySelect) {
         onPropertySelect(address, formattedData);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Property search error:', err);
-      setError(err.message || 'Failed to fetch property details');
+      setError((err as Error).message || 'Failed to fetch property details');
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +103,7 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
 
         {propertyData && !isLoading && (
           <>
-            <PropertyPreview data={propertyData} />
+            <PropertyPreview data={propertyData as any} />
             <div className="mt-4 flex justify-end">
               <button
                 onClick={handleReset}

@@ -21,7 +21,7 @@ interface AnalyzedProperty {
   strategy?: string;
 }
 
-export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesProps) {
+export default function MyAnalyzedProperties({ userId: _userId }: MyAnalyzedPropertiesProps) {
   const router = useRouter();
   const [properties, setProperties] = useState<AnalyzedProperty[]>([]);
   const [loading, setLoading] = useState(true);

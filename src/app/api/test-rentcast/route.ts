@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const apiKey = process.env.RENTCAST_API_KEY;
     const baseUrl = process.env.RENTCAST_API_URL || 'https://api.rentcast.io/v1';
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         let data;
         try {
           data = JSON.parse(responseText);
-        } catch (e) {
+        } catch {
           data = { rawResponse: responseText };
         }
 

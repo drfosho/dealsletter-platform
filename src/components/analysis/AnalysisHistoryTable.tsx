@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { Analysis } from '@/types';
 
 interface AnalysisHistoryTableProps {
-  analyses: any[];
+  analyses: Analysis[];
   selectedIds: string[];
   onSelectAll: (checked: boolean) => void;
   onSelect: (id: string) => void;
@@ -19,6 +20,7 @@ export default function AnalysisHistoryTable({
   onView,
   onDelete
 }: AnalysisHistoryTableProps) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
 
   const formatCurrency = (value: number) => {
@@ -49,6 +51,12 @@ export default function AnalysisHistoryTable({
   const allSelected = analyses.length > 0 && analyses.every(a => selectedIds.includes(a.id));
   const someSelected = selectedIds.length > 0 && !allSelected;
 
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
+
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
       <div className="overflow-x-auto">
@@ -57,9 +65,9 @@ export default function AnalysisHistoryTable({
             <tr>
               <th className="w-12 px-4 py-3">
                 <input
+                  ref={checkboxRef}
                   type="checkbox"
                   checked={allSelected}
-                  indeterminate={someSelected}
                   onChange={(e) => onSelectAll(e.target.checked)}
                   className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                 />
@@ -229,7 +237,7 @@ export default function AnalysisHistoryTable({
                             </p>
                             
                             <div className="grid grid-cols-2 gap-4">
-                              {analysis.ai_analysis?.risks?.length > 0 && (
+                              {analysis.ai_analysis?.risks && analysis.ai_analysis.risks.length > 0 && (
                                 <div>
                                   <h5 className="text-sm font-medium text-red-600 mb-1">Key Risks</h5>
                                   <ul className="text-sm text-muted space-y-1">
@@ -243,7 +251,7 @@ export default function AnalysisHistoryTable({
                                 </div>
                               )}
                               
-                              {analysis.ai_analysis?.opportunities?.length > 0 && (
+                              {analysis.ai_analysis?.opportunities && analysis.ai_analysis.opportunities.length > 0 && (
                                 <div>
                                   <h5 className="text-sm font-medium text-green-600 mb-1">Opportunities</h5>
                                   <ul className="text-sm text-muted space-y-1">

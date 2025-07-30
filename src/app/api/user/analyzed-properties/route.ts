@@ -70,11 +70,11 @@ export async function GET(request: NextRequest) {
       total: transformedData.length
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Fetch Analyzed Properties Error:', error);
     
     // Check if it's a table not found error
-    if (error?.code === '42P01' || error?.message?.includes('relation "user_analyses" does not exist')) {
+    if ((error as any)?.code === '42P01' || (error as any)?.message?.includes('relation "user_analyses" does not exist')) {
       return NextResponse.json(
         { 
           error: 'Database table not found',

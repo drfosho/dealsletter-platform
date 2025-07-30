@@ -108,7 +108,6 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
             types: ['(cities)'],
             componentRestrictions: { country: 'us' }
           },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (predictions: any[] | null, status: any) => {
             setIsLoading(false);
             console.log('[MobileLocationSearch] Places API response:', {
@@ -157,7 +156,6 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
         placeId,
         fields: ['address_components', 'geometry', 'name']
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (place: any, status: any) => {
         console.log('[MobileLocationSearch] Place details response:', {
           status,
@@ -169,7 +167,6 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
           let city = '';
           let state = '';
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           addressComponents.forEach((component: any) => {
             if (component.types.includes('locality')) {
               city = component.long_name;

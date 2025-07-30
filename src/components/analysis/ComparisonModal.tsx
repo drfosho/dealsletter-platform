@@ -1,28 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { Analysis } from '@/types';
 
 interface ComparisonModalProps {
-  currentAnalysis: any;
+  currentAnalysis: Analysis;
   onClose: () => void;
 }
 
 export default function ComparisonModal({ currentAnalysis, onClose }: ComparisonModalProps) {
-  const [analyses, setAnalyses] = useState<any[]>([]);
+  const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [selectedAnalyses, setSelectedAnalyses] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAnalyses();
-  }, []);
-
-  const fetchAnalyses = async () => {
+  const fetchAnalyses = useCallback(async () => {
     try {
       const response = await fetch('/api/analysis/list?limit=20');
       if (response.ok) {
         const data = await response.json();
         // Filter out current analysis
-        const filtered = data.analyses.filter((a: any) => a.id !== currentAnalysis.id);
+        const filtered = data.analyses.filter((a: Analysis) => a.id !== currentAnalysis.id);
         setAnalyses(filtered);
       }
     } catch (error) {
@@ -30,7 +27,11 @@ export default function ComparisonModal({ currentAnalysis, onClose }: Comparison
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentAnalysis.id]);
+
+  useEffect(() => {
+    fetchAnalyses();
+  }, [fetchAnalyses]);
 
   const handleCompare = () => {
     if (selectedAnalyses.length === 0) return;

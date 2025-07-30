@@ -10,7 +10,7 @@ interface Step5ResultsProps {
   onComplete: () => void;
 }
 
-export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
+export default function Step5Results({ data }: Step5ResultsProps) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -63,11 +63,11 @@ export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
     );
   }
 
-  const { financial_metrics } = data.analysis;
+  const analysis = data.analysis as any;
+  const { financial_metrics } = analysis;
 
   return (
     <div>
-      {/* Success Header */}
       <div className="text-center mb-8">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -82,7 +82,6 @@ export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
         </p>
       </div>
 
-      {/* Property Summary */}
       <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between">
           <div>
@@ -107,7 +106,6 @@ export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
         </div>
       </div>
 
-      {/* Key Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-card rounded-lg border border-border p-4">
           <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
@@ -135,16 +133,14 @@ export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
         </div>
       </div>
 
-      {/* Analysis Summary */}
       <div className="bg-card rounded-lg border border-border p-6 mb-6">
         <h3 className="font-semibold text-primary mb-3">Investment Summary</h3>
         <p className="text-muted leading-relaxed">
-          {data.analysis.summary}
+          {analysis.summary}
         </p>
       </div>
 
-      {/* Recommendation */}
-      {data.analysis.recommendation && (
+      {analysis.recommendation && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -152,13 +148,12 @@ export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
             </svg>
             <div>
               <h4 className="font-semibold text-green-900 mb-1">Recommendation</h4>
-              <p className="text-green-800">{data.analysis.recommendation}</p>
+              <p className="text-green-800">{analysis.recommendation}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 mb-8">
         <Link
           href={`/analysis/results/${data.analysisId}`}
@@ -187,7 +182,6 @@ export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
         </button>
       </div>
 
-      {/* Next Steps */}
       <div className="bg-muted/10 rounded-lg p-6 text-center">
         <h3 className="font-semibold text-primary mb-3">What's Next?</h3>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -206,7 +200,6 @@ export default function Step5Results({ data, onComplete }: Step5ResultsProps) {
         </div>
       </div>
 
-      {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-card rounded-lg p-6 max-w-md w-full">

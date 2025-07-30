@@ -19,8 +19,8 @@ export default function Step3Financial({
   setCanProceed 
 }: Step3FinancialProps) {
   const [financial, setFinancial] = useState(data.financial);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [currentRates, setCurrentRates] = useState({ min: 6.5, avg: 7.0, max: 7.5 });
+  const [_errors, setErrors] = useState<Record<string, string>>({});
+  const [currentRates, _setCurrentRates] = useState({ min: 6.5, avg: 7.0, max: 7.5 });
 
   // Quick select options for down payment
   const downPaymentOptions = [
@@ -131,9 +131,9 @@ export default function Step3Financial({
               placeholder="0"
             />
           </div>
-          {data.propertyData?.comparables?.value && (
+          {(data.propertyData as any)?.comparables?.value && (
             <p className="text-xs text-muted mt-1">
-              Estimated value: ${data.propertyData.comparables.value.toLocaleString()}
+              Estimated value: ${(data.propertyData as any).comparables.value.toLocaleString()}
             </p>
           )}
         </div>

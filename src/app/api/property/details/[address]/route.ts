@@ -43,33 +43,72 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(enrichedData);
 
-  } catch (error: any) {
+  } catch (error) {
     logError('Property Details API', error);
     
-    if (error.message?.includes('not found') || error.message?.includes('404')) {
+    if (error instanceof Error) {
+      if (error.message?.includes('not found') || error.message?.includes('404')) {
+        return NextResponse.json(
+          { error: 'Property not found' },
+          { status: 404 }
+        );
+      }
+      
+      if (error.message?.includes('Rate limit')) {
+        return NextResponse.json(
+          { error: 'Too many requests. Please try again later.' },
+          { status: 429 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'Property not found' },
-        { status: 404 }
-      );
-    }
-    
-    if (error.message?.includes('Rate limit')) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
+        { error: 'Failed to fetch property details', details: error.message },
+        { status: 500 }
       );
     }
     
     return NextResponse.json(
-      { error: 'Failed to fetch property details', details: error.message },
+      { error: 'Failed to fetch property details', details: 'Unknown error' },
       { status: 500 }
     );
   }
 }
 
+interface PropertyMetrics {
+  pricePerSqFt?: number;
+  rentToPriceRatio?: string;
+  grossYield?: string;
+  estimatedCapRate?: string;
+  rentVsMarket?: string;
+  priceVsMarket?: string;
+}
+
+interface PropertyDataWithMetrics {
+  property?: {
+    lastSalePrice?: number;
+    squareFootage?: number;
+  };
+  rental?: {
+    rentEstimate?: number;
+  };
+  market?: {
+    rentalData?: {
+      medianRent?: number;
+    };
+    saleData?: {
+      medianPrice?: number;
+    };
+  };
+  comparables?: {
+    value?: number;
+    valueRangeLow?: number;
+    valueRangeHigh?: number;
+  };
+}
+
 // Calculate useful metrics from the property data
-function calculatePropertyMetrics(data: any) {
-  const metrics: any = {};
+function calculatePropertyMetrics(data: PropertyDataWithMetrics): PropertyMetrics {
+  const metrics: PropertyMetrics = {};
   
   // Calculate price per square foot
   if (data.property?.lastSalePrice && data.property?.squareFootage) {
@@ -91,13 +130,13 @@ function calculatePropertyMetrics(data: any) {
   }
   
   // Market position
-  if (data.rental?.rentEstimate && data.market?.medianRent) {
-    const rentDiff = ((data.rental.rentEstimate - data.market.medianRent) / data.market.medianRent * 100);
+  if (data.rental?.rentEstimate && data.market?.rentalData?.medianRent) {
+    const rentDiff = ((data.rental.rentEstimate - data.market.rentalData.medianRent) / data.market.rentalData.medianRent * 100);
     metrics.rentVsMarket = rentDiff > 0 ? `+${rentDiff.toFixed(1)}%` : `${rentDiff.toFixed(1)}%`;
   }
   
-  if (data.property?.lastSalePrice && data.comparables?.medianPrice) {
-    const priceDiff = ((data.property.lastSalePrice - data.comparables.medianPrice) / data.comparables.medianPrice * 100);
+  if (data.property?.lastSalePrice && data.comparables?.value) {
+    const priceDiff = ((data.property.lastSalePrice - data.comparables.value) / data.comparables.value * 100);
     metrics.priceVsMarket = priceDiff > 0 ? `+${priceDiff.toFixed(1)}%` : `${priceDiff.toFixed(1)}%`;
   }
   

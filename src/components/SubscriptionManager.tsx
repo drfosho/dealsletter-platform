@@ -110,8 +110,9 @@ interface SubscriptionModalProps {
 }
 
 export function SubscriptionModal({ isOpen, onClose, currentPlan = 'free' }: SubscriptionModalProps) {
-  const router = useRouter();
+  const _router = useRouter();
   const { addNotification } = useNotifications();
+  
   const [selectedPlan, setSelectedPlan] = useState<string>(currentPlan);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -142,7 +143,7 @@ export function SubscriptionModal({ isOpen, onClose, currentPlan = 'free' }: Sub
       } else {
         throw new Error('Upgrade failed');
       }
-    } catch (error) {
+    } catch {
       addNotification({
         type: 'error',
         title: 'Upgrade Failed',
@@ -277,11 +278,9 @@ export function SubscriptionModal({ isOpen, onClose, currentPlan = 'free' }: Sub
 
 export function UsageLimitBanner() {
   const { usage, currentPlan } = useSubscription();
-  const { addNotification } = useNotifications();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   
   const percentageUsed = (usage.used / usage.limit) * 100;
-  const isNearLimit = percentageUsed >= 80;
   const hasReachedLimit = usage.used >= usage.limit;
 
   if (currentPlan === 'enterprise' || percentageUsed < 80) {

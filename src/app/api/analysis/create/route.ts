@@ -12,7 +12,7 @@ const anthropic = new Anthropic({
 export async function POST(request: NextRequest) {
   try {
     // Create Supabase client
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -132,17 +132,71 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function prepareAnalysisContext(propertyData: any, request: any): string {
+interface AnalysisRequest {
+  strategy: string;
+  purchasePrice: number;
+  downPayment: number;
+  loanTerms: {
+    interestRate: number;
+    loanTerm: number;
+  };
+  rehabCosts?: number;
+}
+
+interface PropertyDataResponse {
+  property: {
+    addressLine1: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    propertyType: string;
+    squareFootage: number;
+    bedrooms: number;
+    bathrooms: number;
+    yearBuilt: number;
+  } | Array<{
+    addressLine1: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    propertyType: string;
+    squareFootage: number;
+    bedrooms: number;
+    bathrooms: number;
+    yearBuilt: number;
+  }>;
+  rental?: {
+    rent?: number;
+    rentRangeLow?: number;
+    rentRangeHigh?: number;
+  };
+  comparables?: {
+    value?: number;
+    valueRangeLow?: number;
+    valueRangeHigh?: number;
+  };
+  market?: {
+    saleData?: {
+      medianPrice?: number;
+    };
+    rentalData?: {
+      medianRent?: number;
+    };
+  };
+}
+
+function prepareAnalysisContext(propertyData: PropertyDataResponse, request: AnalysisRequest): string {
   const { property, rental, comparables, market } = propertyData;
+  const prop = Array.isArray(property) ? property[0] : property;
   
   return `Analyze this property for a ${request.strategy} investment strategy:
 
 PROPERTY DETAILS:
-- Address: ${property[0].addressLine1}, ${property[0].city}, ${property[0].state} ${property[0].zipCode}
-- Type: ${property[0].propertyType}
-- Size: ${property[0].squareFootage} sq ft
-- Bedrooms: ${property[0].bedrooms}, Bathrooms: ${property[0].bathrooms}
-- Year Built: ${property[0].yearBuilt}
+- Address: ${prop.addressLine1}, ${prop.city}, ${prop.state} ${prop.zipCode}
+- Type: ${prop.propertyType}
+- Size: ${prop.squareFootage} sq ft
+- Bedrooms: ${prop.bedrooms}, Bathrooms: ${prop.bathrooms}
+- Year Built: ${prop.yearBuilt}
 
 FINANCIAL PARAMETERS:
 - Purchase Price: $${request.purchasePrice.toLocaleString()}
@@ -171,7 +225,29 @@ Provide a comprehensive investment analysis including:
 Format your response with clear sections and specific numbers.`;
 }
 
-function parseAnalysisResponse(analysisText: string, strategy: string): any {
+interface ParsedAnalysis {
+  summary: string;
+  marketPosition: string;
+  financialProjections: {
+    cashFlow: number;
+    capRate: number;
+    roi: number;
+    cocReturn: number;
+    details: string;
+  };
+  strategyAnalysis: {
+    type: string;
+    details: string;
+  };
+  riskAssessment: {
+    factors: string[];
+    details: string;
+  };
+  recommendation: string;
+  fullAnalysis: string;
+}
+
+function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAnalysis {
   // Simple parsing - in production, you'd want more sophisticated parsing
   const sections = analysisText.split('\n\n');
   

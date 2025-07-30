@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import type { Analysis } from '@/types';
 
 interface InvestmentProjectionsProps {
-  analysis: any;
+  analysis: Analysis;
 }
 
 export default function InvestmentProjections({ analysis }: InvestmentProjectionsProps) {
@@ -46,14 +47,14 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
       const annualExpenses = baseExpenses * Math.pow(1 + inflationRate, year - 1);
 
       // Calculate principal paid this year
-      let yearlyPrincipal = 0;
-      let yearlyInterest = 0;
+      let _yearlyPrincipal = 0;
+      let _yearlyInterest = 0;
       
       for (let month = 0; month < 12 && currentBalance > 0; month++) {
         const interestPayment = currentBalance * monthlyRate;
         const principalPayment = Math.min(monthlyPayment - interestPayment, currentBalance);
-        yearlyInterest += interestPayment;
-        yearlyPrincipal += principalPayment;
+        _yearlyInterest += interestPayment;
+        _yearlyPrincipal += principalPayment;
         currentBalance -= principalPayment;
       }
 
@@ -156,7 +157,7 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
       {/* Projection Chart (simplified visualization) */}
       <div className="bg-muted/10 rounded-lg p-4">
         <div className="flex items-end justify-between h-48 mb-4">
-          {projections.filter((_, i) => i % Math.ceil(projections.length / 10) === 0 || i === projections.length - 1).map((data, index) => {
+          {projections.filter((_, i) => i % Math.ceil(projections.length / 10) === 0 || i === projections.length - 1).map((data) => {
             const heightPercent = (data.totalReturn / lastYear.totalReturn) * 100;
             return (
               <div key={data.year} className="flex flex-col items-center gap-2 flex-1">

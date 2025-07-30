@@ -1,7 +1,9 @@
 'use client';
 
+import type { Analysis } from '@/types';
+
 interface AnalysisOverviewProps {
-  analysis: any;
+  analysis: Analysis;
 }
 
 export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
@@ -49,16 +51,11 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
             </span>
           </div>
         </div>
-        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-          analysis.status === 'completed' 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {analysis.status === 'completed' ? 'Completed' : 'In Progress'}
+        <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+          Completed
         </div>
       </div>
 
-      {/* AI Summary */}
       {analysis.ai_analysis?.summary && (
         <div className="mb-6">
           <p className="text-primary leading-relaxed">
@@ -67,9 +64,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
         </div>
       )}
 
-      {/* Key Insights */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Market Position */}
         <div className="bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
             <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -88,7 +83,6 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
           </p>
         </div>
 
-        {/* Investment Quality */}
         <div className="bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
             <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -101,7 +95,6 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
           </p>
         </div>
 
-        {/* Timeline */}
         <div className="bg-gradient-to-br from-purple-500/5 to-pink-500/5 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
             <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,8 +108,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
         </div>
       </div>
 
-      {/* Recommendation Badge */}
-      {analysis.ai_analysis?.recommendation && (
+      {analysis.ai_analysis && (analysis.ai_analysis as any).recommendation && (
         <div className="mt-6 p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-primary mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -125,7 +117,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
             <div>
               <h4 className="font-semibold text-primary mb-1">AI Recommendation</h4>
               <p className="text-sm text-primary/80">
-                {analysis.ai_analysis.recommendation}
+                {(analysis.ai_analysis as any).recommendation}
               </p>
             </div>
           </div>
@@ -134,7 +126,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
     </div>
   );
 
-  function getInvestmentScore(analysis: any): number {
+  function getInvestmentScore(analysis: AnalysisOverviewProps['analysis']): number {
     const roi = analysis.ai_analysis?.financial_metrics?.roi || 0;
     const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
     const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;

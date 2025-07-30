@@ -13,7 +13,6 @@ export function getErrorMessage(error: unknown): string {
   
   if (error && typeof error === 'object') {
     // Check for common error object patterns
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const errorObj = error as any;
     
     // Google Maps API errors often have these properties

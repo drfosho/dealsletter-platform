@@ -18,7 +18,23 @@ export default function DashboardHeader({ totalProperties, onRefresh }: Dashboar
     saved: number;
   } | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [savedAnalyses, setSavedAnalyses] = useState<any[]>([]);
+  const [savedAnalyses, setSavedAnalyses] = useState<Array<{
+    id: string;
+    address: string;
+    property_data?: {
+      property?: Array<{
+        propertyType?: string;
+      }>;
+    };
+    strategy: string;
+    purchase_price?: number;
+    ai_analysis?: {
+      financial_metrics?: {
+        roi?: number;
+        monthly_cash_flow?: number;
+      };
+    };
+  }>>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

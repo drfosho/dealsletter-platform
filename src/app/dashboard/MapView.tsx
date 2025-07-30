@@ -95,7 +95,7 @@ const MapView = ({ deals, selectedLocation, onDealClick }: MapViewProps) => {
     // Track locations to add offset for duplicates
     const locationCounts: { [key: string]: number } = {};
 
-    return deals.map((deal, index) => {
+    return deals.map((deal) => {
       // If deal already has coordinates, use them
       if (deal.coordinates) {
         return deal;

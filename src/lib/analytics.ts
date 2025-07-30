@@ -3,7 +3,7 @@
 // Google Analytics declaration
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
+    gtag?: (command: string, action: string, params?: Record<string, unknown>) => void;
   }
 }
 
@@ -36,7 +36,7 @@ interface AnalyticsEvent {
   category: string;
   label?: string;
   value?: number;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 // Google Analytics tracking

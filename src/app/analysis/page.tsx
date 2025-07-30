@@ -9,8 +9,17 @@ import Link from 'next/link';
 
 export default function AnalysisPage() {
   const router = useRouter();
-  const [recentAnalyses, setRecentAnalyses] = useState<any[]>([]);
-  const [usage, setUsage] = useState<any>(null);
+  const [recentAnalyses, setRecentAnalyses] = useState<Array<{
+    id: string;
+    address: string;
+    strategy: string;
+    created_at: string;
+  }>>([]);
+  const [usage, setUsage] = useState<{
+    current_month_usage: number;
+    monthly_limit: number;
+    subscription_tier: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,7 +53,7 @@ export default function AnalysisPage() {
     }
   };
 
-  const handlePropertySelect = (address: string, propertyData: any) => {
+  const handlePropertySelect = (address: string, propertyData: Record<string, unknown>) => {
     // Store in session storage for the new analysis page
     sessionStorage.setItem('selectedProperty', JSON.stringify({
       address,

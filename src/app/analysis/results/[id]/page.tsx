@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import DashboardSidebar from '@/components/DashboardSidebar';
@@ -11,6 +11,7 @@ import InvestmentProjections from '@/components/analysis/InvestmentProjections';
 import ActionButtons from '@/components/analysis/ActionButtons';
 import ShareModal from '@/components/analysis/ShareModal';
 import ComparisonModal from '@/components/analysis/ComparisonModal';
+import type { Analysis } from '@/types';
 
 interface PageParams {
   params: Promise<{
@@ -20,18 +21,14 @@ interface PageParams {
 
 export default function AnalysisResultsPage({ params }: PageParams) {
   const router = useRouter();
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  useEffect(() => {
-    fetchAnalysis();
-  }, []);
-
-  const fetchAnalysis = async () => {
+  const fetchAnalysis = useCallback(async () => {
     try {
       const resolvedParams = await params;
       const response = await fetch(`/api/analysis/${resolvedParams.id}`);
@@ -56,7 +53,11 @@ export default function AnalysisResultsPage({ params }: PageParams) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, router]);
+
+  useEffect(() => {
+    fetchAnalysis();
+  }, [fetchAnalysis]);
 
   const handleSaveToDashboard = async () => {
     try {
@@ -95,6 +96,8 @@ export default function AnalysisResultsPage({ params }: PageParams) {
   };
 
   const handleReanalyze = () => {
+    if (!analysis) return;
+    
     // Store current analysis data for re-analysis
     sessionStorage.setItem('reanalyze-data', JSON.stringify({
       address: analysis.address,
@@ -312,7 +315,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
             {/* Risk & Opportunities */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
               {/* Risks */}
-              {analysis.ai_analysis?.risks?.length > 0 && (
+              {analysis.ai_analysis?.risks && analysis.ai_analysis.risks.length > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-6">
                   <h3 className="text-lg font-semibold text-red-900 mb-4 flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -332,7 +335,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
               )}
 
               {/* Opportunities */}
-              {analysis.ai_analysis?.opportunities?.length > 0 && (
+              {analysis.ai_analysis?.opportunities && analysis.ai_analysis.opportunities.length > 0 && (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-6">
                   <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
