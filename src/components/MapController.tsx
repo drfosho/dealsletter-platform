@@ -12,7 +12,11 @@ export default function MapController({ center, zoom }: MapControllerProps) {
   const map = useMap();
   
   useEffect(() => {
-    map.setView(center, zoom);
+    // Force the map to update view with animation
+    map.flyTo(center, zoom, {
+      duration: 0.5,
+      animate: true
+    });
   }, [map, center, zoom]);
   
   return null;

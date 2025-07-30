@@ -38,12 +38,26 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
   
   const debouncedSearchTerm = useDebounce(inputValue, 300);
 
-  // Focus input on mount
+  // Focus input on mount with viewport adjustment
   useEffect(() => {
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    
     const timer = setTimeout(() => {
       inputRef.current?.focus();
-    }, 300);
-    return () => clearTimeout(timer);
+      // Scroll the input into view if needed
+      inputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 400);
+    
+    return () => {
+      clearTimeout(timer);
+      // Restore body scroll
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
   }, []);
 
   // Load Google Places API
@@ -231,7 +245,7 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
   };
 
   return (
-    <div className="fixed inset-0 z-50 md:hidden">
+    <div className="fixed inset-0 z-[9999] md:hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -241,8 +255,11 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
       {/* Modal */}
       <div 
         ref={modalRef}
-        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out"
-        style={{ maxHeight: '90vh' }}
+        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out overflow-hidden"
+        style={{ 
+          maxHeight: '90vh',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)'
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -292,13 +309,22 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
             
             <input
               ref={inputRef}
-              type="search"
+              type="text"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               enterKeyHint="search"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Enter city name..."
-              className="w-full pl-12 pr-12 py-4 text-base bg-muted/10 border border-border/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent/30"
+              className="w-full pl-12 pr-12 py-4 text-base bg-white dark:bg-card border-2 border-border/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent text-primary placeholder:text-muted"
+              style={{
+                fontSize: '16px', // Prevents zoom on iOS
+                WebkitAppearance: 'none',
+                appearance: 'none'
+              }}
             />
             
             {/* Loading or Clear button */}

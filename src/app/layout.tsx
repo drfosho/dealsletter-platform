@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import PlatformProvider from "@/components/PlatformProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,6 +17,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Dealsletter Platform - Real Estate Deal Analysis",
   description: "Analyze real estate investment opportunities with advanced metrics, AI-powered deal scoring, and comprehensive property analysis tools.",
+  manifest: "/manifest.json",
+  themeColor: "#0a0a0a",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "DealsLetter",
+  },
 };
 
 export default function RootLayout({
@@ -28,9 +42,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <PlatformProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </PlatformProvider>
       </body>
     </html>
   );

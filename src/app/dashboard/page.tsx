@@ -10,6 +10,8 @@ import MarketNotification from '@/components/MarketNotification';
 import { isLocationSupported } from '@/config/markets';
 import dynamic from 'next/dynamic';
 import Navigation from '@/components/Navigation';
+import DashboardHeader from '@/components/DashboardHeader';
+import DashboardSidebar from '@/components/DashboardSidebar';
 
 const MapView = dynamic(() => import('./MapView'), { 
   ssr: false,
@@ -51,6 +53,19 @@ export default function Dashboard() {
   const [unsupportedLocation, setUnsupportedLocation] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid');
+  
+  // Effect to ensure mobile doesn't use list view
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768 && viewMode === 'list') {
+        setViewMode('grid');
+      }
+    };
+    
+    handleResize(); // Check on mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [viewMode]);
   const [previousViewMode, setPreviousViewMode] = useState<'grid' | 'list' | 'map'>('grid');
   const [isSearching, setIsSearching] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
@@ -137,16 +152,17 @@ export default function Dashboard() {
 
     // Filter by location search
     if (selectedLocation && !isSearching) {
-      const searchCity = selectedLocation.city.toLowerCase();
-      const searchState = selectedLocation.state.toLowerCase();
+      const searchCity = selectedLocation.city.toLowerCase().trim();
+      const searchState = selectedLocation.state.toLowerCase().trim();
       
       filtered = filtered.filter(deal => {
-        const [city = '', stateZip = ''] = deal.location.toLowerCase().split(',').map(s => s.trim());
-        const state = stateZip.split(' ')[0];
+        // Parse the location string (format: "City, State ZipCode")
+        const [cityPart = '', stateZipPart = ''] = deal.location.split(',').map(s => s.trim());
+        const dealCity = cityPart.toLowerCase().trim();
+        const dealState = stateZipPart.split(' ')[0].toLowerCase().trim();
         
-        return city.includes(searchCity) || 
-               (state && state.includes(searchState)) ||
-               deal.location.toLowerCase().includes(searchCity);
+        // Exact city match
+        return dealCity === searchCity && (searchState === '' || dealState === searchState);
       });
     }
 
@@ -255,11 +271,15 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <Navigation variant="dashboard" />
       
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">Investment Properties</h1>
-          <p className="text-muted">Discover your next profitable real estate investment</p>
-        </div>
+      <div className="flex">
+        <DashboardSidebar />
+        
+        <main className="flex-1">
+          <div className="container mx-auto px-4 py-8">
+            <DashboardHeader 
+              totalProperties={deals.length} 
+              onRefresh={fetchProperties}
+            />
 
         {/* Unsupported Location Notification */}
         {unsupportedLocation && (
@@ -283,19 +303,6 @@ export default function Dashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
             Grid
-          </button>
-          <button
-            className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
-              viewMode === 'list' 
-                ? 'bg-accent text-secondary font-medium' 
-                : 'text-muted hover:text-primary'
-            }`}
-            onClick={() => setViewMode('list')}
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            List
           </button>
           <button
             className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
@@ -395,13 +402,57 @@ export default function Dashboard() {
 
         {/* Content Area */}
         <div className="transition-all duration-300">
-          {viewMode === 'map' ? (
+          {filteredDeals.length === 0 && !isLoading ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <svg 
+                className="w-16 h-16 text-muted mb-4" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={1.5} 
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" 
+                />
+              </svg>
+              <h3 className="text-lg font-semibold text-primary mb-2">
+                No properties available
+              </h3>
+              <p className="text-muted text-center max-w-md mb-6">
+                {selectedLocation ? (
+                  <>
+                    We don&apos;t have any properties in <span className="font-medium">{selectedLocation.fullAddress}</span> yet. 
+                    We&apos;re actively expanding to new markets and this area is on our list!
+                  </>
+                ) : (
+                  "No properties match your current filters. Try adjusting your search criteria."
+                )}
+              </p>
+              {selectedLocation && (
+                <button
+                  onClick={() => {
+                    setSelectedLocation(null);
+                    handleClearFilters();
+                  }}
+                  className="px-4 py-2 bg-accent text-secondary rounded-lg hover:bg-accent/90 transition-colors"
+                >
+                  View All Properties
+                </button>
+              )}
+            </div>
+          ) : viewMode === 'map' ? (
             <MapView 
               deals={filteredDeals}
               selectedLocation={selectedLocation}
               onDealClick={(deal) => {
                 setSelectedDeal(deal);
                 setIsModalOpen(true);
+                // On mobile, exit map view when viewing details
+                if (window.innerWidth < 768) {
+                  setViewMode('grid');
+                }
               }}
             />
           ) : (
@@ -447,6 +498,8 @@ export default function Dashboard() {
             Properties: {dynamicProperties.length} total = {deals.length} deals
           </div>
         )}
+          </div>
+        </main>
       </div>
 
       {/* Deal Modal */}

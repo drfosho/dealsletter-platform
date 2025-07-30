@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Deal {
   id: number;
@@ -55,6 +55,31 @@ interface DealModalProps {
 
 export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store original body styles
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      const originalPosition = window.getComputedStyle(document.body).position;
+      const originalTop = window.getComputedStyle(document.body).top;
+      const scrollY = window.scrollY;
+      
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      
+      return () => {
+        // Restore body scroll
+        document.body.style.overflow = originalStyle;
+        document.body.style.position = originalPosition;
+        document.body.style.top = originalTop;
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen || !deal) return null;
 
@@ -3402,8 +3427,13 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-0 md:p-4 overflow-hidden">
-      <div className="bg-background w-full max-w-full md:max-w-5xl h-full md:max-h-[90vh] md:rounded-xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[9999] overflow-hidden">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      
+      {/* Modal Container */}
+      <div className="relative h-full flex items-end md:items-center justify-center p-0 md:p-4">
+        <div className="bg-background w-full md:max-w-5xl h-full md:max-h-[90vh] md:rounded-xl shadow-2xl flex flex-col relative">
         {/* Header */}
         <div className="p-4 md:p-6 border-b border-border/20 flex-shrink-0">
           <div className="flex items-start justify-between">
@@ -3441,7 +3471,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 min-h-0">
+        <div className="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch p-4 md:p-6 min-h-0">
           {deal.id === 1 && renderSanDiegoDetails()}
           {deal.id === 2 && renderOaklandFlipDetails()}
           {deal.id === 3 && renderTampaDetails()}
@@ -3885,6 +3915,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
               </button>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

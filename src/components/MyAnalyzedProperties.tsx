@@ -2,18 +2,27 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { 
-  getUserAnalyzedProperties, 
-  togglePropertyFavorite, 
-  removeAnalyzedProperty,
-  type AnalyzedProperty 
-} from '@/lib/supabase/analyzed-properties';
+import { useRouter } from 'next/navigation';
 
 interface MyAnalyzedPropertiesProps {
   userId: string;
 }
 
+interface AnalyzedProperty {
+  id: string;
+  address: string;
+  deal_type: string;
+  is_favorite: boolean;
+  analysis_date: string;
+  roi: number;
+  profit: number;
+  property_data?: any;
+  purchase_price?: number;
+  strategy?: string;
+}
+
 export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesProps) {
+  const router = useRouter();
   const [properties, setProperties] = useState<AnalyzedProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,13 +30,34 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
   const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await getUserAnalyzedProperties(userId, 4);
+      const response = await fetch('/api/user/analyzed-properties?limit=4');
       
-      if (error) {
-        setError('Failed to load analyzed properties');
-        console.error('Error fetching properties:', error);
+      if (!response.ok) {
+        if (response.status === 401) {
+          // User is not authenticated - show empty state instead of error
+          setProperties([]);
+          setError(null);
+          setLoading(false);
+          return;
+        }
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch properties');
+      }
+      
+      const result = await response.json();
+      
+      if (result.error) {
+        if (result.error === 'Database table not found') {
+          // Table doesn't exist yet - show empty state instead of error
+          setProperties([]);
+          setError(null);
+        } else {
+          setError('Failed to load analyzed properties');
+          console.error('Error fetching properties:', result.error);
+        }
       } else {
-        setProperties(data);
+        setProperties(result.data || []);
         setError(null);
       }
     } catch (err) {
@@ -36,7 +66,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     fetchProperties();
@@ -44,36 +74,46 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
 
   const handleToggleFavorite = async (propertyId: string) => {
     try {
+      const property = properties.find(p => p.id === propertyId);
+      if (!property) return;
+      
       // Optimistically update UI
       setProperties(prev => 
-        prev.map(property => 
-          property.id === propertyId 
-            ? { ...property, is_favorite: !property.is_favorite }
-            : property
+        prev.map(p => 
+          p.id === propertyId 
+            ? { ...p, is_favorite: !p.is_favorite }
+            : p
         )
       );
 
-      const { error } = await togglePropertyFavorite(propertyId, userId);
+      const response = await fetch('/api/user/analyzed-properties', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          propertyId,
+          is_favorite: !property.is_favorite
+        })
+      });
       
-      if (error) {
+      if (!response.ok) {
         // Revert on error
         setProperties(prev => 
-          prev.map(property => 
-            property.id === propertyId 
-              ? { ...property, is_favorite: !property.is_favorite }
-              : property
+          prev.map(p => 
+            p.id === propertyId 
+              ? { ...p, is_favorite: !p.is_favorite }
+              : p
           )
         );
-        console.error('Error toggling favorite:', error);
+        console.error('Error toggling favorite');
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
       // Revert optimistic update
       setProperties(prev => 
-        prev.map(property => 
-          property.id === propertyId 
-            ? { ...property, is_favorite: !property.is_favorite }
-            : property
+        prev.map(p => 
+          p.id === propertyId 
+            ? { ...p, is_favorite: !p.is_favorite }
+            : p
         )
       );
     }
@@ -89,12 +129,16 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
       const originalProperties = properties;
       setProperties(prev => prev.filter(property => property.id !== propertyId));
 
-      const { error } = await removeAnalyzedProperty(propertyId, userId);
+      const response = await fetch('/api/user/analyzed-properties', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId })
+      });
       
-      if (error) {
+      if (!response.ok) {
         // Revert on error
         setProperties(originalProperties);
-        console.error('Error removing property:', error);
+        console.error('Error removing property');
         alert('Failed to remove property. Please try again.');
       }
     } catch (error) {
@@ -194,7 +238,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
             Start analyzing properties to track your investment research and build your portfolio history.
           </p>
           <Link 
-            href="/dashboard"
+            href="/analysis"
             className="inline-flex px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
           >
             Analyze Your First Property
@@ -216,7 +260,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
         </div>
         {properties.length > 4 && (
           <Link 
-            href="/profile/analyzed-properties"
+            href="/analysis/history"
             className="text-accent hover:text-accent/80 transition-colors text-sm font-medium flex items-center gap-1"
           >
             View All ({properties.length})
@@ -277,7 +321,10 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
 
               {/* Action Buttons */}
               <div className="space-y-2">
-                <button className="w-full px-3 py-2 bg-primary text-secondary text-sm rounded-lg hover:bg-primary/90 transition-colors font-medium">
+                <button 
+                  onClick={() => router.push(`/analysis/results/${property.id}`)}
+                  className="w-full px-3 py-2 bg-primary text-secondary text-sm rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                >
                   View Details
                 </button>
                 <div className="flex gap-2">
@@ -307,7 +354,7 @@ export default function MyAnalyzedProperties({ userId }: MyAnalyzedPropertiesPro
       {properties.length > 0 && properties.length <= 4 && (
         <div className="mt-6 text-center">
           <Link 
-            href="/dashboard"
+            href="/analysis"
             className="inline-flex px-4 py-2 text-accent hover:text-accent/80 transition-colors text-sm font-medium"
           >
             Analyze More Properties →

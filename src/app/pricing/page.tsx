@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import Navigation from '@/components/Navigation';
 
 interface PricingTier {
   id: string;
@@ -100,59 +101,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border/20 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="hover:opacity-80 transition-opacity">
-                <div className="relative">
-                  <Image 
-                    src="/logos/Copy of Dealsletter Official Logo Black.svg"
-                    alt="Dealsletter Logo"
-                    width={180}
-                    height={48}
-                    className="h-12 w-auto"
-                    priority
-                    suppressHydrationWarning
-                  />
-                </div>
-              </Link>
-              <div className="hidden md:flex items-center space-x-2 ml-2">
-                <div className="w-2 h-2 bg-accent rounded-full"></div>
-                <span className="text-sm font-medium text-muted">PRICING</span>
-              </div>
-            </div>
-            
-            {/* Navigation */}
-            <div className="hidden md:flex items-center space-x-4">
-              <Link href="/dashboard" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                Dashboard
-              </Link>
-              <Link href="/blog" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                Blog
-              </Link>
-              <Link href="/contact" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                Contact
-              </Link>
-              {user ? (
-                <Link href="/profile" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                  Profile
-                </Link>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <Link href="/auth/login" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
-                    Sign In
-                  </Link>
-                  <Link href="/auth/signup" className="px-4 py-2 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium">
-                    Get Started
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navigation variant="default" />
 
       {/* Hero Section */}
       <section className="py-16 bg-gradient-to-br from-background to-muted/5">
@@ -166,23 +115,28 @@ export default function PricingPage() {
           </p>
           
           {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <span className={`text-sm font-medium ${!isAnnual ? 'text-primary' : 'text-muted'}`}>
+          <div className="flex items-center justify-center gap-3 mb-12 px-4">
+            <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-primary' : 'text-muted'}`}>
               Monthly
             </span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
-              className="relative w-12 h-6 bg-muted/20 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-muted/30 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+              role="switch"
+              aria-checked={isAnnual}
             >
-              <div className={`absolute top-1 left-1 w-4 h-4 bg-primary rounded-full transition-transform ${
-                isAnnual ? 'translate-x-6' : 'translate-x-0'
-              }`} />
+              <span className="sr-only">Toggle annual billing</span>
+              <span
+                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-primary shadow-lg ring-0 transition duration-200 ease-in-out ${
+                  isAnnual ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
             </button>
-            <span className={`text-sm font-medium ${isAnnual ? 'text-primary' : 'text-muted'}`}>
+            <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-primary' : 'text-muted'}`}>
               Annual
             </span>
             {isAnnual && (
-              <span className="px-2 py-1 bg-green-500/20 text-green-600 rounded-md text-xs font-medium">
+              <span className="ml-2 inline-flex items-center rounded-md bg-green-500/20 px-2.5 py-1 text-xs font-medium text-green-600 whitespace-nowrap">
                 Save 17%
               </span>
             )}

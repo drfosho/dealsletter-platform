@@ -80,13 +80,20 @@ export async function middleware(request: NextRequest) {
   const isAdminUsers = request.nextUrl.pathname.startsWith('/auth/admin-users')
   const isHomePage = request.nextUrl.pathname === '/'
   const isApiRoute = request.nextUrl.pathname.startsWith('/api')
+  const isTestApiPage = request.nextUrl.pathname === '/test-api'
+  const isPropertySearchDemo = request.nextUrl.pathname === '/property-search-demo'
   const isContactPage = request.nextUrl.pathname === '/contact'
   const isFAQPage = request.nextUrl.pathname === '/faq'
   const isBlogPage = request.nextUrl.pathname.startsWith('/blog')
   const isPricingPage = request.nextUrl.pathname === '/pricing'
 
+  // Allow API routes to pass through without authentication
+  if (isApiRoute) {
+    return supabaseResponse
+  }
+
   // If user is not logged in and trying to access protected routes
-  if (!user && !isAuthPage && !isApiRoute && !isHomePage && !isContactPage && !isFAQPage && !isBlogPage && !isPricingPage) {
+  if (!user && !isAuthPage && !isHomePage && !isContactPage && !isFAQPage && !isBlogPage && !isPricingPage && !isTestApiPage && !isPropertySearchDemo) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)

@@ -1,3 +1,12 @@
+// Analytics tracking for the platform
+
+// Google Analytics declaration
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
+
 // Simple in-memory analytics (replace with database in production)
 interface UsageStats {
   totalRequests: number;
@@ -19,6 +28,123 @@ export const usageStats: UsageStats = {
   totalProcessingTime: 0,
   apiErrors: {},
   lastReset: new Date()
+};
+
+// Event tracking interface
+interface AnalyticsEvent {
+  action: string;
+  category: string;
+  label?: string;
+  value?: number;
+  properties?: Record<string, any>;
+}
+
+// Google Analytics tracking
+export function trackEvent(event: AnalyticsEvent) {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', event.action, {
+      event_category: event.category,
+      event_label: event.label,
+      value: event.value,
+      ...event.properties
+    });
+  }
+}
+
+// Analysis-specific events
+export const AnalysisEvents = {
+  startAnalysis: () => trackEvent({
+    action: 'start_analysis',
+    category: 'analysis'
+  }),
+  
+  completeAnalysis: (strategy: string, propertyValue: number) => trackEvent({
+    action: 'complete_analysis',
+    category: 'analysis',
+    label: strategy,
+    value: Math.round(propertyValue),
+    properties: {
+      strategy,
+      property_value: propertyValue
+    }
+  }),
+  
+  saveAnalysis: (analysisId: string) => trackEvent({
+    action: 'save_analysis',
+    category: 'analysis',
+    label: analysisId
+  }),
+  
+  shareAnalysis: (method: string) => trackEvent({
+    action: 'share_analysis',
+    category: 'analysis',
+    label: method
+  }),
+  
+  compareAnalyses: (count: number) => trackEvent({
+    action: 'compare_analyses',
+    category: 'analysis',
+    value: count
+  }),
+  
+  exportAnalysis: (format: string) => trackEvent({
+    action: 'export_analysis',
+    category: 'analysis',
+    label: format
+  }),
+  
+  reachUsageLimit: (plan: string) => trackEvent({
+    action: 'reach_usage_limit',
+    category: 'subscription',
+    label: plan
+  }),
+  
+  viewUpgradePage: (source: string) => trackEvent({
+    action: 'view_upgrade_page',
+    category: 'subscription',
+    label: source
+  }),
+  
+  upgradePlan: (fromPlan: string, toPlan: string) => trackEvent({
+    action: 'upgrade_plan',
+    category: 'subscription',
+    properties: {
+      from_plan: fromPlan,
+      to_plan: toPlan
+    }
+  })
+};
+
+// Dashboard events
+export const DashboardEvents = {
+  viewProperty: (propertyId: string | number, source: string) => trackEvent({
+    action: 'view_property',
+    category: 'dashboard',
+    label: source,
+    properties: {
+      property_id: propertyId.toString()
+    }
+  }),
+  
+  filterProperties: (filterType: string, filterValue: string) => trackEvent({
+    action: 'filter_properties',
+    category: 'dashboard',
+    properties: {
+      filter_type: filterType,
+      filter_value: filterValue
+    }
+  }),
+  
+  searchLocation: (location: string) => trackEvent({
+    action: 'search_location',
+    category: 'dashboard',
+    label: location
+  }),
+  
+  importAnalysis: () => trackEvent({
+    action: 'import_analysis',
+    category: 'dashboard'
+  })
 };
 
 // Track API usage
