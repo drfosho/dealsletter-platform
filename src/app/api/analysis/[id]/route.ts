@@ -41,9 +41,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Fetch the specific analysis
+    // Fetch the specific analysis from analyzed_properties table
     const { data: analysis, error } = await supabase
-      .from('user_analyses')
+      .from('analyzed_properties')
       .select('*')
       .eq('id', resolvedParams.id)
       .eq('user_id', user.id) // Ensure user owns this analysis
@@ -56,7 +56,33 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json(analysis);
+    // Transform the data to match the expected format
+    const transformedAnalysis = {
+      id: analysis.id,
+      user_id: analysis.user_id,
+      address: analysis.address,
+      analysis_date: analysis.analysis_date,
+      roi: analysis.roi,
+      profit: analysis.profit,
+      deal_type: analysis.deal_type,
+      is_favorite: analysis.is_favorite,
+      created_at: analysis.created_at,
+      updated_at: analysis.updated_at,
+      // Extract data from analysis_data JSONB field
+      strategy: analysis.analysis_data?.strategy || analysis.deal_type?.toLowerCase().replace(' & ', ''),
+      purchase_price: analysis.analysis_data?.purchase_price || 0,
+      down_payment_percent: analysis.analysis_data?.down_payment_percent || 20,
+      loan_term: analysis.analysis_data?.loan_term || 30,
+      interest_rate: analysis.analysis_data?.interest_rate || 7,
+      property_data: analysis.analysis_data?.property_data?.property || {},
+      rental_estimate: analysis.analysis_data?.property_data?.rental || {},
+      comparables: analysis.analysis_data?.property_data?.comparables || {},
+      market_data: analysis.analysis_data?.property_data?.market || {},
+      ai_analysis: analysis.analysis_data?.ai_analysis || {},
+      status: analysis.analysis_data?.status || 'completed'
+    };
+
+    return NextResponse.json(transformedAnalysis);
 
   } catch (error) {
     console.error('Get Analysis API Error:', error);
@@ -100,9 +126,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Delete the analysis
+    // Delete the analysis from analyzed_properties table
     const { error } = await supabase
-      .from('user_analyses')
+      .from('analyzed_properties')
       .delete()
       .eq('id', resolvedParams.id)
       .eq('user_id', user.id); // Ensure user owns this analysis

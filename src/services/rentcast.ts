@@ -64,12 +64,25 @@ class RentCastService {
         },
       });
 
+      const responseText = await response.text();
+
       if (!response.ok) {
-        const error = await response.json();
+        let error;
+        try {
+          error = JSON.parse(responseText);
+        } catch {
+          error = { message: responseText };
+        }
+        console.error(`RentCast API error ${endpoint}:`, response.status, error);
         throw new Error(error.message || `RentCast API error: ${response.status}`);
       }
 
-      return await response.json();
+      try {
+        return JSON.parse(responseText);
+      } catch {
+        console.error('Invalid JSON from RentCast:', responseText);
+        throw new Error('Invalid JSON response from RentCast API');
+      }
     } catch (error) {
       logError('RentCast API Request', error);
       throw error;

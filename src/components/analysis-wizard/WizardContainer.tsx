@@ -29,9 +29,9 @@ export default function WizardContainer({
       <div className="mb-8">
         <div className="flex items-center justify-between relative">
           {/* Progress Line */}
-          <div className="absolute left-0 top-1/2 w-full h-1 bg-muted -translate-y-1/2 -z-10" />
+          <div className="absolute left-0 top-1/2 w-full h-1 bg-muted -translate-y-1/2 z-0" />
           <div 
-            className="absolute left-0 top-1/2 h-1 bg-primary -translate-y-1/2 -z-10 transition-all duration-500"
+            className="absolute left-0 top-1/2 h-1 bg-primary -translate-y-1/2 z-0 transition-all duration-500"
             style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
           />
           
@@ -42,7 +42,7 @@ export default function WizardContainer({
               onClick={() => onStepClick?.(step.number)}
               disabled={!onStepClick || step.number > currentStep}
               className={`
-                relative flex flex-col items-center gap-2 bg-background
+                relative flex flex-col items-center gap-2 bg-background z-10
                 ${step.number <= currentStep ? 'cursor-pointer' : 'cursor-not-allowed'}
               `}
             >

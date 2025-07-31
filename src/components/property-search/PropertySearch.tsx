@@ -33,6 +33,8 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
         includeMarketData: true
       });
 
+      console.log('[PropertySearch] Raw search results:', searchResults);
+
       if (!searchResults.property) {
         throw new Error('Property not found at this address');
       }
@@ -45,6 +47,27 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
         comparables: searchResults.comparables,
         market: searchResults.market
       };
+      
+      console.log('[PropertySearch] Formatted data:', formattedData);
+      console.log('[PropertySearch] Property data structure:', {
+        bedrooms: formattedData.property?.bedrooms,
+        bathrooms: formattedData.property?.bathrooms,
+        squareFootage: formattedData.property?.squareFootage,
+        yearBuilt: formattedData.property?.yearBuilt,
+        propertyType: formattedData.property?.propertyType
+      });
+      console.log('[PropertySearch] Comparables structure:', {
+        hasValue: !!formattedData.comparables?.value,
+        value: formattedData.comparables?.value,
+        valueRangeLow: formattedData.comparables?.valueRangeLow,
+        valueRangeHigh: formattedData.comparables?.valueRangeHigh
+      });
+      console.log('[PropertySearch] Rental structure:', {
+        hasRentEstimate: !!formattedData.rental?.rentEstimate,
+        rentEstimate: formattedData.rental?.rentEstimate,
+        rentRangeLow: formattedData.rental?.rentRangeLow,
+        rentRangeHigh: formattedData.rental?.rentRangeHigh
+      });
 
       setPropertyData(formattedData);
       
@@ -52,9 +75,23 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
       if (onPropertySelect) {
         onPropertySelect(address, formattedData);
       }
+      
+      // Force a small delay to ensure UI updates
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (err) {
       console.error('Property search error:', err);
-      setError((err as Error).message || 'Failed to fetch property details');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch property details';
+      
+      // Check for specific error types
+      if (errorMessage.includes('not found')) {
+        setError('Property not found. Please verify the address and try again.');
+      } else if (errorMessage.includes('rate limit')) {
+        setError('Too many requests. Please wait a moment and try again.');
+      } else if (errorMessage.includes('not configured')) {
+        setError('Property search service is temporarily unavailable.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -74,10 +111,10 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-6">
         <div className="mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Property Search</h2>
-          <p className="text-sm text-gray-600">
+          <h2 className="text-xl font-semibold text-primary mb-2">Property Search</h2>
+          <p className="text-sm text-muted">
             Enter a property address to get instant valuation and rental estimates
           </p>
         </div>
@@ -104,10 +141,24 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
         {propertyData && !isLoading && (
           <>
             <PropertyPreview data={propertyData as any} />
+            
+            {/* Debug info - remove in production */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 p-4 bg-muted/20 rounded-lg text-xs">
+                <p className="font-semibold text-primary mb-2">Debug: Data Structure</p>
+                <div className="space-y-1 text-muted">
+                  <p>Has property data: {propertyData.property ? '✓' : '✗'}</p>
+                  <p>Has rental data: {propertyData.rental ? '✓' : '✗'}</p>
+                  <p>Has comparables: {propertyData.comparables ? '✓' : '✗'}</p>
+                  <p>Has market data: {propertyData.market ? '✓' : '✗'}</p>
+                </div>
+              </div>
+            )}
+            
             <div className="mt-4 flex justify-end">
               <button
                 onClick={handleReset}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                className="px-4 py-2 text-sm font-medium text-primary bg-card border border-border rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               >
                 Search Another Property
               </button>
@@ -116,20 +167,6 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
         )}
       </div>
 
-      {/* Mobile-optimized styles */}
-      <style jsx>{`
-        @media (max-width: 640px) {
-          :global(.pac-container) {
-            z-index: 9999;
-            font-family: inherit;
-          }
-          
-          :global(.pac-item) {
-            padding: 10px 14px;
-            font-size: 14px;
-          }
-        }
-      `}</style>
     </div>
   );
 }

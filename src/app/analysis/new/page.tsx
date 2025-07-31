@@ -91,6 +91,23 @@ export default function NewAnalysisPage() {
     router.push('/analysis');
   };
 
+  const handleReset = () => {
+    // Clear all wizard data
+    localStorage.removeItem('analysis-wizard-draft');
+    setWizardData({
+      address: '',
+      strategy: '',
+      financial: {
+        purchasePrice: 0,
+        downPaymentPercent: 20,
+        interestRate: 7.0,
+        loanTerm: 30,
+      }
+    });
+    setCurrentStep(1);
+    setCanProceed(false);
+  };
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -150,6 +167,15 @@ export default function NewAnalysisPage() {
         <DashboardSidebar />
         <main className="flex-1 p-4 lg:p-6">
           <div className="max-w-4xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold text-primary">Property Analysis</h1>
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 text-sm text-muted hover:text-primary border border-border rounded-lg hover:border-primary/50 transition-colors"
+              >
+                {currentStep === 1 ? 'Clear Data' : 'Start Over'}
+              </button>
+            </div>
             <WizardContainer
               currentStep={currentStep}
               totalSteps={5}

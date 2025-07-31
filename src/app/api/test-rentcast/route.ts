@@ -1,77 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rentCastService } from '@/services/rentcast';
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const address = searchParams.get('address') || '1234 Main St, Austin, TX 78701';
+  
   try {
-    const apiKey = process.env.RENTCAST_API_KEY;
-    const baseUrl = process.env.RENTCAST_API_URL || 'https://api.rentcast.io/v1';
+    console.log('[Test] Testing RentCast API with address:', address);
     
-    if (!apiKey) {
-      return NextResponse.json({ error: 'RentCast API key not configured' }, { status: 500 });
+    // Test property details
+    let propertyDetails;
+    try {
+      propertyDetails = await rentCastService.getPropertyDetails(address);
+      console.log('[Test] Property details success:', propertyDetails);
+    } catch (err) {
+      console.error('[Test] Property details failed:', err);
     }
-
-    // Try different test addresses
-    const testAddresses = [
-      '1600 Pennsylvania Avenue NW, Washington, DC 20500',
-      '350 5th Avenue, New York, NY 10118',
-      '1 Infinite Loop, Cupertino, CA 95014'
-    ];
-
-    const results = [];
-
-    for (const address of testAddresses) {
-      const encodedAddress = encodeURIComponent(address);
-      
-      console.log(`Testing RentCast API with address: ${address}`);
-      console.log(`URL: ${baseUrl}/properties?address=${encodedAddress}`);
-
-      try {
-        const response = await fetch(`${baseUrl}/properties?address=${encodedAddress}`, {
-          headers: {
-            'Accept': 'application/json',
-            'X-Api-Key': apiKey,
-          },
-        });
-
-        const responseText = await response.text();
-        
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch {
-          data = { rawResponse: responseText };
-        }
-
-        results.push({
-          address,
-          status: response.status,
-          statusText: response.statusText,
-          data
-        });
-
-        // If we get a successful response, break
-        if (response.ok) {
-          break;
-        }
-      } catch (fetchError) {
-        results.push({
-          address,
-          error: fetchError instanceof Error ? fetchError.message : 'Fetch failed',
-        });
-      }
+    
+    // Test rental estimate
+    let rentalEstimate;
+    try {
+      rentalEstimate = await rentCastService.getRentalEstimate(address);
+      console.log('[Test] Rental estimate success:', rentalEstimate);
+    } catch (err) {
+      console.error('[Test] Rental estimate failed:', err);
     }
-
+    
+    // Test comparables
+    let comparables;
+    try {
+      comparables = await rentCastService.getSaleComparables(address);
+      console.log('[Test] Comparables success:', comparables);
+    } catch (err) {
+      console.error('[Test] Comparables failed:', err);
+    }
+    
     return NextResponse.json({
-      apiKeyPresent: !!apiKey,
-      apiKeyPrefix: apiKey.substring(0, 10) + '...',
-      baseUrl,
-      results,
-      timestamp: new Date().toISOString()
+      success: true,
+      address,
+      data: {
+        propertyDetails,
+        rentalEstimate,
+        comparables
+      }
     });
+    
   } catch (error) {
-    console.error('Test RentCast Error:', error);
-    return NextResponse.json({ 
+    console.error('[Test] Overall error:', error);
+    return NextResponse.json({
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      address
     }, { status: 500 });
   }
 }

@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import Navigation from '@/components/Navigation';
 import DashboardHeader from '@/components/DashboardHeader';
 import DashboardSidebar from '@/components/DashboardSidebar';
+import AdminTools from '@/components/AdminTools';
 
 const MapView = dynamic(() => import('./MapView'), { 
   ssr: false,
@@ -87,12 +88,18 @@ export default function Dashboard() {
       try {
         setIsLoading(true);
         console.log('Dashboard: Fetching properties from /api/properties');
-        const response = await fetch('/api/properties');
+        const response = await fetch('/api/properties', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
         console.log('Dashboard: Response status:', response.status);
         if (response.ok) {
           const data = await response.json();
           console.log('Dashboard: Fetched properties:', data.length);
           console.log('Dashboard: Raw properties data:', data);
+          console.log('Dashboard: First property:', data[0]);
           const formattedProperties = data.map((prop: Deal & Record<string, unknown>, index: number) => ({
             id: typeof prop.id === 'string' ? parseInt(prop.id) : prop.id || 1000 + index,
             title: prop.title,
@@ -121,12 +128,18 @@ export default function Dashboard() {
             monthlyRent: prop.monthlyRent,
             neighborhood: prop.neighborhood
           }));
+          console.log('Dashboard: Formatted properties:', formattedProperties.length);
+          console.log('Dashboard: First formatted property:', formattedProperties[0]);
           setDynamicProperties(formattedProperties);
+          console.log('Dashboard: Set dynamicProperties state');
+        } else {
+          console.error('Dashboard: Failed to fetch properties, status:', response.status);
         }
       } catch (error) {
-        console.error('Error fetching properties:', error);
+        console.error('Dashboard: Error fetching properties:', error);
       } finally {
         setIsLoading(false);
+        console.log('Dashboard: Loading complete');
       }
     };
 
@@ -136,6 +149,7 @@ export default function Dashboard() {
 
   // All deals now come from the API (including static deals)
   const deals = useMemo(() => {
+    console.log('Dashboard: Computing deals memo, dynamicProperties:', dynamicProperties.length);
     return dynamicProperties;
   }, [dynamicProperties]);
 
@@ -400,6 +414,7 @@ export default function Dashboard() {
           onClearFilters={handleClearFilters}
         />
 
+
         {/* Content Area */}
         <div className="transition-all duration-300">
           {filteredDeals.length === 0 && !isLoading ? (
@@ -492,12 +507,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Debug info - only in development */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 text-xs text-muted/50 text-center">
-            Properties: {dynamicProperties.length} total = {deals.length} deals
-          </div>
-        )}
           </div>
         </main>
       </div>
@@ -521,6 +530,9 @@ export default function Dashboard() {
           setComprehensiveProperty(null);
         }}
       />
+
+      {/* Floating Admin Button - Only visible to admins */}
+      <AdminTools variant="floating" />
     </div>
   );
 }

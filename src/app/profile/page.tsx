@@ -12,6 +12,7 @@ import DealModal from '@/app/dashboard/DealModal';
 import { getUserProfile } from '@/lib/supabase/profiles';
 import { getCurrentMonthUsage, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 import UsageTracker from '@/components/UsageTracker';
+import AdminTools from '@/components/AdminTools';
 
 interface SavedProperty {
   id: number;
@@ -1482,6 +1483,9 @@ export default function ProfilePage() {
                 </label>
               </div>
             </div>
+
+            {/* Admin Tools - Only visible to admins */}
+            <AdminTools variant="profile" />
 
             {/* Danger Zone */}
             <div className="bg-red-500/10 rounded-xl border border-red-500/20 p-6">

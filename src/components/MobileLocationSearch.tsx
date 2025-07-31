@@ -40,10 +40,17 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
 
   // Focus input on mount with viewport adjustment
   useEffect(() => {
+    // Store original body styles
+    const originalOverflow = document.body.style.overflow;
+    const originalPosition = document.body.style.position;
+    const originalWidth = document.body.style.width;
+    const scrollY = window.scrollY;
+    
     // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden';
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
+    document.body.style.top = `-${scrollY}px`;
     
     const timer = setTimeout(() => {
       inputRef.current?.focus();
@@ -54,9 +61,12 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
     return () => {
       clearTimeout(timer);
       // Restore body scroll
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
+      document.body.style.overflow = originalOverflow;
+      document.body.style.position = originalPosition;
+      document.body.style.width = originalWidth;
+      document.body.style.top = '';
+      // Restore scroll position
+      window.scrollTo(0, scrollY);
     };
   }, []);
 

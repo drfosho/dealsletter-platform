@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { propertyAPI } from '@/services/property-api';
 import { logError } from '@/utils/error-utils';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAdminConfig } from '@/lib/admin-config';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -60,10 +61,13 @@ export async function POST(request: NextRequest) {
       .eq('name', profile?.subscription_tier || 'free')
       .single();
 
-    const limit = tier?.monthly_analysis_limit || 5;
+    // Check if user is admin
+    const adminConfig = getAdminConfig(user.email);
+    
+    const limit = adminConfig.bypassSubscriptionLimits ? 9999 : (tier?.monthly_analysis_limit || 5);
     const currentUsage = usage?.analyses_count || 0;
 
-    if (limit !== -1 && currentUsage >= limit) {
+    if (!adminConfig.bypassSubscriptionLimits && limit !== -1 && currentUsage >= limit) {
       return NextResponse.json(
         { error: 'Monthly analysis limit reached. Please upgrade your plan.' },
         { status: 403 }

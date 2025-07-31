@@ -47,7 +47,8 @@ export default function Step4Generate({
           loanType: 'conventional'
         },
         rehabCosts: data.financial.renovationCosts || 0,
-        strategyDetails: data.strategyDetails
+        strategyDetails: data.strategyDetails,
+        propertyData: data.propertyData // Include the property data
       })
     });
   }, [data]);
@@ -66,7 +67,8 @@ export default function Step4Generate({
         try {
           const response = await generateAnalysis();
           if (!response.ok) {
-            throw new Error('Failed to generate analysis');
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || errorData.message || 'Failed to generate analysis');
           }
           const result = await response.json();
           setAnalysisId(result.id);

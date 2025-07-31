@@ -69,10 +69,13 @@ export async function POST(request: NextRequest) {
       if (body.includeRentEstimates) {
         promises.push(
           rentCastService.getRentalEstimate(address)
-            .then(data => { results.rental = data; })
+            .then(data => { 
+              console.log('[API] Rental estimate data:', data);
+              results.rental = data; 
+            })
             .catch(err => { 
-              console.error('Failed to get rental estimate:', err);
-              results.rental = { error: 'Unable to fetch rental estimates' };
+              console.error('[API] Failed to get rental estimate:', err);
+              results.rental = null; // Set to null instead of error object
             })
         );
       }
@@ -80,10 +83,13 @@ export async function POST(request: NextRequest) {
       if (body.includeComparables) {
         promises.push(
           rentCastService.getSaleComparables(address)
-            .then(data => { results.comparables = data; })
+            .then(data => { 
+              console.log('[API] Comparables data:', data);
+              results.comparables = data; 
+            })
             .catch(err => { 
-              console.error('Failed to get comparables:', err);
-              results.comparables = { error: 'Unable to fetch comparables' };
+              console.error('[API] Failed to get comparables:', err);
+              results.comparables = null; // Set to null instead of error object
             })
         );
       }
@@ -91,10 +97,13 @@ export async function POST(request: NextRequest) {
       if (body.includeMarketData && propertyDetails.zipCode) {
         promises.push(
           rentCastService.getMarketData(propertyDetails.zipCode)
-            .then(data => { results.market = data; })
+            .then(data => { 
+              console.log('[API] Market data:', data);
+              results.market = data; 
+            })
             .catch(err => { 
-              console.error('Failed to get market data:', err);
-              results.market = { error: 'Unable to fetch market data' };
+              console.error('[API] Failed to get market data:', err);
+              results.market = null; // Set to null instead of error object
             })
         );
       }

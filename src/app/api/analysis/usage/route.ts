@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { getAdminConfig } from '@/lib/admin-config';
 
 export async function GET(_request: NextRequest) {
   try {
@@ -30,6 +31,22 @@ export async function GET(_request: NextRequest) {
         { error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    // Check if user is admin
+    const adminConfig = getAdminConfig(user.email);
+    
+    // If admin, return unlimited access
+    if (adminConfig.bypassSubscriptionLimits) {
+      return NextResponse.json({
+        can_analyze: true,
+        analyses_used: 0,
+        tier_limit: 9999,
+        remaining: 9999,
+        subscription_tier: 'enterprise',
+        message: 'Admin access - unlimited analyses',
+        is_admin: true
+      });
     }
 
     // Check user's usage limits

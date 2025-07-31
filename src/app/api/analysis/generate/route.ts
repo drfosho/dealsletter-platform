@@ -6,32 +6,83 @@ import { PropertyAnalysisRequest } from '@/types/rentcast';
 // These types are imported but not used in this file
 import { logError } from '@/utils/error-utils';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAdminConfig } from '@/lib/admin-config';
+
+console.log('[Generate] Module loaded, Anthropic SDK available:', !!Anthropic);
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
+console.log('[Generate] Anthropic client initialized');
+
 export async function POST(request: NextRequest) {
+  console.log('=== ANALYSIS GENERATION START ===');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Request method:', request.method);
+  console.log('Request URL:', request.url);
+  console.log('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
+  
   try {
+    console.log('\n--- STEP 1: Environment Validation ---');
+    
+    console.log('Environment variables check:');
+    console.log('- Anthropic API key exists:', !!process.env.ANTHROPIC_API_KEY);
+    console.log('- Anthropic API key length:', process.env.ANTHROPIC_API_KEY?.length || 0);
+    console.log('- Supabase URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('- Supabase URL value:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('- Supabase anon key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    console.log('- Supabase anon key length:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 0);
+    console.log('- RentCast API key exists:', !!process.env.RENTCAST_API_KEY);
+    console.log('- Node environment:', process.env.NODE_ENV);
+    
     // Validate API keys
     if (!process.env.RENTCAST_API_KEY || !process.env.ANTHROPIC_API_KEY) {
+      console.error('[Generate] Missing API keys!');
       return NextResponse.json(
         { error: 'API services are not properly configured' },
         { status: 503 }
       );
     }
 
-    // Create Supabase client
-    const cookieStore = await cookies();
+    console.log('\n--- STEP 2: Supabase Client Creation ---');
+    console.log('Creating Supabase client...');
+    
+    let cookieStore;
+    try {
+      cookieStore = await cookies();
+      console.log('Cookie store retrieved successfully');
+    } catch (cookieError) {
+      console.error('Failed to get cookie store:', cookieError);
+      throw cookieError;
+    }
+    
+    // Validate Supabase configuration
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      console.error('Missing Supabase configuration');
+      return NextResponse.json(
+        { error: 'Database configuration error' },
+        { status: 500 }
+      );
+    }
+    
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    
+    console.log('Creating Supabase client with URL:', supabaseUrl);
+    
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      supabaseUrl,
+      supabaseAnonKey,
       {
         cookies: {
           getAll() {
-            return cookieStore.getAll();
+            const cookies = cookieStore.getAll();
+            console.log('Getting cookies:', cookies.length, 'cookies');
+            return cookies;
           },
           setAll(cookiesToSet) {
+            console.log('Setting cookies:', cookiesToSet.length, 'cookies');
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
@@ -39,41 +90,80 @@ export async function POST(request: NextRequest) {
         },
       }
     );
+    console.log('Supabase client created successfully');
+    console.log('Supabase client type:', typeof supabase);
+    console.log('Supabase client methods:', Object.keys(supabase));
 
-    // Check authentication
+    console.log('\n--- STEP 3: Authentication Check ---');
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('Auth check completed');
+    console.log('User authenticated:', !!user);
+    console.log('User ID:', user?.id);
+    console.log('User email:', user?.email);
+    console.log('Auth error:', authError?.message);
+    
     if (authError || !user) {
+      console.log('Authentication failed - returning 401');
+      console.log('Auth error details:', authError);
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Check user's usage limits
-    const { data: usageCheck, error: usageError } = await supabase
-      .rpc('can_user_analyze', { p_user_id: user.id });
+    // Check if user is admin
+    const adminConfig = getAdminConfig(user.email);
     
-    if (usageError) {
-      console.error('Usage check error:', usageError);
-      return NextResponse.json(
-        { error: 'Failed to check usage limits' },
-        { status: 500 }
-      );
-    }
-    
-    if (!usageCheck?.can_analyze) {
-      return NextResponse.json(
-        { 
-          error: 'Monthly analysis limit reached',
-          message: usageCheck?.message || 'Please upgrade to Pro for more analyses',
-          usage: usageCheck
-        },
-        { status: 403 }
-      );
+    // Skip usage check for admins
+    if (!adminConfig.bypassSubscriptionLimits) {
+      // Check user's usage limits
+      const { data: usageCheck, error: usageError } = await supabase
+        .rpc('can_user_analyze', { p_user_id: user.id });
+      
+      if (usageError) {
+        console.error('Usage check error:', usageError);
+        return NextResponse.json(
+          { error: 'Failed to check usage limits' },
+          { status: 500 }
+        );
+      }
+      
+      if (!usageCheck?.can_analyze) {
+        return NextResponse.json(
+          { 
+            error: 'Monthly analysis limit reached',
+            message: usageCheck?.message || 'Please upgrade to Pro for more analyses',
+            usage: usageCheck
+          },
+          { status: 403 }
+        );
+      }
     }
 
-    // Parse request body
-    const body: PropertyAnalysisRequest = await request.json();
+    console.log('\n--- STEP 4: Request Body Parsing ---');
+    let body: PropertyAnalysisRequest;
+    try {
+      const requestText = await request.text();
+      console.log('Raw request body:', requestText);
+      body = JSON.parse(requestText);
+      console.log('Request body parsed successfully');
+      console.log('Parsed body:', JSON.stringify(body, null, 2));
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parseError instanceof Error ? parseError.message : 'Unknown parse error' },
+        { status: 400 }
+      );
+    }
+    
+    console.log('Request body details:', {
+      address: body.address,
+      strategy: body.strategy,
+      hasPropertyData: !!(body as any).propertyData,
+      purchasePrice: body.purchasePrice,
+      downPayment: body.downPayment,
+      loanTerms: body.loanTerms
+    });
     
     // Validate required fields
     if (!body.address || !body.strategy) {
@@ -92,16 +182,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check property cache first
-    const { data: cachedProperty } = await supabase
+    console.log('\n--- STEP 5: Property Cache Check ---');
+    console.log('Checking property cache for address:', body.address);
+    const { data: cachedProperty, error: cacheError } = await supabase
       .from('property_cache')
       .select('*')
       .eq('address', body.address)
       .single();
+    
+    console.log('Cache check completed');
+    console.log('Cached property found:', !!cachedProperty);
+    console.log('Cache error:', cacheError?.message);
 
     let propertyData;
+    let estimatedValue = 0;
     
-    if (cachedProperty && new Date(cachedProperty.expires_at) > new Date()) {
+    console.log('\n--- STEP 5.1: Property Data Retrieval ---');
+    // Check if property data was passed from client (from wizard)
+    if ((body as any).propertyData) {
+      console.log('Property data provided in request body');
+      propertyData = (body as any).propertyData;
+      console.log('Property data type:', typeof propertyData);
+      console.log('Property data keys:', propertyData ? Object.keys(propertyData) : 'null/undefined');
+      
+      // Extract estimated value from comparables
+      if (propertyData && propertyData.comparables) {
+        estimatedValue = propertyData.comparables.price || propertyData.comparables.value || 0;
+        console.log('Extracted estimated value from client data:', estimatedValue);
+      }
+    } else if (cachedProperty && new Date(cachedProperty.expires_at) > new Date()) {
       // Use cached data
       propertyData = {
         property: cachedProperty.property_data,
@@ -109,6 +218,9 @@ export async function POST(request: NextRequest) {
         market: cachedProperty.market_data,
         comparables: cachedProperty.comparables
       };
+      
+      // Extract estimated value from cached comparables
+      estimatedValue = cachedProperty.comparables?.price || cachedProperty.comparables?.value || 0;
       
       // Update cache hit count
       await supabase
@@ -120,62 +232,234 @@ export async function POST(request: NextRequest) {
         .eq('id', cachedProperty.id);
     } else {
       // Get fresh data from RentCast
-      propertyData = await rentCastService.getComprehensivePropertyData(body.address);
-      
-      // Cache the property data
-      await supabase
-        .from('property_cache')
-        .upsert({
-          address: body.address,
-          property_data: propertyData.property,
-          rental_estimate: propertyData.rental,
-          market_data: propertyData.market,
-          comparables: propertyData.comparables,
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-        });
+      try {
+        propertyData = await rentCastService.getComprehensivePropertyData(body.address);
+        
+        // Extract estimated value from fresh data
+        estimatedValue = propertyData.comparables?.price || propertyData.comparables?.value || 0;
+        
+        // Cache the property data
+        await supabase
+          .from('property_cache')
+          .upsert({
+            address: body.address,
+            property_data: propertyData.property,
+            rental_estimate: propertyData.rental,
+            market_data: propertyData.market,
+            comparables: propertyData.comparables,
+            expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+          });
+      } catch (err) {
+        console.error('Failed to fetch property data:', err);
+        return NextResponse.json(
+          { error: 'Failed to fetch property data', details: err instanceof Error ? err.message : 'Unknown error' },
+          { status: 500 }
+        );
+      }
     }
 
-    // Create initial analysis record
+    console.log('\n--- STEP 6: Preparing Analysis Record ---');
+    const purchasePrice = body.purchasePrice || estimatedValue || 0;
+    console.log('Purchase price:', purchasePrice);
+    console.log('Estimated value:', estimatedValue);
+    console.log('Property data available:', !!propertyData);
+    console.log('Property data keys:', propertyData ? Object.keys(propertyData) : 'none');
+
+    console.log('\n--- STEP 7: Creating Database Record ---');
+    
+    // Map strategy to deal_type for analyzed_properties table
+    const strategyToDealType: Record<string, string> = {
+      'rental': 'Buy & Hold',
+      'flip': 'Fix & Flip',
+      'brrrr': 'BRRRR',
+      'commercial': 'Buy & Hold'
+    };
+    
+    // Prepare data for both possible table schemas
+    const insertData = {
+      user_id: user.id,
+      address: body.address,
+      strategy: body.strategy,
+      purchase_price: purchasePrice,
+      down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
+      loan_term: body.loanTerms?.loanTerm || 30,
+      interest_rate: body.loanTerms?.interestRate || 7,
+      rehab_costs: body.rehabCosts,
+      property_data: propertyData?.property || null,
+      market_data: propertyData?.market || null,
+      rental_estimate: propertyData?.rental || null,
+      comparables: propertyData?.comparables || null,
+      status: 'generating',
+      ai_analysis: { status: 'generating' }, // Placeholder - will be updated after generation
+      // Additional fields for analyzed_properties table if needed
+      roi: 0.0, // Will be calculated after AI analysis
+      profit: 0, // Will be calculated after AI analysis
+      deal_type: strategyToDealType[body.strategy] || 'Buy & Hold',
+      analysis_date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+      analysis_data: {} // Will be populated after AI analysis
+    };
+    
+    console.log('Insert data prepared:', JSON.stringify(insertData, null, 2));
+    
+    // Test Supabase connection first
+    console.log('\n--- STEP 7.1: Testing Supabase Connection ---');
+    console.log('Testing Supabase connection...');
+    
+    // Test 1: Check if we can query the table
+    const { data: testData, error: testError } = await supabase
+      .from('analyzed_properties')
+      .select('count(*)')
+      .limit(1);
+    
+    console.log('Supabase test query result:', { 
+      hasData: !!testData, 
+      data: testData,
+      hasError: !!testError,
+      error: testError,
+      errorType: typeof testError,
+      errorKeys: testError ? Object.keys(testError) : 'null'
+    });
+    
+    // Test 2: List required columns for analyzed_properties
+    console.log('Required columns for analyzed_properties table:');
+    console.log('- user_id (UUID, required)');
+    console.log('- address (TEXT, required)');
+    console.log('- roi (DECIMAL, required)');
+    console.log('- profit (INTEGER, required)');
+    console.log('- deal_type (TEXT, required, must be one of allowed values)');
+    console.log('- analysis_date (DATE, has default)');
+    console.log('- analysis_data (JSONB, optional)');
+    
+    // Test 3: Try a simpler insert with minimal data
+    console.log('\n--- STEP 7.2: Attempting Insert ---');
+    console.log('Attempting insert to user_analyses table...');
+    
+    // Log the exact data being sent
+    console.log('Exact insert payload:', JSON.stringify(insertData, null, 2));
+    
+    // Use analyzed_properties table directly (user_analyses doesn't exist)
+    console.log('Using analyzed_properties table...');
     const { data: analysisRecord, error: createError } = await supabase
-      .from('user_analyses')
+      .from('analyzed_properties')
       .insert({
         user_id: user.id,
         address: body.address,
-        strategy: body.strategy,
-        purchase_price: body.purchasePrice,
-        down_payment_percent: body.downPayment && body.purchasePrice ? (body.downPayment / body.purchasePrice) * 100 : 20,
-        loan_term: body.loanTerms?.loanTerm || 30,
-        interest_rate: body.loanTerms?.interestRate || 7,
-        rehab_costs: body.rehabCosts,
-        property_data: propertyData.property,
-        market_data: propertyData.market,
-        rental_estimate: propertyData.rental,
-        comparables: propertyData.comparables,
-        status: 'generating',
-        ai_analysis: {} // Will be updated after generation
+        roi: 0.0, // Will be calculated after AI analysis
+        profit: 0, // Will be calculated after AI analysis
+        deal_type: strategyToDealType[body.strategy] || 'Buy & Hold',
+        analysis_date: new Date().toISOString().split('T')[0],
+        analysis_data: {
+          strategy: body.strategy,
+          purchase_price: purchasePrice,
+          down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
+          loan_term: body.loanTerms?.loanTerm || 30,
+          interest_rate: body.loanTerms?.interestRate || 7,
+          property_data: propertyData,
+          status: 'generating'
+        }
       })
       .select()
       .single();
 
     if (createError || !analysisRecord) {
-      console.error('Failed to create analysis record:', createError);
+      console.error('\n=== DATABASE INSERT ERROR ===');
+      console.error('Failed to create analysis record');
+      console.error('Error present:', !!createError);
+      console.error('Record present:', !!analysisRecord);
+      
+      if (createError) {
+        console.error('Error object:', createError);
+        console.error('Error type:', typeof createError);
+        console.error('Error constructor:', createError?.constructor?.name);
+        console.error('Error is null:', createError === null);
+        console.error('Error is undefined:', createError === undefined);
+        console.error('Error keys:', Object.keys(createError || {}));
+        console.error('Error own property names:', Object.getOwnPropertyNames(createError || {}));
+        console.error('Error entries:', Object.entries(createError || {}));
+        console.error('Error prototype:', Object.getPrototypeOf(createError));
+        
+        // Try to access properties directly
+        console.error('Direct property access:');
+        console.error('- message:', (createError as any)?.message);
+        console.error('- code:', (createError as any)?.code);
+        console.error('- details:', (createError as any)?.details);
+        console.error('- hint:', (createError as any)?.hint);
+        console.error('- error:', (createError as any)?.error);
+        
+        // Stringify with replacer to catch all properties
+        console.error('Full error stringified:', JSON.stringify(createError, (key, value) => {
+          console.log(`Stringifying key: ${key}, value type: ${typeof value}`);
+          return value;
+        }, 2));
+        
+        // Check if it's a PostgrestError
+        console.error('Is PostgrestError:', createError?.constructor?.name === 'PostgrestError');
+      }
+      
+      console.error('Attempted insert data:', {
+        user_id: user.id,
+        address: body.address,
+        strategy: body.strategy,
+        purchase_price: purchasePrice,
+        propertyData: propertyData ? 'Present' : 'Missing',
+        fields: {
+          down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
+          loan_term: body.loanTerms?.loanTerm || 30,
+          interest_rate: body.loanTerms?.interestRate || 7,
+        }
+      });
+      
+      // Try to extract more error information
+      let errorMessage = 'Unknown database error';
+      let errorCode = null;
+      let errorHint = null;
+      
+      if (createError) {
+        errorMessage = createError.message || createError.error || createError.details || errorMessage;
+        errorCode = createError.code;
+        errorHint = createError.hint;
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to create analysis' },
+        { 
+          error: 'Failed to create analysis', 
+          details: errorMessage,
+          code: errorCode,
+          hint: errorHint,
+          table: 'user_analyses'
+        },
         { status: 500 }
       );
     }
 
+    console.log('\n--- STEP 8: AI Analysis Generation ---');
     try {
-      // Generate analysis using AI
-      const aiAnalysis = await generatePropertyAnalysis(propertyData, body);
+      console.log('Calling generatePropertyAnalysis function...');
+      console.log('Property data passed:', !!propertyData);
+      console.log('Request body passed:', !!body);
       
-      // Update analysis with AI results
-      const { error: updateError } = await supabase
-        .from('user_analyses')
-        .update({
+      const aiAnalysis = await generatePropertyAnalysis(propertyData, body);
+      console.log('AI analysis generated successfully');
+      console.log('AI analysis keys:', Object.keys(aiAnalysis));
+      
+      // Update analyzed_properties table with AI results
+      console.log('Updating analyzed_properties table with AI analysis...');
+      
+      const updateData = {
+        analysis_data: {
+          ...analysisRecord.analysis_data,
           ai_analysis: aiAnalysis,
           status: 'completed'
-        })
+        },
+        roi: aiAnalysis.financial_metrics?.roi || 0,
+        profit: aiAnalysis.financial_metrics?.total_profit || 0
+      };
+      
+      console.log('Update data:', JSON.stringify(updateData, null, 2));
+      
+      const { error: updateError } = await supabase
+        .from('analyzed_properties')
+        .update(updateData)
         .eq('id', analysisRecord.id);
 
       if (updateError) {
@@ -215,6 +499,15 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
+    console.error('\n=== DETAILED ERROR INFORMATION ===');
+    console.error('Error caught at:', new Date().toISOString());
+    console.error('Error type:', typeof error);
+    console.error('Error constructor:', error?.constructor?.name);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Error cause:', error instanceof Error ? error.cause : 'No cause');
+    console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    
     logError('Property Analysis API', error);
     
     if (error instanceof Error) {
@@ -253,38 +546,108 @@ interface PropertyData {
 }
 
 async function generatePropertyAnalysis(propertyData: PropertyData, request: PropertyAnalysisRequest) {
+  console.log('\n[generatePropertyAnalysis] Starting AI analysis generation');
+  console.log('[generatePropertyAnalysis] Property data received:', !!propertyData);
+  console.log('[generatePropertyAnalysis] Request data received:', !!request);
+  
   try {
     // Prepare context for AI
+    console.log('[generatePropertyAnalysis] Preparing context...');
     const context = prepareAnalysisContext(propertyData, request);
+    console.log('[generatePropertyAnalysis] Context length:', context.length);
+    console.log('[generatePropertyAnalysis] Context preview:', context.substring(0, 200) + '...');
     
     // Generate analysis using Claude
-    const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
-      max_tokens: 2000,
+    console.log('[generatePropertyAnalysis] Calling Claude API...');
+    const claudeRequest = {
+      model: "claude-3-5-sonnet-20241022", // Using latest available model
+      max_tokens: 4000,
       temperature: 0.3,
-      system: `You are a professional real estate investment analyst. Provide detailed, data-driven analysis for real estate investments. Focus on financial metrics, risks, and opportunities. Be specific with numbers and calculations.`,
+      system: `You are a professional real estate investment analyst. Create a comprehensive, data-driven analysis for real estate investments. 
+
+Your analysis must include:
+1. Executive Summary (2-3 sentences)
+2. Investment Recommendation (Buy/Hold/Pass with clear reasoning)
+3. Key Financial Metrics:
+   - Cap Rate (with calculation)
+   - Cash-on-Cash Return (with calculation)
+   - Monthly Cash Flow (with detailed breakdown)
+   - Total ROI (5-year projection)
+   - Annual NOI
+4. Risk Assessment (Low/Medium/High with specific factors)
+5. Market Analysis
+6. Investment Strategy Details
+7. 3-5 Key Opportunities
+8. 3-5 Key Risks
+9. Action Items for investor
+
+Be specific with ALL numbers and show your calculations. Format monetary values with proper commas.`,
       messages: [
         {
           role: "user",
           content: context
         }
       ]
-    });
-
+    };
+    
+    console.log('[generatePropertyAnalysis] Claude request prepared');
+    console.log('[generatePropertyAnalysis] Model:', claudeRequest.model);
+    console.log('[generatePropertyAnalysis] Max tokens:', claudeRequest.max_tokens);
+    
+    const response = await anthropic.messages.create(claudeRequest);
+    
+    console.log('[generatePropertyAnalysis] Claude response received');
+    console.log('[generatePropertyAnalysis] Response usage:', response.usage);
+    console.log('[generatePropertyAnalysis] Response model:', response.model);
+    
     const analysisText = response.content[0].type === 'text' ? response.content[0].text : '';
+    console.log('[generatePropertyAnalysis] Analysis text length:', analysisText.length);
+    console.log('[generatePropertyAnalysis] Raw Claude response preview:', analysisText.substring(0, 500) + '...');
     
     // Parse the analysis into structured format
-    return parseAnalysisResponse(analysisText, request.strategy);
+    const parsedAnalysis = parseAnalysisResponse(analysisText, request.strategy);
+    console.log('[generatePropertyAnalysis] Parsed analysis:', JSON.stringify(parsedAnalysis, null, 2));
+    console.log('[generatePropertyAnalysis] Financial metrics:', parsedAnalysis.financial_metrics);
+    
+    return parsedAnalysis;
     
   } catch (error) {
+    console.error('[generatePropertyAnalysis] ERROR occurred:');
+    console.error('[generatePropertyAnalysis] Error type:', error?.constructor?.name);
+    console.error('[generatePropertyAnalysis] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('[generatePropertyAnalysis] Full error:', error);
+    
     logError('AI Analysis Generation', error);
+    
+    if (error instanceof Error) {
+      throw new Error(`AI analysis failed: ${error.message}`);
+    }
     throw new Error('Failed to generate AI analysis');
   }
+}
+
+function calculateMonthlyPayment(principal: number, interestRate: number, termYears: number): number {
+  const monthlyRate = interestRate / 100 / 12;
+  const numPayments = termYears * 12;
+  
+  if (monthlyRate === 0) return principal / numPayments;
+  
+  const payment = principal * 
+    (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+    (Math.pow(1 + monthlyRate, numPayments) - 1);
+  
+  return Math.round(payment);
 }
 
 function prepareAnalysisContext(propertyData: PropertyData, request: PropertyAnalysisRequest): string {
   const { property: propertyDetails, rental: rentalEstimate, comparables, market: marketData } = propertyData;
   const property = (Array.isArray(propertyDetails) ? propertyDetails[0] : propertyDetails) as Record<string, unknown>;
+  
+  // Log for debugging
+  console.log('[Context] Property details:', property);
+  console.log('[Context] Rental estimate:', rentalEstimate);
+  console.log('[Context] Comparables:', comparables);
+  console.log('[Context] Market data:', marketData);
   
   let context = `Analyze this property for a ${request.strategy} investment strategy:
 
@@ -297,8 +660,8 @@ PROPERTY DETAILS:
 - Last Sale: $${property?.lastSalePrice?.toLocaleString() || 'Unknown'} on ${property?.lastSaleDate || 'Unknown'}
 
 RENTAL ANALYSIS:
-- Estimated Rent: $${(rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate}/month
-- Rent Range: $${(rentalEstimate as any)?.rentRangeLow} - $${(rentalEstimate as any)?.rentRangeHigh}
+- Estimated Rent: $${(rentalEstimate as any)?.rentEstimate || 'N/A'}/month
+- Rent Range: $${(rentalEstimate as any)?.rentRangeLow || 'N/A'} - $${(rentalEstimate as any)?.rentRangeHigh || 'N/A'}
 
 MARKET DATA:
 - Median Rent: $${(marketData as any)?.medianRent}
@@ -306,15 +669,19 @@ MARKET DATA:
 - Average Days on Market: ${(marketData as any)?.averageDaysOnMarket}
 
 COMPARABLES:
-${comparables && comparables.length > 0 ? comparables.slice(0, 3).map((comp) => 
-  `- ${(comp as any).address}: $${(comp as any).price?.toLocaleString()} (${(comp as any).squareFootage} sq ft)`
-).join('\n') : 'No comparable data available'}
+- Estimated Value: $${(comparables as any)?.value?.toLocaleString() || 'N/A'}
+- Value Range: $${(comparables as any)?.valueRangeLow?.toLocaleString() || 'N/A'} - $${(comparables as any)?.valueRangeHigh?.toLocaleString() || 'N/A'}
+${(comparables as any)?.comparables && Array.isArray((comparables as any).comparables) ? 
+  '\nRecent Sales:\n' + (comparables as any).comparables.slice(0, 3).map((comp: any) => 
+    `- ${comp.address || 'Property'}: $${comp.price?.toLocaleString() || 'N/A'} (${comp.squareFootage || 'N/A'} sq ft)`
+  ).join('\n') : ''}
 `;
 
   // Add investment parameters
-  if (request.purchasePrice) {
+  const purchasePrice = request.purchasePrice || (comparables as any)?.price || (comparables as any)?.value || 0;
+  if (purchasePrice > 0) {
     context += `\nINVESTMENT PARAMETERS:
-- Purchase Price: $${request.purchasePrice.toLocaleString()}
+- Purchase Price: $${purchasePrice.toLocaleString()}
 - Down Payment: $${request.downPayment?.toLocaleString() || 'Not specified'}`;
   }
 
@@ -328,14 +695,55 @@ ${comparables && comparables.length > 0 ? comparables.slice(0, 3).map((comp) =>
     context += `\n- Rehab Costs: $${request.rehabCosts.toLocaleString()}`;
   }
 
-  context += `\n\nProvide a comprehensive analysis including:
-1. Investment Overview and Market Position
-2. Financial Projections (cash flow, ROI, cap rate)
-3. ${request.strategy === 'rental' ? 'Rental Income Analysis' : request.strategy === 'flip' ? 'Flip Profit Analysis' : request.strategy === 'brrrr' ? 'BRRRR Strategy Analysis' : 'Commercial Investment Analysis'}
-4. Risk Assessment
-5. Investment Recommendation with specific action items
+  // Calculate key metrics for context
+  const monthlyRent = (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
+  const effectivePurchasePrice = purchasePrice || 0;
+  const downPayment = request.downPayment || (effectivePurchasePrice * 0.20);
+  const loanAmount = effectivePurchasePrice - downPayment;
+  const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30) : 0;
+  
+  // Calculate additional metrics for better analysis
+  const propertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
+  const insurance = Math.round((effectivePurchasePrice * 0.004) / 12);
+  const hoa = 0; // Could be added as parameter
+  const maintenance = Math.round(monthlyRent * 0.1); // 10% of rent for maintenance
+  const propertyManagement = Math.round(monthlyRent * 0.08); // 8% for management
+  const vacancy = Math.round(monthlyRent * 0.05); // 5% vacancy factor
+  
+  const totalExpenses = monthlyPayment + propertyTaxes + insurance + hoa + maintenance + propertyManagement + vacancy;
+  const monthlyCashFlow = monthlyRent - totalExpenses;
+  const annualCashFlow = monthlyCashFlow * 12;
+  const capRate = effectivePurchasePrice > 0 ? ((monthlyRent * 12 - (propertyTaxes + insurance + maintenance) * 12) / effectivePurchasePrice * 100) : 0;
+  const cashOnCash = downPayment > 0 ? (annualCashFlow / downPayment * 100) : 0;
+  
+  context += `\n\nKEY CALCULATIONS:
+INCOME:
+- Monthly Rent: $${monthlyRent.toLocaleString()}
+- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}
 
-Include specific calculations for all financial metrics.`;
+FINANCING:
+- Purchase Price: $${effectivePurchasePrice.toLocaleString()}
+- Down Payment: $${downPayment.toLocaleString()} (${effectivePurchasePrice > 0 ? ((downPayment/effectivePurchasePrice) * 100).toFixed(1) : '20.0'}%)
+- Loan Amount: $${loanAmount.toLocaleString()}
+- Interest Rate: ${request.loanTerms?.interestRate || 7}%
+- Loan Term: ${request.loanTerms?.loanTerm || 30} years
+
+MONTHLY EXPENSES:
+- Mortgage Payment (P&I): $${monthlyPayment.toLocaleString()}
+- Property Taxes: $${propertyTaxes.toLocaleString()}
+- Insurance: $${insurance.toLocaleString()}
+- Maintenance (10%): $${maintenance.toLocaleString()}
+- Property Management (8%): $${propertyManagement.toLocaleString()}
+- Vacancy Reserve (5%): $${vacancy.toLocaleString()}
+- Total Monthly Expenses: $${totalExpenses.toLocaleString()}
+
+CASH FLOW ANALYSIS:
+- Monthly Cash Flow: $${monthlyCashFlow.toLocaleString()} ${monthlyCashFlow < 0 ? '(NEGATIVE)' : '(POSITIVE)'}
+- Annual Cash Flow: $${annualCashFlow.toLocaleString()}
+- Cap Rate: ${capRate.toFixed(2)}%
+- Cash-on-Cash Return: ${cashOnCash.toFixed(2)}%
+
+Provide a comprehensive analysis following the format specified. Make sure to include ALL the financial metrics in your response with the exact calculations shown above.`;
 
   return context;
 }
@@ -363,15 +771,28 @@ interface ParsedAnalysisResponse {
 }
 
 function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAnalysisResponse {
-  // Structure the AI response into sections
-  const sections = analysisText.split(/\n(?=\d\.)/);
-  
   // Extract financial metrics
   const financialData = extractFinancialData(analysisText);
   
+  // Extract sections more reliably
+  const summary = extractSectionByHeader(analysisText, ['executive summary', 'summary', 'overview']) || 
+                 analysisText.split('\n')[0];
+  
+  const recommendation = extractSectionByHeader(analysisText, ['recommendation', 'investment recommendation']) ||
+                        extractRecommendation(analysisText);
+  
+  const marketAnalysis = extractSectionByHeader(analysisText, ['market analysis', 'market position', 'market overview']) || '';
+  
+  const strategyDetails = extractSectionByHeader(analysisText, [
+    'investment strategy', 
+    'strategy details',
+    `${strategy} strategy`,
+    `${strategy} analysis`
+  ]) || '';
+  
   return {
-    summary: extractSection(sections[0]),
-    recommendation: extractRecommendation(analysisText),
+    summary,
+    recommendation,
     risks: extractRisks(analysisText),
     opportunities: extractOpportunities(analysisText),
     financial_metrics: {
@@ -383,10 +804,10 @@ function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAn
       annual_noi: financialData.annualNOI,
       total_profit: financialData.totalProfit
     },
-    market_analysis: extractSection(sections[1]),
+    market_analysis: marketAnalysis,
     investment_strategy: {
       type: strategy,
-      details: extractSection(sections[3])
+      details: strategyDetails
     },
     full_analysis: analysisText
   };
@@ -394,6 +815,17 @@ function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAn
 
 function extractSection(text: string): string {
   return text?.replace(/^\d+\.\s*/, '').trim() || '';
+}
+
+function extractSectionByHeader(text: string, headers: string[]): string {
+  for (const header of headers) {
+    const regex = new RegExp(`(?:^|\\n)(?:\\d+\\.\\s*)?${header}[:\\s]+(.+?)(?=\\n\\d+\\.|\\n[A-Z][A-Z\\s]+:|$)`, 'is');
+    const match = text.match(regex);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  return '';
 }
 
 function extractRecommendation(text: string): string {
@@ -444,23 +876,73 @@ interface FinancialData {
 }
 
 function extractFinancialData(text: string): FinancialData {
+  console.log('[extractFinancialData] Starting extraction from text length:', text.length);
   const data: FinancialData = {};
   
-  // Extract common financial metrics using regex
+  // Extract common financial metrics using regex with more variations
   const patterns = {
-    cashFlow: /(?:monthly\s+)?cash\s*flow[:\s]+\$?([\d,]+)/i,
-    capRate: /cap\s*rate[:\s]+([\d.]+)%/i,
-    roi: /roi[:\s]+([\d.]+)%/i,
-    cocReturn: /cash[- ]on[- ]cash[:\s]+([\d.]+)%/i,
-    totalInvestment: /total\s*investment[:\s]+\$?([\d,]+)/i,
-    annualNOI: /(?:annual\s+)?noi[:\s]+\$?([\d,]+)/i,
-    totalProfit: /total\s*profit[:\s]+\$?([\d,]+)/i
+    cashFlow: [
+      /(?:monthly\s+)?cash\s*flow[:\s]+\$?([\d,.-]+)/i,
+      /monthly\s+cash\s+flow:\s*\$?([\d,.-]+)/i,
+      /cash\s+flow\s*\(monthly\)[:\s]+\$?([\d,.-]+)/i,
+      /monthly:\s*\$?([\d,.-]+)/i
+    ],
+    capRate: [
+      /cap(?:\s+rate)?[:\s]+([\d.]+)%/i,
+      /cap\s+rate:\s*([\d.]+)%/i,
+      /capitalization\s+rate[:\s]+([\d.]+)%/i
+    ],
+    roi: [
+      /(?:total\s+)?roi[:\s]+([\d.]+)%/i,
+      /return\s+on\s+investment[:\s]+([\d.]+)%/i,
+      /5[-\s]?year\s+roi[:\s]+([\d.]+)%/i
+    ],
+    cocReturn: [
+      /cash[- ]?on[- ]?cash(?:\s+return)?[:\s]+([\d.]+)%/i,
+      /coc\s+return[:\s]+([\d.]+)%/i,
+      /cash\s+on\s+cash:\s*([\d.]+)%/i
+    ],
+    totalInvestment: [
+      /total\s*investment[:\s]+\$?([\d,]+)/i,
+      /initial\s+investment[:\s]+\$?([\d,]+)/i,
+      /cash\s+required[:\s]+\$?([\d,]+)/i
+    ],
+    annualNOI: [
+      /(?:annual\s+)?noi[:\s]+\$?([\d,]+)/i,
+      /net\s+operating\s+income[:\s]+\$?([\d,]+)/i,
+      /annual\s+noi[:\s]+\$?([\d,]+)/i
+    ],
+    totalProfit: [
+      /total\s*profit[:\s]+\$?([\d,]+)/i,
+      /net\s+profit[:\s]+\$?([\d,]+)/i,
+      /profit[:\s]+\$?([\d,]+)/i
+    ]
   };
   
-  for (const [key, pattern] of Object.entries(patterns)) {
-    const match = text.match(pattern);
-    if (match) {
-      (data as any)[key] = parseFloat(match[1].replace(/,/g, ''));
+  // Try each pattern array for each metric
+  for (const [key, patternArray] of Object.entries(patterns)) {
+    for (const pattern of patternArray) {
+      const match = text.match(pattern);
+      if (match) {
+        const value = parseFloat(match[1].replace(/,/g, ''));
+        if (!isNaN(value)) {
+          (data as any)[key] = value;
+          console.log(`[extractFinancialData] Found ${key}: ${value}`);
+          break; // Found a match, move to next metric
+        }
+      }
+    }
+  }
+  
+  // Log what we found
+  console.log('[extractFinancialData] Extracted data:', data);
+  
+  // If still missing critical metrics, try to find them in a financial metrics section
+  if (Object.keys(data).length < 3) {
+    console.log('[extractFinancialData] Few metrics found, trying section extraction...');
+    const metricsSection = text.match(/financial\s+metrics[:\s]+([\s\S]+?)(?:\n\n|\n\d+\.|$)/i);
+    if (metricsSection) {
+      console.log('[extractFinancialData] Found metrics section:', metricsSection[1].substring(0, 200));
     }
   }
   

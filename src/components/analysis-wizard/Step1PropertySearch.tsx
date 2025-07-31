@@ -53,12 +53,18 @@ export default function Step1PropertySearch({
   };
 
   const handlePropertySelect = (address: string, propertyData: Record<string, unknown>) => {
+    // Extract the estimated value from comparables (use 'price' field from RentCast)
+    const comparables = propertyData?.comparables as any;
+    const estimatedValue = comparables?.price || comparables?.value || 0;
+    
+    console.log('[Step1] Property selected with value:', estimatedValue);
+    
     updateData({ 
       address, 
       propertyData,
       financial: {
         ...data.financial,
-        purchasePrice: (propertyData?.comparables as any)?.value || 0
+        purchasePrice: estimatedValue
       }
     });
     setCanProceed(true);
@@ -111,7 +117,7 @@ export default function Step1PropertySearch({
             />
           </div>
           {usageData.subscription_tier === 'free' && usageData.remaining <= 1 && (
-            <p className="text-xs text-yellow-600 mt-2">
+            <p className="text-xs text-yellow-500 mt-2">
               {usageData.remaining === 0 
                 ? 'Monthly limit reached. Upgrade to Pro for more analyses.'
                 : `Only ${usageData.remaining} analysis remaining this month.`
@@ -123,12 +129,12 @@ export default function Step1PropertySearch({
 
       {/* Error State */}
       {error && !usageData?.can_analyze ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-center">
+          <svg className="w-12 h-12 text-destructive mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <h3 className="text-lg font-semibold text-red-900 mb-2">Monthly Limit Reached</h3>
-          <p className="text-red-700 mb-4">{error}</p>
+          <h3 className="text-lg font-semibold text-destructive mb-2">Monthly Limit Reached</h3>
+          <p className="text-destructive/80 mb-4">{error}</p>
           <button className="px-4 py-2 bg-primary text-secondary rounded-lg hover:bg-primary/90">
             Upgrade to Pro
           </button>
@@ -147,11 +153,11 @@ export default function Step1PropertySearch({
                     <p className="text-muted mt-1">
                       {(data.propertyData.property as any)?.bedrooms || 0} bed • 
                       {(data.propertyData.property as any)?.bathrooms || 0} bath • 
-                      {(data.propertyData.property as any)?.squareFootage?.toLocaleString() || 0} sq ft
+                      {((data.propertyData.property as any)?.squareFootage || 0).toLocaleString()} sq ft
                     </p>
                     <div className="flex items-center gap-4 mt-3 text-sm">
                       <span className="text-primary font-medium">
-                        Est. Value: ${(data.propertyData.comparables as any)?.value?.toLocaleString() || 'N/A'}
+                        Est. Value: ${(((data.propertyData.comparables as any)?.price || (data.propertyData.comparables as any)?.value || 0).toLocaleString())}
                       </span>
                       <span className="text-muted">
                         Built: {(data.propertyData.property as any)?.yearBuilt || 'N/A'}
@@ -171,28 +177,30 @@ export default function Step1PropertySearch({
               </div>
 
               {/* Property Preview */}
-              {(data.propertyData as any).rental && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {((data.propertyData.rental as any)?.rent || (data.propertyData.rental as any)?.rentEstimate) && (
                   <div className="bg-muted/10 rounded-lg p-4">
                     <p className="text-sm text-muted mb-1">Estimated Rent</p>
                     <p className="text-xl font-bold text-primary">
-                      ${(data.propertyData.rental as any).rentEstimate?.toLocaleString()}/mo
+                      ${((data.propertyData.rental as any)?.rent || (data.propertyData.rental as any)?.rentEstimate || 0).toLocaleString()}/mo
                     </p>
                   </div>
+                )}
+                {((data.propertyData.comparables as any)?.price || (data.propertyData.comparables as any)?.value) && (data.propertyData.property as any)?.squareFootage && (
                   <div className="bg-muted/10 rounded-lg p-4">
                     <p className="text-sm text-muted mb-1">Price per Sq Ft</p>
                     <p className="text-xl font-bold text-primary">
-                      ${Math.round(((data.propertyData.comparables as any)?.value || 0) / ((data.propertyData.property as any)?.squareFootage || 1))}
+                      ${Math.round((((data.propertyData.comparables as any)?.price || (data.propertyData.comparables as any)?.value || 0) / ((data.propertyData.property as any)?.squareFootage || 1)))}
                     </p>
                   </div>
-                  <div className="bg-muted/10 rounded-lg p-4">
-                    <p className="text-sm text-muted mb-1">Property Type</p>
-                    <p className="text-xl font-bold text-primary capitalize">
-                      {(data.propertyData.property as any)?.propertyType || 'Unknown'}
-                    </p>
-                  </div>
+                )}
+                <div className="bg-muted/10 rounded-lg p-4">
+                  <p className="text-sm text-muted mb-1">Property Type</p>
+                  <p className="text-xl font-bold text-primary capitalize">
+                    {(data.propertyData.property as any)?.propertyType || 'Unknown'}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
