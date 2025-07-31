@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       
       // Extract estimated value from comparables
       if (propertyData && propertyData.comparables) {
-        estimatedValue = propertyData.comparables.price || propertyData.comparables.value || 0;
+        estimatedValue = propertyData.comparables.value || 0;
         console.log('Extracted estimated value from client data:', estimatedValue);
       }
     } else if (cachedProperty && new Date(cachedProperty.expires_at) > new Date()) {
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
       };
       
       // Extract estimated value from cached comparables
-      estimatedValue = cachedProperty.comparables?.price || cachedProperty.comparables?.value || 0;
+      estimatedValue = cachedProperty.comparables?.value || 0;
       
       // Update cache hit count
       await supabase
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
         propertyData = await rentCastService.getComprehensivePropertyData(body.address);
         
         // Extract estimated value from fresh data
-        estimatedValue = propertyData.comparables?.price || propertyData.comparables?.value || 0;
+        estimatedValue = propertyData.comparables?.value || 0;
         
         // Cache the property data
         await supabase
@@ -415,7 +415,7 @@ export async function POST(request: NextRequest) {
       let errorHint = null;
       
       if (createError) {
-        errorMessage = createError.message || createError.error || createError.details || errorMessage;
+        errorMessage = createError.message || createError.details || errorMessage;
         errorCode = createError.code;
         errorHint = createError.hint;
       }
@@ -584,7 +584,7 @@ Your analysis must include:
 Be specific with ALL numbers and show your calculations. Format monetary values with proper commas.`,
       messages: [
         {
-          role: "user",
+          role: "user" as const,
           content: context
         }
       ]

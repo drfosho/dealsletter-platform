@@ -49,8 +49,8 @@ export async function GET(_request: NextRequest) {
     // Test basic Claude API call
     let claudeTest = {
       status: 'Not tested',
-      error: null,
-      response: null
+      error: null as string | null,
+      response: null as string | null
     };
 
     if (process.env.ANTHROPIC_API_KEY) {
@@ -64,7 +64,7 @@ export async function GET(_request: NextRequest) {
           model: "claude-3-5-sonnet-20241022",
           max_tokens: 50,
           messages: [{
-            role: "user",
+            role: "user" as const,
             content: "Say 'test successful' and nothing else"
           }]
         });

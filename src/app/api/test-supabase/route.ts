@@ -63,7 +63,7 @@ export async function GET(_request: NextRequest) {
     });
 
     // Test 3: Try to insert a test record (if authenticated)
-    let insertTest = { attempted: false, success: false, error: null as any };
+    let insertTest = { attempted: false, success: false, error: null as any, data: null as any };
     
     if (user) {
       const testData = {

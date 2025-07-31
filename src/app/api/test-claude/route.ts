@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest) {
       temperature: 0,
       messages: [
         {
-          role: "user",
+          role: "user" as const,
           content: "Please respond with exactly: 'Claude API is working!'"
         }
       ]

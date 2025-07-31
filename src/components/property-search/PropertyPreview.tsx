@@ -46,8 +46,8 @@ export default function PropertyPreview({ data }: PropertyPreviewProps) {
 
   // Handle different possible data structures
   const property = data.property || {};
-  const rental = data.rental || {};
-  const comparables = data.comparables || {};
+  const rental = (data.rental || {}) as any;
+  const comparables = (data.comparables || {}) as any;
   
   // Fix: Use correct field names from RentCast API
   const estimatedValue = comparables.value || comparables.price || 0;
