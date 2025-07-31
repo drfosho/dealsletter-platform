@@ -813,9 +813,6 @@ function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAn
   };
 }
 
-function extractSection(text: string): string {
-  return text?.replace(/^\d+\.\s*/, '').trim() || '';
-}
 
 function extractSectionByHeader(text: string, headers: string[]): string {
   for (const header of headers) {

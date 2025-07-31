@@ -50,7 +50,7 @@ export async function GET(_request: NextRequest) {
     console.log('[Test-Supabase] Auth check:', { hasUser: !!user, error: authError });
 
     // Test 2: Check analyzed_properties table instead
-    const { data: analyzedPropsData, error: analyzedPropsError } = await supabase
+    const { data: _analyzedPropsData, error: analyzedPropsError } = await supabase
       .from('analyzed_properties')
       .select('*')
       .limit(0); // Don't fetch data, just check if table exists
