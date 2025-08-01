@@ -53,11 +53,15 @@ export default function Step1PropertySearch({
   };
 
   const handlePropertySelect = (address: string, propertyData: Record<string, unknown>) => {
-    // Extract the estimated value from comparables (use 'price' field from RentCast)
+    // Extract the estimated value from comparables (RentCast AVM returns 'value' field)
     const comparables = propertyData?.comparables as any;
-    const estimatedValue = comparables?.price || comparables?.value || 0;
+    const estimatedValue = comparables?.value || 0;
     
-    console.log('[Step1] Property selected with value:', estimatedValue);
+    console.log('[Step1] Property selected with AVM data:', {
+      comparables,
+      estimatedValue,
+      valueRange: comparables ? `${comparables.valueRangeLow} - ${comparables.valueRangeHigh}` : 'N/A'
+    });
     
     updateData({ 
       address, 
@@ -157,7 +161,7 @@ export default function Step1PropertySearch({
                     </p>
                     <div className="flex items-center gap-4 mt-3 text-sm">
                       <span className="text-primary font-medium">
-                        Est. Value: ${(((data.propertyData.comparables as any)?.price || (data.propertyData.comparables as any)?.value || 0).toLocaleString())}
+                        Est. Value: ${((data.propertyData.comparables as any)?.value || 0).toLocaleString()}
                       </span>
                       <span className="text-muted">
                         Built: {(data.propertyData.property as any)?.yearBuilt || 'N/A'}
@@ -186,11 +190,11 @@ export default function Step1PropertySearch({
                     </p>
                   </div>
                 )}
-                {((data.propertyData.comparables as any)?.price || (data.propertyData.comparables as any)?.value) && (data.propertyData.property as any)?.squareFootage && (
+                {(data.propertyData.comparables as any)?.value && (data.propertyData.property as any)?.squareFootage && (
                   <div className="bg-muted/10 rounded-lg p-4">
                     <p className="text-sm text-muted mb-1">Price per Sq Ft</p>
                     <p className="text-xl font-bold text-primary">
-                      ${Math.round((((data.propertyData.comparables as any)?.price || (data.propertyData.comparables as any)?.value || 0) / ((data.propertyData.property as any)?.squareFootage || 1)))}
+                      ${Math.round(((data.propertyData.comparables as any)?.value || 0) / ((data.propertyData.property as any)?.squareFootage || 1))}
                     </p>
                   </div>
                 )}

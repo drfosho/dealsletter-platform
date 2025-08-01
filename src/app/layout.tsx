@@ -19,17 +19,18 @@ export const metadata: Metadata = {
   description: "Analyze real estate investment opportunities with advanced metrics, AI-powered deal scoring, and comprehensive property analysis tools.",
   manifest: "/manifest.json",
   themeColor: "#0a0a0a",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "DealsLetter",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 export default function RootLayout({
@@ -38,9 +39,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
       >
         <PlatformProvider>
           <AuthProvider>

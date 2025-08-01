@@ -6,6 +6,7 @@ import {
   CachedPropertyData 
 } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
+import PropertyImageService from './property-images';
 
 // In-memory cache for development (consider Redis for production)
 const propertyCache = new Map<string, CachedPropertyData>();
@@ -110,6 +111,21 @@ class RentCastService {
       }
       
       const data = response[0];
+      
+      // Add property images
+      const fullAddress = `${data.addressLine1}, ${data.city}, ${data.state} ${data.zipCode}`;
+      data.images = PropertyImageService.getPropertyImages(fullAddress, 5);
+      data.primaryImageUrl = PropertyImageService.getPlaceholderImage(fullAddress, data.propertyType);
+      
+      // If Google Maps API key is available, try to get street view
+      const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (googleMapsKey) {
+        const streetViewUrl = PropertyImageService.getStreetViewImage(fullAddress, googleMapsKey);
+        if (streetViewUrl) {
+          data.primaryImageUrl = streetViewUrl;
+        }
+      }
+      
       this.setCache(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL });
       return data;
     } catch (error) {

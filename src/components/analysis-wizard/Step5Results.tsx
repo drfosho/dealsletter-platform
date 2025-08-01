@@ -21,15 +21,27 @@ export default function Step5Results({ data }: Step5ResultsProps) {
     try {
       // Analysis is already saved, just mark as favorite
       if (data.analysisId) {
-        await fetch(`/api/analysis/${data.analysisId}/favorite`, {
+        const response = await fetch(`/api/analysis/${data.analysisId}/favorite`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ is_favorite: true })
         });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to save to dashboard');
+        }
+        
         setIsFavorite(true);
+        // Show success message (you can add a toast notification here)
+        console.log('Successfully saved to dashboard');
+      } else {
+        throw new Error('No analysis ID available');
       }
     } catch (error) {
       console.error('Failed to save to dashboard:', error);
+      // Show error message to user (you can add a toast notification here)
+      alert(error instanceof Error ? error.message : 'Failed to save to dashboard');
     }
     setIsSaving(false);
   };
@@ -83,26 +95,55 @@ export default function Step5Results({ data }: Step5ResultsProps) {
       </div>
 
       <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 mb-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-primary mb-1">{data.address}</h3>
-            <p className="text-muted">
-              {data.strategy === 'flip' ? 'Fix & Flip' : 
-               data.strategy === 'brrrr' ? 'BRRRR Strategy' :
-               data.strategy === 'rental' ? 'Buy & Hold' :
-               'House Hack'} Analysis
-            </p>
+        <div className="flex items-start gap-6">
+          {/* Property Image */}
+          {(data.propertyData as any)?.property?.primaryImageUrl ? (
+            <div className="flex-shrink-0">
+              <img 
+                src={(data.propertyData as any).property.primaryImageUrl} 
+                alt={data.address}
+                className="w-32 h-32 object-cover rounded-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex-shrink-0 w-32 h-32 bg-muted/20 rounded-lg flex items-center justify-center">
+              <svg className="w-12 h-12 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+          )}
+          
+          <div className="flex-1">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-primary mb-1">{data.address}</h3>
+                <p className="text-muted">
+                  {data.strategy === 'flip' ? 'Fix & Flip' : 
+                   data.strategy === 'brrrr' ? 'BRRRR Strategy' :
+                   data.strategy === 'rental' ? 'Buy & Hold' :
+                   'House Hack'} Analysis
+                </p>
+                {(data.propertyData as any)?.property && (
+                  <p className="text-sm text-muted mt-1">
+                    {(data.propertyData as any).property.bedrooms} bd • {(data.propertyData as any).property.bathrooms} ba • {(data.propertyData as any).property.squareFootage?.toLocaleString() || 'N/A'} sqft
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setIsFavorite(!isFavorite)}
+                className={`p-2 rounded-lg transition-colors ${
+                  isFavorite ? 'bg-red-100 text-red-500' : 'bg-muted/20 text-muted hover:text-primary'
+                }`}
+              >
+                <svg className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setIsFavorite(!isFavorite)}
-            className={`p-2 rounded-lg transition-colors ${
-              isFavorite ? 'bg-red-100 text-red-500' : 'bg-muted/20 text-muted hover:text-primary'
-            }`}
-          >
-            <svg className="w-5 h-5" fill={isFavorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-          </button>
         </div>
       </div>
 

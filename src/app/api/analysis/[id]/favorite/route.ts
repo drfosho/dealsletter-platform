@@ -41,9 +41,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Update favorite status
+    // Update favorite status in analyzed_properties table
     const { error } = await supabase
-      .from('user_analyses')
+      .from('analyzed_properties')
       .update({ is_favorite })
       .eq('id', resolvedParams.id)
       .eq('user_id', user.id);

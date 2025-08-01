@@ -8,10 +8,57 @@ interface FinancialMetricsProps {
 }
 
 export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
+  const isFlipStrategy = analysis.strategy === 'flip';
+  const purchasePrice = analysis.purchase_price || 0;
+  const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
+  
   const metrics = useMemo(() => {
-    const purchasePrice = analysis.purchase_price || 0;
-    const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
     const loanAmount = purchasePrice - downPayment;
+    
+    if (isFlipStrategy) {
+      // Fix & Flip specific calculations
+      const rehabCosts = analysis.rehab_costs || 0;
+      const closingCosts = purchasePrice * 0.03; // 3% closing costs
+      const totalInvestment = downPayment + rehabCosts + closingCosts;
+      
+      // Get metrics from AI analysis if available
+      const aiMetrics = analysis.ai_analysis?.financial_metrics;
+      const netProfit = aiMetrics?.total_profit || 0;
+      const roi = aiMetrics?.roi || 0;
+      
+      // Estimate ARV from comparables or AI analysis
+      const estimatedARV = (analysis.property_data as any)?.comparables?.value || purchasePrice * 1.3;
+      const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
+      
+      return {
+        purchasePrice,
+        rehabCosts,
+        totalInvestment,
+        estimatedARV,
+        netProfit,
+        roi,
+        profitMargin,
+        holdingPeriod: analysis.loan_term || 0.5,
+        // Set rental metrics to 0 for flips
+        monthlyRent: 0,
+        monthlyPayment: 0,
+        totalExpenses: 0,
+        monthlyCashFlow: 0,
+        annualCashFlow: 0,
+        annualNOI: 0,
+        capRate: 0,
+        cashOnCashReturn: 0,
+        totalReturn: roi,
+        totalCashInvested: totalInvestment,
+        propertyTax: 0,
+        insurance: 0,
+        maintenance: 0,
+        vacancy: 0,
+        propertyManagement: 0
+      };
+    }
+    
+    // Rental property calculations (existing logic)
     const monthlyRate = (analysis.interest_rate || 7) / 100 / 12;
     const numPayments = (analysis.loan_term || 30) * 12;
     
@@ -76,7 +123,7 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
       vacancy,
       propertyManagement
     };
-  }, [analysis]);
+  }, [analysis, isFlipStrategy, purchasePrice, downPayment]);
 
   function calculateFirstYearPrincipal(
     loanAmount: number, 
@@ -115,53 +162,145 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
       <h3 className="text-lg font-semibold text-primary mb-6">Financial Analysis</h3>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4">
-          <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
-          <p className={`text-2xl font-bold ${metrics.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(metrics.monthlyCashFlow)}
-          </p>
+      {isFlipStrategy ? (
+        // Fix & Flip Metrics
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">Net Profit</p>
+            <p className={`text-2xl font-bold ${(metrics as any).netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency((metrics as any).netProfit)}
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">ROI</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {formatPercent((metrics as any).roi)}
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">Profit Margin</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {formatPercent((metrics as any).profitMargin)}
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">ARV</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {formatCurrency((metrics as any).estimatedARV)}
+            </p>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
-          <p className="text-sm text-muted mb-1">Cap Rate</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {formatPercent(metrics.capRate)}
-          </p>
+      ) : (
+        // Rental Property Metrics
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
+            <p className={`text-2xl font-bold ${metrics.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(metrics.monthlyCashFlow)}
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">Cap Rate</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {formatPercent(metrics.capRate)}
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">Cash-on-Cash</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {formatPercent(metrics.cashOnCashReturn)}
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">Total Return</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {formatPercent(metrics.totalReturn)}
+            </p>
+          </div>
         </div>
-        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg p-4">
-          <p className="text-sm text-muted mb-1">Cash-on-Cash</p>
-          <p className="text-2xl font-bold text-purple-600">
-            {formatPercent(metrics.cashOnCashReturn)}
-          </p>
-        </div>
-        <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg p-4">
-          <p className="text-sm text-muted mb-1">Total Return</p>
-          <p className="text-2xl font-bold text-orange-600">
-            {formatPercent(metrics.totalReturn)}
-          </p>
-        </div>
-      </div>
+      )}
 
       {/* Income & Expenses Breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Income */}
-        <div>
-          <h4 className="font-semibold text-primary mb-3">Monthly Income</h4>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Rental Income</span>
-              <span className="font-medium text-green-600">
-                +{formatCurrency(metrics.monthlyRent)}
-              </span>
+      {isFlipStrategy ? (
+        // Fix & Flip Project Breakdown
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Investment Breakdown */}
+          <div>
+            <h4 className="font-semibold text-primary mb-3">Investment Breakdown</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-muted">Purchase Price</span>
+                <span className="font-medium">
+                  {formatCurrency((metrics as any).purchasePrice)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-muted">Rehab Costs</span>
+                <span className="font-medium">
+                  {formatCurrency((metrics as any).rehabCosts)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-muted">Closing & Holding</span>
+                <span className="font-medium">
+                  {formatCurrency((metrics as any).totalInvestment - (metrics as any).rehabCosts - downPayment)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 font-semibold">
+                <span>Total Investment</span>
+                <span className="text-primary">
+                  {formatCurrency((metrics as any).totalInvestment)}
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between items-center py-2 font-semibold">
-              <span>Total Income</span>
-              <span className="text-green-600">
-                {formatCurrency(metrics.monthlyRent)}
-              </span>
+          </div>
+          
+          {/* Exit Strategy */}
+          <div>
+            <h4 className="font-semibold text-primary mb-3">Exit Strategy</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-muted">After Repair Value</span>
+                <span className="font-medium text-green-600">
+                  {formatCurrency((metrics as any).estimatedARV)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-muted">Holding Period</span>
+                <span className="font-medium">
+                  {((metrics as any).holdingPeriod * 12).toFixed(0)} months
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 font-semibold">
+                <span>Expected Profit</span>
+                <span className={`${(metrics as any).netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency((metrics as any).netProfit)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+      ) : (
+        // Rental Property Income & Expenses
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Income */}
+          <div>
+            <h4 className="font-semibold text-primary mb-3">Monthly Income</h4>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <span className="text-muted">Rental Income</span>
+                <span className="font-medium text-green-600">
+                  +{formatCurrency(metrics.monthlyRent)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 font-semibold">
+                <span>Total Income</span>
+                <span className="text-green-600">
+                  {formatCurrency(metrics.monthlyRent)}
+                </span>
+              </div>
+            </div>
+          </div>
 
         {/* Expenses */}
         <div>
@@ -214,30 +353,56 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
           </div>
         </div>
       </div>
+      )}
 
       {/* Investment Summary */}
       <div className="mt-6 pt-6 border-t border-border">
         <h4 className="font-semibold text-primary mb-3">Investment Summary</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-muted/20 rounded-lg p-3">
-            <p className="text-sm text-muted mb-1">Total Cash Invested</p>
-            <p className="font-semibold text-primary">
-              {formatCurrency(metrics.totalCashInvested)}
-            </p>
+        {isFlipStrategy ? (
+          // Fix & Flip Summary
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-muted/20 rounded-lg p-3">
+              <p className="text-sm text-muted mb-1">Cash Required</p>
+              <p className="font-semibold text-primary">
+                {formatCurrency(downPayment)}
+              </p>
+            </div>
+            <div className="bg-muted/20 rounded-lg p-3">
+              <p className="text-sm text-muted mb-1">Total Investment</p>
+              <p className="font-semibold text-primary">
+                {formatCurrency((metrics as any).totalInvestment)}
+              </p>
+            </div>
+            <div className="bg-muted/20 rounded-lg p-3">
+              <p className="text-sm text-muted mb-1">Expected ROI</p>
+              <p className={`font-semibold ${(metrics as any).roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatPercent((metrics as any).roi)}
+              </p>
+            </div>
           </div>
-          <div className="bg-muted/20 rounded-lg p-3">
-            <p className="text-sm text-muted mb-1">Annual Cash Flow</p>
-            <p className={`font-semibold ${metrics.annualCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(metrics.annualCashFlow)}
-            </p>
+        ) : (
+          // Rental Property Summary
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-muted/20 rounded-lg p-3">
+              <p className="text-sm text-muted mb-1">Total Cash Invested</p>
+              <p className="font-semibold text-primary">
+                {formatCurrency(metrics.totalCashInvested)}
+              </p>
+            </div>
+            <div className="bg-muted/20 rounded-lg p-3">
+              <p className="text-sm text-muted mb-1">Annual Cash Flow</p>
+              <p className={`font-semibold ${metrics.annualCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(metrics.annualCashFlow)}
+              </p>
+            </div>
+            <div className="bg-muted/20 rounded-lg p-3">
+              <p className="text-sm text-muted mb-1">Annual NOI</p>
+              <p className="font-semibold text-primary">
+                {formatCurrency(metrics.annualNOI)}
+              </p>
+            </div>
           </div>
-          <div className="bg-muted/20 rounded-lg p-3">
-            <p className="text-sm text-muted mb-1">Annual NOI</p>
-            <p className="font-semibold text-primary">
-              {formatCurrency(metrics.annualNOI)}
-            </p>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

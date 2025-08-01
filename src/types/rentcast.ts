@@ -32,6 +32,8 @@ export interface RentCastPropertyDetails {
     middle?: string;
     high?: string;
   };
+  images?: string[]; // Array of image URLs
+  primaryImageUrl?: string; // Main property image
 }
 
 export interface RentCastRentalEstimate {
@@ -115,9 +117,11 @@ export interface PropertyAnalysisRequest {
     interestRate: number;
     loanTerm: number;
     loanType: string;
+    points?: number;
   };
   rehabCosts?: number;
   holdingPeriod?: number;
+  arv?: number; // After Repair Value for flip strategy
 }
 
 // Cache Types

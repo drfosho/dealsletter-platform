@@ -59,6 +59,8 @@ export interface AIAnalysis {
     cash_on_cash_return?: number;
     monthly_cash_flow?: number;
     annual_noi?: number;
+    total_investment?: number;
+    total_profit?: number;
   };
   [key: string]: unknown;
 }

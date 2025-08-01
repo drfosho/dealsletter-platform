@@ -289,7 +289,7 @@ export default function Dashboard() {
         <DashboardSidebar />
         
         <main className="flex-1">
-          <div className="container mx-auto px-4 py-8">
+          <div className="px-4 sm:px-6 lg:px-8 py-8">
             <DashboardHeader 
               totalProperties={deals.length} 
               onRefresh={fetchProperties}

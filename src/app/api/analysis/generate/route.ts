@@ -553,9 +553,10 @@ async function generatePropertyAnalysis(propertyData: PropertyData, request: Pro
   try {
     // Prepare context for AI
     console.log('[generatePropertyAnalysis] Preparing context...');
-    const context = prepareAnalysisContext(propertyData, request);
+    const { context, calculatedMetrics } = prepareAnalysisContext(propertyData, request);
     console.log('[generatePropertyAnalysis] Context length:', context.length);
     console.log('[generatePropertyAnalysis] Context preview:', context.substring(0, 200) + '...');
+    console.log('[generatePropertyAnalysis] Calculated metrics:', calculatedMetrics);
     
     // Generate analysis using Claude
     console.log('[generatePropertyAnalysis] Calling Claude API...');
@@ -565,15 +566,38 @@ async function generatePropertyAnalysis(propertyData: PropertyData, request: Pro
       temperature: 0.3,
       system: `You are a professional real estate investment analyst. Create a comprehensive, data-driven analysis for real estate investments. 
 
+IMPORTANT: Tailor your analysis based on the investment strategy:
+
+FOR FIX & FLIP PROPERTIES:
+Your analysis must include:
+1. Executive Summary (2-3 sentences focusing on profit potential)
+2. Investment Recommendation (Buy/Hold/Pass based on profit margin and ARV)
+3. Key Financial Metrics (Use EXACT values from FIX & FLIP ANALYSIS):
+   - After Repair Value (ARV): $[exact value]
+   - Total Investment: $[exact value]
+   - Net Profit: $[exact value]
+   - Return on Investment: [exact percentage]%
+   - Profit Margin: [exact percentage]%
+   - Holding Period: [months]
+4. Risk Assessment (Focus on renovation risks, market timing, ARV accuracy)
+5. Market Analysis (Focus on buyer demand and comparable sales)
+6. Renovation Strategy (Timeline, scope, budget allocation)
+7. 3-5 Key Opportunities (Value-add improvements, market trends)
+8. 3-5 Key Risks (Construction delays, budget overruns, market shifts)
+9. Exit Strategy & Action Items
+
+DO NOT include monthly cash flow, cap rates, or rental income for fix & flip properties.
+
+FOR RENTAL PROPERTIES:
 Your analysis must include:
 1. Executive Summary (2-3 sentences)
 2. Investment Recommendation (Buy/Hold/Pass with clear reasoning)
-3. Key Financial Metrics:
-   - Cap Rate (with calculation)
-   - Cash-on-Cash Return (with calculation)
-   - Monthly Cash Flow (with detailed breakdown)
-   - Total ROI (5-year projection)
-   - Annual NOI
+3. Key Financial Metrics (Use EXACT values from CASH FLOW ANALYSIS):
+   - Monthly Cash Flow: $[exact value]
+   - Cap Rate: [exact percentage]%
+   - Cash-on-Cash Return: [exact percentage]%
+   - Total ROI: [calculated percentage]%
+   - Annual NOI: $[calculated value]
 4. Risk Assessment (Low/Medium/High with specific factors)
 5. Market Analysis
 6. Investment Strategy Details
@@ -581,7 +605,7 @@ Your analysis must include:
 8. 3-5 Key Risks
 9. Action Items for investor
 
-Be specific with ALL numbers and show your calculations. Format monetary values with proper commas.`,
+CRITICAL: Use the EXACT numerical values from the calculations section provided. Do not recalculate or modify these numbers. Format monetary values with proper commas but preserve the exact amounts.`,
       messages: [
         {
           role: "user" as const,
@@ -604,8 +628,8 @@ Be specific with ALL numbers and show your calculations. Format monetary values 
     console.log('[generatePropertyAnalysis] Analysis text length:', analysisText.length);
     console.log('[generatePropertyAnalysis] Raw Claude response preview:', analysisText.substring(0, 500) + '...');
     
-    // Parse the analysis into structured format
-    const parsedAnalysis = parseAnalysisResponse(analysisText, request.strategy);
+    // Parse the analysis into structured format with calculated metrics as fallback
+    const parsedAnalysis = parseAnalysisResponse(analysisText, request.strategy, calculatedMetrics);
     console.log('[generatePropertyAnalysis] Parsed analysis:', JSON.stringify(parsedAnalysis, null, 2));
     console.log('[generatePropertyAnalysis] Financial metrics:', parsedAnalysis.financial_metrics);
     
@@ -626,10 +650,24 @@ Be specific with ALL numbers and show your calculations. Format monetary values 
   }
 }
 
-function calculateMonthlyPayment(principal: number, interestRate: number, termYears: number): number {
+function calculateMonthlyPayment(principal: number, interestRate: number, termYears: number, loanType?: string, rehabAmount?: number): number {
   const monthlyRate = interestRate / 100 / 12;
   const numPayments = termYears * 12;
   
+  // Hard money loans are typically interest-only
+  if (loanType === 'hardMoney') {
+    // Interest-only payment on purchase loan
+    let payment = principal * monthlyRate;
+    
+    // Add interest on rehab loan if applicable
+    if (rehabAmount && rehabAmount > 0) {
+      payment += rehabAmount * monthlyRate;
+    }
+    
+    return Math.round(payment);
+  }
+  
+  // Traditional amortized loan calculation
   if (monthlyRate === 0) return principal / numPayments;
   
   const payment = principal * 
@@ -639,7 +677,7 @@ function calculateMonthlyPayment(principal: number, interestRate: number, termYe
   return Math.round(payment);
 }
 
-function prepareAnalysisContext(propertyData: PropertyData, request: PropertyAnalysisRequest): string {
+function prepareAnalysisContext(propertyData: PropertyData, request: PropertyAnalysisRequest): { context: string; calculatedMetrics: FinancialData } {
   const { property: propertyDetails, rental: rentalEstimate, comparables, market: marketData } = propertyData;
   const property = (Array.isArray(propertyDetails) ? propertyDetails[0] : propertyDetails) as Record<string, unknown>;
   
@@ -648,6 +686,10 @@ function prepareAnalysisContext(propertyData: PropertyData, request: PropertyAna
   console.log('[Context] Rental estimate:', rentalEstimate);
   console.log('[Context] Comparables:', comparables);
   console.log('[Context] Market data:', marketData);
+  console.log('[Context] Strategy:', request.strategy);
+  
+  // Check if this is a fix & flip strategy
+  const isFlipStrategy = request.strategy === 'flip';
   
   let context = `Analyze this property for a ${request.strategy} investment strategy:
 
@@ -695,28 +737,99 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
     context += `\n- Rehab Costs: $${request.rehabCosts.toLocaleString()}`;
   }
 
+  if (request.arv && isFlipStrategy) {
+    context += `\n- ARV (After Repair Value): $${request.arv.toLocaleString()}`;
+  }
+
   // Calculate key metrics for context
-  const monthlyRent = (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
   const effectivePurchasePrice = purchasePrice || 0;
   const downPayment = request.downPayment || (effectivePurchasePrice * 0.20);
   const loanAmount = effectivePurchasePrice - downPayment;
-  const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30) : 0;
+  const pointsCost = request.loanTerms?.points ? (loanAmount * request.loanTerms.points) / 100 : 0;
   
-  // Calculate additional metrics for better analysis
-  const propertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
-  const insurance = Math.round((effectivePurchasePrice * 0.004) / 12);
-  const hoa = 0; // Could be added as parameter
-  const maintenance = Math.round(monthlyRent * 0.1); // 10% of rent for maintenance
-  const propertyManagement = Math.round(monthlyRent * 0.08); // 8% for management
-  const vacancy = Math.round(monthlyRent * 0.05); // 5% vacancy factor
+  let calculatedMetrics: FinancialData;
   
-  const totalExpenses = monthlyPayment + propertyTaxes + insurance + hoa + maintenance + propertyManagement + vacancy;
-  const monthlyCashFlow = monthlyRent - totalExpenses;
-  const annualCashFlow = monthlyCashFlow * 12;
-  const capRate = effectivePurchasePrice > 0 ? ((monthlyRent * 12 - (propertyTaxes + insurance + maintenance) * 12) / effectivePurchasePrice * 100) : 0;
-  const cashOnCash = downPayment > 0 ? (annualCashFlow / downPayment * 100) : 0;
-  
-  context += `\n\nKEY CALCULATIONS:
+  if (isFlipStrategy) {
+    // Fix & Flip specific calculations
+    // Use provided ARV if available, otherwise use comparables or estimate
+    const estimatedARV = request.arv || (comparables as any)?.value || effectivePurchasePrice * 1.3;
+    const rehabCosts = request.rehabCosts || 0;
+    const closingCosts = effectivePurchasePrice * 0.03; // 3% closing costs
+    const holdingTime = request.loanTerms?.loanTerm || 0.5; // in years
+    
+    // For holding costs calculation
+    const propertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
+    const insurance = Math.round((effectivePurchasePrice * 0.004) / 12);
+    
+    const monthlyHoldingCosts = calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 10.45, holdingTime, request.loanTerms?.loanType, rehabCosts);
+    const totalHoldingCosts = monthlyHoldingCosts * (holdingTime * 12) + (propertyTaxes * holdingTime * 12) + (insurance * holdingTime * 12);
+    const sellingCosts = estimatedARV * 0.08; // 8% for realtor fees, closing costs
+    const totalInvestment = downPayment + rehabCosts + closingCosts + pointsCost;
+    const totalProjectCost = effectivePurchasePrice + rehabCosts + closingCosts + totalHoldingCosts + sellingCosts + pointsCost;
+    const netProfit = estimatedARV - totalProjectCost;
+    const roi = totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0;
+    
+    context += `\n\nFIX & FLIP ANALYSIS:
+    
+PURCHASE & FINANCING:
+- Purchase Price: $${effectivePurchasePrice.toLocaleString()}
+- Down Payment: $${downPayment.toLocaleString()} (${effectivePurchasePrice > 0 ? ((downPayment/effectivePurchasePrice) * 100).toFixed(1) : '20.0'}%)
+- Loan Amount: $${loanAmount.toLocaleString()}
+- Interest Rate: ${request.loanTerms?.interestRate || 10.45}%
+- Loan Term: ${holdingTime * 12} months
+- Loan Type: ${request.loanTerms?.loanType === 'hardMoney' ? 'Hard Money' : 'Conventional'}${request.loanTerms?.points ? `
+- Points/Fees: ${request.loanTerms.points} points ($${Math.round(pointsCost).toLocaleString()})` : ''}
+
+RENOVATION & COSTS:
+- Rehab Budget: $${rehabCosts.toLocaleString()}
+- Closing Costs (Purchase): $${Math.round(closingCosts).toLocaleString()}
+- Monthly Holding Costs: $${monthlyHoldingCosts.toLocaleString()}
+- Total Holding Costs: $${Math.round(totalHoldingCosts).toLocaleString()}
+- Selling Costs (8%): $${Math.round(sellingCosts).toLocaleString()}
+
+EXIT STRATEGY:
+- After Repair Value (ARV): $${Math.round(estimatedARV).toLocaleString()}
+- Total Project Cost: $${Math.round(totalProjectCost).toLocaleString()}
+- Net Profit: $${Math.round(netProfit).toLocaleString()} ${netProfit < 0 ? '(LOSS)' : '(PROFIT)'}
+- Cash Investment: $${Math.round(totalInvestment).toLocaleString()}
+- Return on Investment: ${roi.toFixed(2)}%
+- Profit Margin: ${estimatedARV > 0 ? ((netProfit / estimatedARV) * 100).toFixed(2) : '0.00'}%
+
+Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, holding costs, and profit margins. Do NOT include rental income or cash flow calculations.`;
+
+    calculatedMetrics = {
+      totalInvestment: totalInvestment,
+      totalProfit: netProfit,
+      roi: roi,
+      // Set rental-focused metrics to 0 or undefined for flips
+      cashFlow: 0,
+      capRate: 0,
+      cocReturn: roi, // Use ROI instead
+      annualNOI: 0
+    };
+    
+  } else {
+    // Rental property calculations (existing logic)
+    const monthlyRent = (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
+    const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
+    
+    // Calculate additional metrics for better analysis
+    const propertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
+    const insurance = Math.round((effectivePurchasePrice * 0.004) / 12);
+    const hoa = 0; // Could be added as parameter
+    const maintenance = Math.round(monthlyRent * 0.1); // 10% of rent for maintenance
+    const propertyManagement = Math.round(monthlyRent * 0.08); // 8% for management
+    const vacancy = Math.round(monthlyRent * 0.05); // 5% vacancy factor
+    
+    const totalExpenses = monthlyPayment + propertyTaxes + insurance + hoa + maintenance + propertyManagement + vacancy;
+    const monthlyCashFlow = monthlyRent - totalExpenses;
+    const annualCashFlow = monthlyCashFlow * 12;
+    const capRate = effectivePurchasePrice > 0 ? ((monthlyRent * 12 - (propertyTaxes + insurance + maintenance) * 12) / effectivePurchasePrice * 100) : 0;
+    const cashOnCash = downPayment > 0 ? (annualCashFlow / downPayment * 100) : 0;
+    
+    const annualNOI = (monthlyRent * 12) - ((propertyTaxes + insurance + maintenance) * 12);
+    
+    context += `\n\nKEY CALCULATIONS:
 INCOME:
 - Monthly Rent: $${monthlyRent.toLocaleString()}
 - Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}
@@ -726,7 +839,9 @@ FINANCING:
 - Down Payment: $${downPayment.toLocaleString()} (${effectivePurchasePrice > 0 ? ((downPayment/effectivePurchasePrice) * 100).toFixed(1) : '20.0'}%)
 - Loan Amount: $${loanAmount.toLocaleString()}
 - Interest Rate: ${request.loanTerms?.interestRate || 7}%
-- Loan Term: ${request.loanTerms?.loanTerm || 30} years
+- Loan Term: ${request.loanTerms?.loanTerm || 30} ${request.loanTerms?.loanTerm && request.loanTerms.loanTerm < 2 ? 'year' : 'years'}
+- Loan Type: ${request.loanTerms?.loanType === 'hardMoney' ? 'Hard Money' : 'Conventional'}${request.loanTerms?.points ? `
+- Points/Fees: ${request.loanTerms.points} points ($${Math.round(pointsCost).toLocaleString()})` : ''}
 
 MONTHLY EXPENSES:
 - Mortgage Payment (P&I): $${monthlyPayment.toLocaleString()}
@@ -742,10 +857,22 @@ CASH FLOW ANALYSIS:
 - Annual Cash Flow: $${annualCashFlow.toLocaleString()}
 - Cap Rate: ${capRate.toFixed(2)}%
 - Cash-on-Cash Return: ${cashOnCash.toFixed(2)}%
+- Annual NOI: $${annualNOI.toLocaleString()}
 
 Provide a comprehensive analysis following the format specified. Make sure to include ALL the financial metrics in your response with the exact calculations shown above.`;
+    
+    calculatedMetrics = {
+      cashFlow: monthlyCashFlow,
+      capRate: capRate,
+      cocReturn: cashOnCash,
+      roi: cashOnCash * 5, // Simple 5-year projection
+      totalInvestment: downPayment + (request.rehabCosts || 0) + pointsCost,
+      annualNOI: annualNOI,
+      totalProfit: annualCashFlow * 5 // 5-year profit projection
+    };
+  }
 
-  return context;
+  return { context, calculatedMetrics };
 }
 
 interface ParsedAnalysisResponse {
@@ -770,9 +897,20 @@ interface ParsedAnalysisResponse {
   full_analysis: string;
 }
 
-function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAnalysisResponse {
+function parseAnalysisResponse(analysisText: string, strategy: string, calculatedMetrics?: FinancialData): ParsedAnalysisResponse {
   // Extract financial metrics
   const financialData = extractFinancialData(analysisText);
+  
+  // Use calculated metrics as fallback if extraction fails
+  const finalMetrics = {
+    cashFlow: financialData.cashFlow !== undefined ? financialData.cashFlow : calculatedMetrics?.cashFlow,
+    capRate: financialData.capRate !== undefined ? financialData.capRate : calculatedMetrics?.capRate,
+    cocReturn: financialData.cocReturn !== undefined ? financialData.cocReturn : calculatedMetrics?.cocReturn,
+    roi: financialData.roi !== undefined ? financialData.roi : calculatedMetrics?.roi,
+    totalInvestment: financialData.totalInvestment !== undefined ? financialData.totalInvestment : calculatedMetrics?.totalInvestment,
+    annualNOI: financialData.annualNOI !== undefined ? financialData.annualNOI : calculatedMetrics?.annualNOI,
+    totalProfit: financialData.totalProfit !== undefined ? financialData.totalProfit : calculatedMetrics?.totalProfit
+  };
   
   // Extract sections more reliably
   const summary = extractSectionByHeader(analysisText, ['executive summary', 'summary', 'overview']) || 
@@ -790,19 +928,24 @@ function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAn
     `${strategy} analysis`
   ]) || '';
   
+  // Log the extracted financial data for debugging
+  console.log('[parseAnalysisResponse] Extracted financial data:', financialData);
+  console.log('[parseAnalysisResponse] Calculated metrics (fallback):', calculatedMetrics);
+  console.log('[parseAnalysisResponse] Final metrics:', finalMetrics);
+  
   return {
     summary,
     recommendation,
     risks: extractRisks(analysisText),
     opportunities: extractOpportunities(analysisText),
     financial_metrics: {
-      monthly_cash_flow: financialData.cashFlow,
-      cap_rate: financialData.capRate,
-      cash_on_cash_return: financialData.cocReturn,
-      roi: financialData.roi,
-      total_investment: financialData.totalInvestment,
-      annual_noi: financialData.annualNOI,
-      total_profit: financialData.totalProfit
+      monthly_cash_flow: finalMetrics.cashFlow,
+      cap_rate: finalMetrics.capRate,
+      cash_on_cash_return: finalMetrics.cocReturn,
+      roi: finalMetrics.roi,
+      total_investment: finalMetrics.totalInvestment,
+      annual_noi: finalMetrics.annualNOI,
+      total_profit: finalMetrics.totalProfit
     },
     market_analysis: marketAnalysis,
     investment_strategy: {
@@ -892,12 +1035,14 @@ function extractFinancialData(text: string): FinancialData {
     roi: [
       /(?:total\s+)?roi[:\s]+([\d.]+)%/i,
       /return\s+on\s+investment[:\s]+([\d.]+)%/i,
-      /5[-\s]?year\s+roi[:\s]+([\d.]+)%/i
+      /5[-\s]?year\s+roi[:\s]+([\d.]+)%/i,
+      /total\s+roi.*?[:\s]+([\d.]+)%/i
     ],
     cocReturn: [
       /cash[- ]?on[- ]?cash(?:\s+return)?[:\s]+([\d.]+)%/i,
       /coc\s+return[:\s]+([\d.]+)%/i,
-      /cash\s+on\s+cash:\s*([\d.]+)%/i
+      /cash\s+on\s+cash:\s*([\d.]+)%/i,
+      /cash-on-cash\s+return[:\s]+([\d.]+)%/i
     ],
     totalInvestment: [
       /total\s*investment[:\s]+\$?([\d,]+)/i,
@@ -910,9 +1055,9 @@ function extractFinancialData(text: string): FinancialData {
       /annual\s+noi[:\s]+\$?([\d,]+)/i
     ],
     totalProfit: [
-      /total\s*profit[:\s]+\$?([\d,]+)/i,
-      /net\s+profit[:\s]+\$?([\d,]+)/i,
-      /profit[:\s]+\$?([\d,]+)/i
+      /total\s*profit[:\s]+\$?([\d,.-]+)/i,
+      /net\s+profit[:\s]+\$?([\d,.-]+)/i,
+      /profit[:\s]+\$?([\d,.-]+)/i
     ]
   };
   
@@ -931,17 +1076,75 @@ function extractFinancialData(text: string): FinancialData {
     }
   }
   
-  // Log what we found
-  console.log('[extractFinancialData] Extracted data:', data);
-  
-  // If still missing critical metrics, try to find them in a financial metrics section
-  if (Object.keys(data).length < 3) {
-    console.log('[extractFinancialData] Few metrics found, trying section extraction...');
-    const metricsSection = text.match(/financial\s+metrics[:\s]+([\s\S]+?)(?:\n\n|\n\d+\.|$)/i);
-    if (metricsSection) {
-      console.log('[extractFinancialData] Found metrics section:', metricsSection[1].substring(0, 200));
+  // Try to extract from FIX & FLIP ANALYSIS section
+  const flipSection = text.match(/FIX & FLIP ANALYSIS:([\s\S]+?)(?:\n\n|Provide|$)/i);
+  if (flipSection) {
+    console.log('[extractFinancialData] Found FIX & FLIP ANALYSIS section, extracting...');
+    const flipText = flipSection[1];
+    
+    // Extract net profit
+    const profitMatch = flipText.match(/Net Profit:\s*\$?([\d,.-]+)/i);
+    if (profitMatch && !data.totalProfit) {
+      data.totalProfit = parseFloat(profitMatch[1].replace(/,/g, ''));
+      console.log('[extractFinancialData] Extracted net profit from flip analysis:', data.totalProfit);
+    }
+    
+    // Extract ROI
+    const roiMatch = flipText.match(/Return on Investment:\s*([\d.-]+)%/i);
+    if (roiMatch && !data.roi) {
+      data.roi = parseFloat(roiMatch[1]);
+      console.log('[extractFinancialData] Extracted ROI from flip analysis:', data.roi);
+    }
+    
+    // Extract total investment
+    const investmentMatch = flipText.match(/Cash Investment:\s*\$?([\d,]+)/i);
+    if (investmentMatch && !data.totalInvestment) {
+      data.totalInvestment = parseFloat(investmentMatch[1].replace(/,/g, ''));
+      console.log('[extractFinancialData] Extracted total investment from flip analysis:', data.totalInvestment);
     }
   }
+  
+  // Also try to extract from the CASH FLOW ANALYSIS section for rental properties
+  const keyCalcsSection = text.match(/CASH FLOW ANALYSIS:([\s\S]+?)(?:\n\n|$)/i);
+  if (keyCalcsSection) {
+    console.log('[extractFinancialData] Found CASH FLOW ANALYSIS section, extracting...');
+    const calcsText = keyCalcsSection[1];
+    
+    // Extract monthly cash flow with more patterns
+    const cashFlowMatch = calcsText.match(/Monthly Cash Flow:\s*\$?([\d,.-]+)/i);
+    if (cashFlowMatch && !data.cashFlow) {
+      data.cashFlow = parseFloat(cashFlowMatch[1].replace(/,/g, ''));
+      console.log('[extractFinancialData] Extracted monthly cash flow from calculations:', data.cashFlow);
+    }
+    
+    // Extract cap rate
+    const capRateMatch = calcsText.match(/Cap Rate:\s*([\d.]+)%/i);
+    if (capRateMatch && !data.capRate) {
+      data.capRate = parseFloat(capRateMatch[1]);
+      console.log('[extractFinancialData] Extracted cap rate from calculations:', data.capRate);
+    }
+    
+    // Extract cash-on-cash
+    const cocMatch = calcsText.match(/Cash-on-Cash Return:\s*([\d.]+)%/i);
+    if (cocMatch && !data.cocReturn) {
+      data.cocReturn = parseFloat(cocMatch[1]);
+      console.log('[extractFinancialData] Extracted CoC return from calculations:', data.cocReturn);
+    }
+  }
+  
+  // If we still don't have values, use the calculated values from the context
+  // This is a fallback based on the calculations we provided to Claude
+  if (!data.cashFlow && text.includes('Monthly Cash Flow:')) {
+    console.log('[extractFinancialData] Using fallback extraction for cash flow');
+    // Look for the value we calculated in prepareAnalysisContext
+    const contextMatch = text.match(/Monthly Cash Flow:\s*\$?([\d,.-]+)\s*\(/i);
+    if (contextMatch) {
+      data.cashFlow = parseFloat(contextMatch[1].replace(/,/g, ''));
+    }
+  }
+  
+  // Log final extracted data
+  console.log('[extractFinancialData] Final extracted data:', data);
   
   return data;
 }

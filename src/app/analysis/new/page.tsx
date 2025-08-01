@@ -28,6 +28,9 @@ export interface WizardData {
     closingCosts?: number;
     renovationCosts?: number;
     holdingCosts?: number;
+    loanType?: 'conventional' | 'hardMoney';
+    points?: number;
+    arv?: number; // After Repair Value for flip strategy
   };
   analysis?: Record<string, unknown>;
   analysisId?: string;
@@ -166,7 +169,7 @@ export default function NewAnalysisPage() {
       <div className="flex">
         <DashboardSidebar />
         <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-5xl mx-auto">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold text-primary">Property Analysis</h1>
               <button

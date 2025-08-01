@@ -44,9 +44,11 @@ export default function Step4Generate({
         loanTerms: {
           interestRate: data.financial.interestRate,
           loanTerm: data.financial.loanTerm,
-          loanType: 'conventional'
+          loanType: data.financial.loanType || 'conventional',
+          points: data.financial.points
         },
         rehabCosts: data.financial.renovationCosts || 0,
+        arv: data.financial.arv, // After Repair Value for flip strategy
         strategyDetails: data.strategyDetails,
         propertyData: data.propertyData // Include the property data
       })
