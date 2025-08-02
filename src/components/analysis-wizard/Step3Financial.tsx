@@ -955,7 +955,7 @@ export default function Step3Financial({
                 ${Math.round(calculateMonthlyPayment())?.toLocaleString() || '0'}
               </p>
             </div>
-            {showRenovationCosts && financial.renovationCosts > 0 ? (
+            {showRenovationCosts && (financial.renovationCosts ?? 0) > 0 ? (
               <div>
                 <p className="text-muted mb-1">Renovation Costs</p>
                 <p className="text-xl font-bold text-accent">
