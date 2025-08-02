@@ -258,31 +258,31 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                     <div className="flex justify-between">
                       <span className="text-muted">Type</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.propertyType || analysis.property_data?.property?.propertyType || 'N/A'}
+                        {(analysis.property_data as any)?.propertyType || analysis.property_data?.property?.[0]?.propertyType || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Size</span>
                       <span className="text-primary font-medium">
-                        {(analysis.property_data?.squareFootage || analysis.property_data?.property?.squareFootage)?.toLocaleString() || 'N/A'} sq ft
+                        {((analysis.property_data as any)?.squareFootage || analysis.property_data?.property?.[0]?.squareFootage)?.toLocaleString() || 'N/A'} sq ft
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Bedrooms</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.bedrooms || analysis.property_data?.property?.bedrooms || 'N/A'}
+                        {(analysis.property_data as any)?.bedrooms || analysis.property_data?.property?.[0]?.bedrooms || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Bathrooms</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.bathrooms || analysis.property_data?.property?.bathrooms || 'N/A'}
+                        {(analysis.property_data as any)?.bathrooms || analysis.property_data?.property?.[0]?.bathrooms || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Year Built</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.yearBuilt || analysis.property_data?.property?.yearBuilt || 'N/A'}
+                        {(analysis.property_data as any)?.yearBuilt || analysis.property_data?.property?.[0]?.yearBuilt || 'N/A'}
                       </span>
                     </div>
                   </div>
