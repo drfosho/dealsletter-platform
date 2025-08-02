@@ -34,10 +34,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Get comprehensive property data
     const data = await rentCastService.getComprehensivePropertyData(address);
     
-    // Add calculated metrics
+    // Add calculated metrics - ensure null values are converted to undefined
+    const dataForMetrics = {
+      property: data.property,
+      rental: data.rental || undefined,
+      comparables: data.comparables || undefined,
+      market: data.market || undefined,
+      listing: data.listing
+    };
+    
     const enrichedData = {
       ...data,
-      metrics: calculatePropertyMetrics(data),
+      metrics: calculatePropertyMetrics(dataForMetrics),
       timestamp: new Date().toISOString(),
     };
 
