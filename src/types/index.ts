@@ -61,6 +61,8 @@ export interface AIAnalysis {
     annual_noi?: number;
     total_investment?: number;
     total_profit?: number;
+    net_profit?: number;
+    holding_costs?: number;
   };
   [key: string]: unknown;
 }

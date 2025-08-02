@@ -987,7 +987,7 @@ export default function Step3Financial({
           )}
           
           {/* Renovation Cost Breakdown */}
-          {showRenovationCosts && financial.renovationCosts > 0 && (
+          {showRenovationCosts && (financial.renovationCosts ?? 0) > 0 && (
             <div className="mt-4 p-4 bg-accent/5 rounded-lg border border-accent/20">
               <h4 className="text-sm font-semibold text-accent mb-2">Renovation Investment Details</h4>
               <div className="space-y-1 text-xs">
@@ -999,7 +999,7 @@ export default function Step3Financial({
                   const sqft = (data.propertyData as any)?.property?.squareFootage;
                   const level = data.strategyDetails?.renovationLevel || 'moderate';
                   if (sqft) {
-                    const perSqft = financial.renovationCosts / sqft;
+                    const perSqft = (financial.renovationCosts ?? 0) / sqft;
                     return (
                       <>
                         <div className="flex justify-between">

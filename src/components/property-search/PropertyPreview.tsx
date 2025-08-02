@@ -9,6 +9,7 @@ interface PropertyData {
     propertyType: string;
     yearBuilt: number;
     lotSize?: number;
+    images?: string[];
   };
   rental?: {
     rentEstimate?: number;

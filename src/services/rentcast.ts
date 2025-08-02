@@ -222,10 +222,10 @@ class RentCastService {
         console.log('[RentCast] No active listing found, will use AVM data');
       }
       
-      return null;
+      return undefined;
     } catch (error) {
       console.error('[RentCast] Error getting active listing:', error);
-      return null;
+      return undefined;
     }
   }
 
@@ -316,22 +316,22 @@ class RentCastService {
         this.getPropertyDetails(address),
         this.getRentalEstimate(address).catch(err => {
           console.warn('[RentCast] Rental estimate failed:', err);
-          return null;
+          return undefined;
         }),
         this.getSaleComparables(address).catch(err => {
           console.warn('[RentCast] Sale comparables failed:', err);
-          return null;
+          return undefined;
         }),
         this.getActiveListing(address).catch(err => {
           console.warn('[RentCast] Active listing fetch failed:', err);
-          return null;
+          return undefined;
         })
       ]);
 
       // Get market data using property's zip code
       const market = await this.getMarketData(property.zipCode).catch(err => {
         console.warn('[RentCast] Market data failed:', err);
-        return null;
+        return undefined;
       });
 
       const comprehensiveData = {
@@ -346,7 +346,7 @@ class RentCastService {
         hasListing: !!listing,
         listingPrice: listing?.price || listing?.listPrice,
         avmValue: comparables?.value,
-        hasImages: property?.images?.length > 0
+        hasImages: (property?.images?.length ?? 0) > 0
       });
 
       // Cache the comprehensive data
@@ -368,15 +368,15 @@ class RentCastService {
   }
 
   // Cache management
-  private getFromCache(key: string): CachedPropertyData | null {
+  private getFromCache(key: string): CachedPropertyData | undefined {
     const cached = propertyCache.get(key);
     
-    if (!cached) return null;
+    if (!cached) return undefined;
     
     const now = Date.now();
     if (now - cached.timestamp > cached.ttl) {
       propertyCache.delete(key);
-      return null;
+      return undefined;
     }
     
     return cached;

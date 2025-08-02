@@ -131,6 +131,7 @@ export interface CachedPropertyData {
   rentEstimate?: RentCastRentalEstimate;
   saleComps?: RentCastSaleComps;
   marketData?: RentCastMarketData;
+  listing?: any;
   timestamp: number;
   ttl: number; // Time to live in milliseconds
 }

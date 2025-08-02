@@ -13,12 +13,12 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
   const projections = useMemo(() => {
     const years = parseInt(timeframe);
     const purchasePrice = analysis.purchase_price || 0;
-    const monthlyRent = analysis.rental_estimate?.rentEstimate || analysis.rental_estimate?.rent || 0;
+    const monthlyRent = Number(analysis.rental_estimate?.rentEstimate || analysis.rental_estimate?.rent || 0);
     const appreciationRate = 0.03; // 3% annual
     const rentGrowthRate = 0.025; // 2.5% annual
     const inflationRate = 0.02; // 2% for expenses
 
-    const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
+    const downPayment = (purchasePrice * ((analysis.down_payment_percent ?? 20))) / 100;
     const loanAmount = purchasePrice - downPayment;
     const monthlyRate = (analysis.interest_rate || 7) / 100 / 12;
     const numPayments = (analysis.loan_term || 30) * 12;
@@ -29,10 +29,10 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
       (Math.pow(1 + monthlyRate, numPayments) - 1);
 
     const yearlyData = [];
-    let currentValue = purchasePrice;
-    let currentRent = monthlyRent;
-    let currentBalance = loanAmount;
-    let totalCashFlow = 0;
+    let currentValue: number = purchasePrice;
+    let currentRent: number = monthlyRent;
+    let currentBalance: number = loanAmount;
+    let totalCashFlow: number = 0;
 
     for (let year = 1; year <= years; year++) {
       // Property appreciation
@@ -122,7 +122,7 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
             {formatCurrency(lastYear.totalReturn)}
           </p>
           <p className="text-xs text-muted mt-1">
-            {((lastYear.totalReturn / (analysis.purchase_price * (analysis.down_payment_percent / 100))) * 100).toFixed(0)}% ROI
+            {((lastYear.totalReturn / ((analysis.purchase_price ?? 0) * ((analysis.down_payment_percent ?? 20) / 100))) * 100).toFixed(0)}% ROI
           </p>
         </div>
         <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
@@ -131,7 +131,7 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
             {formatCurrency(lastYear.propertyValue)}
           </p>
           <p className="text-xs text-muted mt-1">
-            +{((lastYear.propertyValue / analysis.purchase_price - 1) * 100).toFixed(0)}% growth
+            +{((lastYear.propertyValue / (analysis.purchase_price ?? 1) - 1) * 100).toFixed(0)}% growth
           </p>
         </div>
         <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg p-4">
