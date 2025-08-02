@@ -66,11 +66,11 @@ export default function Step3Financial({
         purchasePrice: data.financial.purchasePrice
       }));
     }
-    if (data.financial.monthlyRent > 0 && financial.monthlyRent === 0) {
+    if ((data.financial.monthlyRent ?? 0) > 0 && financial.monthlyRent === 0) {
       console.log('[Step3Financial] Syncing monthly rent from props:', data.financial.monthlyRent);
       setFinancial(prev => ({
         ...prev,
-        monthlyRent: data.financial.monthlyRent
+        monthlyRent: data.financial.monthlyRent ?? 0
       }));
     }
   }, [data.financial.purchasePrice, data.financial.monthlyRent]); // eslint-disable-line react-hooks/exhaustive-deps
