@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       results.property = {
         success: true,
         data: property,
-        hasImages: property?.images?.length > 0
+        hasImages: (property?.images?.length ?? 0) > 0
       };
     } catch (err) {
       results.property = {
