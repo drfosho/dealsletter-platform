@@ -218,7 +218,7 @@ class RentCastService {
           this.updateCache(cacheKey, { listing: listingData });
           return listingData;
         }
-      } catch (_listingError) {
+      } catch {
         console.log('[RentCast] No active listing found, will use AVM data');
       }
       
