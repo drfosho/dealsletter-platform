@@ -26,11 +26,21 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
 
   const getRiskLevel = () => {
     const roi = analysis.ai_analysis?.financial_metrics?.roi || 0;
-    const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
     
-    if (roi < 10 || cashFlow < 0) return { level: 'High', color: 'text-red-600' };
-    if (roi < 15 || cashFlow < 200) return { level: 'Medium', color: 'text-yellow-600' };
-    return { level: 'Low', color: 'text-green-600' };
+    if (analysis.strategy === 'flip') {
+      // Fix & Flip risk assessment based on ROI and timeline
+      const timeline = (analysis as any).strategy_details?.timeline || 
+                      (analysis as any).strategyDetails?.timeline || 6;
+      if (roi < 15 || timeline > 12) return { level: 'High', color: 'text-red-600' };
+      if (roi < 25 || timeline > 9) return { level: 'Medium', color: 'text-yellow-600' };
+      return { level: 'Low', color: 'text-green-600' };
+    } else {
+      // Rental property risk assessment based on ROI and cash flow
+      const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
+      if (roi < 10 || cashFlow < 0) return { level: 'High', color: 'text-red-600' };
+      if (roi < 15 || cashFlow < 200) return { level: 'Medium', color: 'text-yellow-600' };
+      return { level: 'Low', color: 'text-green-600' };
+    }
   };
 
   const risk = getRiskLevel();
@@ -109,14 +119,62 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       </div>
 
       {analysis.ai_analysis && (analysis.ai_analysis as any).recommendation && (
-        <div className="mt-6 p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+        <div className={`mt-6 p-4 rounded-lg border ${
+          (analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
+          (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
+          (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
+          (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended')
+            ? 'bg-red-50 border-red-200' 
+            : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
+              (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
+              (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful')
+            ? 'bg-yellow-50 border-yellow-200'
+            : 'bg-green-50 border-green-200'
+        }`}>
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-primary mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
+            {(analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
+             (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
+             (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
+             (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended') ? (
+              <svg className="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            ) : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful') ? (
+              <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            )}
             <div>
-              <h4 className="font-semibold text-primary mb-1">AI Recommendation</h4>
-              <p className="text-sm text-primary/80">
+              <h4 className={`font-semibold mb-1 ${
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended')
+                  ? 'text-red-900' 
+                  : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
+                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
+                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful')
+                  ? 'text-yellow-900'
+                  : 'text-green-900'
+              }`}>AI Recommendation</h4>
+              <p className={`text-sm ${
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
+                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended')
+                  ? 'text-red-800' 
+                  : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
+                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
+                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful')
+                  ? 'text-yellow-800'
+                  : 'text-green-800'
+              }`}>
                 {(analysis.ai_analysis as any).recommendation}
               </p>
             </div>
@@ -128,38 +186,73 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
 
   function getInvestmentScore(analysis: AnalysisOverviewProps['analysis']): number {
     const roi = analysis.ai_analysis?.financial_metrics?.roi || 0;
-    const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
-    const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
-
+    
     let score = 50; // Base score
 
-    // ROI contribution (0-25 points)
-    if (roi > 20) score += 25;
-    else if (roi > 15) score += 20;
-    else if (roi > 10) score += 15;
-    else if (roi > 5) score += 10;
-    else if (roi > 0) score += 5;
+    if (analysis.strategy === 'flip') {
+      // Fix & Flip scoring based on ROI and profit margin
+      const netProfit = analysis.ai_analysis?.financial_metrics?.net_profit || 
+                       analysis.ai_analysis?.financial_metrics?.total_profit || 0;
+      const timeline = (analysis as any).strategy_details?.timeline || 
+                      (analysis as any).strategyDetails?.timeline || 6;
+      
+      // ROI contribution (0-35 points for flips)
+      if (roi > 30) score += 35;
+      else if (roi > 25) score += 30;
+      else if (roi > 20) score += 25;
+      else if (roi > 15) score += 20;
+      else if (roi > 10) score += 15;
+      else if (roi > 5) score += 10;
+      
+      // Profit contribution (0-10 points)
+      if (netProfit > 100000) score += 10;
+      else if (netProfit > 75000) score += 8;
+      else if (netProfit > 50000) score += 6;
+      else if (netProfit > 25000) score += 4;
+      else if (netProfit > 10000) score += 2;
+      
+      // Timeline bonus (0-5 points)
+      if (timeline <= 6) score += 5;
+      else if (timeline <= 9) score += 3;
+      else if (timeline <= 12) score += 1;
+    } else {
+      // Rental property scoring
+      const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
+      const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
+      
+      // ROI contribution (0-25 points)
+      if (roi > 20) score += 25;
+      else if (roi > 15) score += 20;
+      else if (roi > 10) score += 15;
+      else if (roi > 5) score += 10;
+      else if (roi > 0) score += 5;
 
-    // Cap rate contribution (0-15 points)
-    if (capRate > 10) score += 15;
-    else if (capRate > 8) score += 12;
-    else if (capRate > 6) score += 9;
-    else if (capRate > 4) score += 6;
-    else if (capRate > 2) score += 3;
+      // Cap rate contribution (0-15 points)
+      if (capRate > 10) score += 15;
+      else if (capRate > 8) score += 12;
+      else if (capRate > 6) score += 9;
+      else if (capRate > 4) score += 6;
+      else if (capRate > 2) score += 3;
 
-    // Cash flow contribution (0-10 points)
-    if (cashFlow > 1000) score += 10;
-    else if (cashFlow > 500) score += 8;
-    else if (cashFlow > 250) score += 6;
-    else if (cashFlow > 100) score += 4;
-    else if (cashFlow > 0) score += 2;
+      // Cash flow contribution (0-10 points)
+      if (cashFlow > 1000) score += 10;
+      else if (cashFlow > 500) score += 8;
+      else if (cashFlow > 250) score += 6;
+      else if (cashFlow > 100) score += 4;
+      else if (cashFlow > 0) score += 2;
+    }
 
     return Math.min(100, Math.max(0, score));
   }
 
   function getTimelineEstimate(strategy: string): string {
     switch (strategy) {
-      case 'flip': return '6-12 months';
+      case 'flip': {
+        // Use timeline from strategy details if available
+        const timeline = (analysis as any).strategy_details?.timeline || 
+                        (analysis as any).strategyDetails?.timeline;
+        return timeline ? `${timeline} months` : '6-12 months';
+      }
       case 'brrrr': return '12-18 months';
       case 'rental': return '5+ years';
       case 'commercial': return '1+ years';

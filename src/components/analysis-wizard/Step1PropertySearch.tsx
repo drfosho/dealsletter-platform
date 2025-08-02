@@ -53,24 +53,168 @@ export default function Step1PropertySearch({
   };
 
   const handlePropertySelect = (address: string, propertyData: Record<string, unknown>) => {
-    // Extract the estimated value from comparables (RentCast AVM returns 'value' field)
-    const comparables = propertyData?.comparables as any;
-    const estimatedValue = comparables?.value || 0;
+    console.log('[Step1] RAW PROPERTY DATA RECEIVED:', JSON.stringify(propertyData, null, 2));
     
-    console.log('[Step1] Property selected with AVM data:', {
-      comparables,
-      estimatedValue,
-      valueRange: comparables ? `${comparables.valueRangeLow} - ${comparables.valueRangeHigh}` : 'N/A'
+    // Extract data from RentCast response
+    const comparables = propertyData?.comparables as any;
+    const rental = propertyData?.rental as any;
+    const listing = propertyData?.listing as any;
+    const property = propertyData?.property as any;
+    
+    console.log('[Step1] Extracted fields:', {
+      hasComparables: !!comparables,
+      hasRental: !!rental,
+      hasListing: !!listing,
+      hasProperty: !!property,
+      comparablesStructure: comparables,
+      rentalStructure: rental
     });
+    
+    // Handle potentially wrapped responses from RentCast
+    // Sometimes the data comes wrapped in a 'data' field or array
+    const extractValue = (obj: any, ...keys: string[]) => {
+      if (!obj) return 0;
+      
+      // If it's an array, take the first element
+      if (Array.isArray(obj) && obj.length > 0) {
+        obj = obj[0];
+      }
+      
+      // If it's wrapped in 'data' field
+      if (obj.data) {
+        obj = obj.data;
+      }
+      
+      // Try each key
+      for (const key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null) {
+          return obj[key];
+        }
+      }
+      
+      return 0;
+    };
+    
+    // For on-market properties, prioritize listing price over AVM
+    const listingPrice = extractValue(listing, 'price', 'listPrice', 'askingPrice', 'currentPrice');
+    
+    // RentCast comparables data structure - check both direct value and nested paths
+    let avmValue = 0;
+    if (comparables) {
+      // Try direct value first
+      avmValue = comparables.value || comparables.price || 0;
+      
+      // If not found, try nested paths
+      if (!avmValue && comparables.avm) {
+        avmValue = comparables.avm.value || comparables.avm.amount || 0;
+      }
+      
+      // Try averagePrice or estimatedValue
+      if (!avmValue) {
+        avmValue = comparables.averagePrice || comparables.estimatedValue || 0;
+      }
+      
+      console.log('[Step1] AVM extraction:', {
+        directValue: comparables.value,
+        directPrice: comparables.price,
+        avmNested: comparables.avm,
+        averagePrice: comparables.averagePrice,
+        finalAVM: avmValue
+      });
+    }
+    
+    const purchasePrice = listingPrice > 0 ? listingPrice : avmValue;
+    
+    // Extract rent estimate with similar approach
+    let rentEstimate = 0;
+    if (rental) {
+      // Try direct fields first
+      rentEstimate = rental.rentEstimate || rental.rent || rental.price || 0;
+      
+      // Try nested paths
+      if (!rentEstimate && rental.estimate) {
+        rentEstimate = rental.estimate.rent || rental.estimate.amount || 0;
+      }
+      
+      // Try monthlyRent
+      if (!rentEstimate) {
+        rentEstimate = rental.monthlyRent || 0;
+      }
+      
+      console.log('[Step1] Rent extraction:', {
+        directRentEstimate: rental.rentEstimate,
+        directRent: rental.rent,
+        monthlyRent: rental.monthlyRent,
+        finalRent: rentEstimate
+      });
+    }
+    
+    console.log('[Step1] CRITICAL - Purchase Price Calculation:', {
+      listing,
+      listingPrice,
+      avmValue,
+      finalPurchasePrice: purchasePrice,
+      isOnMarket: listingPrice > 0,
+      comparables,
+      valueRange: comparables ? `${extractValue(comparables, 'valueRangeLow')}-${extractValue(comparables, 'valueRangeHigh')}` : 'N/A',
+      rental,
+      rentEstimate,
+      rentRange: rental ? `${extractValue(rental, 'rentRangeLow')}-${extractValue(rental, 'rentRangeHigh')}` : 'N/A',
+      hasImages: property?.images?.length > 0
+    });
+    
+    // FALLBACK: If we still don't have a purchase price, try to extract from any available data
+    let finalPurchasePrice = purchasePrice;
+    if (finalPurchasePrice === 0) {
+      console.log('[Step1] WARNING: No purchase price found, attempting deep extraction...');
+      
+      // Try to find any price-like field in the entire propertyData object
+      const findPrice = (obj: any, depth = 0): number => {
+        if (depth > 3 || !obj) return 0;
+        
+        // Direct price fields
+        const priceFields = ['value', 'price', 'listPrice', 'askingPrice', 'estimatedValue', 'avm', 'currentPrice'];
+        for (const field of priceFields) {
+          if (obj[field] && typeof obj[field] === 'number' && obj[field] > 10000) {
+            console.log(`[Step1] Found price in field '${field}':`, obj[field]);
+            return obj[field];
+          }
+        }
+        
+        // Recursively search nested objects
+        for (const key in obj) {
+          if (typeof obj[key] === 'object' && obj[key] !== null) {
+            const found = findPrice(obj[key], depth + 1);
+            if (found > 0) return found;
+          }
+        }
+        
+        return 0;
+      };
+      
+      finalPurchasePrice = findPrice(propertyData);
+      console.log('[Step1] Deep extraction result:', finalPurchasePrice);
+    }
+    
+    // Update both property data and financial data at the same time
+    const updatedFinancial = {
+      ...data.financial,
+      purchasePrice: finalPurchasePrice > 0 ? finalPurchasePrice : (purchasePrice > 0 ? purchasePrice : data.financial.purchasePrice),
+      monthlyRent: rentEstimate > 0 ? rentEstimate : data.financial.monthlyRent
+    };
     
     updateData({ 
       address, 
       propertyData,
-      financial: {
-        ...data.financial,
-        purchasePrice: estimatedValue
-      }
+      financial: updatedFinancial
     });
+    
+    console.log('[Step1] Updated wizard data with financial values:', {
+      purchasePrice: updatedFinancial.purchasePrice,
+      monthlyRent: updatedFinancial.monthlyRent,
+      usedListingPrice: listingPrice > 0
+    });
+    
     setCanProceed(true);
   };
 

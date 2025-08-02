@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch user's analyzed properties
     const { data, error } = await supabase
-      .from('user_analyses')
+      .from('analyzed_properties')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -52,18 +52,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data to match the expected format
-    const transformedData = (data || []).map(analysis => ({
-      id: analysis.id,
-      address: analysis.address,
-      deal_type: analysis.strategy.charAt(0).toUpperCase() + analysis.strategy.slice(1),
-      is_favorite: analysis.is_favorite || false,
-      analysis_date: analysis.created_at,
-      roi: analysis.ai_analysis?.financial_metrics?.roi || 0,
-      profit: analysis.ai_analysis?.financial_metrics?.total_profit || 0,
-      property_data: analysis.property_data,
-      purchase_price: analysis.purchase_price,
-      strategy: analysis.strategy
-    }));
+    const transformedData = (data || []).map(analysis => {
+      // Extract financial metrics from analysis_data JSON
+      const analysisData = analysis.analysis_data || {};
+      const aiAnalysis = analysisData.ai_analysis || {};
+      const financialMetrics = aiAnalysis.financial_metrics || {};
+      
+      return {
+        id: analysis.id,
+        address: analysis.address,
+        deal_type: analysis.deal_type || 'Buy & Hold',
+        is_favorite: analysis.is_favorite || false,
+        analysis_date: analysis.analysis_date || analysis.created_at,
+        roi: analysis.roi || financialMetrics.roi || 0,
+        profit: analysis.profit || financialMetrics.total_profit || 0,
+        property_data: analysisData.property_data || {},
+        purchase_price: analysisData.purchase_price || 0,
+        strategy: analysisData.strategy || 'rental'
+      };
+    });
 
     return NextResponse.json({
       data: transformedData,
@@ -74,11 +81,11 @@ export async function GET(request: NextRequest) {
     console.error('Fetch Analyzed Properties Error:', error);
     
     // Check if it's a table not found error
-    if ((error as any)?.code === '42P01' || (error as any)?.message?.includes('relation "user_analyses" does not exist')) {
+    if ((error as any)?.code === '42P01' || (error as any)?.message?.includes('relation "analyzed_properties" does not exist')) {
       return NextResponse.json(
         { 
           error: 'Database table not found',
-          message: 'The user_analyses table has not been created yet. Please run the migration.',
+          message: 'The analyzed_properties table has not been created yet. Please run the migration.',
           data: []
         },
         { status: 200 } // Return 200 with empty data instead of 500
@@ -126,7 +133,7 @@ export async function DELETE(request: NextRequest) {
 
     // Delete the analysis
     const { error } = await supabase
-      .from('user_analyses')
+      .from('analyzed_properties')
       .delete()
       .eq('id', propertyId)
       .eq('user_id', user.id);
@@ -180,7 +187,7 @@ export async function PATCH(request: NextRequest) {
 
     // Update favorite status
     const { error } = await supabase
-      .from('user_analyses')
+      .from('analyzed_properties')
       .update({ is_favorite })
       .eq('id', propertyId)
       .eq('user_id', user.id);

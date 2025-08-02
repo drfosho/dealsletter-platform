@@ -108,10 +108,46 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // CRITICAL: Always fetch listing data for on-market properties
+      promises.push(
+        rentCastService.getActiveListing(address)
+          .then(data => {
+            console.log('[API] Active listing data:', data);
+            results.listing = data;
+          })
+          .catch(err => {
+            console.log('[API] No active listing found (property may be off-market):', err.message);
+            results.listing = null;
+          })
+      );
+
       // Wait for all additional data
       if (promises.length > 0) {
         await Promise.all(promises);
       }
+      
+      // Log final results for debugging with FULL data structure
+      console.log('[API] CRITICAL - Raw data structure inspection:');
+      console.log('Property data:', JSON.stringify(results.property, null, 2));
+      console.log('Comparables data:', JSON.stringify(results.comparables, null, 2));
+      console.log('Rental data:', JSON.stringify(results.rental, null, 2));
+      console.log('Listing data:', JSON.stringify(results.listing, null, 2));
+      
+      // Try to extract values from different possible paths
+      const comparablesData = results.comparables as any;
+      const rentalData = results.rental as any;
+      
+      console.log('[API] Final property search results:', {
+        hasProperty: !!results.property,
+        hasListing: !!results.listing,
+        listingPrice: (results.listing as any)?.price || (results.listing as any)?.listPrice,
+        hasComparables: !!results.comparables,
+        comparablesValue: comparablesData?.value || comparablesData?.price || comparablesData?.averagePrice,
+        comparablesFullData: comparablesData,
+        hasRental: !!results.rental,
+        rentEstimate: rentalData?.rentEstimate || rentalData?.rent || rentalData?.price,
+        rentalFullData: rentalData
+      });
 
       return NextResponse.json(results);
 

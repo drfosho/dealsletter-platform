@@ -275,6 +275,26 @@ export async function POST(request: NextRequest) {
       'commercial': 'Buy & Hold'
     };
     
+    // Log the property data being stored
+    console.log('[Analysis] Property data being stored:', {
+      property: propertyData?.property ? {
+        bedrooms: (propertyData.property as any).bedrooms,
+        bathrooms: (propertyData.property as any).bathrooms,
+        squareFootage: (propertyData.property as any).squareFootage,
+        yearBuilt: (propertyData.property as any).yearBuilt,
+        propertyType: (propertyData.property as any).propertyType,
+        addressLine1: (propertyData.property as any).addressLine1
+      } : null,
+      rental: propertyData?.rental,
+      comparables: propertyData?.comparables ? {
+        value: (propertyData.comparables as any).value,
+        valueRangeLow: (propertyData.comparables as any).valueRangeLow,
+        valueRangeHigh: (propertyData.comparables as any).valueRangeHigh,
+        comparablesCount: (propertyData.comparables as any).comparables?.length
+      } : null,
+      market: propertyData?.market
+    });
+    
     // Prepare data for both possible table schemas
     const insertData = {
       user_id: user.id,
@@ -466,13 +486,21 @@ export async function POST(request: NextRequest) {
         console.error('Failed to update analysis:', updateError);
       }
 
-      // Update user's usage count
+      // Update user's usage count (including admin tracking)
+      console.log('[Analysis] Incrementing usage count for user:', user.id);
       const { error: usageUpdateError } = await supabase
-        .rpc('increment_usage', { p_user_id: user.id });
+        .rpc('increment_analysis_usage', { p_user_id: user.id });
       
       if (usageUpdateError) {
         console.error('Failed to update usage count:', usageUpdateError);
+        console.error('Usage update error details:', {
+          code: usageUpdateError.code,
+          message: usageUpdateError.message,
+          details: usageUpdateError.details
+        });
         // Don't fail the request, just log the error
+      } else {
+        console.log('[Analysis] Successfully incremented usage count');
       }
 
       // Return complete analysis
@@ -488,10 +516,13 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // Update analysis status to failed
       await supabase
-        .from('user_analyses')
+        .from('analyzed_properties')
         .update({
-          status: 'failed',
-          error_message: error instanceof Error ? error.message : 'Unknown error'
+          analysis_data: {
+            ...analysisRecord.analysis_data,
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Unknown error'
+          }
         })
         .eq('id', analysisRecord.id);
 
@@ -809,8 +840,8 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
     };
     
   } else {
-    // Rental property calculations (existing logic)
-    const monthlyRent = (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
+    // Rental property calculations - use user-specified rent if available
+    const monthlyRent = request.monthlyRent || (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
     
     // Calculate additional metrics for better analysis

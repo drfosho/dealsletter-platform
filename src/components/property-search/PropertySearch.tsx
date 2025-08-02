@@ -113,7 +113,12 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
     <div className={`w-full ${className}`}>
       <div className="bg-card rounded-lg shadow-sm border border-border p-6">
         <div className="mb-4">
-          <h2 className="text-xl font-semibold text-primary mb-2">Property Search</h2>
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <h2 className="text-xl font-semibold text-primary">Property Search</h2>
+          </div>
           <p className="text-sm text-muted">
             Enter a property address to get instant valuation and rental estimates
           </p>

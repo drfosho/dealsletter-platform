@@ -18,7 +18,6 @@ export const metadata: Metadata = {
   title: "Dealsletter Platform - Real Estate Deal Analysis",
   description: "Analyze real estate investment opportunities with advanced metrics, AI-powered deal scoring, and comprehensive property analysis tools.",
   manifest: "/manifest.json",
-  themeColor: "#0a0a0a",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -31,6 +30,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({
@@ -39,9 +39,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <PlatformProvider>
           <AuthProvider>

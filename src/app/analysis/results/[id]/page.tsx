@@ -8,6 +8,7 @@ import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import FinancialMetrics from '@/components/analysis/FinancialMetrics';
 import AnalysisOverview from '@/components/analysis/AnalysisOverview';
 import InvestmentProjections from '@/components/analysis/InvestmentProjections';
+import FlipTimeline from '@/components/analysis/FlipTimeline';
 import ActionButtons from '@/components/analysis/ActionButtons';
 import ShareModal from '@/components/analysis/ShareModal';
 import ComparisonModal from '@/components/analysis/ComparisonModal';
@@ -176,22 +177,34 @@ export default function AnalysisResultsPage({ params }: PageParams) {
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex items-start gap-4">
                   {/* Property Image */}
-                  {(analysis.property_data as any)?.property?.[0]?.primaryImageUrl ? (
-                    <img 
-                      src={(analysis.property_data as any).property[0].primaryImageUrl} 
-                      alt={analysis.address}
-                      className="w-24 h-24 object-cover rounded-lg"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-muted/20 rounded-lg flex items-center justify-center">
-                      <svg className="w-10 h-10 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                      </svg>
-                    </div>
-                  )}
+                  {(() => {
+                    const imageUrl = (analysis.property_data as any)?.primaryImageUrl || 
+                                   (analysis.property_data as any)?.property?.primaryImageUrl ||
+                                   (analysis.property_data as any)?.images?.[0];
+                    
+                    if (imageUrl) {
+                      return (
+                        <img 
+                          src={imageUrl} 
+                          alt={analysis.address}
+                          className="w-24 h-24 object-cover rounded-lg shadow-md"
+                          onError={(e) => {
+                            const img = e.target as HTMLImageElement;
+                            // Use the no image placeholder
+                            img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"%3E%3Crect width="200" height="200" fill="%23f3f4f6"/%3E%3Cg transform="translate(100,100)"%3E%3Crect x="-40" y="-40" width="80" height="80" fill="none" stroke="%239ca3af" stroke-width="2" rx="4"/%3E%3Cpath d="M-30,-20 L-10,0 L0,-10 L10,0 L30,-20" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="-10" cy="-15" r="4" fill="none" stroke="%239ca3af" stroke-width="2"/%3E%3Ctext y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="%236b7280"%3ENo Image%3C/text%3E%3C/g%3E%3C/svg%3E';
+                          }}
+                        />
+                      );
+                    }
+                    
+                    return (
+                      <div className="w-24 h-24 bg-muted/20 rounded-lg flex items-center justify-center">
+                        <svg className="w-10 h-10 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                      </div>
+                    );
+                  })()}
                   <div>
                     <h1 className="text-2xl lg:text-3xl font-bold text-primary mb-2">
                       {analysis.address}
@@ -228,7 +241,12 @@ export default function AnalysisResultsPage({ params }: PageParams) {
               <div className="lg:col-span-2 space-y-6">
                 <AnalysisOverview analysis={analysis} />
                 <FinancialMetrics analysis={analysis} />
-                <InvestmentProjections analysis={analysis} />
+                {/* Show strategy-specific components */}
+                {analysis.strategy === 'flip' ? (
+                  <FlipTimeline analysis={analysis} />
+                ) : (
+                  <InvestmentProjections analysis={analysis} />
+                )}
               </div>
 
               {/* Right Column - Property Details & Strategy */}
@@ -240,31 +258,31 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                     <div className="flex justify-between">
                       <span className="text-muted">Type</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.property?.[0]?.propertyType || 'N/A'}
+                        {analysis.property_data?.propertyType || analysis.property_data?.property?.propertyType || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Size</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.property?.[0]?.squareFootage?.toLocaleString() || 'N/A'} sq ft
+                        {(analysis.property_data?.squareFootage || analysis.property_data?.property?.squareFootage)?.toLocaleString() || 'N/A'} sq ft
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Bedrooms</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.property?.[0]?.bedrooms || 'N/A'}
+                        {analysis.property_data?.bedrooms || analysis.property_data?.property?.bedrooms || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Bathrooms</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.property?.[0]?.bathrooms || 'N/A'}
+                        {analysis.property_data?.bathrooms || analysis.property_data?.property?.bathrooms || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Year Built</span>
                       <span className="text-primary font-medium">
-                        {analysis.property_data?.property?.[0]?.yearBuilt || 'N/A'}
+                        {analysis.property_data?.yearBuilt || analysis.property_data?.property?.yearBuilt || 'N/A'}
                       </span>
                     </div>
                   </div>

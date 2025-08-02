@@ -97,24 +97,38 @@ export default function Step5Results({ data }: Step5ResultsProps) {
       <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 mb-6">
         <div className="flex items-start gap-6">
           {/* Property Image */}
-          {(data.propertyData as any)?.property?.primaryImageUrl ? (
-            <div className="flex-shrink-0">
-              <img 
-                src={(data.propertyData as any).property.primaryImageUrl} 
-                alt={data.address}
-                className="w-32 h-32 object-cover rounded-lg"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-          ) : (
-            <div className="flex-shrink-0 w-32 h-32 bg-muted/20 rounded-lg flex items-center justify-center">
-              <svg className="w-12 h-12 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-            </div>
-          )}
+          {(() => {
+            const imageUrl = (data.propertyData as any)?.property?.primaryImageUrl || 
+                           (data.propertyData as any)?.primaryImageUrl ||
+                           (data.propertyData as any)?.images?.[0];
+            
+            if (imageUrl && !imageUrl.includes('No Image Available')) {
+              return (
+                <div className="flex-shrink-0">
+                  <img 
+                    src={imageUrl} 
+                    alt={data.address}
+                    className="w-32 h-32 object-cover rounded-lg"
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      // Replace with placeholder on error
+                      img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"%3E%3Crect width="128" height="128" fill="%23f3f4f6"/%3E%3Cg transform="translate(64,64)"%3E%3Crect x="-30" y="-30" width="60" height="60" fill="none" stroke="%239ca3af" stroke-width="2" rx="4"/%3E%3Cpath d="M-20,-15 L-5,0 L0,-5 L5,0 L20,-15" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="-5" cy="-10" r="3" fill="none" stroke="%239ca3af" stroke-width="2"/%3E%3Ctext y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="%236b7280"%3ENo Image%3C/text%3E%3C/g%3E%3C/svg%3E';
+                    }}
+                  />
+                </div>
+              );
+            }
+            
+            return (
+              <div className="flex-shrink-0 w-32 h-32 bg-muted/20 rounded-lg flex flex-col items-center justify-center">
+                <svg className="w-12 h-12 text-muted mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-xs text-muted">No Image Available</span>
+                <span className="text-xs text-muted">Off-Market Property</span>
+              </div>
+            );
+          })()}
           
           <div className="flex-1">
             <div className="flex items-start justify-between">
@@ -148,30 +162,63 @@ export default function Step5Results({ data }: Step5ResultsProps) {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-card rounded-lg border border-border p-4">
-          <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
-          <p className="text-2xl font-bold text-primary">
-            ${financial_metrics?.monthly_cash_flow?.toLocaleString() || '0'}
-          </p>
-        </div>
-        <div className="bg-card rounded-lg border border-border p-4">
-          <p className="text-sm text-muted mb-1">Cap Rate</p>
-          <p className="text-2xl font-bold text-primary">
-            {financial_metrics?.cap_rate?.toFixed(1) || '0'}%
-          </p>
-        </div>
-        <div className="bg-card rounded-lg border border-border p-4">
-          <p className="text-sm text-muted mb-1">Cash on Cash</p>
-          <p className="text-2xl font-bold text-primary">
-            {financial_metrics?.cash_on_cash_return?.toFixed(1) || '0'}%
-          </p>
-        </div>
-        <div className="bg-card rounded-lg border border-border p-4">
-          <p className="text-sm text-muted mb-1">Total ROI</p>
-          <p className="text-2xl font-bold text-green-600">
-            {financial_metrics?.roi?.toFixed(1) || '0'}%
-          </p>
-        </div>
+        {data.strategy === 'flip' ? (
+          // Fix & Flip Metrics
+          <>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">📊 Net Profit</p>
+              <p className="text-2xl font-bold text-primary">
+                ${financial_metrics?.net_profit?.toLocaleString() || financial_metrics?.total_profit?.toLocaleString() || '0'}
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">💰 Holding Costs</p>
+              <p className="text-2xl font-bold text-primary">
+                ${financial_metrics?.holding_costs?.toLocaleString() || '0'}
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">⏱️ Timeline</p>
+              <p className="text-2xl font-bold text-primary">
+                {data.strategyDetails?.timeline || '6'} mo
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">📈 ROI</p>
+              <p className="text-2xl font-bold text-green-600">
+                {financial_metrics?.roi?.toFixed(1) || '0'}%
+              </p>
+            </div>
+          </>
+        ) : (
+          // Rental Strategy Metrics
+          <>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
+              <p className="text-2xl font-bold text-primary">
+                ${financial_metrics?.monthly_cash_flow?.toLocaleString() || '0'}
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">Cap Rate</p>
+              <p className="text-2xl font-bold text-primary">
+                {financial_metrics?.cap_rate?.toFixed(1) || '0'}%
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">Cash on Cash</p>
+              <p className="text-2xl font-bold text-primary">
+                {financial_metrics?.cash_on_cash_return?.toFixed(1) || '0'}%
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">Total ROI</p>
+              <p className="text-2xl font-bold text-green-600">
+                {financial_metrics?.roi?.toFixed(1) || '0'}%
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="bg-card rounded-lg border border-border p-6 mb-6">
@@ -182,14 +229,63 @@ export default function Step5Results({ data }: Step5ResultsProps) {
       </div>
 
       {analysis.recommendation && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+        <div className={`
+          ${analysis.recommendation.toLowerCase().includes('pass') || 
+            analysis.recommendation.toLowerCase().includes('avoid') || 
+            analysis.recommendation.toLowerCase().includes("don't") ||
+            analysis.recommendation.toLowerCase().includes('not recommended')
+            ? 'bg-red-50 border-red-200' 
+            : analysis.recommendation.toLowerCase().includes('maybe') || 
+              analysis.recommendation.toLowerCase().includes('cautious') ||
+              analysis.recommendation.toLowerCase().includes('careful')
+            ? 'bg-yellow-50 border-yellow-200'
+            : 'bg-green-50 border-green-200'
+          } border rounded-lg p-6 mb-6
+        `}>
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
+            {analysis.recommendation.toLowerCase().includes('pass') || 
+             analysis.recommendation.toLowerCase().includes('avoid') || 
+             analysis.recommendation.toLowerCase().includes("don't") ||
+             analysis.recommendation.toLowerCase().includes('not recommended') ? (
+              <svg className="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            ) : analysis.recommendation.toLowerCase().includes('maybe') || 
+                analysis.recommendation.toLowerCase().includes('cautious') ||
+                analysis.recommendation.toLowerCase().includes('careful') ? (
+              <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            )}
             <div>
-              <h4 className="font-semibold text-green-900 mb-1">Recommendation</h4>
-              <p className="text-green-800">{analysis.recommendation}</p>
+              <h4 className={`font-semibold mb-1 ${
+                analysis.recommendation.toLowerCase().includes('pass') || 
+                analysis.recommendation.toLowerCase().includes('avoid') || 
+                analysis.recommendation.toLowerCase().includes("don't") ||
+                analysis.recommendation.toLowerCase().includes('not recommended')
+                  ? 'text-red-900' 
+                  : analysis.recommendation.toLowerCase().includes('maybe') || 
+                    analysis.recommendation.toLowerCase().includes('cautious') ||
+                    analysis.recommendation.toLowerCase().includes('careful')
+                  ? 'text-yellow-900'
+                  : 'text-green-900'
+              }`}>Recommendation</h4>
+              <p className={`${
+                analysis.recommendation.toLowerCase().includes('pass') || 
+                analysis.recommendation.toLowerCase().includes('avoid') || 
+                analysis.recommendation.toLowerCase().includes("don't") ||
+                analysis.recommendation.toLowerCase().includes('not recommended')
+                  ? 'text-red-800' 
+                  : analysis.recommendation.toLowerCase().includes('maybe') || 
+                    analysis.recommendation.toLowerCase().includes('cautious') ||
+                    analysis.recommendation.toLowerCase().includes('careful')
+                  ? 'text-yellow-800'
+                  : 'text-green-800'
+              }`}>{analysis.recommendation}</p>
             </div>
           </div>
         </div>

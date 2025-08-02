@@ -122,6 +122,7 @@ export interface PropertyAnalysisRequest {
   rehabCosts?: number;
   holdingPeriod?: number;
   arv?: number; // After Repair Value for flip strategy
+  monthlyRent?: number; // User-specified monthly rent for rental strategies
 }
 
 // Cache Types

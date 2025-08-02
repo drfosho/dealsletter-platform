@@ -56,6 +56,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Log the raw data for debugging
+    console.log('[Analysis GET] Raw analysis data:', {
+      id: analysis.id,
+      hasAnalysisData: !!analysis.analysis_data,
+      analysisDataKeys: analysis.analysis_data ? Object.keys(analysis.analysis_data) : [],
+      hasPropertyData: !!analysis.analysis_data?.property_data,
+      propertyDataKeys: analysis.analysis_data?.property_data ? Object.keys(analysis.analysis_data.property_data) : []
+    });
+
     // Transform the data to match the expected format
     const transformedAnalysis = {
       id: analysis.id,
@@ -74,13 +83,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       down_payment_percent: analysis.analysis_data?.down_payment_percent || 20,
       loan_term: analysis.analysis_data?.loan_term || 30,
       interest_rate: analysis.analysis_data?.interest_rate || 7,
-      property_data: analysis.analysis_data?.property_data?.property || {},
-      rental_estimate: analysis.analysis_data?.property_data?.rental || {},
-      comparables: analysis.analysis_data?.property_data?.comparables || {},
-      market_data: analysis.analysis_data?.property_data?.market || {},
-      ai_analysis: analysis.analysis_data?.ai_analysis || {},
+      rehab_costs: analysis.analysis_data?.rehab_costs || 0,
+      // Property data might be stored directly or nested
+      property_data: analysis.analysis_data?.property_data || analysis.property_data || {},
+      rental_estimate: analysis.analysis_data?.rental_estimate || analysis.rental_estimate || {},
+      comparables: analysis.analysis_data?.comparables || analysis.comparables || {},
+      market_data: analysis.analysis_data?.market_data || analysis.market_data || {},
+      ai_analysis: analysis.analysis_data?.ai_analysis || analysis.ai_analysis || {},
       status: analysis.analysis_data?.status || 'completed'
     };
+    
+    console.log('[Analysis GET] Transformed analysis:', {
+      hasPropertyData: !!transformedAnalysis.property_data,
+      propertyDataKeys: Object.keys(transformedAnalysis.property_data),
+      hasMarketData: !!transformedAnalysis.market_data,
+      marketDataKeys: Object.keys(transformedAnalysis.market_data)
+    });
 
     return NextResponse.json(transformedAnalysis);
 

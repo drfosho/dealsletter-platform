@@ -8,8 +8,8 @@ export interface RehabCostEstimate {
 
 export const REHAB_COST_PER_SQFT = {
   cosmetic: { min: 15, max: 25, description: 'Paint, carpet, minor updates' },
-  moderate: { min: 25, max: 50, description: 'Kitchen/bath updates, new flooring' },
-  extensive: { min: 50, max: 100, description: 'Major systems, structural work' },
+  moderate: { min: 30, max: 50, description: 'Kitchen/bath updates, new flooring' },
+  extensive: { min: 60, max: 100, description: 'Major systems, structural work' },
   gut: { min: 100, max: 150, description: 'Complete renovation' }
 } as const;
 

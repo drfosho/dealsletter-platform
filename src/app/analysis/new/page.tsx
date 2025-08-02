@@ -31,6 +31,7 @@ export interface WizardData {
     loanType?: 'conventional' | 'hardMoney';
     points?: number;
     arv?: number; // After Repair Value for flip strategy
+    monthlyRent?: number; // Monthly rent for rental strategies
   };
   analysis?: Record<string, unknown>;
   analysisId?: string;
@@ -72,7 +73,20 @@ export default function NewAnalysisPage() {
   }, [wizardData]);
 
   const updateWizardData = (data: Partial<WizardData>) => {
-    setWizardData(prev => ({ ...prev, ...data }));
+    setWizardData(prev => {
+      // Deep merge for financial object
+      if (data.financial) {
+        return {
+          ...prev,
+          ...data,
+          financial: {
+            ...prev.financial,
+            ...data.financial
+          }
+        };
+      }
+      return { ...prev, ...data };
+    });
   };
 
   const handleNext = () => {

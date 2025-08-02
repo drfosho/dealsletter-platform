@@ -92,18 +92,23 @@ class RentCastService {
 
   // Get property details by address
   async getPropertyDetails(address: string): Promise<RentCastPropertyDetails> {
+    console.log('[RentCast] Getting property details for:', address);
     const cacheKey = `details:${address}`;
     const cached = this.getFromCache(cacheKey);
     
     if (cached?.data) {
+      console.log('[RentCast] Using cached property details');
       return cached.data;
     }
 
     try {
       const encodedAddress = encodeURIComponent(address);
+      console.log('[RentCast] Fetching property details from API:', `/properties?address=${encodedAddress}`);
       const response = await this.makeRequest<RentCastPropertyDetails[]>(
         `/properties?address=${encodedAddress}`
       );
+      
+      console.log('[RentCast] Property details response:', JSON.stringify(response, null, 2));
       
       // RentCast returns an array, get the first property
       if (!response || response.length === 0) {
@@ -111,20 +116,34 @@ class RentCastService {
       }
       
       const data = response[0];
+      console.log('[RentCast] Property details extracted:', {
+        addressLine1: data.addressLine1,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
+        bedrooms: data.bedrooms,
+        bathrooms: data.bathrooms,
+        squareFootage: data.squareFootage,
+        yearBuilt: data.yearBuilt,
+        propertyType: data.propertyType,
+        lastSalePrice: data.lastSalePrice,
+        lastSaleDate: data.lastSaleDate
+      });
       
-      // Add property images
+      // Add property images - enhanced for off-market properties
       const fullAddress = `${data.addressLine1}, ${data.city}, ${data.state} ${data.zipCode}`;
-      data.images = PropertyImageService.getPropertyImages(fullAddress, 5);
-      data.primaryImageUrl = PropertyImageService.getPlaceholderImage(fullAddress, data.propertyType);
       
-      // If Google Maps API key is available, try to get street view
-      const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      if (googleMapsKey) {
-        const streetViewUrl = PropertyImageService.getStreetViewImage(fullAddress, googleMapsKey);
-        if (streetViewUrl) {
-          data.primaryImageUrl = streetViewUrl;
-        }
-      }
+      // Get primary image (best available)
+      data.primaryImageUrl = PropertyImageService.getPropertyImage(fullAddress, data.propertyType);
+      
+      // Get multiple images including different angles
+      data.images = PropertyImageService.getPropertyImages(fullAddress, 5, data.propertyType);
+      
+      console.log('[RentCast] Property images added:', {
+        primaryImage: data.primaryImageUrl,
+        totalImages: data.images?.length,
+        hasGoogleMaps: !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      });
       
       this.setCache(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL });
       return data;
@@ -136,45 +155,112 @@ class RentCastService {
 
   // Get rental estimate
   async getRentalEstimate(address: string): Promise<RentCastRentalEstimate> {
+    console.log('[RentCast] Getting rental estimate for:', address);
     const cacheKey = `rent:${address}`;
     const cached = this.getFromCache(cacheKey);
     
     if (cached?.rentEstimate) {
+      console.log('[RentCast] Using cached rental estimate');
       return cached.rentEstimate;
     }
 
     try {
       const encodedAddress = encodeURIComponent(address);
+      console.log('[RentCast] Fetching rental estimate from API:', `/avm/rent/long-term?address=${encodedAddress}`);
       const data = await this.makeRequest<RentCastRentalEstimate>(
         `/avm/rent/long-term?address=${encodedAddress}`
       );
       
+      console.log('[RentCast] Rental estimate response structure:', {
+        hasData: !!data,
+        dataType: typeof data,
+        isArray: Array.isArray(data),
+        keys: data ? Object.keys(data) : [],
+        rent: (data as any)?.rent,
+        rentEstimate: (data as any)?.rentEstimate,
+        price: (data as any)?.price,
+        fullData: JSON.stringify(data, null, 2)
+      });
+      
       this.updateCache(cacheKey, { rentEstimate: data });
       return data;
     } catch (error) {
+      console.error('[RentCast] Error getting rental estimate:', error);
       logError('RentCast Get Rental Estimate', error);
       throw error;
     }
   }
 
+  // Get active listing data (for on-market properties)
+  async getActiveListing(address: string): Promise<any> {
+    console.log('[RentCast] Getting active listing for:', address);
+    const cacheKey = `listing:${address}`;
+    const cached = this.getFromCache(cacheKey);
+    
+    if (cached?.listing) {
+      console.log('[RentCast] Using cached listing data');
+      return cached.listing;
+    }
+
+    try {
+      const encodedAddress = encodeURIComponent(address);
+      // Try to get listing data - RentCast may have a listings endpoint
+      console.log('[RentCast] Fetching active listing from API');
+      
+      // First, try the listings/sale endpoint if available
+      try {
+        const listingData = await this.makeRequest<any>(
+          `/listings/sale?address=${encodedAddress}`
+        );
+        
+        if (listingData && listingData.price) {
+          console.log('[RentCast] Found active listing with price:', listingData.price);
+          this.updateCache(cacheKey, { listing: listingData });
+          return listingData;
+        }
+      } catch (_listingError) {
+        console.log('[RentCast] No active listing found, will use AVM data');
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('[RentCast] Error getting active listing:', error);
+      return null;
+    }
+  }
+
   // Get sale comparables
   async getSaleComparables(address: string, _radius: number = 0.5): Promise<RentCastSaleComps> {
+    console.log('[RentCast] Getting sale comparables for:', address);
     const cacheKey = `comps:${address}`;
     const cached = this.getFromCache(cacheKey);
     
     if (cached?.saleComps) {
+      console.log('[RentCast] Using cached sale comparables');
       return cached.saleComps;
     }
 
     try {
       const encodedAddress = encodeURIComponent(address);
+      console.log('[RentCast] Fetching sale comparables from API:', `/avm/value?address=${encodedAddress}`);
       const data = await this.makeRequest<RentCastSaleComps>(
         `/avm/value?address=${encodedAddress}`
       );
       
+      console.log('[RentCast] Sale comparables response structure:', {
+        hasData: !!data,
+        dataType: typeof data,
+        isArray: Array.isArray(data),
+        keys: data ? Object.keys(data) : [],
+        value: (data as any)?.value,
+        price: (data as any)?.price,
+        fullData: JSON.stringify(data, null, 2)
+      });
+      
       this.updateCache(cacheKey, { saleComps: data });
       return data;
     } catch (error) {
+      console.error('[RentCast] Error getting sale comparables:', error);
       logError('RentCast Get Sale Comparables', error);
       throw error;
     }
@@ -182,21 +268,27 @@ class RentCastService {
 
   // Get market data for area
   async getMarketData(zipCode: string): Promise<RentCastMarketData> {
+    console.log('[RentCast] Getting market data for zip code:', zipCode);
     const cacheKey = `market:${zipCode}`;
     const cached = this.getFromCache(cacheKey);
     
     if (cached?.marketData) {
+      console.log('[RentCast] Using cached market data');
       return cached.marketData;
     }
 
     try {
+      console.log('[RentCast] Fetching market data from API:', `/markets?zipCode=${zipCode}`);
       const data = await this.makeRequest<RentCastMarketData>(
         `/markets?zipCode=${zipCode}`
       );
       
+      console.log('[RentCast] Market data response:', JSON.stringify(data, null, 2));
+      
       this.updateCache(cacheKey, { marketData: data });
       return data;
     } catch (error) {
+      console.error('[RentCast] Error getting market data:', error);
       logError('RentCast Get Market Data', error);
       throw error;
     }
@@ -215,25 +307,47 @@ class RentCastService {
           rental: cached.rentEstimate,
           comparables: cached.saleComps,
           market: cached.marketData,
+          listing: cached.listing
         };
       }
 
       // Fetch all data in parallel
-      const [property, rental, comparables] = await Promise.all([
+      const [property, rental, comparables, listing] = await Promise.all([
         this.getPropertyDetails(address),
-        this.getRentalEstimate(address),
-        this.getSaleComparables(address),
+        this.getRentalEstimate(address).catch(err => {
+          console.warn('[RentCast] Rental estimate failed:', err);
+          return null;
+        }),
+        this.getSaleComparables(address).catch(err => {
+          console.warn('[RentCast] Sale comparables failed:', err);
+          return null;
+        }),
+        this.getActiveListing(address).catch(err => {
+          console.warn('[RentCast] Active listing fetch failed:', err);
+          return null;
+        })
       ]);
 
       // Get market data using property's zip code
-      const market = await this.getMarketData(property.zipCode);
+      const market = await this.getMarketData(property.zipCode).catch(err => {
+        console.warn('[RentCast] Market data failed:', err);
+        return null;
+      });
 
       const comprehensiveData = {
         property,
         rental,
         comparables,
         market,
+        listing
       };
+      
+      console.log('[RentCast] Comprehensive data summary:', {
+        hasListing: !!listing,
+        listingPrice: listing?.price || listing?.listPrice,
+        avmValue: comparables?.value,
+        hasImages: property?.images?.length > 0
+      });
 
       // Cache the comprehensive data
       this.setCache(cacheKey, {
@@ -241,6 +355,7 @@ class RentCastService {
         rentEstimate: rental,
         saleComps: comparables,
         marketData: market,
+        listing: listing,
         timestamp: Date.now(),
         ttl: CACHE_TTL,
       });

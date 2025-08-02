@@ -13,7 +13,7 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
   const projections = useMemo(() => {
     const years = parseInt(timeframe);
     const purchasePrice = analysis.purchase_price || 0;
-    const monthlyRent = analysis.rental_estimate?.rent || 0;
+    const monthlyRent = analysis.rental_estimate?.rentEstimate || analysis.rental_estimate?.rent || 0;
     const appreciationRate = 0.03; // 3% annual
     const rentGrowthRate = 0.025; // 2.5% annual
     const inflationRate = 0.02; // 2% for expenses
@@ -154,21 +154,83 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
         </div>
       </div>
 
-      {/* Projection Chart (simplified visualization) */}
-      <div className="bg-muted/10 rounded-lg p-4">
-        <div className="flex items-end justify-between h-48 mb-4">
-          {projections.filter((_, i) => i % Math.ceil(projections.length / 10) === 0 || i === projections.length - 1).map((data) => {
-            const heightPercent = (data.totalReturn / lastYear.totalReturn) * 100;
-            return (
-              <div key={data.year} className="flex flex-col items-center gap-2 flex-1">
-                <div className="w-full max-w-[40px] bg-gradient-to-t from-primary to-accent rounded-t"
-                     style={{ height: `${heightPercent}%` }} />
-                <span className="text-xs text-muted">Y{data.year}</span>
-              </div>
-            );
-          })}
+      {/* Projection Chart - Enhanced Bar Chart */}
+      <div className="bg-muted/10 rounded-lg p-6">
+        <h4 className="text-sm font-semibold text-primary mb-4">Total Return Over Time</h4>
+        <div className="relative h-64">
+          {/* Y-axis labels */}
+          <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted pr-2">
+            {[100, 75, 50, 25, 0].map((percent) => (
+              <span key={percent} className="text-right">
+                {formatCurrency((lastYear.totalReturn * percent) / 100)}
+              </span>
+            ))}
+          </div>
+          
+          {/* Chart area */}
+          <div className="ml-16 h-full relative">
+            {/* Grid lines */}
+            <div className="absolute inset-0">
+              {[0, 25, 50, 75, 100].map((percent) => (
+                <div
+                  key={percent}
+                  className="absolute w-full border-t border-border/30"
+                  style={{ top: `${100 - percent}%` }}
+                />
+              ))}
+            </div>
+            
+            {/* Bars */}
+            <div className="relative h-full flex items-end justify-between gap-2 px-2">
+              {projections.map((data, index) => {
+                const heightPercent = Math.max(0, (data.totalReturn / lastYear.totalReturn) * 100);
+                const isNegative = data.totalReturn < 0;
+                
+                // Show every year for 5-year view, every 2 years for 10-year, every 4 years for 20-year
+                const showBar = timeframe === '5' || 
+                               (timeframe === '10' && index % 2 === 0) || 
+                               (timeframe === '20' && index % 4 === 0) ||
+                               index === projections.length - 1;
+                
+                if (!showBar) return null;
+                
+                return (
+                  <div key={data.year} className="flex-1 flex flex-col items-center">
+                    <div className="w-full flex items-end justify-center h-full">
+                      <div 
+                        className={`w-full max-w-[30px] rounded-t transition-all duration-500 relative group cursor-pointer ${
+                          isNegative 
+                            ? 'bg-gradient-to-t from-red-600 to-red-400' 
+                            : 'bg-gradient-to-t from-primary to-accent'
+                        }`}
+                        style={{ height: `${Math.abs(heightPercent)}%` }}
+                      >
+                        {/* Tooltip on hover */}
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                          <p className="text-xs font-semibold">{formatCurrency(data.totalReturn)}</p>
+                          <p className="text-xs text-muted">Year {data.year}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted mt-2">Y{data.year}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <p className="text-center text-sm text-muted">Total Return Over Time</p>
+        
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-6 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-gradient-to-t from-primary to-accent rounded"></div>
+            <span className="text-xs text-muted">Positive Returns</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-gradient-to-t from-red-600 to-red-400 rounded"></div>
+            <span className="text-xs text-muted">Negative Returns</span>
+          </div>
+        </div>
       </div>
 
       {/* Detailed Table */}

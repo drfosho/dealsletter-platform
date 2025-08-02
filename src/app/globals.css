@@ -1,13 +1,5 @@
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-}
-
-html {
-  height: 100%;
-}
-
 :root {
   --background: #f2f2f2;
   --foreground: #0a0a0a;
@@ -57,6 +49,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
 }
 
 /* Leaflet dark theme styling */
@@ -233,9 +226,6 @@ body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
-  
-  /* Prevent body scroll when modal is open */
-  /* Removed global body.modal-open styles to prevent layout constraints */
 }
 
 /* Touch-optimized styles */
@@ -304,31 +294,84 @@ body {
 .pac-container {
   z-index: 9999 !important;
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--card);
-  border: 1px solid var(--border);
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.pac-container::after {
+  display: none !important;
 }
 
 .pac-item {
   padding: 10px 14px;
   font-size: 14px;
-  color: var(--primary);
+  color: var(--primary) !important;
+  background-color: transparent !important;
+  border: none !important;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 .pac-item:hover {
-  background-color: var(--muted) !important;
+  background-color: rgba(var(--muted), 0.1) !important;
 }
 
-.pac-item-selected,
-.pac-item-selected:hover {
-  background-color: var(--primary) !important;
-  color: var(--secondary) !important;
+.pac-item-query {
+  color: var(--primary) !important;
+  padding-right: 4px;
 }
 
 .pac-matched {
   font-weight: 600;
+  color: var(--primary) !important;
+}
+
+.pac-item-selected,
+.pac-item-selected:hover {
+  background-color: rgba(var(--accent), 0.1) !important;
+  color: var(--primary) !important;
+}
+
+/* Additional Google Autocomplete fixes */
+.pac-icon {
+  background-image: none !important;
+  width: 0 !important;
+}
+
+.pac-item-query .pac-matched,
+.pac-item span {
+  color: var(--primary) !important;
+}
+
+/* Fix for secondary text in suggestions */
+.pac-item > span + span {
+  color: var(--muted) !important;
+  font-size: 13px;
+}
+
+/* Ensure text visibility in both themes */
+.pac-item-query,
+.pac-item-query span,
+.pac-item > span:first-child {
+  color: var(--primary) !important;
+}
+
+/* Dark mode specific overrides */
+@media (prefers-color-scheme: dark) {
+  .pac-container {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  }
+  
+  .pac-item:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+  }
+  
+  .pac-item-selected,
+  .pac-item-selected:hover {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+  }
 }
 
 @media (max-width: 640px) {

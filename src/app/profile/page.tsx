@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import MyAnalyzedProperties from '@/components/MyAnalyzedProperties';
+import UsageDisplay from '@/components/UsageDisplay';
 import { getUserFavoriteProperties } from '@/lib/supabase/favorites';
 import FavoriteButton from '@/components/FavoriteButton';
 import DealModal from '@/app/dashboard/DealModal';
@@ -1000,8 +1001,16 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* My Analyzed Properties */}
-            <MyAnalyzedProperties userId={user.id} />
+            {/* Usage Display */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <div className="lg:col-span-2">
+                {/* My Analyzed Properties */}
+                <MyAnalyzedProperties userId={user.id} />
+              </div>
+              <div>
+                <UsageDisplay userId={user.id} />
+              </div>
+            </div>
           </div>
         )}
 
