@@ -789,11 +789,26 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
     const holdingTime = request.loanTerms?.loanTerm || 0.5; // in years
     
     // For holding costs calculation
-    const propertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
-    const insurance = Math.round((effectivePurchasePrice * 0.004) / 12);
+    const monthlyPropertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
+    const monthlyInsurance = Math.round((effectivePurchasePrice * 0.004) / 12);
+    const monthlyUtilities = 150; // Estimated utilities during renovation
     
-    const monthlyHoldingCosts = calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 10.45, holdingTime, request.loanTerms?.loanType, rehabCosts);
-    const totalHoldingCosts = monthlyHoldingCosts * (holdingTime * 12) + (propertyTaxes * holdingTime * 12) + (insurance * holdingTime * 12);
+    // Calculate monthly loan payment (interest-only for hard money)
+    // For hard money: includes interest on both purchase loan and rehab loan (if 100% financed)
+    const includeRehabInLoan = request.loanTerms?.loanType === 'hardMoney';
+    const monthlyLoanPayment = calculateMonthlyPayment(
+      loanAmount, 
+      request.loanTerms?.interestRate || 10.45, 
+      holdingTime, 
+      request.loanTerms?.loanType, 
+      includeRehabInLoan ? rehabCosts : 0
+    );
+    
+    // Total monthly holding costs = loan payment + taxes + insurance + utilities
+    const monthlyHoldingCosts = monthlyLoanPayment + monthlyPropertyTaxes + monthlyInsurance + monthlyUtilities;
+    
+    // Total holding costs for the entire project duration
+    const totalHoldingCosts = monthlyHoldingCosts * (holdingTime * 12);
     const sellingCosts = estimatedARV * 0.08; // 8% for realtor fees, closing costs
     const totalInvestment = downPayment + rehabCosts + closingCosts + pointsCost;
     const totalProjectCost = effectivePurchasePrice + rehabCosts + closingCosts + totalHoldingCosts + sellingCosts + pointsCost;
@@ -814,9 +829,18 @@ PURCHASE & FINANCING:
 RENOVATION & COSTS:
 - Rehab Budget: $${rehabCosts.toLocaleString()}
 - Closing Costs (Purchase): $${Math.round(closingCosts).toLocaleString()}
-- Monthly Holding Costs: $${monthlyHoldingCosts.toLocaleString()}
+
+HOLDING COSTS BREAKDOWN:
+- Monthly Loan Payment: $${monthlyLoanPayment.toLocaleString()}
+- Monthly Property Taxes: $${monthlyPropertyTaxes.toLocaleString()}
+- Monthly Insurance: $${monthlyInsurance.toLocaleString()}
+- Monthly Utilities: $${monthlyUtilities.toLocaleString()}
+- Total Monthly Holding: $${monthlyHoldingCosts.toLocaleString()}
+- Project Duration: ${holdingTime * 12} months
 - Total Holding Costs: $${Math.round(totalHoldingCosts).toLocaleString()}
-- Selling Costs (8%): $${Math.round(sellingCosts).toLocaleString()}
+
+SELLING COSTS:
+- Realtor Fees & Closing (8%): $${Math.round(sellingCosts).toLocaleString()}
 
 EXIT STRATEGY:
 - After Repair Value (ARV): $${Math.round(estimatedARV).toLocaleString()}
@@ -832,6 +856,7 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
       totalInvestment: totalInvestment,
       totalProfit: netProfit,
       roi: roi,
+      holdingCosts: totalHoldingCosts,
       // Set rental-focused metrics to 0 or undefined for flips
       cashFlow: 0,
       capRate: 0,
@@ -919,6 +944,7 @@ interface ParsedAnalysisResponse {
     total_investment?: number;
     annual_noi?: number;
     total_profit?: number;
+    holding_costs?: number;
   };
   market_analysis: string;
   investment_strategy: {
@@ -940,7 +966,8 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
     roi: financialData.roi !== undefined ? financialData.roi : calculatedMetrics?.roi,
     totalInvestment: financialData.totalInvestment !== undefined ? financialData.totalInvestment : calculatedMetrics?.totalInvestment,
     annualNOI: financialData.annualNOI !== undefined ? financialData.annualNOI : calculatedMetrics?.annualNOI,
-    totalProfit: financialData.totalProfit !== undefined ? financialData.totalProfit : calculatedMetrics?.totalProfit
+    totalProfit: financialData.totalProfit !== undefined ? financialData.totalProfit : calculatedMetrics?.totalProfit,
+    holdingCosts: financialData.holdingCosts !== undefined ? financialData.holdingCosts : calculatedMetrics?.holdingCosts
   };
   
   // Extract sections more reliably
@@ -976,7 +1003,8 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
       roi: finalMetrics.roi,
       total_investment: finalMetrics.totalInvestment,
       annual_noi: finalMetrics.annualNOI,
-      total_profit: finalMetrics.totalProfit
+      total_profit: finalMetrics.totalProfit,
+      holding_costs: finalMetrics.holdingCosts
     },
     market_analysis: marketAnalysis,
     investment_strategy: {
@@ -1044,6 +1072,7 @@ interface FinancialData {
   totalInvestment?: number;
   annualNOI?: number;
   totalProfit?: number;
+  holdingCosts?: number;
 }
 
 function extractFinancialData(text: string): FinancialData {
@@ -1089,6 +1118,11 @@ function extractFinancialData(text: string): FinancialData {
       /total\s*profit[:\s]+\$?([\d,.-]+)/i,
       /net\s+profit[:\s]+\$?([\d,.-]+)/i,
       /profit[:\s]+\$?([\d,.-]+)/i
+    ],
+    holdingCosts: [
+      /total\s+holding\s+costs?[:\s]+\$?([\d,.-]+)/i,
+      /holding\s+costs?[:\s]+\$?([\d,.-]+)/i,
+      /monthly\s+holding.*?\$?([\d,.-]+).*?total.*?\$?([\d,.-]+)/i
     ]
   };
   
@@ -1132,6 +1166,13 @@ function extractFinancialData(text: string): FinancialData {
     if (investmentMatch && !data.totalInvestment) {
       data.totalInvestment = parseFloat(investmentMatch[1].replace(/,/g, ''));
       console.log('[extractFinancialData] Extracted total investment from flip analysis:', data.totalInvestment);
+    }
+    
+    // Extract holding costs
+    const holdingMatch = flipText.match(/Total Holding Costs:\s*\$?([\d,]+)/i);
+    if (holdingMatch && !data.holdingCosts) {
+      data.holdingCosts = parseFloat(holdingMatch[1].replace(/,/g, ''));
+      console.log('[extractFinancialData] Extracted holding costs from flip analysis:', data.holdingCosts);
     }
   }
   
