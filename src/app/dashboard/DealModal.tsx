@@ -3668,9 +3668,9 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                               ? 'text-green-600' 
                               : 'text-red-600'
                         }`}>
-                          ${deal.strategy?.toLowerCase().includes('house hack') && deal.monthlyCashFlow && deal.monthlyCashFlow < 0
+                          ${deal.strategy?.toLowerCase().includes('house hack') && typeof deal.monthlyCashFlow === 'number' && deal.monthlyCashFlow < 0
                             ? Math.abs(deal.monthlyCashFlow).toLocaleString()
-                            : deal.monthlyCashFlow?.toLocaleString() || '0'}
+                            : typeof deal.monthlyCashFlow === 'number' ? deal.monthlyCashFlow.toLocaleString() : '0'}
                         </p>
                         {deal.strategy?.toLowerCase().includes('house hack') && (
                           <p className="text-xs text-muted mt-1">after rental income</p>

@@ -4,18 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { MergedPropertyData } from '@/utils/property-data-merger';
 import type { GeneratedAnalysis, AnalysisConfig } from '@/services/property-analysis-ai';
 
-interface ImportStep {
-  id: string;
-  title: string;
-  icon: string;
-  status: 'pending' | 'active' | 'complete' | 'error';
-}
-
-interface TabContent {
-  propertyData: MergedPropertyData | null;
-  analysis: GeneratedAnalysis | null;
-  preview: any;
-}
+// Removed unused interfaces
 
 interface DraftProperty {
   id: string;
@@ -58,7 +47,7 @@ export default function PropertyImportWorkflow() {
   });
 
   // Analysis Configuration
-  const [config, setConfig] = useState<AnalysisConfig>({
+  const [config] = useState<AnalysisConfig>({
     strategy: 'rental',
     timeHorizon: 5,
     financingType: 'conventional',

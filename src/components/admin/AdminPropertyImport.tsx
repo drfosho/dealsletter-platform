@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import type { MergedPropertyData } from '@/utils/property-data-merger';
 import type { GeneratedAnalysis, AnalysisConfig } from '@/services/property-analysis-ai';
 import PropertyPreviewModal from './PropertyPreviewModal';
@@ -551,7 +551,7 @@ https://www.realtor.com/..."
                   className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="Enter monthly rent"
                 />
-                {selectedProperty.editedData.monthlyRent > 50000 && (
+                {selectedProperty.editedData.monthlyRent && selectedProperty.editedData.monthlyRent > 50000 && (
                   <p className="text-red-500 text-xs mt-1">⚠️ Rent seems incorrect. Please enter a realistic monthly rent.</p>
                 )}
               </div>
@@ -658,9 +658,9 @@ https://www.realtor.com/..."
                       type="radio"
                       name="rehabLevel"
                       value="cosmetic"
-                      checked={(selectedProperty.editedData.estimatedRehab || 0) <= (selectedProperty.editedData.squareFootage || 1800) * 25}
+                      checked={(selectedProperty.editedData?.estimatedRehab || 0) <= (selectedProperty.editedData?.squareFootage || 1800) * 25}
                       onChange={() => {
-                        const sqft = selectedProperty.editedData.squareFootage || 1800;
+                        const sqft = selectedProperty.editedData?.squareFootage || 1800;
                         handleDataEdit(selectedProperty.id, 'estimatedRehab', Math.round(sqft * 20));
                       }}
                       className="mr-2"
@@ -681,7 +681,7 @@ https://www.realtor.com/..."
                       checked={(selectedProperty.editedData.estimatedRehab || 0) > (selectedProperty.editedData.squareFootage || 1800) * 25 && 
                                (selectedProperty.editedData.estimatedRehab || 0) <= (selectedProperty.editedData.squareFootage || 1800) * 60}
                       onChange={() => {
-                        const sqft = selectedProperty.editedData.squareFootage || 1800;
+                        const sqft = selectedProperty.editedData?.squareFootage || 1800;
                         handleDataEdit(selectedProperty.id, 'estimatedRehab', Math.round(sqft * 45));
                       }}
                       className="mr-2"
@@ -701,7 +701,7 @@ https://www.realtor.com/..."
                       value="major"
                       checked={(selectedProperty.editedData.estimatedRehab || 0) > (selectedProperty.editedData.squareFootage || 1800) * 60}
                       onChange={() => {
-                        const sqft = selectedProperty.editedData.squareFootage || 1800;
+                        const sqft = selectedProperty.editedData?.squareFootage || 1800;
                         handleDataEdit(selectedProperty.id, 'estimatedRehab', Math.round(sqft * 85));
                       }}
                       className="mr-2"

@@ -33,7 +33,7 @@ export default function PropertyAnalysisWorkflow() {
     includeComparables: true,
     analysisDepth: 'comprehensive'
   });
-  const [generatedAnalysis, setGeneratedAnalysis] = useState<GeneratedAnalysis | null>(null);
+  const [_generatedAnalysis, setGeneratedAnalysis] = useState<GeneratedAnalysis | null>(null);
   const [editedAnalysis, setEditedAnalysis] = useState<GeneratedAnalysis | null>(null);
   
   // UI state
@@ -43,12 +43,12 @@ export default function PropertyAnalysisWorkflow() {
 
   // Update step statuses
   useEffect(() => {
-    const newSteps = steps.map(step => {
+    steps.map(step => {
       if (step.id < currentStep) return { ...step, status: 'complete' as const };
       if (step.id === currentStep) return { ...step, status: 'active' as const };
       return { ...step, status: 'pending' as const };
     });
-  }, [currentStep]);
+  }, [currentStep, steps]);
 
   // Step 1: Enter URL
   const handleUrlSubmit = () => {

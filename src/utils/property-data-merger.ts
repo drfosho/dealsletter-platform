@@ -277,7 +277,7 @@ function applyRentCastData(merged: MergedPropertyData, rentcast: any): void {
   // Comparables data
   if (rentcast.comparables) {
     merged.comparables = rentcast.comparables.comparables || [];
-    merged.comparablesCount = merged.comparables.length;
+    merged.comparablesCount = merged.comparables?.length || 0;
     if (rentcast.comparables.value) {
       merged.comparablesAvgPrice = rentcast.comparables.value;
     }
@@ -343,12 +343,12 @@ function applyEstimatedData(merged: MergedPropertyData): void {
  */
 function calculateDerivedMetrics(merged: MergedPropertyData): void {
   // Price per square foot
-  if (merged.price > 0 && merged.squareFootage > 0) {
+  if (merged.price > 0 && merged.squareFootage && merged.squareFootage > 0) {
     merged.pricePerSqFt = Math.round(merged.price / merged.squareFootage);
   }
   
   // Cap rate (if not already provided)
-  if (!merged.capRate && merged.price > 0 && merged.monthlyRent > 0) {
+  if (!merged.capRate && merged.price > 0 && merged.monthlyRent && merged.monthlyRent > 0) {
     const annualRent = merged.monthlyRent * 12;
     const annualExpenses = annualRent * 0.4; // 40% expense ratio
     const noi = annualRent - annualExpenses;
@@ -360,13 +360,13 @@ function calculateDerivedMetrics(merged: MergedPropertyData): void {
   }
   
   // Gross yield
-  if (merged.price > 0 && merged.monthlyRent > 0) {
+  if (merged.price > 0 && merged.monthlyRent && merged.monthlyRent > 0) {
     const annualRent = merged.monthlyRent * 12;
     merged.grossYield = parseFloat(((annualRent / merged.price) * 100).toFixed(2));
   }
   
   // Cash on cash return (assuming 25% down)
-  if (merged.price > 0 && merged.monthlyRent > 0) {
+  if (merged.price > 0 && merged.monthlyRent && merged.monthlyRent > 0) {
     const downPayment = merged.price * 0.25;
     const loanAmount = merged.price * 0.75;
     const monthlyPayment = calculateMonthlyPayment(loanAmount, 0.07, 30);

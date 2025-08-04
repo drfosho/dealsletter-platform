@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import type { MergedPropertyData } from '@/utils/property-data-merger';
 import type { GeneratedAnalysis, AnalysisConfig } from '@/services/property-analysis-ai';
 
@@ -67,7 +67,7 @@ export default function BatchPropertyImport({ onComplete }: BatchImportProps) {
 
   // Process a single property
   const processProperty = async (job: BatchJob): Promise<BatchJob> => {
-    const updatedJob = { ...job, status: 'scraping' as const, startTime: new Date() };
+    const updatedJob: BatchJob = { ...job, status: 'scraping', startTime: new Date() };
     
     try {
       // Update job status

@@ -89,11 +89,6 @@ export default function PremiumPropertyCard({
   // Check if this is a house hack property
   const isHouseHack = deal.strategy?.toLowerCase().includes('house hack') || 
                       deal.strategy?.toLowerCase().includes('househack');
-  
-  // Calculate effective mortgage for house hacks (show as positive number)
-  const effectiveMortgage = isHouseHack && deal.monthlyCashFlow && deal.monthlyCashFlow < 0 
-    ? Math.abs(deal.monthlyCashFlow) 
-    : 0;
 
   // Get metric color
   const getMetricColor = (value: number | string | undefined, type: 'positive' | 'neutral' = 'positive') => {

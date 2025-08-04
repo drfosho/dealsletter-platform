@@ -25,7 +25,6 @@ export function extractBasicPropertyData(url: string): BasicPropertyData {
   console.log('[BasicExtractor] Extracting data from URL:', url);
   
   const urlLower = url.toLowerCase();
-  const urlParts = url.split('/');
   
   // Basic data structure
   let data: BasicPropertyData = {
@@ -249,33 +248,6 @@ function extractRedfinBasics(url: string, data: BasicPropertyData): BasicPropert
   return data;
 }
 
-function estimatePrice(data: BasicPropertyData): number {
-  // Estimate based on location
-  const cityPrices: Record<string, number> = {
-    'san francisco': 1200000,
-    'los angeles': 800000,
-    'new york': 900000,
-    'seattle': 750000,
-    'denver': 600000,
-    'austin': 550000,
-    'miami': 500000,
-    'chicago': 400000,
-    'dallas': 350000,
-    'atlanta': 350000,
-    'phoenix': 400000,
-    'default': 450000
-  };
-  
-  const city = data.city?.toLowerCase() || '';
-  
-  for (const [cityKey, price] of Object.entries(cityPrices)) {
-    if (city.includes(cityKey)) {
-      return price;
-    }
-  }
-  
-  return cityPrices.default;
-}
 
 function estimateSquareFootage(data: BasicPropertyData): number {
   // Estimate based on bedrooms

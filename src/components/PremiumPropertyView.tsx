@@ -640,8 +640,8 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                                     : (scenario.monthlyCashFlow ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                                 }`}>
                                   {property.strategy?.toLowerCase().includes('house hack') && (scenario.monthlyCashFlow ?? 0) < 0
-                                    ? formatCurrency(Math.abs(scenario.monthlyCashFlow))
-                                    : formatCurrency(scenario.monthlyCashFlow)}
+                                    ? formatCurrency(Math.abs(scenario.monthlyCashFlow ?? 0))
+                                    : formatCurrency(scenario.monthlyCashFlow ?? 0)}
                                 </span>
                               </div>
                               <div className="flex justify-between">

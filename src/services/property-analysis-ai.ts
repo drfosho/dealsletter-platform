@@ -367,7 +367,7 @@ Focus on:
 `;
   }
 
-  private getFlipStrategyPrompt(property?: MergedPropertyData): string {
+  private getFlipStrategyPrompt(_property?: MergedPropertyData): string {
     return `
 Focus on FIX & FLIP STRATEGY:
 - IMPORTANT: Use the provided Estimated Rehab Budget if available in FINANCIAL DATA above
@@ -658,7 +658,7 @@ Focus on:
   private calculateFinancials(
     property: MergedPropertyData,
     config: AnalysisConfig,
-    sections: Record<string, string>
+    _sections: Record<string, string>
   ): GeneratedAnalysis['financialAnalysis'] {
     const price = property.price || 0;
     const monthlyRent = property.monthlyRent || property.rentEstimate || 0;

@@ -250,11 +250,11 @@ export default function ComprehensivePropertyView({ isOpen, property, onClose }:
                               {property.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage:' : 'Monthly Cash Flow:'}
                             </dt>
                             <dd className={
-                              property.strategy?.toLowerCase().includes('house hack') && scenario.monthlyCashFlow < 0
+                              property.strategy?.toLowerCase().includes('house hack') && scenario.monthlyCashFlow !== undefined && scenario.monthlyCashFlow < 0
                                 ? "text-blue-600"
-                                : scenario.monthlyCashFlow >= 0 ? "text-green-600" : "text-red-600"
+                                : (scenario.monthlyCashFlow ?? 0) >= 0 ? "text-green-600" : "text-red-600"
                             }>
-                              ${property.strategy?.toLowerCase().includes('house hack') && scenario.monthlyCashFlow < 0
+                              ${property.strategy?.toLowerCase().includes('house hack') && scenario.monthlyCashFlow !== undefined && scenario.monthlyCashFlow < 0
                                 ? Math.abs(scenario.monthlyCashFlow).toLocaleString()
                                 : scenario.monthlyCashFlow?.toLocaleString()}
                             </dd>
