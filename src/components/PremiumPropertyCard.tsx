@@ -36,6 +36,23 @@ interface PremiumPropertyCardProps {
     bedrooms?: number;
     bathrooms?: number;
     sqft?: number;
+    // Fix & Flip specific
+    estimatedProfit?: number;
+    arv?: number;
+    estimatedRehab?: number;
+    renovationCosts?: number;
+    // BRRRR specific
+    equityCreated?: number;
+    refinanceAmount?: number;
+    // Comprehensive data from admin
+    strategicOverview?: string;
+    executiveSummary?: string;
+    valueAddDescription?: string;
+    locationAnalysis?: any;
+    rentAnalysis?: any;
+    propertyMetrics?: any;
+    financingScenarios?: any[];
+    thirtyYearProjections?: any;
     [key: string]: unknown;
   };
   viewMode?: 'grid' | 'list';
@@ -89,12 +106,54 @@ export default function PremiumPropertyCard({
   // Check if this is a house hack property
   const isHouseHack = deal.strategy?.toLowerCase().includes('house hack') || 
                       deal.strategy?.toLowerCase().includes('househack');
+  
+  // Calculate mortgage payment for house hacks
+  const calculateMonthlyMortgage = () => {
+    if (!deal.price || !deal.downPaymentPercent) return 0;
+    const loanAmount = deal.price * (1 - (deal.downPaymentPercent / 100));
+    const monthlyRate = 0.067 / 12; // Assuming 6.7% interest rate
+    const numPayments = 30 * 12; // 30-year mortgage
+    const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+                          (Math.pow(1 + monthlyRate, numPayments) - 1);
+    return Math.round(monthlyPayment);
+  };
+  
+  // Calculate effective mortgage for house hacks
+  const effectiveMortgage = isHouseHack ? 
+    calculateMonthlyMortgage() - (deal.monthlyRent || 0) : 0;
 
-  // Get metric color
+  // Get metric color with strategy-specific logic
   const getMetricColor = (value: number | string | undefined, type: 'positive' | 'neutral' = 'positive') => {
     if (!value) return 'text-muted';
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
     
+    // Strategy-specific coloring
+    if (deal.strategy?.toLowerCase().includes('flip')) {
+      // For flips, emphasize high ROI
+      if (numValue >= 30) return 'text-green-600 font-bold';
+      if (numValue >= 20) return 'text-green-600';
+      if (numValue >= 15) return 'text-blue-600';
+      if (numValue >= 10) return 'text-amber-600';
+      return 'text-muted';
+    } else if (deal.strategy?.toLowerCase().includes('rental') || deal.strategy?.toLowerCase().includes('hold')) {
+      // For rentals, emphasize cash flow and cap rate
+      if (type === 'positive') {
+        if (numValue >= 10) return 'text-green-600 font-bold';
+        if (numValue >= 8) return 'text-green-600';
+        if (numValue >= 6) return 'text-blue-600';
+        if (numValue >= 4) return 'text-amber-600';
+        return 'text-muted';
+      }
+    } else if (deal.strategy?.toLowerCase().includes('brrrr')) {
+      // For BRRRR, emphasize cash-on-cash return
+      if (numValue >= 20) return 'text-green-600 font-bold';
+      if (numValue >= 15) return 'text-green-600';
+      if (numValue >= 10) return 'text-blue-600';
+      if (numValue >= 5) return 'text-amber-600';
+      return 'text-muted';
+    }
+    
+    // Default coloring
     if (type === 'positive') {
       if (numValue >= 20) return 'text-green-600';
       if (numValue >= 10) return 'text-blue-600';
@@ -222,11 +281,11 @@ export default function PremiumPropertyCard({
                     </div>
                     <div className={`font-semibold ${
                       isHouseHack 
-                        ? 'text-green-600' // Always green for house hacks
+                        ? effectiveMortgage <= 1000 ? 'text-green-600' : effectiveMortgage <= 2000 ? 'text-blue-600' : 'text-amber-600'
                         : deal.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {isHouseHack && deal.monthlyCashFlow < 0
-                        ? formatCurrency(Math.abs(deal.monthlyCashFlow))
+                      {isHouseHack 
+                        ? formatCurrency(Math.abs(effectiveMortgage))
                         : formatCurrency(deal.monthlyCashFlow)}/mo
                     </div>
                   </div>
@@ -379,14 +438,44 @@ export default function PremiumPropertyCard({
               )}
             </div>
 
+            {/* Fix & Flip Specific Metrics */}
+            {deal.strategy?.toLowerCase().includes('flip') && (
+              <>
+                {/* Estimated Profit */}
+                {deal.estimatedProfit && (
+                  <div className="p-3 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5 rounded-lg border border-emerald-500/10">
+                    <div className="text-xs text-muted mb-1">Est. Profit</div>
+                    <div className="font-bold text-lg text-emerald-600">
+                      {formatCurrency(deal.estimatedProfit)}
+                    </div>
+                    <div className="text-xs text-muted">after all costs</div>
+                  </div>
+                )}
+                {/* ARV */}
+                {deal.arv && (
+                  <div className="p-3 bg-gradient-to-br from-purple-500/5 to-purple-600/5 rounded-lg border border-purple-500/10">
+                    <div className="text-xs text-muted mb-1">After Repair Value</div>
+                    <div className="font-bold text-lg text-purple-600">
+                      {formatCurrency(deal.arv)}
+                    </div>
+                    <div className="text-xs text-muted">projected value</div>
+                  </div>
+                )}
+              </>
+            )}
+            
             {/* Total ROI */}
             {deal.totalROI ? (
               <div className="p-3 bg-gradient-to-br from-green-500/5 to-green-600/5 rounded-lg border border-green-500/10">
-                <div className="text-xs text-muted mb-1">Total ROI</div>
+                <div className="text-xs text-muted mb-1">
+                  {deal.strategy?.toLowerCase().includes('flip') ? 'Project ROI' : 'Total ROI'}
+                </div>
                 <div className={`font-bold text-lg ${getMetricColor(deal.totalROI)}`}>
                   {deal.totalROI}%
                 </div>
-                <div className="text-xs text-muted">5-year return</div>
+                <div className="text-xs text-muted">
+                  {deal.strategy?.toLowerCase().includes('flip') ? 'on investment' : '5-year return'}
+                </div>
               </div>
             ) : deal.roi ? (
               <div className="p-3 bg-gradient-to-br from-green-500/5 to-green-600/5 rounded-lg border border-green-500/10">
@@ -426,13 +515,13 @@ export default function PremiumPropertyCard({
                 </div>
                 <div className={`font-bold text-lg ${
                   isHouseHack 
-                    ? 'text-blue-600' // Blue for house hack effective mortgage
+                    ? effectiveMortgage <= 1000 ? 'text-green-600' : effectiveMortgage <= 2000 ? 'text-blue-600' : 'text-amber-600'
                     : (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
                       ? 'text-emerald-600' 
                       : 'text-red-600'
                 }`}>
-                  {isHouseHack && deal.monthlyCashFlow && deal.monthlyCashFlow < 0
-                    ? formatCurrency(Math.abs(deal.monthlyCashFlow))
+                  {isHouseHack 
+                    ? formatCurrency(Math.abs(effectiveMortgage))
                     : deal.proFormaCashFlow 
                       ? `$${deal.proFormaCashFlow}` 
                       : formatCurrency(deal.monthlyCashFlow || 0)}
@@ -454,14 +543,29 @@ export default function PremiumPropertyCard({
               </div>
             )}
 
-            {/* Monthly Rent */}
+            {/* Monthly Rent - Show differently for house hacks vs rentals */}
             {deal.monthlyRent && (
               <div className="p-3 bg-gradient-to-br from-indigo-500/5 to-indigo-600/5 rounded-lg border border-indigo-500/10">
-                <div className="text-xs text-muted mb-1">Monthly Rent</div>
+                <div className="text-xs text-muted mb-1">
+                  {isHouseHack ? 'Rental Income' : 'Monthly Rent'}
+                </div>
                 <div className="font-bold text-lg text-indigo-600">
                   {formatCurrency(deal.monthlyRent)}
                 </div>
-                <div className="text-xs text-muted">gross income</div>
+                <div className="text-xs text-muted">
+                  {isHouseHack ? 'from tenant units' : 'gross income'}
+                </div>
+              </div>
+            )}
+            
+            {/* Original Mortgage for House Hacks */}
+            {isHouseHack && (
+              <div className="p-3 bg-gradient-to-br from-gray-500/5 to-gray-600/5 rounded-lg border border-gray-500/10">
+                <div className="text-xs text-muted mb-1">Total Mortgage</div>
+                <div className="font-bold text-lg text-gray-600">
+                  {formatCurrency(calculateMonthlyMortgage())}
+                </div>
+                <div className="text-xs text-muted">before rental income</div>
               </div>
             )}
           </div>
