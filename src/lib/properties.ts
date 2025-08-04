@@ -127,13 +127,32 @@ export async function updateProperty(id: string | number, updates: Record<string
 export async function deleteProperty(id: string | number) {
   await initializeProperties();
   
+  console.log('=== deleteProperty called ===');
+  console.log('Deleting property with ID:', id);
+  console.log('Current properties count:', properties.length);
+  
   const index = properties.findIndex(p => String(p.id) === String(id));
-  if (index === -1) return false;
+  if (index === -1) {
+    console.log('Property not found for deletion');
+    return false;
+  }
+  
+  const deletedProperty = properties[index];
+  console.log('Property to delete:', {
+    id: deletedProperty.id,
+    title: deletedProperty.title,
+    isStatic: Number(deletedProperty.id) <= 12
+  });
   
   properties.splice(index, 1);
+  console.log('Properties after deletion:', properties.length);
   
-  // Save to persistent storage
+  // Save to persistent storage (this will track deleted static deals)
   await saveProperties(properties);
   
+  // Force re-initialization on next access to ensure deleted IDs are respected
+  isInitialized = false;
+  
+  console.log('Deletion complete, reset initialization flag');
   return true;
 }
