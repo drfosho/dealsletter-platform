@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import type { MergedPropertyData } from '@/utils/property-data-merger';
 import type { GeneratedAnalysis, AnalysisConfig } from '@/services/property-analysis-ai';
+import PropertyPreviewModal from './PropertyPreviewModal';
 
 interface AdminStep {
   id: number;
@@ -28,6 +29,7 @@ export default function AdminPropertyImport() {
   const [properties, setProperties] = useState<ProcessingProperty[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<ProcessingProperty | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [previewProperty, setPreviewProperty] = useState<ProcessingProperty | null>(null);
   
   // Admin workflow steps
   const [currentStep, setCurrentStep] = useState<AdminStep>({
@@ -248,6 +250,15 @@ export default function AdminPropertyImport() {
     ));
 
     try {
+      // Calculate financial metrics
+      const price = property.editedData.price || 0;
+      const rehabCost = property.editedData.estimatedRehab || 0;
+      const totalInvestment = price + rehabCost;
+      const downPaymentPercent = analysisConfig.strategy === 'flip' ? 20 : 25; // 20% for flips, 25% for rentals
+      const downPayment = Math.round(price * (downPaymentPercent / 100));
+      const estimatedProfit = analysisConfig.strategy === 'flip' ? Math.round(totalInvestment * 0.25) : 0;
+      const arv = analysisConfig.strategy === 'flip' ? totalInvestment + estimatedProfit : 0;
+
       // Prepare dashboard property data
       const dashboardProperty = {
         ...property.editedData,
@@ -261,6 +272,16 @@ export default function AdminPropertyImport() {
         exitStrategy: property.analysis.exitStrategy,
         recommendedActions: property.analysis.recommendedActions,
         investmentStrategy: analysisConfig.strategy,
+        strategy: analysisConfig.strategy === 'flip' ? 'Fix & Flip' : 
+                  analysisConfig.strategy === 'brrrr' ? 'BRRRR' :
+                  analysisConfig.strategy === 'airbnb' ? 'Short-term Rental' :
+                  analysisConfig.strategy === 'commercial' ? 'Commercial' : 'Buy & Hold',
+        estimatedRehab: rehabCost,
+        totalInvestment: totalInvestment,
+        arv: arv,
+        expectedProfit: estimatedProfit,
+        downPayment: downPayment,
+        downPaymentPercent: downPaymentPercent,
         confidence: property.analysis.confidenceScore > 80 ? 'high' : 
                    property.analysis.confidenceScore > 60 ? 'medium' : 'low',
         riskLevel: property.analysis.riskAssessment.riskLevel,
@@ -437,12 +458,20 @@ https://www.realtor.com/..."
                   )}
                   
                   {property.status === 'ready' && (
-                    <button
-                      onClick={() => handlePublishProperty(property)}
-                      className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      Publish to Dashboard
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPreviewProperty(property)}
+                        className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Preview
+                      </button>
+                      <button
+                        onClick={() => handlePublishProperty(property)}
+                        className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        Publish to Dashboard
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -612,6 +641,93 @@ https://www.realtor.com/..."
               </div>
             </div>
             
+            {/* Rehab Cost Estimator */}
+            {(analysisConfig.strategy === 'flip' || analysisConfig.strategy === 'brrrr') && (
+              <div className="mb-4 p-4 bg-amber-50 rounded-lg">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estimated Rehab Costs
+                  {selectedProperty.editedData.squareFootage && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({selectedProperty.editedData.squareFootage.toLocaleString()} sq ft)
+                    </span>
+                  )}
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="rehabLevel"
+                      value="cosmetic"
+                      checked={(selectedProperty.editedData.estimatedRehab || 0) <= (selectedProperty.editedData.squareFootage || 1800) * 25}
+                      onChange={() => {
+                        const sqft = selectedProperty.editedData.squareFootage || 1800;
+                        handleDataEdit(selectedProperty.id, 'estimatedRehab', Math.round(sqft * 20));
+                      }}
+                      className="mr-2"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium">Cosmetic ($15-25/sq ft)</span>
+                      <span className="text-sm text-gray-600 ml-2">
+                        Paint, flooring, fixtures - ${((selectedProperty.editedData.squareFootage || 1800) * 20).toLocaleString()}
+                      </span>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="rehabLevel"
+                      value="moderate"
+                      checked={(selectedProperty.editedData.estimatedRehab || 0) > (selectedProperty.editedData.squareFootage || 1800) * 25 && 
+                               (selectedProperty.editedData.estimatedRehab || 0) <= (selectedProperty.editedData.squareFootage || 1800) * 60}
+                      onChange={() => {
+                        const sqft = selectedProperty.editedData.squareFootage || 1800;
+                        handleDataEdit(selectedProperty.id, 'estimatedRehab', Math.round(sqft * 45));
+                      }}
+                      className="mr-2"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium">Moderate ($35-60/sq ft)</span>
+                      <span className="text-sm text-gray-600 ml-2">
+                        Kitchen, baths, systems - ${((selectedProperty.editedData.squareFootage || 1800) * 45).toLocaleString()}
+                      </span>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="rehabLevel"
+                      value="major"
+                      checked={(selectedProperty.editedData.estimatedRehab || 0) > (selectedProperty.editedData.squareFootage || 1800) * 60}
+                      onChange={() => {
+                        const sqft = selectedProperty.editedData.squareFootage || 1800;
+                        handleDataEdit(selectedProperty.id, 'estimatedRehab', Math.round(sqft * 85));
+                      }}
+                      className="mr-2"
+                    />
+                    <div className="flex-1">
+                      <span className="font-medium">Major ($70-100+/sq ft)</span>
+                      <span className="text-sm text-gray-600 ml-2">
+                        Full gut renovation - ${((selectedProperty.editedData.squareFootage || 1800) * 85).toLocaleString()}
+                      </span>
+                    </div>
+                  </label>
+                  
+                  <div className="mt-2 pt-2 border-t">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Custom Amount</label>
+                    <input
+                      type="number"
+                      value={selectedProperty.editedData.estimatedRehab || ''}
+                      onChange={(e) => handleDataEdit(selectedProperty.id, 'estimatedRehab', parseInt(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      placeholder="Enter custom rehab budget"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Custom Analysis Notes */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -665,6 +781,21 @@ https://www.realtor.com/..."
           </div>
         </div>
       )}
+
+      {/* Property Preview Modal */}
+      <PropertyPreviewModal
+        isOpen={!!previewProperty}
+        property={previewProperty?.editedData || null}
+        analysis={previewProperty?.analysis || null}
+        strategy={analysisConfig.strategy}
+        onClose={() => setPreviewProperty(null)}
+        onPublish={() => {
+          if (previewProperty) {
+            handlePublishProperty(previewProperty);
+            setPreviewProperty(null);
+          }
+        }}
+      />
     </div>
   );
 }

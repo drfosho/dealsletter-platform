@@ -44,6 +44,7 @@ export interface MergedPropertyData {
   rentEstimate?: number;
   rentRangeLow?: number;
   rentRangeHigh?: number;
+  estimatedRehab?: number;
   
   // Investment Metrics
   capRate?: number;

@@ -61,9 +61,18 @@ export async function createProperty(property: Record<string, unknown>) {
   console.log('Input isDraft:', 'isDraft' in property ? property.isDraft : undefined);
   console.log('Properties array before push:', properties.length);
   
+  // Generate a unique ID - check if provided ID already exists
+  let propertyId = property.id || Date.now().toString();
+  
+  // If ID already exists, generate a new one
+  while (properties.some(p => String(p.id) === String(propertyId))) {
+    console.log(`ID ${propertyId} already exists, generating new one...`);
+    propertyId = Date.now() + Math.floor(Math.random() * 10000);
+  }
+  
   const newProperty = {
     ...property,
-    id: property.id || Date.now().toString(),
+    id: propertyId,
     createdAt: property.createdAt || new Date(),
     updatedAt: property.updatedAt || new Date()
   };

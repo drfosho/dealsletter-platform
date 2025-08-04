@@ -3658,10 +3658,23 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                         <p className="text-2xl font-bold text-primary">${deal.monthlyRent?.toLocaleString() || '0'}</p>
                       </div>
                       <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
-                        <p className="text-sm text-muted mb-1">Monthly Cash Flow</p>
-                        <p className={`text-2xl font-bold ${(typeof deal.monthlyCashFlow === 'number' ? deal.monthlyCashFlow : 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          ${deal.monthlyCashFlow?.toLocaleString() || '0'}
+                        <p className="text-sm text-muted mb-1">
+                          {deal.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage' : 'Monthly Cash Flow'}
                         </p>
+                        <p className={`text-2xl font-bold ${
+                          deal.strategy?.toLowerCase().includes('house hack') 
+                            ? 'text-blue-600' // Blue for house hack effective mortgage
+                            : (typeof deal.monthlyCashFlow === 'number' ? deal.monthlyCashFlow : 0) >= 0 
+                              ? 'text-green-600' 
+                              : 'text-red-600'
+                        }`}>
+                          ${deal.strategy?.toLowerCase().includes('house hack') && deal.monthlyCashFlow && deal.monthlyCashFlow < 0
+                            ? Math.abs(deal.monthlyCashFlow).toLocaleString()
+                            : deal.monthlyCashFlow?.toLocaleString() || '0'}
+                        </p>
+                        {deal.strategy?.toLowerCase().includes('house hack') && (
+                          <p className="text-xs text-muted mt-1">after rental income</p>
+                        )}
                       </div>
                       <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
                         <p className="text-sm text-muted mb-1">Cap Rate</p>

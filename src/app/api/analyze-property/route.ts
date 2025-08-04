@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { trackUsage } from '@/lib/analytics';
 
-// Initialize Anthropic client
+// Initialize Anthropic client with timeout
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
+  timeout: 120000, // 120 second timeout for comprehensive Opus 4 responses
 });
 
 // Simple in-memory cache (replace with Redis in production)
@@ -716,7 +717,7 @@ export async function POST(request: NextRequest) {
         const apiStartTime = Date.now();
         
         const message = await anthropic.messages.create({
-          model: metrics.model, // Using claude-opus-4-20250514
+          model: metrics.model, // Using claude-opus-4-20250514 for comprehensive analysis
           max_tokens: 8000, // Increased for comprehensive newsletter-quality data
           temperature: 0.1, // Lower for more consistent parsing
           system: `You are an expert real estate investment analyst with 20+ years of experience creating premium newsletter content for sophisticated investors. 

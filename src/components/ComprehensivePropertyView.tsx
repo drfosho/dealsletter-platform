@@ -99,9 +99,17 @@ export default function ComprehensivePropertyView({ isOpen, property, onClose }:
                       <dd>{property.capRate}%</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-muted">Cash Flow:</dt>
-                      <dd className={property.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}>
-                        ${property.monthlyCashFlow?.toLocaleString()}
+                      <dt className="text-muted">
+                        {property.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage:' : 'Cash Flow:'}
+                      </dt>
+                      <dd className={
+                        property.strategy?.toLowerCase().includes('house hack') 
+                          ? 'text-blue-600' 
+                          : property.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                      }>
+                        ${property.strategy?.toLowerCase().includes('house hack') && property.monthlyCashFlow < 0
+                          ? Math.abs(property.monthlyCashFlow).toLocaleString()
+                          : property.monthlyCashFlow?.toLocaleString()}
                       </dd>
                     </div>
                     <div className="flex justify-between">
@@ -238,8 +246,18 @@ export default function ComprehensivePropertyView({ isOpen, property, onClose }:
                             <dd>{scenario.interestRate}%</dd>
                           </div>
                           <div className="flex justify-between">
-                            <dt className="text-muted">Monthly Cash Flow:</dt>
-                            <dd className="text-green-600">${scenario.monthlyCashFlow?.toLocaleString()}</dd>
+                            <dt className="text-muted">
+                              {property.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage:' : 'Monthly Cash Flow:'}
+                            </dt>
+                            <dd className={
+                              property.strategy?.toLowerCase().includes('house hack') && scenario.monthlyCashFlow < 0
+                                ? "text-blue-600"
+                                : scenario.monthlyCashFlow >= 0 ? "text-green-600" : "text-red-600"
+                            }>
+                              ${property.strategy?.toLowerCase().includes('house hack') && scenario.monthlyCashFlow < 0
+                                ? Math.abs(scenario.monthlyCashFlow).toLocaleString()
+                                : scenario.monthlyCashFlow?.toLocaleString()}
+                            </dd>
                           </div>
                           <div className="flex justify-between">
                             <dt className="text-muted">Cash-on-Cash:</dt>

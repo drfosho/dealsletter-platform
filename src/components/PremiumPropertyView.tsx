@@ -212,14 +212,27 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                 </div>
                 
                 <div className={`bg-gradient-to-br ${
-                  property.monthlyCashFlow >= 0 
-                    ? 'from-emerald-500/10 to-emerald-600/10 border-emerald-500/20' 
-                    : 'from-red-500/10 to-red-600/10 border-red-500/20'
+                  property.strategy?.toLowerCase().includes('house hack')
+                    ? 'from-blue-500/10 to-blue-600/10 border-blue-500/20'
+                    : property.monthlyCashFlow >= 0 
+                      ? 'from-emerald-500/10 to-emerald-600/10 border-emerald-500/20' 
+                      : 'from-red-500/10 to-red-600/10 border-red-500/20'
                 } rounded-xl p-6 border`}>
-                  <div className="text-sm text-muted mb-1">Monthly Cash Flow</div>
-                  <div className={`text-2xl font-bold ${getMetricColor(property.monthlyCashFlow, 'risk')}`}>
-                    {formatCurrency(property.monthlyCashFlow)}
+                  <div className="text-sm text-muted mb-1">
+                    {property.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage' : 'Monthly Cash Flow'}
                   </div>
+                  <div className={`text-2xl font-bold ${
+                    property.strategy?.toLowerCase().includes('house hack')
+                      ? 'text-blue-600'
+                      : getMetricColor(property.monthlyCashFlow, 'risk')
+                  }`}>
+                    {property.strategy?.toLowerCase().includes('house hack') && property.monthlyCashFlow < 0
+                      ? formatCurrency(Math.abs(property.monthlyCashFlow))
+                      : formatCurrency(property.monthlyCashFlow)}
+                  </div>
+                  {property.strategy?.toLowerCase().includes('house hack') && (
+                    <div className="text-xs text-muted mt-1">after rental income</div>
+                  )}
                 </div>
               </div>
 
@@ -618,9 +631,17 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                             
                             <div className="space-y-3">
                               <div className="flex justify-between">
-                                <span className="text-sm text-muted">Monthly Cash Flow</span>
-                                <span className={`font-bold ${(scenario.monthlyCashFlow ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {formatCurrency(scenario.monthlyCashFlow)}
+                                <span className="text-sm text-muted">
+                                  {property.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage' : 'Monthly Cash Flow'}
+                                </span>
+                                <span className={`font-bold ${
+                                  property.strategy?.toLowerCase().includes('house hack') && (scenario.monthlyCashFlow ?? 0) < 0
+                                    ? 'text-blue-600'
+                                    : (scenario.monthlyCashFlow ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {property.strategy?.toLowerCase().includes('house hack') && (scenario.monthlyCashFlow ?? 0) < 0
+                                    ? formatCurrency(Math.abs(scenario.monthlyCashFlow))
+                                    : formatCurrency(scenario.monthlyCashFlow)}
                                 </span>
                               </div>
                               <div className="flex justify-between">

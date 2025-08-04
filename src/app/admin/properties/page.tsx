@@ -305,8 +305,8 @@ export default function AdminPropertiesPage() {
       // Ensure all required fields for dashboard display
       const propertyToSave: PropertyData = {
         ...propertyData,
-        // Ensure numeric ID for dashboard compatibility
-        id: propertyData.id || Date.now(),
+        // Ensure unique numeric ID for dashboard compatibility
+        id: propertyData.id || Date.now() + Math.floor(Math.random() * 1000),
         // Ensure location field is set
         location: propertyData.location || `${propertyData.city}, ${propertyData.state} ${propertyData.zipCode}`.trim(),
         // Ensure type matches strategy if not set
@@ -363,7 +363,7 @@ export default function AdminPropertiesPage() {
 
   // Convert property data to dashboard deal format
   const convertToDeal = (property: Property) => ({
-    id: typeof property.id === 'string' ? parseInt(property.id) || Date.now() : Number(property.id),
+    id: typeof property.id === 'string' ? parseInt(property.id) || (Date.now() + Math.floor(Math.random() * 1000)) : Number(property.id),
     title: property.title || property.address,
     location: property.location || `${property.city}, ${property.state} ${property.zipCode}`.trim(),
     type: property.type || property.propertyType,

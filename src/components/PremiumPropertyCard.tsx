@@ -86,6 +86,15 @@ export default function PremiumPropertyCard({
     }).format(value);
   };
 
+  // Check if this is a house hack property
+  const isHouseHack = deal.strategy?.toLowerCase().includes('house hack') || 
+                      deal.strategy?.toLowerCase().includes('househack');
+  
+  // Calculate effective mortgage for house hacks (show as positive number)
+  const effectiveMortgage = isHouseHack && deal.monthlyCashFlow && deal.monthlyCashFlow < 0 
+    ? Math.abs(deal.monthlyCashFlow) 
+    : 0;
+
   // Get metric color
   const getMetricColor = (value: number | string | undefined, type: 'positive' | 'neutral' = 'positive') => {
     if (!value) return 'text-muted';
@@ -213,9 +222,17 @@ export default function PremiumPropertyCard({
                 )}
                 {deal.monthlyCashFlow !== undefined && (
                   <div>
-                    <div className="text-xs text-muted mb-1">Cash Flow</div>
-                    <div className={`font-semibold ${deal.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(deal.monthlyCashFlow)}/mo
+                    <div className="text-xs text-muted mb-1">
+                      {isHouseHack ? 'Effective Mortgage' : 'Cash Flow'}
+                    </div>
+                    <div className={`font-semibold ${
+                      isHouseHack 
+                        ? 'text-green-600' // Always green for house hacks
+                        : deal.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {isHouseHack && deal.monthlyCashFlow < 0
+                        ? formatCurrency(Math.abs(deal.monthlyCashFlow))
+                        : formatCurrency(deal.monthlyCashFlow)}/mo
                     </div>
                   </div>
                 )}
@@ -400,24 +417,34 @@ export default function PremiumPropertyCard({
               </div>
             )}
 
-            {/* Cash Flow */}
+            {/* Cash Flow or Effective Mortgage */}
             {(deal.monthlyCashFlow !== undefined || deal.proFormaCashFlow) && (
               <div className={`p-3 bg-gradient-to-br ${
-                (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
-                  ? 'from-emerald-500/5 to-emerald-600/5 border-emerald-500/10' 
-                  : 'from-red-500/5 to-red-600/5 border-red-500/10'
+                isHouseHack 
+                  ? 'from-blue-500/5 to-blue-600/5 border-blue-500/10' // Blue for house hacks
+                  : (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
+                    ? 'from-emerald-500/5 to-emerald-600/5 border-emerald-500/10' 
+                    : 'from-red-500/5 to-red-600/5 border-red-500/10'
               } rounded-lg border`}>
-                <div className="text-xs text-muted mb-1">Monthly Cash Flow</div>
-                <div className={`font-bold text-lg ${
-                  (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
-                    ? 'text-emerald-600' 
-                    : 'text-red-600'
-                }`}>
-                  {deal.proFormaCashFlow 
-                    ? `$${deal.proFormaCashFlow}` 
-                    : formatCurrency(deal.monthlyCashFlow || 0)}
+                <div className="text-xs text-muted mb-1">
+                  {isHouseHack ? 'Effective Mortgage' : 'Monthly Cash Flow'}
                 </div>
-                <div className="text-xs text-muted">per month</div>
+                <div className={`font-bold text-lg ${
+                  isHouseHack 
+                    ? 'text-blue-600' // Blue for house hack effective mortgage
+                    : (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
+                      ? 'text-emerald-600' 
+                      : 'text-red-600'
+                }`}>
+                  {isHouseHack && deal.monthlyCashFlow && deal.monthlyCashFlow < 0
+                    ? formatCurrency(Math.abs(deal.monthlyCashFlow))
+                    : deal.proFormaCashFlow 
+                      ? `$${deal.proFormaCashFlow}` 
+                      : formatCurrency(deal.monthlyCashFlow || 0)}
+                </div>
+                <div className="text-xs text-muted">
+                  {isHouseHack ? 'after rental income' : 'per month'}
+                </div>
               </div>
             )}
 
