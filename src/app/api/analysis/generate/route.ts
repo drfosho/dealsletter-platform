@@ -275,24 +275,37 @@ export async function POST(request: NextRequest) {
       'commercial': 'Buy & Hold'
     };
     
+    // Ensure property data is properly structured
+    let structuredPropertyData = propertyData;
+    if (propertyData && !propertyData.property && propertyData.listing) {
+      // If we have listing data but no property key, restructure it
+      structuredPropertyData = {
+        ...propertyData,
+        property: propertyData.listing
+      };
+    }
+    
     // Log the property data being stored
     console.log('[Analysis] Property data being stored:', {
-      property: propertyData?.property ? {
-        bedrooms: (propertyData.property as any).bedrooms,
-        bathrooms: (propertyData.property as any).bathrooms,
-        squareFootage: (propertyData.property as any).squareFootage,
-        yearBuilt: (propertyData.property as any).yearBuilt,
-        propertyType: (propertyData.property as any).propertyType,
-        addressLine1: (propertyData.property as any).addressLine1
+      hasProperty: !!structuredPropertyData?.property,
+      hasListing: !!structuredPropertyData?.listing,
+      property: structuredPropertyData?.property ? {
+        bedrooms: (structuredPropertyData.property as any).bedrooms,
+        bathrooms: (structuredPropertyData.property as any).bathrooms,
+        squareFootage: (structuredPropertyData.property as any).squareFootage,
+        yearBuilt: (structuredPropertyData.property as any).yearBuilt,
+        propertyType: (structuredPropertyData.property as any).propertyType,
+        addressLine1: (structuredPropertyData.property as any).addressLine1,
+        images: (structuredPropertyData.property as any).images?.length || 0
       } : null,
-      rental: propertyData?.rental,
-      comparables: propertyData?.comparables ? {
-        value: (propertyData.comparables as any).value,
-        valueRangeLow: (propertyData.comparables as any).valueRangeLow,
-        valueRangeHigh: (propertyData.comparables as any).valueRangeHigh,
-        comparablesCount: (propertyData.comparables as any).comparables?.length
+      rental: structuredPropertyData?.rental,
+      comparables: structuredPropertyData?.comparables ? {
+        value: (structuredPropertyData.comparables as any).value,
+        valueRangeLow: (structuredPropertyData.comparables as any).valueRangeLow,
+        valueRangeHigh: (structuredPropertyData.comparables as any).valueRangeHigh,
+        comparablesCount: (structuredPropertyData.comparables as any).comparables?.length
       } : null,
-      market: propertyData?.market
+      market: structuredPropertyData?.market
     });
     
     // Prepare data for both possible table schemas
@@ -304,11 +317,11 @@ export async function POST(request: NextRequest) {
       down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
       loan_term: body.loanTerms?.loanTerm || 30,
       interest_rate: body.loanTerms?.interestRate || 7,
-      rehab_costs: body.rehabCosts,
-      property_data: propertyData?.property || null,
-      market_data: propertyData?.market || null,
-      rental_estimate: propertyData?.rental || null,
-      comparables: propertyData?.comparables || null,
+      rehab_costs: body.rehabCosts || 0,
+      property_data: structuredPropertyData || null,
+      market_data: structuredPropertyData?.market || null,
+      rental_estimate: structuredPropertyData?.rental || null,
+      comparables: structuredPropertyData?.comparables || null,
       status: 'generating',
       ai_analysis: { status: 'generating' }, // Placeholder - will be updated after generation
       // Additional fields for analyzed_properties table if needed
@@ -374,7 +387,10 @@ export async function POST(request: NextRequest) {
           down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
           loan_term: body.loanTerms?.loanTerm || 30,
           interest_rate: body.loanTerms?.interestRate || 7,
-          property_data: propertyData,
+          property_data: structuredPropertyData,
+          rehab_costs: body.rehabCosts || 0,
+          strategy_details: (body as any).strategyDetails || {},
+          flip_timeline_months: (body as any).strategyDetails?.timeline || null,
           status: 'generating'
         }
       })
@@ -764,8 +780,20 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
 - Loan Type: ${request.loanTerms.loanType}`;
   }
 
-  if (request.rehabCosts) {
+  if (request.rehabCosts && request.rehabCosts > 0) {
     context += `\n- Rehab Costs: $${request.rehabCosts.toLocaleString()}`;
+  } else if (isFlipStrategy && !request.rehabCosts) {
+    // Calculate rehab costs if not provided but needed for flip
+    const squareFootage = (property?.squareFootage as number) || 0;
+    const renovationLevel = (request as any).renovationLevel || 'moderate';
+    const rehabMultipliers: Record<string, number> = {
+      cosmetic: 20,
+      moderate: 40,
+      extensive: 80,
+      gut: 125
+    };
+    const estimatedRehab = squareFootage * (rehabMultipliers[renovationLevel] || 40);
+    context += `\n- Rehab Costs (Estimated): $${estimatedRehab.toLocaleString()}`;
   }
 
   if (request.arv && isFlipStrategy) {
@@ -784,31 +812,120 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
     // Fix & Flip specific calculations
     // Use provided ARV if available, otherwise use comparables or estimate
     const estimatedARV = request.arv || (comparables as any)?.value || effectivePurchasePrice * 1.3;
-    const rehabCosts = request.rehabCosts || 0;
+    
+    // Calculate rehab costs if not provided
+    let rehabCosts = request.rehabCosts || 0;
+    if (rehabCosts === 0) {
+      const squareFootage = (property?.squareFootage as number) || 0;
+      const renovationLevel = (request as any).renovationLevel || 'moderate';
+      const rehabMultipliers: Record<string, number> = {
+        cosmetic: 20,
+        moderate: 40,
+        extensive: 80,
+        gut: 125
+      };
+      rehabCosts = squareFootage > 0 ? squareFootage * (rehabMultipliers[renovationLevel] || 40) : effectivePurchasePrice * 0.15;
+      console.log('[Context] Calculated rehab costs:', { squareFootage, renovationLevel, rehabCosts });
+    }
     const closingCosts = effectivePurchasePrice * 0.03; // 3% closing costs
-    const holdingTime = request.loanTerms?.loanTerm || 0.5; // in years
     
-    // For holding costs calculation
-    const monthlyPropertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
-    const monthlyInsurance = Math.round((effectivePurchasePrice * 0.004) / 12);
-    const monthlyUtilities = 150; // Estimated utilities during renovation
+    // For flip strategies, we need to get the actual flip timeline
+    // The strategyDetails.timeline is in months (3, 6, 9, 12)
+    // The loanTerm for hard money is typically 1 year but the flip might be shorter
+    let holdingTimeInMonths = 6; // Default to 6 months
     
-    // Calculate monthly loan payment (interest-only for hard money)
-    // For hard money: includes interest on both purchase loan and rehab loan (if 100% financed)
-    const includeRehabInLoan = request.loanTerms?.loanType === 'hardMoney';
-    const monthlyLoanPayment = calculateMonthlyPayment(
-      loanAmount, 
-      request.loanTerms?.interestRate || 10.45, 
-      holdingTime, 
-      request.loanTerms?.loanType, 
-      includeRehabInLoan ? rehabCosts : 0
-    );
+    // Check if we have a specific timeline in strategyDetails
+    if ((request as any).strategyDetails?.timeline) {
+      holdingTimeInMonths = parseInt((request as any).strategyDetails.timeline) || 6;
+      console.log('[Fix & Flip] Using timeline from strategyDetails:', holdingTimeInMonths, 'months');
+    } else if (request.loanTerms?.loanTerm) {
+      // If no specific timeline, use loan term but cap at 12 months for flips
+      holdingTimeInMonths = Math.min(Math.round(request.loanTerms.loanTerm * 12), 12);
+      console.log('[Fix & Flip] Using loanTerm as timeline:', holdingTimeInMonths, 'months');
+    }
     
-    // Total monthly holding costs = loan payment + taxes + insurance + utilities
-    const monthlyHoldingCosts = monthlyLoanPayment + monthlyPropertyTaxes + monthlyInsurance + monthlyUtilities;
+    const holdingTimeInYears = holdingTimeInMonths / 12;
+    
+    // Calculate accurate monthly holding costs
+    // Property taxes: typically 1.2% annually in most areas
+    const annualPropertyTaxes = effectivePurchasePrice * 0.012; // 1.2% of purchase price
+    const monthlyPropertyTaxes = Math.round(annualPropertyTaxes / 12);
+    
+    // Insurance: typically 0.35% annually for investment properties
+    const annualInsurance = effectivePurchasePrice * 0.0035; // 0.35% of purchase price
+    const monthlyInsurance = Math.round(annualInsurance / 12);
+    
+    // Utilities during renovation (higher during construction)
+    const monthlyUtilities = 200; // $200/month average during renovation
+    
+    // Maintenance/Security during renovation
+    const monthlyMaintenance = 150; // $150/month for security, misc maintenance
+    
+    // Calculate monthly loan interest payment
+    // For hard money loans: interest-only on both purchase and rehab loans
+    const interestRate = request.loanTerms?.interestRate || 10.45;
+    const monthlyInterestRate = interestRate / 100 / 12;
+    
+    let monthlyLoanPayment = 0;
+    if (request.loanTerms?.loanType === 'hardMoney') {
+      // Interest-only payment on purchase loan
+      monthlyLoanPayment = Math.round(loanAmount * monthlyInterestRate);
+      
+      // Add interest on rehab loan if 100% financed
+      if (rehabCosts > 0) {
+        monthlyLoanPayment += Math.round(rehabCosts * monthlyInterestRate);
+      }
+    } else {
+      // Traditional loan payment calculation
+      monthlyLoanPayment = calculateMonthlyPayment(
+        loanAmount,
+        interestRate,
+        holdingTimeInYears,
+        request.loanTerms?.loanType
+      );
+    }
+    
+    // Total monthly holding costs = loan payment + taxes + insurance + utilities + maintenance
+    const monthlyHoldingCosts = monthlyLoanPayment + monthlyPropertyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
+    
+    // Log detailed holding costs calculation for debugging and transparency
+    console.log('[Fix & Flip] DETAILED Holding Costs Calculation:', {
+      purchasePrice: effectivePurchasePrice,
+      loanAmount,
+      rehabCosts,
+      interestRate: interestRate,
+      holdingTimeInYears,
+      holdingTimeInMonths,
+      monthlyBreakdown: {
+        loanInterest: monthlyLoanPayment,
+        propertyTaxes: monthlyPropertyTaxes,
+        insurance: monthlyInsurance,
+        utilities: monthlyUtilities,
+        maintenance: monthlyMaintenance,
+        totalMonthly: monthlyHoldingCosts
+      },
+      annualRates: {
+        propertyTaxRate: '1.2%',
+        insuranceRate: '0.35%',
+        interestRate: `${interestRate}%`
+      },
+      totalHoldingCosts: monthlyHoldingCosts * holdingTimeInMonths,
+      calculation: `$${monthlyHoldingCosts}/month × ${holdingTimeInMonths} months = $${monthlyHoldingCosts * holdingTimeInMonths}`
+    });
     
     // Total holding costs for the entire project duration
-    const totalHoldingCosts = monthlyHoldingCosts * (holdingTime * 12);
+    const totalHoldingCosts = monthlyHoldingCosts * holdingTimeInMonths;
+    
+    // Validation: Ensure holding costs are reasonable (typically 3-10% of purchase price for 6-month flip)
+    const holdingCostPercentage = (totalHoldingCosts / effectivePurchasePrice) * 100;
+    if (holdingCostPercentage < 1 || holdingCostPercentage > 20) {
+      console.warn('[Fix & Flip] WARNING: Holding costs may be incorrect:', {
+        totalHoldingCosts,
+        purchasePrice: effectivePurchasePrice,
+        percentage: holdingCostPercentage.toFixed(2) + '%',
+        expected: '3-10% for 6-month flip, 6-20% for 12-month flip'
+      });
+    }
     const sellingCosts = estimatedARV * 0.08; // 8% for realtor fees, closing costs
     const totalInvestment = downPayment + rehabCosts + closingCosts + pointsCost;
     const totalProjectCost = effectivePurchasePrice + rehabCosts + closingCosts + totalHoldingCosts + sellingCosts + pointsCost;
@@ -822,7 +939,7 @@ PURCHASE & FINANCING:
 - Down Payment: $${downPayment.toLocaleString()} (${effectivePurchasePrice > 0 ? ((downPayment/effectivePurchasePrice) * 100).toFixed(1) : '20.0'}%)
 - Loan Amount: $${loanAmount.toLocaleString()}
 - Interest Rate: ${request.loanTerms?.interestRate || 10.45}%
-- Loan Term: ${holdingTime * 12} months
+- Loan Term: ${holdingTimeInMonths} months
 - Loan Type: ${request.loanTerms?.loanType === 'hardMoney' ? 'Hard Money' : 'Conventional'}${request.loanTerms?.points ? `
 - Points/Fees: ${request.loanTerms.points} points ($${Math.round(pointsCost).toLocaleString()})` : ''}
 
@@ -831,12 +948,13 @@ RENOVATION & COSTS:
 - Closing Costs (Purchase): $${Math.round(closingCosts).toLocaleString()}
 
 HOLDING COSTS BREAKDOWN:
-- Monthly Loan Payment: $${monthlyLoanPayment.toLocaleString()}
-- Monthly Property Taxes: $${monthlyPropertyTaxes.toLocaleString()}
-- Monthly Insurance: $${monthlyInsurance.toLocaleString()}
+- Monthly Loan Interest: $${monthlyLoanPayment.toLocaleString()}
+- Monthly Property Taxes: $${monthlyPropertyTaxes.toLocaleString()} (1.2% annually)
+- Monthly Insurance: $${monthlyInsurance.toLocaleString()} (0.35% annually)
 - Monthly Utilities: $${monthlyUtilities.toLocaleString()}
+- Monthly Maintenance/Security: $${monthlyMaintenance.toLocaleString()}
 - Total Monthly Holding: $${monthlyHoldingCosts.toLocaleString()}
-- Project Duration: ${holdingTime * 12} months
+- Project Duration: ${holdingTimeInMonths} months
 - Total Holding Costs: $${Math.round(totalHoldingCosts).toLocaleString()}
 
 SELLING COSTS:
@@ -870,8 +988,9 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
     
     // Calculate additional metrics for better analysis
-    const propertyTaxes = Math.round((effectivePurchasePrice * 0.01) / 12);
-    const insurance = Math.round((effectivePurchasePrice * 0.004) / 12);
+    // Using same rates as fix & flip for consistency
+    const propertyTaxes = Math.round((effectivePurchasePrice * 0.012) / 12); // 1.2% annually
+    const insurance = Math.round((effectivePurchasePrice * 0.0035) / 12); // 0.35% annually
     const hoa = 0; // Could be added as parameter
     const maintenance = Math.round(monthlyRent * 0.1); // 10% of rent for maintenance
     const propertyManagement = Math.round(monthlyRent * 0.08); // 8% for management

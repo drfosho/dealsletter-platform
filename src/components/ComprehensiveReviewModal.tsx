@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ImageUpload from './ImageUpload';
+import ImageUploadErrorBoundary from './ImageUploadErrorBoundary';
 import type { PropertyData, FinancingScenario, ProjectionData } from '@/types/property';
 
 interface ComprehensiveReviewModalProps {
@@ -648,11 +649,13 @@ export default function ComprehensiveReviewModal({
                 </p>
               </div>
               <div className="w-full overflow-hidden">
-                <ImageUpload 
-                  images={uploadedImages}
-                  onImagesChange={onImagesChange}
-                  maxImages={10}
-                />
+                <ImageUploadErrorBoundary>
+                  <ImageUpload 
+                    images={uploadedImages}
+                    onImagesChange={onImagesChange}
+                    maxImages={10}
+                  />
+                </ImageUploadErrorBoundary>
               </div>
             </div>
           )}

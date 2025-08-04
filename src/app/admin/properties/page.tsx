@@ -6,6 +6,8 @@ import DealModal from '@/app/dashboard/DealModal';
 import Navigation from '@/components/Navigation';
 import ComprehensiveReviewModal from '@/components/ComprehensiveReviewModal';
 import ComprehensivePropertyView from '@/components/ComprehensivePropertyView';
+import BulkPropertyAnalysis from '@/components/admin/BulkPropertyAnalysis';
+import AdminPropertyImport from '@/components/admin/AdminPropertyImport';
 import type { PropertyData } from '@/types/property';
 
 interface Property {
@@ -99,6 +101,8 @@ export default function AdminPropertiesPage() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [showComprehensiveView, setShowComprehensiveView] = useState(false);
   const [comprehensiveProperty, setComprehensiveProperty] = useState<Property | null>(null);
+  const [showBulkAnalysis, setShowBulkAnalysis] = useState(false);
+  const [showAdminImport, setShowAdminImport] = useState(false);
 
   // Fetch properties
   const fetchProperties = async () => {
@@ -429,7 +433,64 @@ export default function AdminPropertiesPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-4">Property Management</h1>
           
-          {/* AI-Powered Quick Import */}
+          {/* Toggle for Tools */}
+          <div className="mb-6 flex gap-3 flex-wrap">
+            <button
+              onClick={() => {
+                setShowAdminImport(!showAdminImport);
+                setShowBulkAnalysis(false);
+              }}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                showAdminImport 
+                  ? 'bg-accent text-white' 
+                  : 'bg-card border border-border hover:border-accent'
+              }`}
+            >
+              {showAdminImport ? 'Hide' : 'Show'} Admin Import
+            </button>
+            
+            <button
+              onClick={() => {
+                setShowBulkAnalysis(!showBulkAnalysis);
+                setShowAdminImport(false);
+              }}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                showBulkAnalysis 
+                  ? 'bg-accent text-white' 
+                  : 'bg-card border border-border hover:border-accent'
+              }`}
+            >
+              {showBulkAnalysis ? 'Hide' : 'Show'} Text Analysis
+            </button>
+          </div>
+
+          {/* Show appropriate tool based on selection */}
+          {showAdminImport ? (
+            <AdminPropertyImport />
+          ) : showBulkAnalysis ? (
+            <BulkPropertyAnalysis 
+              onBatchComplete={async (properties) => {
+                // Save all properties to database
+                for (const property of properties) {
+                  try {
+                    await fetch('/api/admin/properties', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(property)
+                    });
+                  } catch (error) {
+                    console.error('Error saving property:', error);
+                  }
+                }
+                
+                // Refresh properties list
+                await fetchProperties();
+                setShowBulkAnalysis(false);
+                alert(`Successfully added ${properties.length} properties to dashboard!`);
+              }}
+            />
+          ) : (
+          /* AI-Powered Quick Import */
           <div className="bg-card rounded-xl border border-border/60 p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">AI-Powered Property Import</h2>
             
@@ -464,6 +525,7 @@ export default function AdminPropertiesPage() {
               </div>
             </div>
           </div>
+          )}
           
           {/* View Mode Toggle */}
           <div className="flex justify-between items-center">

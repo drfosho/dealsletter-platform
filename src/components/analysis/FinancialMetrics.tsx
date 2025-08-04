@@ -17,7 +17,11 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
     
     if (isFlipStrategy) {
       // Fix & Flip specific calculations
-      const rehabCosts = analysis.rehab_costs || 0;
+      // Try multiple locations for rehab costs
+      const rehabCosts = analysis.rehab_costs || 
+                        (analysis as any).renovationCosts || 
+                        (analysis as any).analysis_data?.rehab_costs || 
+                        0;
       const closingCosts = purchasePrice * 0.03; // 3% closing costs
       const totalInvestment = downPayment + rehabCosts + closingCosts;
       

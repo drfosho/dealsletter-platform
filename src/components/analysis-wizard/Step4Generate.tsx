@@ -50,6 +50,7 @@ export default function Step4Generate({
         rehabCosts: data.financial.renovationCosts || 0,
         arv: data.financial.arv, // After Repair Value for flip strategy
         monthlyRent: data.financial.monthlyRent, // User-specified monthly rent
+        renovationLevel: data.strategyDetails?.renovationLevel, // Pass renovation level for backup calculation
         strategyDetails: data.strategyDetails,
         propertyData: data.propertyData // Include the property data
       })

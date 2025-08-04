@@ -4,7 +4,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'dealsletter2024!';
 
 export async function middleware(request: NextRequest) {
-  // Check if the request is for the admin area
+  // Allow API routes to pass through without middleware auth (they handle their own auth)
+  if (request.nextUrl.pathname.startsWith('/api')) {
+    return NextResponse.next({ request });
+  }
+  
+  // Check if the request is for the admin area (non-API)
   if (request.nextUrl.pathname.startsWith('/admin')) {
     const authHeader = request.headers.get('authorization');
     const cookie = request.cookies.get('admin-auth');

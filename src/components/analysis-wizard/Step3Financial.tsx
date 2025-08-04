@@ -215,18 +215,25 @@ export default function Step3Financial({
   useEffect(() => {
     const propertyData = data.propertyData as any;
     const renovationLevel = data.strategyDetails?.renovationLevel as RenovationLevel;
-    const squareFootage = propertyData?.property?.squareFootage;
+    
+    // Try multiple locations for square footage
+    const squareFootage = propertyData?.property?.squareFootage || 
+                         propertyData?.listing?.squareFootage ||
+                         propertyData?.comparables?.property?.squareFootage ||
+                         (Array.isArray(propertyData?.property) ? propertyData.property[0]?.squareFootage : undefined) ||
+                         0;
     
     console.log('[Step3Financial] Renovation cost calculation check:', {
       showRenovationCosts,
       squareFootage,
       renovationLevel,
       strategy: data.strategy,
-      currentRenovationCosts: financial.renovationCosts
+      currentRenovationCosts: financial.renovationCosts,
+      propertyDataStructure: propertyData ? Object.keys(propertyData) : 'null'
     });
     
     // Calculate and set rehab costs if we have the necessary data
-    if (squareFootage && renovationLevel && showRenovationCosts) {
+    if (squareFootage > 0 && renovationLevel && showRenovationCosts) {
       const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, renovationLevel);
       
       console.log('[Step3Financial] Calculated renovation costs:', {

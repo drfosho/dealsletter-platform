@@ -178,8 +178,17 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 <div className="flex items-start gap-4">
                   {/* Property Image */}
                   {(() => {
-                    const imageUrl = (analysis.property_data as any)?.primaryImageUrl || 
-                                   (analysis.property_data as any)?.property?.primaryImageUrl ||
+                    // Check for images in various possible locations from RentCast API
+                    const listing = (analysis.property_data as any)?.listing;
+                    const property = (analysis.property_data as any)?.property;
+                    
+                    const imageUrl = listing?.primaryImageUrl || 
+                                   listing?.images?.[0]?.url || 
+                                   listing?.images?.[0] ||
+                                   property?.primaryImageUrl || 
+                                   property?.images?.[0]?.url ||
+                                   property?.images?.[0] ||
+                                   (analysis.property_data as any)?.primaryImageUrl || 
                                    (analysis.property_data as any)?.images?.[0];
                     
                     if (imageUrl) {
@@ -213,13 +222,20 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                       {analysis.strategy.charAt(0).toUpperCase() + analysis.strategy.slice(1)} Analysis • 
                       Generated {new Date(analysis.created_at).toLocaleDateString()}
                     </p>
-                    {analysis.property_data?.property?.[0] && (
-                      <p className="text-sm text-muted mt-1">
-                        {analysis.property_data.property[0].bedrooms} bd • 
-                        {analysis.property_data.property[0].bathrooms} ba • 
-                        {analysis.property_data.property[0].squareFootage?.toLocaleString() || 'N/A'} sqft
-                      </p>
-                    )}
+                    {(() => {
+                      const propertyData = analysis.property_data as any;
+                      const property = propertyData?.property || propertyData?.listing || propertyData?.property?.[0];
+                      if (property) {
+                        return (
+                          <p className="text-sm text-muted mt-1">
+                            {property.bedrooms || 'N/A'} bd • 
+                            {property.bathrooms || 'N/A'} ba • 
+                            {property.squareFootage?.toLocaleString() || 'N/A'} sqft
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
                 
@@ -258,31 +274,41 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                     <div className="flex justify-between">
                       <span className="text-muted">Type</span>
                       <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.propertyType || analysis.property_data?.property?.[0]?.propertyType || 'N/A'}
+                        {(analysis.property_data as any)?.property?.propertyType || 
+                         (analysis.property_data as any)?.propertyType || 
+                         analysis.property_data?.property?.[0]?.propertyType || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Size</span>
                       <span className="text-primary font-medium">
-                        {((analysis.property_data as any)?.squareFootage || analysis.property_data?.property?.[0]?.squareFootage)?.toLocaleString() || 'N/A'} sq ft
+                        {((analysis.property_data as any)?.property?.squareFootage || 
+                          (analysis.property_data as any)?.squareFootage || 
+                          analysis.property_data?.property?.[0]?.squareFootage)?.toLocaleString() || 'N/A'} sq ft
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Bedrooms</span>
                       <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.bedrooms || analysis.property_data?.property?.[0]?.bedrooms || 'N/A'}
+                        {(analysis.property_data as any)?.property?.bedrooms || 
+                         (analysis.property_data as any)?.bedrooms || 
+                         analysis.property_data?.property?.[0]?.bedrooms || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Bathrooms</span>
                       <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.bathrooms || analysis.property_data?.property?.[0]?.bathrooms || 'N/A'}
+                        {(analysis.property_data as any)?.property?.bathrooms || 
+                         (analysis.property_data as any)?.bathrooms || 
+                         analysis.property_data?.property?.[0]?.bathrooms || 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted">Year Built</span>
                       <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.yearBuilt || analysis.property_data?.property?.[0]?.yearBuilt || 'N/A'}
+                        {(analysis.property_data as any)?.property?.yearBuilt || 
+                         (analysis.property_data as any)?.yearBuilt || 
+                         analysis.property_data?.property?.[0]?.yearBuilt || 'N/A'}
                       </span>
                     </div>
                   </div>

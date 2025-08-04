@@ -9,7 +9,12 @@ interface FlipTimelineProps {
 export default function FlipTimeline({ analysis }: FlipTimelineProps) {
   const timeline = (analysis as any).strategy_details?.timeline || 
                   (analysis as any).strategyDetails?.timeline || 6;
-  const rehabCosts = analysis.rehab_costs || 0;
+  
+  // Get rehab costs from multiple possible locations
+  const rehabCosts = analysis.rehab_costs || 
+                    (analysis as any).renovationCosts || 
+                    (analysis as any).analysis_data?.rehab_costs || 
+                    0;
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
   
@@ -19,7 +24,40 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
               (analysis.property_data as any)?.comparables?.value || 
               purchasePrice * 1.3;
   const netProfit = aiMetrics?.net_profit || aiMetrics?.total_profit || 0;
-  const holdingCosts = aiMetrics?.holding_costs || (purchasePrice * 0.015 * (timeline / 12));
+  // Calculate fallback holding costs accurately if not provided by AI
+  // Using same formula as backend for consistency
+  const loanAmount = purchasePrice * 0.9; // Assuming 10% down for hard money
+  const monthlyInterestRate = 0.1045 / 12; // 10.45% annual rate
+  const monthlyLoanInterest = Math.round(loanAmount * monthlyInterestRate);
+  
+  // Add interest on rehab loan if using hard money (100% financed)
+  const monthlyRehabInterest = rehabCosts > 0 ? Math.round(rehabCosts * monthlyInterestRate) : 0;
+  
+  // Property taxes: 1.2% annually
+  const monthlyTaxes = Math.round((purchasePrice * 0.012) / 12);
+  
+  // Insurance: 0.35% annually for investment property
+  const monthlyInsurance = Math.round((purchasePrice * 0.0035) / 12);
+  
+  // Utilities and maintenance during renovation
+  const monthlyUtilities = 200; // $200/month during renovation
+  const monthlyMaintenance = 150; // $150/month for security/misc
+  
+  const estimatedMonthlyHolding = monthlyLoanInterest + monthlyRehabInterest + monthlyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
+  const holdingCosts = aiMetrics?.holding_costs || (estimatedMonthlyHolding * timeline);
+  
+  console.log('[FlipTimeline] Holding costs fallback calculation:', {
+    monthlyLoanInterest,
+    monthlyRehabInterest,
+    monthlyTaxes,
+    monthlyInsurance,
+    monthlyUtilities,
+    monthlyMaintenance,
+    totalMonthly: estimatedMonthlyHolding,
+    timeline,
+    totalHoldingCosts: estimatedMonthlyHolding * timeline,
+    usingAIMetrics: !!aiMetrics?.holding_costs
+  });
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {

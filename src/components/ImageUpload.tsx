@@ -36,13 +36,23 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 10 }: 
     e.stopPropagation();
     setIsDragging(false);
 
-    const files = Array.from(e.dataTransfer.files);
-    await uploadFiles(files);
+    try {
+      const files = Array.from(e.dataTransfer.files);
+      await uploadFiles(files);
+    } catch (error) {
+      console.error('Drop handler error:', error);
+      alert('Error handling dropped files. Please try again.');
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    await uploadFiles(files);
+    try {
+      const files = e.target.files ? Array.from(e.target.files) : [];
+      await uploadFiles(files);
+    } catch (error) {
+      console.error('File select error:', error);
+      alert('Error selecting files. Please try again.');
+    }
   };
 
   const uploadFiles = async (files: File[]) => {
@@ -57,6 +67,13 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 10 }: 
 
     if (imageFiles.length === 0) {
       alert('Please select valid image files (JPG, PNG, or WEBP)');
+      return;
+    }
+
+    // Check file sizes (10MB limit per file)
+    const oversizedFiles = imageFiles.filter(file => file.size > 10 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      alert(`Some files exceed the 10MB limit: ${oversizedFiles.map(f => f.name).join(', ')}`);
       return;
     }
 
@@ -80,17 +97,29 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 10 }: 
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
       }
 
       const result = await response.json();
       
       if (result.success && result.paths) {
         onImagesChange([...images, ...result.paths]);
+      } else {
+        throw new Error(result.error || 'Upload failed - no paths returned');
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload images. Please try again.');
+      
+      // Better error message handling
+      let errorMessage = 'Failed to upload images. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      alert(errorMessage);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

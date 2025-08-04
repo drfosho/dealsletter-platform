@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const uploadedPaths: string[] = [];
+    const errors: string[] = [];
     
     // Ensure upload directory exists
     const uploadDir = path.join(process.cwd(), 'public', 'property-images');
@@ -25,28 +26,40 @@ export async function POST(request: NextRequest) {
 
     // Process each file
     for (const file of files) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        continue;
+      try {
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          errors.push(`${file.name}: Invalid file type (${file.type})`);
+          continue;
+        }
+
+        // Check file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+          errors.push(`${file.name}: File too large (max 10MB)`);
+          continue;
+        }
+
+        // Generate unique filename
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 9);
+        const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const filename = `property-${timestamp}-${randomString}.${extension}`;
+        
+        // Convert file to buffer
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        // Save file
+        const filepath = path.join(uploadDir, filename);
+        await writeFile(filepath, buffer);
+        
+        // Add relative path for frontend use
+        uploadedPaths.push(`/property-images/${filename}`);
+      } catch (fileError) {
+        console.error(`Error processing file ${file.name}:`, fileError);
+        errors.push(`${file.name}: Failed to process`);
       }
-
-      // Generate unique filename
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 9);
-      const extension = file.name.split('.').pop();
-      const filename = `property-${timestamp}-${randomString}.${extension}`;
-      
-      // Convert file to buffer
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      // Save file
-      const filepath = path.join(uploadDir, filename);
-      await writeFile(filepath, buffer);
-      
-      // Add relative path for frontend use
-      uploadedPaths.push(`/property-images/${filename}`);
     }
 
     if (uploadedPaths.length === 0) {
@@ -64,8 +77,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    
+    // Better error message
+    let errorMessage = 'Failed to upload files';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to upload files' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
