@@ -18,6 +18,16 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    id: '6',
+    title: 'Buying, investing, or just curious? Here is a no BS breakdown for the LA real estate market',
+    excerpt: 'Median home price at $876K, inventory climbing, and nearly half of homes selling below asking. The LA market has shifted from panic-buying to buyer leverage. Here&apos;s your complete neighborhood breakdown and investment playbook.',
+    date: 'January 3, 2025',
+    readTime: '10 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/la real estate article.png',
+    slug: 'la-real-estate-market-2025'
+  },
+  {
     id: '1',
     title: 'Missouri Just Changed the Game for Investors &mdash; Here&apos;s What It Means for You',
     excerpt: 'Missouri is about to become the first state in the nation to completely eliminate capital gains tax for individuals. This massive shift will impact how smart investors think about where they do business.',
