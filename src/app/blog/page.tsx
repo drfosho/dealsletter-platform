@@ -227,8 +227,8 @@ export default function BlogPage() {
                 <div className="md:w-1/2">
                   <div className="relative aspect-[5/3] bg-muted/10">
                     <Image
-                      src="/logos/ARTICLE 1 (1).png"
-                      alt="Housing Market Analysis 2025"
+                      src="/logos/la real estate article.png"
+                      alt="LA Real Estate Market Analysis 2025"
                       fill
                       className="object-cover rounded-l-xl md:rounded-l-none"
                     />
@@ -244,16 +244,16 @@ export default function BlogPage() {
                     <span className="px-3 py-1 bg-accent/10 text-accent rounded-full text-xs font-medium">
                       Featured
                     </span>
-                    <span className="text-sm text-muted">December 27, 2024</span>
+                    <span className="text-sm text-muted">{blogPosts[0].date}</span>
                   </div>
                   <h2 className="text-2xl font-bold text-primary mb-4">
-                    {blogPosts[3].title}
+                    {blogPosts[0].title}
                   </h2>
                   <p className="text-muted mb-6 leading-relaxed">
-                    {blogPosts[3].excerpt}
+                    {blogPosts[0].excerpt}
                   </p>
                   <Link 
-                    href={`/blog/${blogPosts[3].slug}`}
+                    href={`/blog/${blogPosts[0].slug}`}
                     className="inline-flex items-center space-x-2 px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
                   >
                     <span>Read Full Article</span>
@@ -268,7 +268,7 @@ export default function BlogPage() {
 
           {/* Article Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogPosts.filter(post => post.id !== '4').map((post) => (
+            {blogPosts.filter(post => post.id !== '6').map((post) => (
               <article key={post.id} className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-xl transition-all duration-300 group">
                 <div className="h-48 relative bg-muted/10">
                   {post.slug === 'big-beautiful-bill-tax-reform' ? (
@@ -296,6 +296,20 @@ export default function BlogPage() {
                     <Image
                       src="/logos/bay area article header.png"
                       alt="Bay Area Real Estate Market"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'la-real-estate-market-2025' ? (
+                    <Image
+                      src="/logos/la real estate article.png"
+                      alt="LA Real Estate Market Analysis"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'real-state-housing-2025' ? (
+                    <Image
+                      src="/logos/ARTICLE 1 (1).png"
+                      alt="Housing Market Analysis 2025"
                       fill
                       className="object-cover"
                     />
