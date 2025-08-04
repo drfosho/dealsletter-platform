@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import type { PropertyData, FinancingScenario, ProjectionData, ExitStrategy } from '@/types/property';
+import { 
+  isHouseHackProperty, 
+  calculateEffectiveMortgage,
+  getEffectiveMortgageColor,
+  calculateMonthlyMortgage 
+} from '@/utils/house-hack-calculations';
 
 interface PremiumPropertyViewProps {
   isOpen: boolean;
@@ -212,25 +218,35 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                 </div>
                 
                 <div className={`bg-gradient-to-br ${
-                  property.strategy?.toLowerCase().includes('house hack')
+                  isHouseHackProperty(property.strategy)
                     ? 'from-blue-500/10 to-blue-600/10 border-blue-500/20'
                     : property.monthlyCashFlow >= 0 
                       ? 'from-emerald-500/10 to-emerald-600/10 border-emerald-500/20' 
                       : 'from-red-500/10 to-red-600/10 border-red-500/20'
                 } rounded-xl p-6 border`}>
                   <div className="text-sm text-muted mb-1">
-                    {property.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage' : 'Monthly Cash Flow'}
+                    {isHouseHackProperty(property.strategy) ? 'Effective Mortgage' : 'Monthly Cash Flow'}
                   </div>
                   <div className={`text-2xl font-bold ${
-                    property.strategy?.toLowerCase().includes('house hack')
-                      ? 'text-blue-600'
+                    isHouseHackProperty(property.strategy)
+                      ? getEffectiveMortgageColor(
+                          calculateEffectiveMortgage(
+                            property.price,
+                            property.downPaymentPercent || 25,
+                            property.monthlyRent || 0
+                          )
+                        )
                       : getMetricColor(property.monthlyCashFlow, 'risk')
                   }`}>
-                    {property.strategy?.toLowerCase().includes('house hack') && property.monthlyCashFlow < 0
-                      ? formatCurrency(Math.abs(property.monthlyCashFlow))
+                    {isHouseHackProperty(property.strategy)
+                      ? formatCurrency(Math.abs(calculateEffectiveMortgage(
+                          property.price,
+                          property.downPaymentPercent || 25,
+                          property.monthlyRent || 0
+                        )))
                       : formatCurrency(property.monthlyCashFlow)}
                   </div>
-                  {property.strategy?.toLowerCase().includes('house hack') && (
+                  {isHouseHackProperty(property.strategy) && (
                     <div className="text-xs text-muted mt-1">after rental income</div>
                   )}
                 </div>

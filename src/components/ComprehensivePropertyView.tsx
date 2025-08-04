@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import type { PropertyData, FinancingScenario, ProjectionData } from '@/types/property';
+import { 
+  isHouseHackProperty, 
+  calculateEffectiveMortgage,
+  getEffectiveMortgageColor 
+} from '@/utils/house-hack-calculations';
 
 interface ComprehensivePropertyViewProps {
   isOpen: boolean;
@@ -100,15 +105,25 @@ export default function ComprehensivePropertyView({ isOpen, property, onClose }:
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted">
-                        {property.strategy?.toLowerCase().includes('house hack') ? 'Effective Mortgage:' : 'Cash Flow:'}
+                        {isHouseHackProperty(property.strategy) ? 'Effective Mortgage:' : 'Cash Flow:'}
                       </dt>
                       <dd className={
-                        property.strategy?.toLowerCase().includes('house hack') 
-                          ? 'text-blue-600' 
+                        isHouseHackProperty(property.strategy) 
+                          ? getEffectiveMortgageColor(
+                              calculateEffectiveMortgage(
+                                property.price,
+                                property.downPaymentPercent || 25,
+                                property.monthlyRent || 0
+                              )
+                            )
                           : property.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
                       }>
-                        ${property.strategy?.toLowerCase().includes('house hack') && property.monthlyCashFlow < 0
-                          ? Math.abs(property.monthlyCashFlow).toLocaleString()
+                        ${isHouseHackProperty(property.strategy)
+                          ? Math.abs(calculateEffectiveMortgage(
+                              property.price,
+                              property.downPaymentPercent || 25,
+                              property.monthlyRent || 0
+                            )).toLocaleString()
                           : property.monthlyCashFlow?.toLocaleString()}
                       </dd>
                     </div>

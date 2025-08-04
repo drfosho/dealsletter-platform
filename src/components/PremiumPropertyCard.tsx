@@ -7,6 +7,12 @@ import SavePropertyButton from '@/components/SavePropertyButton';
 import ViewerTracker from '@/components/ViewerTracker';
 import ActivityBadges from '@/components/ActivityBadges';
 import type { PropertyData } from '@/types/property';
+import { 
+  isHouseHackProperty, 
+  calculateEffectiveMortgage,
+  getEffectiveMortgageColor,
+  calculateMonthlyMortgage 
+} from '@/utils/house-hack-calculations';
 
 interface PremiumPropertyCardProps {
   deal: {
@@ -104,23 +110,19 @@ export default function PremiumPropertyCard({
   };
 
   // Check if this is a house hack property
-  const isHouseHack = deal.strategy?.toLowerCase().includes('house hack') || 
-                      deal.strategy?.toLowerCase().includes('househack');
+  const isHouseHack = isHouseHackProperty(deal.strategy);
   
-  // Calculate mortgage payment for house hacks
-  const calculateMonthlyMortgage = () => {
-    if (!deal.price || !deal.downPaymentPercent) return 0;
-    const loanAmount = deal.price * (1 - (deal.downPaymentPercent / 100));
-    const monthlyRate = 0.067 / 12; // Assuming 6.7% interest rate
-    const numPayments = 30 * 12; // 30-year mortgage
-    const monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
-                          (Math.pow(1 + monthlyRate, numPayments) - 1);
-    return Math.round(monthlyPayment);
-  };
-  
-  // Calculate effective mortgage for house hacks
+  // Calculate effective mortgage for house hacks using shared utility
   const effectiveMortgage = isHouseHack ? 
-    calculateMonthlyMortgage() - (deal.monthlyRent || 0) : 0;
+    calculateEffectiveMortgage(
+      deal.price, 
+      deal.downPaymentPercent || 25,
+      deal.monthlyRent || 0
+    ) : 0;
+  
+  // Get the total mortgage payment for display
+  const totalMortgage = isHouseHack ? 
+    calculateMonthlyMortgage(deal.price, deal.downPaymentPercent || 25) : 0;
 
   // Get metric color with strategy-specific logic
   const getMetricColor = (value: number | string | undefined, type: 'positive' | 'neutral' = 'positive') => {
@@ -281,7 +283,7 @@ export default function PremiumPropertyCard({
                     </div>
                     <div className={`font-semibold ${
                       isHouseHack 
-                        ? effectiveMortgage <= 1000 ? 'text-green-600' : effectiveMortgage <= 2000 ? 'text-blue-600' : 'text-amber-600'
+                        ? getEffectiveMortgageColor(effectiveMortgage)
                         : deal.monthlyCashFlow >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {isHouseHack 
@@ -515,7 +517,7 @@ export default function PremiumPropertyCard({
                 </div>
                 <div className={`font-bold text-lg ${
                   isHouseHack 
-                    ? effectiveMortgage <= 1000 ? 'text-green-600' : effectiveMortgage <= 2000 ? 'text-blue-600' : 'text-amber-600'
+                    ? getEffectiveMortgageColor(effectiveMortgage)
                     : (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
                       ? 'text-emerald-600' 
                       : 'text-red-600'
@@ -563,7 +565,7 @@ export default function PremiumPropertyCard({
               <div className="p-3 bg-gradient-to-br from-gray-500/5 to-gray-600/5 rounded-lg border border-gray-500/10">
                 <div className="text-xs text-muted mb-1">Total Mortgage</div>
                 <div className="font-bold text-lg text-gray-600">
-                  {formatCurrency(calculateMonthlyMortgage())}
+                  {formatCurrency(totalMortgage)}
                 </div>
                 <div className="text-xs text-muted">before rental income</div>
               </div>
