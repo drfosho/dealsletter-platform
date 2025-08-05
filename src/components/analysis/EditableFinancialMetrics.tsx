@@ -14,6 +14,13 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
   const [isEditingRentPerUnit, setIsEditingRentPerUnit] = useState(false);
   const [editedRentPerUnit, setEditedRentPerUnit] = useState('');
   
+  console.log('[EditableFinancialMetrics] Component rendered with:', {
+    analysisId: analysis.id,
+    strategy: analysis.strategy,
+    isEditingRent,
+    isEditingRentPerUnit
+  });
+  
   const isFlipStrategy = analysis.strategy === 'flip';
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;

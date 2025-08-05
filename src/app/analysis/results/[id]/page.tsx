@@ -274,11 +274,19 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 <AnalysisOverview analysis={analysis} />
                 
                 {/* Financial Metrics with Edit Button */}
+                {console.log('[Edit Button Debug]', {
+                  isEditMode,
+                  strategy: analysis.strategy,
+                  shouldShowEditButton: !isEditMode && analysis.strategy !== 'flip'
+                })}
                 <div className="relative">
                   {!isEditMode && analysis.strategy !== 'flip' && (
                     <button
-                      onClick={() => setIsEditMode(true)}
-                      className="absolute top-6 right-6 z-10 px-3 py-1 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center gap-1"
+                      onClick={() => {
+                        console.log('Edit button clicked, switching to edit mode');
+                        setIsEditMode(true);
+                      }}
+                      className="absolute top-6 right-6 z-50 px-3 py-1 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center gap-1 transition-all"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />

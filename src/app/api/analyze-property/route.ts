@@ -953,7 +953,7 @@ Return only valid JSON matching the exact schema provided.`,
       const rateInfo = getStrategyInterestRate(
         propertyData.investmentStrategy, 
         propertyData.propertyType,
-        propertyData.units
+        typeof propertyData.units === 'number' ? propertyData.units : undefined
       );
       
       if (!propertyData.financing) {
