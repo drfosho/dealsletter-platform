@@ -276,6 +276,14 @@ export default function PremiumPropertyCard({
                     </div>
                   </div>
                 )}
+                {deal.units && deal.units > 1 && deal.monthlyRent && (
+                  <div>
+                    <div className="text-xs text-muted mb-1">Rent/Unit</div>
+                    <div className="font-semibold">
+                      {formatCurrency(Math.round(deal.monthlyRent / deal.units))}/mo
+                    </div>
+                  </div>
+                )}
                 {deal.monthlyCashFlow !== undefined && (
                   <div>
                     <div className="text-xs text-muted mb-1">
@@ -425,6 +433,11 @@ export default function PremiumPropertyCard({
             {deal.bedrooms && (
               <span className="px-3 py-1 bg-muted/10 text-muted rounded-full text-xs font-medium">
                 {deal.bedrooms} BR / {deal.bathrooms} BA
+              </span>
+            )}
+            {deal.units && deal.units > 1 && (
+              <span className="px-3 py-1 bg-blue-500/10 text-blue-700 rounded-full text-xs font-medium">
+                {deal.units} UNITS
               </span>
             )}
           </div>

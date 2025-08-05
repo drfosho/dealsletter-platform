@@ -33,17 +33,22 @@ export interface MergedPropertyData {
   stories?: number;
   garage?: boolean;
   pool?: boolean;
+  units?: number;
+  isMultiFamily?: boolean;
   
   // Financial Data
   price: number;
   listingPrice?: number;
   askingPrice?: number;
   avm?: number;
+  isOnMarket?: boolean;
   pricePerSqFt?: number;
   monthlyRent?: number;
   rentEstimate?: number;
   rentRangeLow?: number;
   rentRangeHigh?: number;
+  rentPerUnit?: number;
+  totalMonthlyRent?: number;
   estimatedRehab?: number;
   
   // Investment Metrics
@@ -165,6 +170,46 @@ export async function mergePropertyData(
 }
 
 /**
+ * Detect if property is multi-family based on various indicators
+ */
+function detectMultiFamily(propertyType: string, description: string, units?: number): { isMultiFamily: boolean; units: number } {
+  const type = propertyType?.toLowerCase() || '';
+  const desc = description?.toLowerCase() || '';
+  
+  // Check explicit unit count
+  if (units && units > 1) {
+    return { isMultiFamily: true, units };
+  }
+  
+  // Check property type
+  if (type.includes('multi') || type.includes('plex') || type.includes('apartment') || 
+      type.includes('units') || type.includes('family') && type.includes('multi')) {
+    // Try to extract unit count from type
+    const unitMatch = type.match(/(\d+)\s*unit|duplex|triplex|fourplex|quad/);
+    if (unitMatch) {
+      let extractedUnits = 1;
+      if (unitMatch[0].includes('duplex')) extractedUnits = 2;
+      else if (unitMatch[0].includes('triplex')) extractedUnits = 3;
+      else if (unitMatch[0].includes('fourplex') || unitMatch[0].includes('quad')) extractedUnits = 4;
+      else if (unitMatch[1]) extractedUnits = parseInt(unitMatch[1]);
+      return { isMultiFamily: true, units: extractedUnits };
+    }
+    return { isMultiFamily: true, units: 2 }; // Default to 2 if can't determine
+  }
+  
+  // Check description for unit mentions
+  const descUnitMatch = desc.match(/(\d+)\s*unit/);
+  if (descUnitMatch && descUnitMatch[1]) {
+    const extractedUnits = parseInt(descUnitMatch[1]);
+    if (extractedUnits > 1) {
+      return { isMultiFamily: true, units: extractedUnits };
+    }
+  }
+  
+  return { isMultiFamily: false, units: 1 };
+}
+
+/**
  * Apply scraped data to merged object (highest priority)
  */
 function applyScrapedData(merged: MergedPropertyData, scraped: any): void {
@@ -183,6 +228,15 @@ function applyScrapedData(merged: MergedPropertyData, scraped: any): void {
   setFieldWithSource(merged, 'squareFootage', scraped.squareFootage || scraped.livingArea || scraped.buildingSize, 'scraped', 'high');
   setFieldWithSource(merged, 'lotSize', scraped.lotSize, 'scraped', 'high');
   setFieldWithSource(merged, 'yearBuilt', scraped.yearBuilt, 'scraped', 'high');
+  
+  // Multi-family detection
+  const multiFamily = detectMultiFamily(
+    scraped.propertyType || scraped.homeType,
+    scraped.description || '',
+    scraped.units
+  );
+  setFieldWithSource(merged, 'units', multiFamily.units, 'scraped', 'high');
+  setFieldWithSource(merged, 'isMultiFamily', multiFamily.isMultiFamily, 'scraped', 'high');
   
   // Financial Data - Listing price takes priority
   if (scraped.price) {
@@ -245,6 +299,7 @@ function applyRentCastData(merged: MergedPropertyData, rentcast: any): void {
   if (rentcast.listing?.price || rentcast.listing?.listPrice) {
     const listingPrice = rentcast.listing.price || rentcast.listing.listPrice;
     setFieldWithSource(merged, 'listingPrice', listingPrice, 'rentcast', 'high');
+    setFieldWithSource(merged, 'isOnMarket', true, 'rentcast', 'high');
     
     // Use listing price as primary price if available
     if (!merged.price || merged.price > 10000000) { // Override if price seems wrong
@@ -264,13 +319,20 @@ function applyRentCastData(merged: MergedPropertyData, rentcast: any): void {
   
   // Rental estimates - add as supplementary
   if (rentcast.rental?.rentEstimate || rentcast.rental?.rent) {
-    setFieldWithSource(merged, 'rentEstimate', rentcast.rental.rentEstimate || rentcast.rental.rent, 'rentcast', 'high');
+    const rentEstimate = rentcast.rental.rentEstimate || rentcast.rental.rent;
+    setFieldWithSource(merged, 'rentEstimate', rentEstimate, 'rentcast', 'high');
     setFieldWithSource(merged, 'rentRangeLow', rentcast.rental.rentRangeLow, 'rentcast', 'medium');
     setFieldWithSource(merged, 'rentRangeHigh', rentcast.rental.rentRangeHigh, 'rentcast', 'medium');
     
     // Use as primary rent if no scraped rent
     if (!merged.monthlyRent) {
-      setFieldWithSource(merged, 'monthlyRent', rentcast.rental.rentEstimate || rentcast.rental.rent, 'rentcast', 'medium');
+      setFieldWithSource(merged, 'monthlyRent', rentEstimate, 'rentcast', 'medium');
+    }
+    
+    // Calculate per-unit rent for multi-family
+    if (merged.isMultiFamily && merged.units && merged.units > 1 && rentEstimate) {
+      setFieldWithSource(merged, 'totalMonthlyRent', rentEstimate, 'rentcast', 'medium');
+      setFieldWithSource(merged, 'rentPerUnit', Math.round(rentEstimate / merged.units), 'rentcast', 'medium');
     }
   }
   

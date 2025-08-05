@@ -3657,8 +3657,13 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                     {/* Key Metrics Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
-                        <p className="text-sm text-muted mb-1">Monthly Rent</p>
+                        <p className="text-sm text-muted mb-1">Monthly Rent{deal.units && deal.units > 1 ? ' (Total)' : ''}</p>
                         <p className="text-2xl font-bold text-primary">${deal.monthlyRent?.toLocaleString() || '0'}</p>
+                        {deal.units && deal.units > 1 && (
+                          <p className="text-xs text-muted mt-1">
+                            ${Math.round((deal.monthlyRent || 0) / deal.units).toLocaleString()}/unit
+                          </p>
+                        )}
                       </div>
                       <div className="bg-card rounded-lg p-4 shadow-lg border border-border/20">
                         <p className="text-sm text-muted mb-1">

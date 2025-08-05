@@ -499,6 +499,34 @@ https://www.realtor.com/..."
           <div className="bg-white text-gray-900 rounded-xl p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Review Property Data</h3>
             
+            {/* Price Warning Banner */}
+            {selectedProperty.editedData.isOnMarket && 
+             selectedProperty.editedData.listingPrice && 
+             selectedProperty.editedData.avm && 
+             Math.abs(selectedProperty.editedData.listingPrice - selectedProperty.editedData.avm) > 50000 && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">Price Notice</h4>
+                    <p className="text-sm text-gray-700 mt-1">
+                      Price Shown: <strong>AVM Estimate ${selectedProperty.editedData.avm?.toLocaleString()}</strong>
+                    </p>
+                    <p className="text-sm text-gray-700">
+                      List Price: <strong>${selectedProperty.editedData.listingPrice?.toLocaleString()}</strong> 
+                      ({((selectedProperty.editedData.listingPrice - selectedProperty.editedData.avm) / selectedProperty.editedData.avm * 100).toFixed(1)}% 
+                      {selectedProperty.editedData.listingPrice > selectedProperty.editedData.avm ? 'higher' : 'lower'})
+                    </p>
+                    <p className="text-sm text-amber-700 mt-2">
+                      ⚠️ Update purchase price to reflect actual listing price for accurate analysis.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
@@ -548,7 +576,7 @@ https://www.realtor.com/..."
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Monthly Rent
+                  Monthly Rent {selectedProperty.editedData.units > 1 ? '(Total)' : ''}
                   {selectedProperty.editedData.rentEstimate && (
                     <span className="ml-2 text-blue-600">(RentCast: ${selectedProperty.editedData.rentEstimate.toLocaleString()})</span>
                   )}
@@ -560,12 +588,36 @@ https://www.realtor.com/..."
                       ? selectedProperty.editedData.monthlyRent
                       : selectedProperty.editedData.rentEstimate || ''
                   }
-                  onChange={(e) => handleDataEdit(selectedProperty.id, 'monthlyRent', parseInt(e.target.value) || 0)}
+                  onChange={(e) => {
+                    const totalRent = parseInt(e.target.value) || 0;
+                    handleDataEdit(selectedProperty.id, 'monthlyRent', totalRent);
+                    
+                    // Update per-unit rent for multi-family
+                    if (selectedProperty.editedData.units > 1) {
+                      handleDataEdit(selectedProperty.id, 'totalMonthlyRent', totalRent);
+                      handleDataEdit(selectedProperty.id, 'rentPerUnit', Math.round(totalRent / selectedProperty.editedData.units));
+                    }
+                  }}
                   className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="Enter monthly rent"
                 />
                 {selectedProperty.editedData.monthlyRent && selectedProperty.editedData.monthlyRent > 50000 && (
                   <p className="text-red-500 text-xs mt-1">⚠️ Rent seems incorrect. Please enter a realistic monthly rent.</p>
+                )}
+                
+                {/* Multi-Family Rent Breakdown */}
+                {selectedProperty.editedData.units > 1 && selectedProperty.editedData.monthlyRent && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Per Unit:</span>
+                      <span className="font-medium">
+                        ${Math.round(selectedProperty.editedData.monthlyRent / selectedProperty.editedData.units).toLocaleString()}/month
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {selectedProperty.editedData.units} units × ${Math.round(selectedProperty.editedData.monthlyRent / selectedProperty.editedData.units).toLocaleString()}/mo = ${selectedProperty.editedData.monthlyRent.toLocaleString()}/mo total
+                    </div>
+                  </div>
                 )}
               </div>
               
@@ -589,6 +641,38 @@ https://www.realtor.com/..."
                   className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 />
               </div>
+              
+              {/* Unit Count for Multi-Family */}
+              {(selectedProperty.editedData.propertyType?.toLowerCase().includes('multi') ||
+                selectedProperty.editedData.propertyType?.toLowerCase().includes('plex') ||
+                selectedProperty.editedData.propertyType?.toLowerCase().includes('apartment') ||
+                selectedProperty.editedData.description?.toLowerCase().includes('unit')) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Number of Units
+                    <span className="text-xs text-gray-500 ml-2">(Update if incorrect)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={selectedProperty.editedData.units || ''}
+                    onChange={(e) => {
+                      const units = parseInt(e.target.value) || 1;
+                      handleDataEdit(selectedProperty.id, 'units', units);
+                      handleDataEdit(selectedProperty.id, 'isMultiFamily', units > 1);
+                      
+                      // Update rental calculations if needed
+                      if (selectedProperty.editedData.monthlyRent && units > 1) {
+                        const totalRent = selectedProperty.editedData.monthlyRent;
+                        handleDataEdit(selectedProperty.id, 'totalMonthlyRent', totalRent);
+                        handleDataEdit(selectedProperty.id, 'rentPerUnit', Math.round(totalRent / units));
+                      }
+                    }}
+                    className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="Enter number of units"
+                    min="1"
+                  />
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Square Feet</label>
