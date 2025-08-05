@@ -957,10 +957,16 @@ Return only valid JSON matching the exact schema provided.`,
       );
       
       if (!propertyData.financing) {
-        propertyData.financing = {};
+        propertyData.financing = {
+          interestRate: rateInfo.default,
+          loanTerm: 30,
+          loanType: 'Conventional',
+          monthlyPI: 0,
+          closingCosts: 0
+        };
+      } else {
+        propertyData.financing.interestRate = rateInfo.default;
       }
-      
-      propertyData.financing.interestRate = rateInfo.default;
       
       // Also update financing scenarios if they exist
       if (propertyData.financingScenarios && propertyData.financingScenarios.length > 0) {
