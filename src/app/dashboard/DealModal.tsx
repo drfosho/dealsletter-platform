@@ -43,6 +43,9 @@ interface Deal {
   features?: string[];
   neighborhood?: string;
   images?: string[];
+  // Listing URL fields
+  listingUrl?: string;
+  listingSource?: string;
   // Allow other properties but with proper types
   [key: string]: unknown;
 }
@@ -3923,8 +3926,20 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
               <button className="px-4 md:px-6 py-3 border border-border text-primary rounded-lg hover:bg-muted/5 transition-colors font-medium min-h-[44px] flex items-center justify-center text-sm md:text-base">
                 Download Analysis
               </button>
-              <button className="px-4 md:px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center text-sm md:text-base">
-                Contact Agent
+              <button 
+                onClick={() => {
+                  if (deal.listingUrl) {
+                    window.open(deal.listingUrl, '_blank');
+                  } else {
+                    alert('Contact information not available for this property.');
+                  }
+                }}
+                className="px-4 md:px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center text-sm md:text-base"
+              >
+                {deal.listingSource && ['Zillow', 'LoopNet', 'Realtor.com', 'Redfin'].includes(deal.listingSource) 
+                  ? `View on ${deal.listingSource}`
+                  : 'Contact Agent'
+                }
               </button>
             </div>
           </div>

@@ -83,6 +83,8 @@ interface Property {
   isDraft?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  listingUrl?: string;
+  listingSource?: string;
   [key: string]: unknown;
 }
 
@@ -414,7 +416,10 @@ export default function AdminPropertiesPage() {
     rentUpside: property.rentUpside,
     currentCapRate: property.currentCapRate,
     proFormaCashFlow2: property.proFormaCashFlow,
-    cashOnCashReturn: property.cashOnCashReturn
+    cashOnCashReturn: property.cashOnCashReturn,
+    // Listing URL fields
+    listingUrl: property.listingUrl,
+    listingSource: property.listingSource
   });
 
   const handleEditClick = (propertyId: string | number) => {

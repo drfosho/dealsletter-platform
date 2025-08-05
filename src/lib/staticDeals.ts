@@ -37,6 +37,8 @@ export const staticDeals = [
     cashRequired: 647500,
     totalROI: 42.3,
     isDraft: false,
+    listingUrl: "https://www.zillow.com/homedetails/853-S-32nd-St-San-Diego-CA-92113/17029949_zpid/",
+    listingSource: "Zillow",
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -75,6 +77,8 @@ export const staticDeals = [
     cashRequired: 45625,
     totalROI: 28.1,
     isDraft: false,
+    listingUrl: "https://www.zillow.com/homedetails/4223-Menlo-Ave-San-Diego-CA-92105/17061899_zpid/",
+    listingSource: "Zillow",
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -403,6 +407,8 @@ export const staticDeals = [
     cashRequired: 2300000,
     totalROI: 11.5,
     isDraft: false,
+    listingUrl: "https://www.loopnet.com/Listing/10116-Lake-Ave-Tampa-FL/29876543/",
+    listingSource: "LoopNet",
     createdAt: new Date(),
     updatedAt: new Date()
   },

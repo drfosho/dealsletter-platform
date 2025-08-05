@@ -361,7 +361,20 @@ export default function ComprehensivePropertyView({ isOpen, property, onClose }:
           )}
         </div>
 
-        <div className="p-6 border-t border-border/60 flex justify-end">
+        <div className="p-6 border-t border-border/60 flex justify-between">
+          <div>
+            {property.listingUrl && (
+              <button
+                onClick={() => window.open(property.listingUrl, '_blank')}
+                className="px-6 py-2 bg-primary text-secondary rounded-lg hover:bg-primary/90"
+              >
+                {property.listingSource && ['Zillow', 'LoopNet', 'Realtor.com', 'Redfin'].includes(property.listingSource) 
+                  ? `View on ${property.listingSource}`
+                  : 'View Original Listing'
+                }
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent/90"

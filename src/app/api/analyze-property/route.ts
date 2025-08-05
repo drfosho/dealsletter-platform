@@ -609,6 +609,9 @@ interface PropertyData {
   holdingCosts?: number;
   netProfit?: number;
   roi?: number;
+  // Listing URL fields
+  listingUrl?: string;
+  listingSource?: string;
   [key: string]: unknown;
 }
 

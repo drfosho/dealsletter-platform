@@ -259,6 +259,16 @@ export default function AdminPropertyImport() {
       const estimatedProfit = analysisConfig.strategy === 'flip' ? Math.round(totalInvestment * 0.25) : 0;
       const arv = analysisConfig.strategy === 'flip' ? totalInvestment + estimatedProfit : 0;
 
+      // Determine listing source from URL
+      const getListingSource = (url: string): string => {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.includes('zillow.com')) return 'Zillow';
+        if (lowerUrl.includes('loopnet.com')) return 'LoopNet';
+        if (lowerUrl.includes('realtor.com')) return 'Realtor.com';
+        if (lowerUrl.includes('redfin.com')) return 'Redfin';
+        return 'Other';
+      };
+
       // Prepare dashboard property data
       const dashboardProperty = {
         ...property.editedData,
@@ -287,6 +297,9 @@ export default function AdminPropertyImport() {
         riskLevel: property.analysis.riskAssessment.riskLevel,
         status: 'active',
         isDraft: false,
+        // Add listing URL and source
+        listingUrl: property.url,
+        listingSource: getListingSource(property.url),
         createdAt: new Date(),
         updatedAt: new Date()
       };
