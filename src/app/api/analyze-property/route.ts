@@ -5,7 +5,7 @@ import { trackUsage } from '@/lib/analytics';
 // Initialize Anthropic client with timeout
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
-  timeout: 120000, // 120 second timeout for comprehensive Opus 4 responses
+  timeout: 60000, // 60 second timeout - reduced for faster failure detection
 });
 
 // Simple in-memory cache (replace with Redis in production)
@@ -15,6 +15,10 @@ interface CachedAnalysis {
 }
 const analysisCache = new Map<string, CachedAnalysis>();
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+// Track model failures to skip problematic models temporarily
+let opusFailureCount = 0;
+let opusLastFailure = 0;
 
 // Helper to create cache key from text
 function getCacheKey(text: string): string {
@@ -29,8 +33,9 @@ function getCacheKey(text: string): string {
 }
 
 // Retry configuration
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 2; // Reduced from 3 to fail faster
+const RETRY_DELAY = 500; // 500ms base delay
+const MAX_TOTAL_TIME = 180000; // 3 minutes max total time
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -722,6 +727,19 @@ export async function POST(request: NextRequest) {
       const currentModel = models[modelIndex];
       metrics.model = currentModel;
       
+      // Skip Opus if it's been failing consistently
+      if (currentModel.includes('opus') && opusFailureCount > 2) {
+        const timeSinceLastFailure = Date.now() - opusLastFailure;
+        if (timeSinceLastFailure < 300000) { // 5 minutes
+          console.log('Skipping Opus model due to recent failures, using fallback directly');
+          continue;
+        } else {
+          // Reset failure count after 5 minutes
+          console.log('Resetting Opus failure count after cooldown period');
+          opusFailureCount = 0;
+        }
+      }
+      
       for (let attempt = 1; attempt <= MAX_RETRIES && !propertyData; attempt++) {
         totalAttempts++;
         try {
@@ -805,25 +823,57 @@ Return only valid JSON matching the exact schema provided.`,
         
         // Success - break out of retry loop
         console.log('Successfully parsed property data');
+        
+        // Reset Opus failure count on success
+        if (currentModel.includes('opus')) {
+          opusFailureCount = 0;
+          console.log('Opus working again, reset failure count');
+        }
+        
         break;
         
       } catch (error) {
         lastError = error as Error;
         console.error(`Attempt ${attempt} with ${currentModel} failed:`, error);
         
+        // Track Opus failures
+        if (currentModel.includes('opus')) {
+          opusFailureCount++;
+          opusLastFailure = Date.now();
+          console.log(`Opus failure count: ${opusFailureCount}`);
+        }
+        
         // Check if it's an overloaded error (529)
         const isOverloaded = error instanceof Error && 
           (error.message.includes('529') || error.message.includes('overloaded'));
         
-        if (isOverloaded && modelIndex < models.length - 1) {
-          console.log(`Model ${currentModel} is overloaded, switching to fallback model...`);
-          continue modelLoop; // Try next model
+        // Check if we've exceeded total time limit
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime > MAX_TOTAL_TIME) {
+          console.log(`Exceeded maximum total time of ${MAX_TOTAL_TIME}ms, stopping retries`);
+          break modelLoop;
         }
         
-        if (attempt < MAX_RETRIES) {
-          const backoffDelay = RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
+        // Determine if we should retry based on error type
+        const isRetryableError = isOverloaded || 
+          error.message.includes('timeout') ||
+          error.message.includes('ECONNRESET') ||
+          error.message.includes('ETIMEDOUT');
+        
+        // If overloaded and we have a fallback model, switch immediately
+        if (isOverloaded && modelIndex < models.length - 1) {
+          console.log(`Model ${currentModel} is overloaded, switching to fallback model immediately...`);
+          break; // Break inner loop to try next model
+        }
+        
+        // Only retry if it's a retryable error and we haven't exceeded attempts
+        if (attempt < MAX_RETRIES && isRetryableError) {
+          const backoffDelay = Math.min(RETRY_DELAY * attempt, 2000); // Cap at 2 seconds
           console.log(`Retrying in ${backoffDelay}ms...`);
           await sleep(backoffDelay);
+        } else if (!isRetryableError) {
+          console.log(`Non-retryable error encountered, stopping retries for ${currentModel}`);
+          break; // Skip to next model or fail
         }
       }
     }
