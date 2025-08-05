@@ -6,6 +6,7 @@ import Navigation from '@/components/Navigation';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import FinancialMetrics from '@/components/analysis/FinancialMetrics';
+import EditableFinancialMetrics from '@/components/analysis/EditableFinancialMetrics';
 import AnalysisOverview from '@/components/analysis/AnalysisOverview';
 import InvestmentProjections from '@/components/analysis/InvestmentProjections';
 import FlipTimeline from '@/components/analysis/FlipTimeline';
@@ -28,6 +29,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const fetchAnalysis = useCallback(async () => {
     try {
@@ -180,7 +182,21 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                   {(() => {
                     // Check for images in various possible locations from RentCast API
                     const listing = (analysis.property_data as any)?.listing;
-                    const property = (analysis.property_data as any)?.property;
+                    const propertyData = analysis.property_data as any;
+                    // Handle property as array
+                    const property = Array.isArray(propertyData?.property) 
+                      ? propertyData.property[0] 
+                      : propertyData?.property;
+                    
+                    console.log('[PropertyImage] Looking for images:', {
+                      hasPropertyData: !!propertyData,
+                      hasProperty: !!property,
+                      hasListing: !!listing,
+                      propertyPrimaryImage: property?.primaryImageUrl,
+                      propertyImages: property?.images,
+                      listingPrimaryImage: listing?.primaryImageUrl,
+                      listingImages: listing?.images
+                    });
                     
                     const imageUrl = listing?.primaryImageUrl || 
                                    listing?.images?.[0]?.url || 
@@ -188,8 +204,8 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                                    property?.primaryImageUrl || 
                                    property?.images?.[0]?.url ||
                                    property?.images?.[0] ||
-                                   (analysis.property_data as any)?.primaryImageUrl || 
-                                   (analysis.property_data as any)?.images?.[0];
+                                   propertyData?.primaryImageUrl || 
+                                   propertyData?.images?.[0];
                     
                     if (imageUrl) {
                       return (
@@ -256,7 +272,37 @@ export default function AnalysisResultsPage({ params }: PageParams) {
               {/* Left Column - Overview & Metrics */}
               <div className="lg:col-span-2 space-y-6">
                 <AnalysisOverview analysis={analysis} />
-                <FinancialMetrics analysis={analysis} />
+                
+                {/* Financial Metrics with Edit Button */}
+                <div className="relative">
+                  {!isEditMode && analysis.strategy !== 'flip' && (
+                    <button
+                      onClick={() => setIsEditMode(true)}
+                      className="absolute top-6 right-6 z-10 px-3 py-1 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      Edit Rent
+                    </button>
+                  )}
+                  {isEditMode && (
+                    <button
+                      onClick={() => setIsEditMode(false)}
+                      className="absolute top-6 right-6 z-10 px-3 py-1 text-sm bg-primary text-secondary rounded-lg hover:bg-primary/90"
+                    >
+                      Done
+                    </button>
+                  )}
+                  {isEditMode ? (
+                    <EditableFinancialMetrics 
+                      analysis={analysis} 
+                      onUpdate={(updatedAnalysis) => setAnalysis(updatedAnalysis)}
+                    />
+                  ) : (
+                    <FinancialMetrics analysis={analysis} />
+                  )}
+                </div>
                 {/* Show strategy-specific components */}
                 {analysis.strategy === 'flip' ? (
                   <FlipTimeline analysis={analysis} />
@@ -271,46 +317,67 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 <div className="bg-card rounded-xl border border-border p-6">
                   <h3 className="text-lg font-semibold text-primary mb-4">Property Details</h3>
                   <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-muted">Type</span>
-                      <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.property?.propertyType || 
-                         (analysis.property_data as any)?.propertyType || 
-                         analysis.property_data?.property?.[0]?.propertyType || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted">Size</span>
-                      <span className="text-primary font-medium">
-                        {((analysis.property_data as any)?.property?.squareFootage || 
-                          (analysis.property_data as any)?.squareFootage || 
-                          analysis.property_data?.property?.[0]?.squareFootage)?.toLocaleString() || 'N/A'} sq ft
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted">Bedrooms</span>
-                      <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.property?.bedrooms || 
-                         (analysis.property_data as any)?.bedrooms || 
-                         analysis.property_data?.property?.[0]?.bedrooms || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted">Bathrooms</span>
-                      <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.property?.bathrooms || 
-                         (analysis.property_data as any)?.bathrooms || 
-                         analysis.property_data?.property?.[0]?.bathrooms || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted">Year Built</span>
-                      <span className="text-primary font-medium">
-                        {(analysis.property_data as any)?.property?.yearBuilt || 
-                         (analysis.property_data as any)?.yearBuilt || 
-                         analysis.property_data?.property?.[0]?.yearBuilt || 'N/A'}
-                      </span>
-                    </div>
+                    {(() => {
+                      // Helper to extract property details from various data structures
+                      const propertyData = analysis.property_data as any;
+                      // RentCast returns property as an array, so handle both array and object cases
+                      const property = Array.isArray(propertyData?.property) 
+                        ? propertyData.property[0] 
+                        : (propertyData?.property || propertyData?.listing || propertyData);
+                      
+                      console.log('[PropertyDetails] Extracting property data:', {
+                        hasPropertyData: !!propertyData,
+                        propertyIsArray: Array.isArray(propertyData?.property),
+                        propertyKeys: property ? Object.keys(property) : [],
+                        bedrooms: property?.bedrooms,
+                        bathrooms: property?.bathrooms,
+                        squareFootage: property?.squareFootage,
+                        yearBuilt: property?.yearBuilt
+                      });
+                      
+                      return (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Type</span>
+                            <span className="text-primary font-medium">
+                              {property?.propertyType || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Size</span>
+                            <span className="text-primary font-medium">
+                              {property?.squareFootage ? `${property.squareFootage.toLocaleString()} sq ft` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Bedrooms</span>
+                            <span className="text-primary font-medium">
+                              {property?.bedrooms || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Bathrooms</span>
+                            <span className="text-primary font-medium">
+                              {property?.bathrooms || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Year Built</span>
+                            <span className="text-primary font-medium">
+                              {property?.yearBuilt || 'N/A'}
+                            </span>
+                          </div>
+                          {analysis.analysis_data?.units || property?.units ? (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Units</span>
+                              <span className="text-primary font-medium">
+                                {analysis.analysis_data?.units || property?.units}
+                              </span>
+                            </div>
+                          ) : null}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -354,31 +421,52 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 </div>
 
                 {/* Market Data */}
-                {analysis.market_data && (
-                  <div className="bg-card rounded-xl border border-border p-6">
-                    <h3 className="text-lg font-semibold text-primary mb-4">Market Analysis</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-muted">Median Rent</span>
-                        <span className="text-primary font-medium">
-                          ${analysis.market_data.medianRent?.toLocaleString()}/mo
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted">Median Sale Price</span>
-                        <span className="text-primary font-medium">
-                          ${analysis.market_data.medianSalePrice?.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted">Days on Market</span>
-                        <span className="text-primary font-medium">
-                          {analysis.market_data.averageDaysOnMarket || 'N/A'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <div className="bg-card rounded-xl border border-border p-6">
+                  <h3 className="text-lg font-semibold text-primary mb-4">Market Analysis</h3>
+                  {(() => {
+                    const marketData = analysis.market_data || (analysis.property_data as any)?.market;
+                    
+                    if (marketData && (marketData.medianRent || marketData.medianSalePrice)) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-muted">Median Rent</span>
+                            <span className="text-primary font-medium">
+                              {marketData.medianRent ? `$${marketData.medianRent.toLocaleString()}/mo` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Median Sale Price</span>
+                            <span className="text-primary font-medium">
+                              {marketData.medianSalePrice ? `$${marketData.medianSalePrice.toLocaleString()}` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted">Days on Market</span>
+                            <span className="text-primary font-medium">
+                              {marketData.averageDaysOnMarket || 'N/A'}
+                            </span>
+                          </div>
+                          {marketData.averageRent && (
+                            <div className="flex justify-between">
+                              <span className="text-muted">Average Rent</span>
+                              <span className="text-primary font-medium">
+                                ${marketData.averageRent.toLocaleString()}/mo
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="text-muted text-sm">
+                          <p className="mb-2">Market data unavailable for this location.</p>
+                          <p className="text-xs">This may occur for rural areas or properties with limited local data.</p>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
               </div>
             </div>
 

@@ -34,6 +34,7 @@ export interface RentCastPropertyDetails {
   };
   images?: string[]; // Array of image URLs
   primaryImageUrl?: string; // Main property image
+  isEstimated?: boolean; // Indicates if property details were estimated from comparables
 }
 
 export interface RentCastRentalEstimate {
@@ -124,6 +125,8 @@ export interface PropertyAnalysisRequest {
   arv?: number; // After Repair Value for flip strategy
   monthlyRent?: number; // User-specified monthly rent for rental strategies
   renovationLevel?: 'cosmetic' | 'moderate' | 'extensive' | 'gut'; // For calculating rehab costs
+  units?: number; // Number of units for multi-family properties
+  rentPerUnit?: number; // Rent per unit for multi-family properties
 }
 
 // Cache Types

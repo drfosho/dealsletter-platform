@@ -14,6 +14,7 @@ export interface Analysis {
   loan_term: number;
   rehab_costs: number;
   ai_analysis: AIAnalysis | null;
+  analysis_data?: Record<string, unknown>;
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
@@ -63,6 +64,7 @@ export interface AIAnalysis {
     total_profit?: number;
     net_profit?: number;
     holding_costs?: number;
+    monthly_rent?: number;
   };
   [key: string]: unknown;
 }

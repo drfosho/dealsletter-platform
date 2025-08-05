@@ -52,7 +52,9 @@ export default function Step4Generate({
         monthlyRent: data.financial.monthlyRent, // User-specified monthly rent
         renovationLevel: data.strategyDetails?.renovationLevel, // Pass renovation level for backup calculation
         strategyDetails: data.strategyDetails,
-        propertyData: data.propertyData // Include the property data
+        propertyData: data.propertyData, // Include the property data
+        units: data.financial.units || 1, // Number of units for multi-family properties
+        rentPerUnit: data.financial.rentPerUnit // Rent per unit for multi-family properties
       })
     });
   }, [data]);

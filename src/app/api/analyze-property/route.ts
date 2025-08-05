@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { trackUsage } from '@/lib/analytics';
+import { getStrategyInterestRate } from '@/utils/interest-rates';
 
 // Initialize Anthropic client with timeout
 const anthropic = new Anthropic({
@@ -759,7 +760,7 @@ When information is not explicitly provided, use your expertise to calculate rea
 - Property location and local market conditions (research actual market data)
 - Property type and typical metrics for that asset class  
 - Price point and typical returns for that investment level
-- Current interest rates (assume 7-8% for investment properties)
+- Current interest rates (use strategy-specific rates: House Hack 6.5-7.5%, Buy & Hold 7-8%, BRRRR/Flip 10-12%, Commercial 7.5-8.5%)
 - Market rent comparables for the area
 - Typical expense ratios (25-35% for multifamily, 30-40% for single family)
 
@@ -943,6 +944,30 @@ Return only valid JSON matching the exact schema provided.`,
         'Short-Term Rental': 'STR Property'
       };
       propertyData.type = typeMap[propertyData.investmentStrategy] || propertyData.propertyType;
+    }
+
+    // Set appropriate interest rate based on strategy and property type
+    if (!propertyData.financing?.interestRate && propertyData.investmentStrategy) {
+      const rateInfo = getStrategyInterestRate(
+        propertyData.investmentStrategy, 
+        propertyData.propertyType,
+        propertyData.units
+      );
+      
+      if (!propertyData.financing) {
+        propertyData.financing = {};
+      }
+      
+      propertyData.financing.interestRate = rateInfo.default;
+      
+      // Also update financing scenarios if they exist
+      if (propertyData.financingScenarios && propertyData.financingScenarios.length > 0) {
+        propertyData.financingScenarios.forEach(scenario => {
+          if (!scenario.interestRate) {
+            scenario.interestRate = rateInfo.default;
+          }
+        });
+      }
     }
 
     // Ensure comprehensive description

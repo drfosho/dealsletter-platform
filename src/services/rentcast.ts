@@ -32,6 +32,134 @@ class RentCastService {
     }
   }
 
+  // Normalize property data to handle different field name variations
+  private normalizePropertyData(data: any, comparables?: any[]): RentCastPropertyDetails {
+    // Map various possible field names to our expected structure
+    const normalized: any = {
+      // Address fields
+      id: data.id || data._id || data.propertyId,
+      addressLine1: data.addressLine1 || data.address || data.streetAddress || data.street,
+      addressLine2: data.addressLine2 || data.address2,
+      city: data.city,
+      state: data.state,
+      zipCode: data.zipCode || data.zip || data.postalCode,
+      county: data.county,
+      latitude: data.latitude || data.lat,
+      longitude: data.longitude || data.lng || data.lon,
+      
+      // Property details - handle various field name possibilities
+      propertyType: data.propertyType || data.type || data.property_type || data.propType || 'Unknown',
+      bedrooms: data.bedrooms || data.beds || data.numBedrooms || data.numberOfBedrooms || 0,
+      bathrooms: data.bathrooms || data.baths || data.numBathrooms || data.numberOfBathrooms || 0,
+      squareFootage: data.squareFootage || data.sqft || data.square_footage || data.livingArea || data.area || 0,
+      lotSize: data.lotSize || data.lot_size || data.lotSquareFootage,
+      yearBuilt: data.yearBuilt || data.year_built || data.builtYear || data.yearConstructed || 0,
+      
+      // Sale information
+      lastSaleDate: data.lastSaleDate || data.last_sale_date || data.soldDate,
+      lastSalePrice: data.lastSalePrice || data.last_sale_price || data.soldPrice || data.salePrice,
+      
+      // Tax information
+      taxAssessedValue: data.taxAssessedValue || data.tax_assessed_value || data.assessedValue,
+      propertyTaxes: data.propertyTaxes || data.property_taxes || data.taxes,
+      
+      // Owner information
+      owner: data.owner,
+      
+      // Additional fields
+      features: data.features || [],
+      zoning: data.zoning,
+      subdivision: data.subdivision,
+      school: data.school || data.schools,
+      images: data.images || [],
+      primaryImageUrl: data.primaryImageUrl || data.primaryImage || data.mainImage,
+      
+      // Flag to indicate if data is estimated
+      isEstimated: false
+    };
+
+    // Check if we have incomplete data (all zeros)
+    const hasIncompleteData = normalized.bedrooms === 0 && 
+                             normalized.bathrooms === 0 && 
+                             normalized.squareFootage === 0 &&
+                             normalized.propertyType === 'Unknown';
+
+    // If we have incomplete data and comparables, use them to estimate
+    if (hasIncompleteData && comparables && comparables.length > 0) {
+      console.log('[RentCast] Property has incomplete data, using comparables to estimate');
+      
+      // Filter out comparables with missing data
+      const validComps = comparables.filter(comp => 
+        comp.bedrooms > 0 && comp.propertyType && comp.propertyType !== 'Unknown'
+      );
+      
+      if (validComps.length > 0) {
+        // Use the closest comparable (first one) or average of top 3
+        const topComps = validComps.slice(0, 3);
+        
+        // For bedrooms and bathrooms, use the most common value
+        const bedroomCounts = topComps.map(c => c.bedrooms);
+        const bathroomCounts = topComps.map(c => c.bathrooms || 0);
+        
+        normalized.bedrooms = Math.round(bedroomCounts.reduce((a, b) => a + b, 0) / bedroomCounts.length);
+        normalized.bathrooms = Math.round(bathroomCounts.reduce((a, b) => a + b, 0) / bathroomCounts.length * 2) / 2; // Round to nearest 0.5
+        
+        // For square footage, use average
+        const sqftValues = topComps.filter(c => c.squareFootage > 0).map(c => c.squareFootage);
+        if (sqftValues.length > 0) {
+          normalized.squareFootage = Math.round(sqftValues.reduce((a, b) => a + b, 0) / sqftValues.length);
+        }
+        
+        // For property type, use the most common
+        const propertyTypes = topComps.map(c => c.propertyType).filter(t => t && t !== 'Unknown');
+        if (propertyTypes.length > 0) {
+          // Find most common property type
+          const typeCount: Record<string, number> = {};
+          propertyTypes.forEach(type => {
+            typeCount[type] = (typeCount[type] || 0) + 1;
+          });
+          normalized.propertyType = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0][0];
+        }
+        
+        // For year built, use average if available
+        const yearValues = topComps.filter(c => c.yearBuilt > 0).map(c => c.yearBuilt);
+        if (yearValues.length > 0) {
+          normalized.yearBuilt = Math.round(yearValues.reduce((a, b) => a + b, 0) / yearValues.length);
+        }
+        
+        // Mark as estimated
+        normalized.isEstimated = true;
+        
+        console.log('[RentCast] Estimated property details from comparables:', {
+          bedrooms: normalized.bedrooms,
+          bathrooms: normalized.bathrooms,
+          squareFootage: normalized.squareFootage,
+          propertyType: normalized.propertyType,
+          yearBuilt: normalized.yearBuilt,
+          basedOn: `${validComps.length} comparable properties`
+        });
+      }
+    }
+
+    // Log the normalization process
+    console.log('[RentCast] Data normalization:', {
+      original: {
+        bedrooms: data.bedrooms || data.beds || data.numBedrooms,
+        propertyType: data.propertyType || data.type || data.property_type,
+        squareFootage: data.squareFootage || data.sqft || data.square_footage
+      },
+      normalized: {
+        bedrooms: normalized.bedrooms,
+        bathrooms: normalized.bathrooms,
+        propertyType: normalized.propertyType,
+        squareFootage: normalized.squareFootage,
+        isEstimated: normalized.isEstimated
+      }
+    });
+
+    return normalized;
+  }
+
   // Rate limiting check
   private checkRateLimit(): void {
     const now = Date.now();
@@ -108,15 +236,48 @@ class RentCastService {
         `/properties?address=${encodedAddress}`
       );
       
-      console.log('[RentCast] Property details response:', JSON.stringify(response, null, 2));
+      console.log('[RentCast] Property details RAW response:', response);
+      console.log('[RentCast] Response type:', typeof response);
+      console.log('[RentCast] Is array?:', Array.isArray(response));
+      console.log('[RentCast] Response length:', Array.isArray(response) ? response.length : 'N/A');
       
       // RentCast returns an array, get the first property
-      if (!response || response.length === 0) {
+      if (!response || (Array.isArray(response) && response.length === 0)) {
         throw new Error('Property not found');
       }
       
-      const data = response[0];
-      console.log('[RentCast] Property details extracted:', {
+      const rawData = Array.isArray(response) ? response[0] : response;
+      
+      // CRITICAL DEBUG: Log ALL fields in the response to identify field name mismatches
+      console.log('[RentCast] ALL fields in response object:');
+      console.log('[RentCast] Object keys:', Object.keys(rawData));
+      console.log('[RentCast] Full object:', JSON.stringify(rawData, null, 2));
+      
+      // Check if we have incomplete data
+      const hasIncompleteData = rawData.bedrooms === 0 && 
+                               rawData.bathrooms === 0 && 
+                               rawData.squareFootage === 0;
+      
+      let comparables: any[] | undefined;
+      
+      // If we have incomplete data, try to get rental comparables first
+      if (hasIncompleteData) {
+        console.log('[RentCast] Property has incomplete data, fetching rental comparables for estimation');
+        try {
+          const rentalData = await this.getRentalEstimate(address);
+          if (rentalData && (rentalData as any).comparables) {
+            comparables = (rentalData as any).comparables;
+            console.log('[RentCast] Found', comparables.length, 'rental comparables for estimation');
+          }
+        } catch (error) {
+          console.log('[RentCast] Could not fetch rental comparables for estimation:', error);
+        }
+      }
+      
+      // Normalize the data to ensure consistent field names and estimate if needed
+      const data = this.normalizePropertyData(rawData, comparables);
+      
+      console.log('[RentCast] Property details after normalization:', {
         addressLine1: data.addressLine1,
         city: data.city,
         state: data.state,
@@ -127,11 +288,15 @@ class RentCastService {
         yearBuilt: data.yearBuilt,
         propertyType: data.propertyType,
         lastSalePrice: data.lastSalePrice,
-        lastSaleDate: data.lastSaleDate
+        lastSaleDate: data.lastSaleDate,
+        isEstimated: (data as any).isEstimated
       });
       
       // Add property images - enhanced for off-market properties
       const fullAddress = `${data.addressLine1}, ${data.city}, ${data.state} ${data.zipCode}`;
+      
+      console.log('[RentCast] Attempting to fetch property images for:', fullAddress);
+      console.log('[RentCast] Google Maps API Key available:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
       
       // Get primary image (best available)
       data.primaryImageUrl = PropertyImageService.getPropertyImage(fullAddress, data.propertyType);
@@ -140,9 +305,14 @@ class RentCastService {
       data.images = PropertyImageService.getPropertyImages(fullAddress, 5, data.propertyType);
       
       console.log('[RentCast] Property images added:', {
+        address: fullAddress,
+        hasStreetNumber: /^\d+\s+/.test(data.addressLine1?.trim() || ''),
         primaryImage: data.primaryImageUrl,
         totalImages: data.images?.length,
-        hasGoogleMaps: !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        imagesFound: data.images?.length || 0,
+        imageURLs: data.images,
+        hasGoogleMaps: !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+        isPlaceholder: data.primaryImageUrl?.includes('No Image Available')
       });
       
       this.setCache(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL });

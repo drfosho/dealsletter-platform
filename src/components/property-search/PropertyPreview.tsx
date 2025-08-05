@@ -3,19 +3,22 @@ import PropertyImageService from '@/services/property-images';
 interface PropertyData {
   address: string;
   property: {
-    bedrooms: number;
-    bathrooms: number;
-    squareFootage: number;
-    propertyType: string;
-    yearBuilt: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    squareFootage?: number;
+    propertyType?: string;
+    yearBuilt?: number;
     lotSize?: number;
     images?: string[];
-  };
+    isEstimated?: boolean;
+    // Additional fields that might come from RentCast
+    [key: string]: any;
+  } | any; // Allow any structure temporarily for debugging
   rental?: {
     rentEstimate?: number;
     rent?: number;
-    rentRangeLow: number;
-    rentRangeHigh: number;
+    rentRangeLow?: number;
+    rentRangeHigh?: number;
   };
   comparables?: {
     value?: number;
@@ -25,6 +28,7 @@ interface PropertyData {
     valueRangeLow?: number;
     valueRangeHigh?: number;
   };
+  listing?: any;
 }
 
 interface PropertyPreviewProps {
@@ -33,6 +37,7 @@ interface PropertyPreviewProps {
 
 export default function PropertyPreview({ data }: PropertyPreviewProps) {
   console.log('[PropertyPreview] Received data:', data);
+  console.log('[PropertyPreview] Full data structure:', JSON.stringify(data, null, 2));
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -52,6 +57,17 @@ export default function PropertyPreview({ data }: PropertyPreviewProps) {
   const rental = (data.rental || {}) as any;
   const comparables = (data.comparables || {}) as any;
   const listing = (data as any).listing || {};
+  
+  console.log('[PropertyPreview] Extracted property data:', {
+    hasProperty: !!data.property,
+    propertyKeys: Object.keys(property),
+    property: property,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    propertyType: property.propertyType,
+    squareFootage: property.squareFootage,
+    yearBuilt: property.yearBuilt
+  });
   
   // Fix: Use correct field names from RentCast API
   const listingPrice = listing.price || listing.listPrice || listing.askingPrice || 0;
@@ -76,7 +92,17 @@ export default function PropertyPreview({ data }: PropertyPreviewProps) {
 
   return (
     <div className="bg-card rounded-lg border border-border p-6 mt-6">
-      <h3 className="text-lg font-semibold text-primary mb-4">Property Details</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-primary">Property Details</h3>
+        {property.isEstimated && (
+          <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-lg">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Estimated from nearby properties</span>
+          </div>
+        )}
+      </div>
       
       {/* Property Images */}
       {property.images && property.images.length > 0 && property.images[0] !== PropertyImageService.getNoImagePlaceholder() && (
@@ -109,12 +135,12 @@ export default function PropertyPreview({ data }: PropertyPreviewProps) {
         </div>
         <div>
           <p className="text-sm text-muted">Property Type</p>
-          <p className="font-medium text-primary">{property.propertyType || 'N/A'}</p>
+          <p className="font-medium text-primary">{property.propertyType || property.type || 'Unknown'}</p>
         </div>
         <div>
           <p className="text-sm text-muted">Bedrooms / Bathrooms</p>
           <p className="font-medium text-primary">
-            {property.bedrooms || 0} beds / {property.bathrooms || 0} baths
+            {property.bedrooms ? `${property.bedrooms} beds` : '0 beds'} / {property.bathrooms ? `${property.bathrooms} baths` : '0 baths'}
           </p>
         </div>
         <div>

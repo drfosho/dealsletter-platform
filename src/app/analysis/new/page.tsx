@@ -32,6 +32,8 @@ export interface WizardData {
     points?: number;
     arv?: number; // After Repair Value for flip strategy
     monthlyRent?: number; // Monthly rent for rental strategies
+    rentPerUnit?: number; // Rent per unit for multi-family properties
+    units?: number; // Number of units for multi-family properties
   };
   analysis?: Record<string, unknown>;
   analysisId?: string;

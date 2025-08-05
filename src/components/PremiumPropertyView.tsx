@@ -7,7 +7,7 @@ import {
   isHouseHackProperty, 
   calculateEffectiveMortgage,
   getEffectiveMortgageColor,
-  calculateMonthlyMortgage 
+  getDefaultInterestRate 
 } from '@/utils/house-hack-calculations';
 
 interface PremiumPropertyViewProps {
@@ -171,6 +171,25 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
           </div>
         </div>
 
+        {/* AVM vs Listing Price Warning */}
+        {property.isOnMarket && property.avm && property.price && Math.abs(property.avm - property.price) > 50000 && (
+          <div className="mx-6 my-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div className="flex-1">
+                <h4 className="font-semibold text-amber-900 dark:text-amber-200 mb-1">Price Notice: AVM Estimate Shown</h4>
+                <div className="text-sm text-amber-800 dark:text-amber-300 space-y-1">
+                  <p>The price displayed (<strong>${property.avm?.toLocaleString()}</strong>) is an automated valuation estimate.</p>
+                  <p>Actual listing price: <strong>${property.price.toLocaleString()}</strong> ({((property.price - property.avm!) / property.avm! * 100).toFixed(1)}% {property.price > property.avm! ? 'higher' : 'lower'})</p>
+                  <p className="mt-2 font-medium">Please update the purchase price in your analysis accordingly.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Premium Tabs */}
         <div className="border-t border-b border-border/60 bg-muted/5">
           <div className="flex overflow-x-auto scrollbar-hide">
@@ -199,8 +218,19 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
               {/* Key Metrics Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl p-6 border border-blue-500/20">
-                  <div className="text-sm text-muted mb-1">Purchase Price</div>
-                  <div className="text-2xl font-bold text-primary">{formatCurrency(property.price)}</div>
+                  <div className="text-sm text-muted mb-1">
+                    {property.isOnMarket && property.avm && Math.abs(property.avm - property.price) > 50000 
+                      ? 'AVM Estimate' 
+                      : 'Purchase Price'}
+                  </div>
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(property.isOnMarket && property.avm ? property.avm : property.price)}
+                  </div>
+                  {property.isOnMarket && property.avm && Math.abs(property.avm - property.price) > 50000 && (
+                    <div className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                      List: {formatCurrency(property.price)}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl p-6 border border-green-500/20">
@@ -233,7 +263,8 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                           calculateEffectiveMortgage(
                             property.price,
                             property.downPaymentPercent || 25,
-                            property.monthlyRent || 0
+                            property.monthlyRent || 0,
+                            property.interestRate ? property.interestRate / 100 : getDefaultInterestRate(property.strategy, property.units)
                           )
                         )
                       : getMetricColor(property.monthlyCashFlow, 'risk')
@@ -242,7 +273,8 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                       ? formatCurrency(Math.abs(calculateEffectiveMortgage(
                           property.price,
                           property.downPaymentPercent || 25,
-                          property.monthlyRent || 0
+                          property.monthlyRent || 0,
+                          property.interestRate ? property.interestRate / 100 : getDefaultInterestRate(property.strategy, property.units)
                         )))
                       : formatCurrency(property.monthlyCashFlow)}
                   </div>

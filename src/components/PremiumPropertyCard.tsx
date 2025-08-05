@@ -117,12 +117,17 @@ export default function PremiumPropertyCard({
     calculateEffectiveMortgage(
       deal.price, 
       deal.downPaymentPercent || 25,
-      deal.monthlyRent || 0
+      deal.monthlyRent || 0,
+      deal.interestRate ? deal.interestRate / 100 : undefined // Convert to decimal if provided
     ) : 0;
   
   // Get the total mortgage payment for display
   const totalMortgage = isHouseHack ? 
-    calculateMonthlyMortgage(deal.price, deal.downPaymentPercent || 25) : 0;
+    calculateMonthlyMortgage(
+      deal.price, 
+      deal.downPaymentPercent || 25,
+      deal.interestRate ? deal.interestRate / 100 : undefined // Convert to decimal if provided
+    ) : 0;
 
   // Get metric color with strategy-specific logic
   const getMetricColor = (value: number | string | undefined, type: 'positive' | 'neutral' = 'positive') => {
@@ -233,8 +238,19 @@ export default function PremiumPropertyCard({
                   <p className="text-sm text-muted">{deal.location}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-primary">{formatCurrency(deal.price)}</div>
-                  <div className="text-xs text-muted">Purchase Price</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(deal.isOnMarket && deal.avm ? deal.avm : deal.price)}
+                  </div>
+                  <div className="text-xs text-muted">
+                    {deal.isOnMarket && deal.avm && Math.abs(deal.avm - deal.price) > 50000 
+                      ? 'AVM Estimate' 
+                      : 'Purchase Price'}
+                  </div>
+                  {deal.isOnMarket && deal.avm && Math.abs(deal.avm - deal.price) > 50000 && (
+                    <div className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                      List: {formatCurrency(deal.price)}
+                    </div>
+                  )}
                 </div>
               </div>
 

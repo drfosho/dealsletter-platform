@@ -40,12 +40,18 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
       }
 
       // Format the data for display
+      // Handle RentCast returning property as an array
+      const propertyData = Array.isArray(searchResults.property) 
+        ? searchResults.property[0] 
+        : searchResults.property;
+      
       const formattedData = {
         address,
-        property: searchResults.property,
+        property: propertyData,
         rental: searchResults.rental,
         comparables: searchResults.comparables,
-        market: searchResults.market
+        market: searchResults.market,
+        listing: searchResults.listing
       };
       
       console.log('[PropertySearch] Formatted data:', formattedData);

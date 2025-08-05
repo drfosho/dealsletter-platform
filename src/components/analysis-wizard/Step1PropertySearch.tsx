@@ -299,16 +299,24 @@ export default function Step1PropertySearch({
                   <div>
                     <h3 className="font-semibold text-primary text-lg">{data.address}</h3>
                     <p className="text-muted mt-1">
-                      {(data.propertyData.property as any)?.bedrooms || 0} bed • 
-                      {(data.propertyData.property as any)?.bathrooms || 0} bath • 
-                      {((data.propertyData.property as any)?.squareFootage || 0).toLocaleString()} sq ft
+                      {(() => {
+                        const prop = Array.isArray(data.propertyData.property) 
+                          ? data.propertyData.property[0] 
+                          : data.propertyData.property;
+                        return `${prop?.bedrooms || 0} bed • ${prop?.bathrooms || 0} bath • ${(prop?.squareFootage || 0).toLocaleString()} sq ft`;
+                      })()}
                     </p>
                     <div className="flex items-center gap-4 mt-3 text-sm">
                       <span className="text-primary font-medium">
                         Est. Value: ${((data.propertyData.comparables as any)?.value || 0).toLocaleString()}
                       </span>
                       <span className="text-muted">
-                        Built: {(data.propertyData.property as any)?.yearBuilt || 'N/A'}
+                        Built: {(() => {
+                          const prop = Array.isArray(data.propertyData.property) 
+                            ? data.propertyData.property[0] 
+                            : data.propertyData.property;
+                          return prop?.yearBuilt || 'N/A';
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -334,18 +342,33 @@ export default function Step1PropertySearch({
                     </p>
                   </div>
                 )}
-                {(data.propertyData.comparables as any)?.value && (data.propertyData.property as any)?.squareFootage && (
-                  <div className="bg-muted/10 rounded-lg p-4">
-                    <p className="text-sm text-muted mb-1">Price per Sq Ft</p>
-                    <p className="text-xl font-bold text-primary">
-                      ${Math.round(((data.propertyData.comparables as any)?.value || 0) / ((data.propertyData.property as any)?.squareFootage || 1))}
-                    </p>
-                  </div>
-                )}
+                {(() => {
+                  const prop = Array.isArray(data.propertyData.property) 
+                    ? data.propertyData.property[0] 
+                    : data.propertyData.property;
+                  const comparablesValue = (data.propertyData.comparables as any)?.value;
+                  
+                  if (comparablesValue && prop?.squareFootage) {
+                    return (
+                      <div className="bg-muted/10 rounded-lg p-4">
+                        <p className="text-sm text-muted mb-1">Price per Sq Ft</p>
+                        <p className="text-xl font-bold text-primary">
+                          ${Math.round(comparablesValue / prop.squareFootage)}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <div className="bg-muted/10 rounded-lg p-4">
                   <p className="text-sm text-muted mb-1">Property Type</p>
                   <p className="text-xl font-bold text-primary capitalize">
-                    {(data.propertyData.property as any)?.propertyType || 'Unknown'}
+                    {(() => {
+                      const prop = Array.isArray(data.propertyData.property) 
+                        ? data.propertyData.property[0] 
+                        : data.propertyData.property;
+                      return prop?.propertyType || 'Unknown';
+                    })()}
                   </p>
                 </div>
               </div>

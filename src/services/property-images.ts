@@ -10,20 +10,28 @@ export class PropertyImageService {
   
   // Get the best available image for a property
   static getPropertyImage(address: string, _propertyType?: string): string {
+    console.log('[PropertyImageService] Getting image for address:', address);
+    
     // For off-market properties, we should NOT try to fetch random images
     // Only use Google Street View if we have high confidence it's the right property
     const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    console.log('[PropertyImageService] Google Maps API Key available:', !!googleMapsKey);
+    
     if (googleMapsKey && address && address.length > 10) {
       // Only use Street View for complete addresses with street number
       const hasStreetNumber = /^\d+\s+/.test(address.trim());
+      console.log('[PropertyImageService] Has street number:', hasStreetNumber);
+      
       if (hasStreetNumber) {
         const streetViewUrl = this.getStreetViewImage(address, googleMapsKey);
+        console.log('[PropertyImageService] Generated Street View URL:', streetViewUrl);
         if (streetViewUrl) return streetViewUrl;
       }
     }
     
     // For off-market properties, always use the placeholder
     // Don't use random stock photos as they're misleading
+    console.log('[PropertyImageService] Using placeholder image');
     return this.getNoImagePlaceholder();
   }
   

@@ -519,44 +519,146 @@ export default function Step3Financial({
               <svg className="w-5 h-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-sm font-medium text-primary">Monthly Rent Estimate</span>
+              <span className="text-sm font-medium text-primary">Rental Income</span>
             </div>
           </div>
-          <div className="space-y-3">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
-              <input
-                type="number"
-                value={financial.monthlyRent || ''}
-                onChange={(e) => handleFieldChange('monthlyRent', e.target.value)}
-                className="w-full pl-8 pr-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder={rentEstimate ? `RentCast estimate: $${rentEstimate}` : "Enter expected monthly rent"}
-              />
-            </div>
-            {rentEstimate > 0 && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted">
-                    RentCast Estimate: ${rentEstimate.toLocaleString()}/mo
-                  </p>
-                  {(!financial.monthlyRent || financial.monthlyRent === 0) && (
-                    <button
-                      type="button"
-                      onClick={() => handleFieldChange('monthlyRent', rentEstimate)}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Use Estimate
-                    </button>
-                  )}
+          
+          {/* Multi-family property detection */}
+          {(() => {
+            const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+            const bedroomCount = (data.propertyData as any)?.property?.bedrooms || 0;
+            const isMultiFamily = propertyType.toLowerCase().includes('multi') || 
+                                  propertyType.toLowerCase().includes('duplex') || 
+                                  propertyType.toLowerCase().includes('triplex') ||
+                                  propertyType.toLowerCase().includes('fourplex') ||
+                                  bedroomCount >= 4;
+            
+            // Extract unit count from property data or infer from property type
+            const extractUnits = () => {
+              if ((data.propertyData as any)?.property?.units) {
+                return (data.propertyData as any).property.units;
+              }
+              if (propertyType.toLowerCase().includes('duplex')) return 2;
+              if (propertyType.toLowerCase().includes('triplex')) return 3;
+              if (propertyType.toLowerCase().includes('fourplex')) return 4;
+              if (propertyType.toLowerCase().includes('multi') && bedroomCount >= 4) {
+                return Math.floor(bedroomCount / 2); // Estimate based on bedrooms
+              }
+              return 1;
+            };
+            
+            const unitCount = financial.units || extractUnits();
+            
+            if (isMultiFamily || unitCount > 1) {
+              return (
+                <div className="space-y-4">
+                  {/* Number of Units */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Number of Units</label>
+                    <input
+                      type="number"
+                      value={financial.units || unitCount}
+                      onChange={(e) => {
+                        const units = parseInt(e.target.value) || 1;
+                        handleFieldChange('units', units);
+                        // Update total rent when units change
+                        if (financial.rentPerUnit) {
+                          handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      min="1"
+                      placeholder="Number of units"
+                    />
+                  </div>
+                  
+                  {/* Rent Per Unit */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Rent Per Unit</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+                      <input
+                        type="number"
+                        value={financial.rentPerUnit || ''}
+                        onChange={(e) => {
+                          const rentPerUnit = parseFloat(e.target.value) || 0;
+                          handleFieldChange('rentPerUnit', rentPerUnit);
+                          // Update total rent
+                          const units = financial.units || unitCount;
+                          handleFieldChange('monthlyRent', rentPerUnit * units);
+                        }}
+                        className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder={rentEstimate && unitCount > 1 ? `Avg: $${Math.round(rentEstimate / unitCount)}` : "Per unit rent"}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Total Monthly Rent (Read-only) */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Total Monthly Rent</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+                      <input
+                        type="number"
+                        value={financial.monthlyRent || ''}
+                        onChange={(e) => {
+                          const totalRent = parseFloat(e.target.value) || 0;
+                          handleFieldChange('monthlyRent', totalRent);
+                          // Update rent per unit
+                          const units = financial.units || unitCount;
+                          if (units > 1) {
+                            handleFieldChange('rentPerUnit', totalRent / units);
+                          }
+                        }}
+                        className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-muted/20"
+                        placeholder="Total monthly rent"
+                      />
+                    </div>
+                  </div>
                 </div>
-                {(data.propertyData as any)?.rental?.rentRangeLow && (data.propertyData as any)?.rental?.rentRangeHigh && (
-                  <p className="text-xs text-muted">
-                    Range: ${(data.propertyData as any).rental.rentRangeLow.toLocaleString()} - ${(data.propertyData as any).rental.rentRangeHigh.toLocaleString()}
-                  </p>
+              );
+            }
+            
+            // Single-family property - show simple rent input
+            return (
+              <div className="space-y-3">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+                  <input
+                    type="number"
+                    value={financial.monthlyRent || ''}
+                    onChange={(e) => handleFieldChange('monthlyRent', e.target.value)}
+                    className="w-full pl-8 pr-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder={rentEstimate ? `RentCast estimate: $${rentEstimate}` : "Enter expected monthly rent"}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+          
+          {rentEstimate > 0 && (
+            <div className="space-y-1 mt-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted">
+                  RentCast Estimate: ${rentEstimate.toLocaleString()}/mo
+                </p>
+                {(!financial.monthlyRent || financial.monthlyRent === 0) && (
+                  <button
+                    type="button"
+                    onClick={() => handleFieldChange('monthlyRent', rentEstimate)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Use Estimate
+                  </button>
                 )}
               </div>
-            )}
-          </div>
+              {(data.propertyData as any)?.rental?.rentRangeLow && (data.propertyData as any)?.rental?.rentRangeHigh && (
+                <p className="text-xs text-muted">
+                  Range: ${(data.propertyData as any).rental.rentRangeLow.toLocaleString()} - ${(data.propertyData as any).rental.rentRangeHigh.toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -566,6 +668,80 @@ export default function Step3Financial({
           <label className="block text-sm font-medium text-primary mb-2">
             Purchase Price
           </label>
+          
+          {/* AVM vs Listing Price Warning */}
+          {(() => {
+            const listing = (data.propertyData as any)?.listing;
+            const listingPrice = listing?.price || listing?.listPrice || listing?.askingPrice || 0;
+            const comparablesValue = (data.propertyData as any)?.comparables?.value || 0;
+            const isOnMarket = listingPrice > 0;
+            
+            console.log('[Step3Financial] Purchase price warning check:', {
+              isOnMarket,
+              listingPrice,
+              comparablesValue,
+              avmValue: comparablesValue,
+              priceDifference: listingPrice - comparablesValue,
+              percentDifference: comparablesValue > 0 ? ((listingPrice - comparablesValue) / comparablesValue * 100).toFixed(1) : 0
+            });
+            
+            // Show warning if listing price is significantly different from AVM
+            if (isOnMarket && comparablesValue > 0) {
+              const priceDifference = listingPrice - comparablesValue;
+              const percentDifference = (priceDifference / comparablesValue) * 100;
+              
+              if (Math.abs(percentDifference) > 10) {
+                return (
+                  <div className={`mb-4 p-4 rounded-lg border-2 ${
+                    percentDifference > 0 
+                      ? 'bg-orange-50 border-orange-300 dark:bg-orange-900/20 dark:border-orange-700' 
+                      : 'bg-green-50 border-green-300 dark:bg-green-900/20 dark:border-green-700'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <svg className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                        percentDifference > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'
+                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div className="flex-1">
+                        <h4 className={`font-semibold ${
+                          percentDifference > 0 ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200'
+                        }`}>
+                          {percentDifference > 0 ? 'Property May Be Overpriced' : 'Property May Be Underpriced'}
+                        </h4>
+                        <div className="mt-2 space-y-1">
+                          <p className={`text-sm ${
+                            percentDifference > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300'
+                          }`}>
+                            <span className="font-medium">Listing Price:</span> ${listingPrice.toLocaleString()}
+                          </p>
+                          <p className={`text-sm ${
+                            percentDifference > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300'
+                          }`}>
+                            <span className="font-medium">AVM Estimate:</span> ${comparablesValue.toLocaleString()}
+                          </p>
+                          <p className={`text-sm font-medium ${
+                            percentDifference > 0 ? 'text-orange-800 dark:text-orange-200' : 'text-green-800 dark:text-green-200'
+                          }`}>
+                            Difference: ${Math.abs(priceDifference).toLocaleString()} ({Math.abs(percentDifference).toFixed(1)}% {percentDifference > 0 ? 'above' : 'below'} AVM)
+                          </p>
+                        </div>
+                        <p className={`text-xs mt-3 ${
+                          percentDifference > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'
+                        }`}>
+                          {percentDifference > 0 
+                            ? 'Consider negotiating a lower price or ensure the premium is justified by property condition, location, or features not captured in the AVM.'
+                            : 'This could represent a good value opportunity. Verify the property condition and ensure there are no hidden issues.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            }
+            return null;
+          })()}
+          
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
             <input
@@ -770,6 +946,52 @@ export default function Step3Financial({
             )}
           </div>
         )}
+
+        {/* Number of Units */}
+        <div>
+          <label className="block text-sm font-medium text-primary mb-2">
+            Number of Units
+            {(() => {
+              const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+              const isMultiFamily = propertyType.toLowerCase().includes('multi') || 
+                                   propertyType.toLowerCase().includes('duplex') || 
+                                   propertyType.toLowerCase().includes('triplex') ||
+                                   propertyType.toLowerCase().includes('fourplex');
+              return isMultiFamily ? (
+                <span className="text-xs text-muted font-normal ml-2">
+                  (Multi-family property)
+                </span>
+              ) : null;
+            })()}
+          </label>
+          <input
+            type="number"
+            value={financial.units || (() => {
+              const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+              if ((data.propertyData as any)?.property?.units) {
+                return (data.propertyData as any).property.units;
+              }
+              if (propertyType.toLowerCase().includes('duplex')) return 2;
+              if (propertyType.toLowerCase().includes('triplex')) return 3;
+              if (propertyType.toLowerCase().includes('fourplex')) return 4;
+              return 1;
+            })()}
+            onChange={(e) => {
+              const units = parseInt(e.target.value) || 1;
+              handleFieldChange('units', units);
+              // Update rent calculations if we have rent per unit
+              if (financial.rentPerUnit) {
+                handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+              }
+            }}
+            className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            min="1"
+            placeholder="1"
+          />
+          <p className="text-xs text-muted mt-1">
+            Total number of rentable units in the property
+          </p>
+        </div>
 
         {/* Down Payment */}
         <div>

@@ -391,7 +391,10 @@ export async function POST(request: NextRequest) {
           rehab_costs: body.rehabCosts || 0,
           strategy_details: (body as any).strategyDetails || {},
           flip_timeline_months: (body as any).strategyDetails?.timeline || null,
-          status: 'generating'
+          status: 'generating',
+          units: body.units || 1,
+          monthlyRent: body.monthlyRent || 0,
+          rentPerUnit: body.rentPerUnit || 0
         }
       })
       .select()
@@ -985,6 +988,8 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
   } else {
     // Rental property calculations - use user-specified rent if available
     const monthlyRent = request.monthlyRent || (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
+    const units = request.units || 1;
+    const rentPerUnit = request.rentPerUnit || (units > 1 ? monthlyRent / units : monthlyRent);
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
     
     // Calculate additional metrics for better analysis
@@ -1007,7 +1012,11 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
     context += `\n\nKEY CALCULATIONS:
 INCOME:
 - Monthly Rent: $${monthlyRent.toLocaleString()}
-- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}
+${units > 1 ? `- Number of Units: ${units}
+- Rent Per Unit: $${Math.round(rentPerUnit).toLocaleString()}/month
+- Total Monthly Rent: $${monthlyRent.toLocaleString()}
+- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}` : `- Monthly Rent: $${monthlyRent.toLocaleString()}
+- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}`}
 
 FINANCING:
 - Purchase Price: $${effectivePurchasePrice.toLocaleString()}
@@ -1043,7 +1052,8 @@ Provide a comprehensive analysis following the format specified. Make sure to in
       roi: cashOnCash * 5, // Simple 5-year projection
       totalInvestment: downPayment + (request.rehabCosts || 0) + pointsCost,
       annualNOI: annualNOI,
-      totalProfit: annualCashFlow * 5 // 5-year profit projection
+      totalProfit: annualCashFlow * 5, // 5-year profit projection
+      monthlyRent: monthlyRent // Add monthly rent to metrics
     };
   }
 
@@ -1064,6 +1074,7 @@ interface ParsedAnalysisResponse {
     annual_noi?: number;
     total_profit?: number;
     holding_costs?: number;
+    monthly_rent?: number;
   };
   market_analysis: string;
   investment_strategy: {
@@ -1086,7 +1097,8 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
     totalInvestment: financialData.totalInvestment !== undefined ? financialData.totalInvestment : calculatedMetrics?.totalInvestment,
     annualNOI: financialData.annualNOI !== undefined ? financialData.annualNOI : calculatedMetrics?.annualNOI,
     totalProfit: financialData.totalProfit !== undefined ? financialData.totalProfit : calculatedMetrics?.totalProfit,
-    holdingCosts: financialData.holdingCosts !== undefined ? financialData.holdingCosts : calculatedMetrics?.holdingCosts
+    holdingCosts: financialData.holdingCosts !== undefined ? financialData.holdingCosts : calculatedMetrics?.holdingCosts,
+    monthlyRent: financialData.monthlyRent !== undefined ? financialData.monthlyRent : calculatedMetrics?.monthlyRent
   };
   
   // Extract sections more reliably
@@ -1123,7 +1135,8 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
       total_investment: finalMetrics.totalInvestment,
       annual_noi: finalMetrics.annualNOI,
       total_profit: finalMetrics.totalProfit,
-      holding_costs: finalMetrics.holdingCosts
+      holding_costs: finalMetrics.holdingCosts,
+      monthly_rent: finalMetrics.monthlyRent
     },
     market_analysis: marketAnalysis,
     investment_strategy: {
@@ -1192,6 +1205,7 @@ interface FinancialData {
   annualNOI?: number;
   totalProfit?: number;
   holdingCosts?: number;
+  monthlyRent?: number;
 }
 
 function extractFinancialData(text: string): FinancialData {

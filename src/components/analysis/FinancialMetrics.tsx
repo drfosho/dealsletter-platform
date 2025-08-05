@@ -71,9 +71,28 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
       (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
       (Math.pow(1 + monthlyRate, numPayments) - 1);
 
-    // Get rental income
-    const monthlyRent = analysis.rental_estimate?.rent || 
-                       (analysis.rental_estimate as any)?.rentEstimate || 0;
+    // Get rental income - check multiple possible locations
+    // Debug logging to track the issue
+    console.log('[FinancialMetrics] Looking for monthly rent:', {
+      aiAnalysisRent: analysis.ai_analysis?.financial_metrics?.monthly_rent,
+      rentalEstimateRent: analysis.rental_estimate?.rent,
+      rentalEstimateRentEstimate: (analysis.rental_estimate as any)?.rentEstimate,
+      analysisDataRent: (analysis.analysis_data as any)?.monthlyRent,
+      fullRentalEstimate: analysis.rental_estimate,
+      fullAiMetrics: analysis.ai_analysis?.financial_metrics
+    });
+    
+    const monthlyRent = analysis.ai_analysis?.financial_metrics?.monthly_rent ||
+                       analysis.rental_estimate?.rent || 
+                       (analysis.rental_estimate as any)?.rentEstimate || 
+                       (analysis.analysis_data as any)?.monthlyRent ||
+                       0;
+    
+    // Get units for multi-family properties
+    const units = (analysis.analysis_data as any)?.units || 
+                 (analysis.property_data as any)?.property?.units || 
+                 1;
+    const rentPerUnit = units > 1 ? monthlyRent / units : monthlyRent;
 
     // Calculate expenses (simplified)
     const propertyTax = (purchasePrice * 0.012) / 12; // 1.2% annual
@@ -125,7 +144,9 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
       insurance,
       maintenance,
       vacancy,
-      propertyManagement
+      propertyManagement,
+      units,
+      rentPerUnit
     };
   }, [analysis, isFlipStrategy, purchasePrice, downPayment]);
 
@@ -292,11 +313,22 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
             <h4 className="font-semibold text-primary mb-3">Monthly Income</h4>
             <div className="space-y-2">
               <div className="flex justify-between items-center py-2 border-b border-border/50">
-                <span className="text-muted">Rental Income</span>
+                <span className="text-muted">
+                  Rental Income
+                  {metrics.units > 1 && (
+                    <span className="text-xs ml-1">({metrics.units} units)</span>
+                  )}
+                </span>
                 <span className="font-medium text-green-600">
                   +{formatCurrency(metrics.monthlyRent)}
                 </span>
               </div>
+              {metrics.units > 1 && (
+                <div className="flex justify-between items-center py-1 text-sm text-muted">
+                  <span>Per Unit</span>
+                  <span>{formatCurrency(Math.round(metrics.rentPerUnit))}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center py-2 font-semibold">
                 <span>Total Income</span>
                 <span className="text-green-600">

@@ -61,6 +61,14 @@ export async function POST(request: NextRequest) {
     try {
       // Always get basic property details
       const propertyDetails = await rentCastService.getPropertyDetails(address);
+      console.log('[API] Property details received from RentCast:', {
+        isArray: Array.isArray(propertyDetails),
+        bedrooms: propertyDetails.bedrooms,
+        bathrooms: propertyDetails.bathrooms,
+        propertyType: propertyDetails.propertyType,
+        squareFootage: propertyDetails.squareFootage,
+        fullDetails: propertyDetails
+      });
       results.property = propertyDetails;
 
       // Get additional data if requested

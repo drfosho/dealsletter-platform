@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { MergedPropertyData } from '@/utils/property-data-merger';
 import type { GeneratedAnalysis, AnalysisConfig } from '@/services/property-analysis-ai';
 import PropertyPreviewModal from './PropertyPreviewModal';
+import { getStrategyInterestRate, formatInterestRate } from '@/utils/interest-rates';
 
 interface AdminStep {
   id: number;
@@ -292,6 +293,20 @@ export default function AdminPropertyImport() {
         expectedProfit: estimatedProfit,
         downPayment: downPayment,
         downPaymentPercent: downPaymentPercent,
+        // Include interest rate from edited data or use strategy default
+        interestRate: property.editedData.interestRate || (() => {
+          const strategyMap = {
+            'flip': 'Fix & Flip',
+            'brrrr': 'BRRRR',
+            'rental': 'Buy & Hold',
+            'airbnb': 'Short-Term Rental',
+            'commercial': 'Commercial'
+          };
+          const strategy = strategyMap[analysisConfig.strategy] || 'Buy & Hold';
+          const units = property.editedData.units || 1;
+          const rateInfo = getStrategyInterestRate(strategy, property.editedData.propertyType, units);
+          return rateInfo.default;
+        })(),
         confidence: property.analysis.confidenceScore > 80 ? 'high' : 
                    property.analysis.confidenceScore > 60 ? 'medium' : 'low',
         riskLevel: property.analysis.riskAssessment.riskLevel,
@@ -606,17 +621,48 @@ https://www.realtor.com/..."
                 )}
                 
                 {/* Multi-Family Rent Breakdown */}
-                {selectedProperty.editedData.units > 1 && selectedProperty.editedData.monthlyRent && (
-                  <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-700">Per Unit:</span>
-                      <span className="font-medium">
-                        ${Math.round(selectedProperty.editedData.monthlyRent / selectedProperty.editedData.units).toLocaleString()}/month
-                      </span>
+                {selectedProperty.editedData.units > 1 && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Rent Per Unit
+                        <span className="text-xs text-gray-500 ml-2">
+                          (Changes will update total rent)
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        value={selectedProperty.editedData.rentPerUnit || Math.round((selectedProperty.editedData.monthlyRent || 0) / selectedProperty.editedData.units)}
+                        onChange={(e) => {
+                          const perUnitRent = parseInt(e.target.value) || 0;
+                          handleDataEdit(selectedProperty.id, 'rentPerUnit', perUnitRent);
+                          
+                          // Update total rent based on per-unit rent
+                          const totalRent = perUnitRent * selectedProperty.editedData.units;
+                          handleDataEdit(selectedProperty.id, 'monthlyRent', totalRent);
+                          handleDataEdit(selectedProperty.id, 'totalMonthlyRent', totalRent);
+                        }}
+                        className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        placeholder="Enter rent per unit"
+                      />
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      {selectedProperty.editedData.units} units × ${Math.round(selectedProperty.editedData.monthlyRent / selectedProperty.editedData.units).toLocaleString()}/mo = ${selectedProperty.editedData.monthlyRent.toLocaleString()}/mo total
-                    </div>
+                    
+                    {selectedProperty.editedData.monthlyRent && (
+                      <div className="p-2 bg-blue-50 rounded text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Calculation:</span>
+                          <span className="font-medium">
+                            {selectedProperty.editedData.units} units × ${(selectedProperty.editedData.rentPerUnit || Math.round(selectedProperty.editedData.monthlyRent / selectedProperty.editedData.units)).toLocaleString()}/mo
+                          </span>
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-gray-700 font-medium">Total Monthly Rent:</span>
+                          <span className="font-bold text-green-600">
+                            ${selectedProperty.editedData.monthlyRent.toLocaleString()}/mo
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -735,6 +781,85 @@ https://www.realtor.com/..."
                   <option value="10">10 Years</option>
                   <option value="30">30 Years</option>
                 </select>
+              </div>
+            </div>
+            
+            {/* Interest Rate Selection */}
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Interest Rate
+                {(() => {
+                  const strategy = analysisConfig.strategy === 'rental' ? 'Buy & Hold' :
+                                  analysisConfig.strategy === 'flip' ? 'Fix & Flip' :
+                                  analysisConfig.strategy === 'brrrr' ? 'BRRRR' :
+                                  analysisConfig.strategy === 'airbnb' ? 'Short-Term Rental' :
+                                  'Commercial';
+                  const rateInfo = getStrategyInterestRate(
+                    strategy,
+                    selectedProperty.editedData?.propertyType,
+                    selectedProperty.editedData?.units
+                  );
+                  return (
+                    <span className="text-xs text-gray-500 ml-2">
+                      ({rateInfo.description})
+                    </span>
+                  );
+                })()}
+              </label>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <input
+                    type="number"
+                    step="0.25"
+                    min="3"
+                    max="15"
+                    value={selectedProperty.editedData?.interestRate || (() => {
+                      const strategy = analysisConfig.strategy === 'rental' ? 'Buy & Hold' :
+                                      analysisConfig.strategy === 'flip' ? 'Fix & Flip' :
+                                      analysisConfig.strategy === 'brrrr' ? 'BRRRR' :
+                                      analysisConfig.strategy === 'airbnb' ? 'Short-Term Rental' :
+                                      'Commercial';
+                      const rateInfo = getStrategyInterestRate(
+                        strategy,
+                        selectedProperty.editedData?.propertyType,
+                        selectedProperty.editedData?.units
+                      );
+                      return rateInfo.default;
+                    })()}
+                    onChange={(e) => handleDataEdit(selectedProperty.id, 'interestRate', parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    {(() => {
+                      const strategy = analysisConfig.strategy === 'rental' ? 'Buy & Hold' :
+                                      analysisConfig.strategy === 'flip' ? 'Fix & Flip' :
+                                      analysisConfig.strategy === 'brrrr' ? 'BRRRR' :
+                                      analysisConfig.strategy === 'airbnb' ? 'Short-Term Rental' :
+                                      'Commercial';
+                      const rateInfo = getStrategyInterestRate(
+                        strategy,
+                        selectedProperty.editedData?.propertyType,
+                        selectedProperty.editedData?.units
+                      );
+                      return `Typical range: ${formatInterestRate(rateInfo.min)} - ${formatInterestRate(rateInfo.max)}`;
+                    })()}
+                  </p>
+                </div>
+                
+                <div>
+                  <select
+                    value={selectedProperty.editedData?.loanTerm || 30}
+                    onChange={(e) => handleDataEdit(selectedProperty.id, 'loanTerm', parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border rounded bg-white text-gray-900 border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="30">30 Year</option>
+                    <option value="15">15 Year</option>
+                    <option value="10">10 Year</option>
+                    <option value="5">5 Year</option>
+                  </select>
+                  <p className="text-xs text-gray-600 mt-1">Loan term</p>
+                </div>
               </div>
             </div>
             

@@ -13,7 +13,24 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
   const projections = useMemo(() => {
     const years = parseInt(timeframe);
     const purchasePrice = analysis.purchase_price || 0;
-    const monthlyRent = Number(analysis.rental_estimate?.rentEstimate || analysis.rental_estimate?.rent || 0);
+    
+    // Try multiple sources for monthly rent
+    const monthlyRent = Number(
+      analysis.ai_analysis?.financial_metrics?.monthly_rent ||
+      analysis.rental_estimate?.rent || 
+      (analysis.rental_estimate as any)?.rentEstimate ||
+      (analysis.analysis_data as any)?.monthlyRent ||
+      0
+    );
+    
+    console.log('[InvestmentProjections] Monthly rent sources:', {
+      aiAnalysisRent: analysis.ai_analysis?.financial_metrics?.monthly_rent,
+      rentalEstimateRent: analysis.rental_estimate?.rent,
+      rentalEstimateRentEstimate: (analysis.rental_estimate as any)?.rentEstimate,
+      analysisDataRent: (analysis.analysis_data as any)?.monthlyRent,
+      finalMonthlyRent: monthlyRent
+    });
+    
     const appreciationRate = 0.03; // 3% annual
     const rentGrowthRate = 0.025; // 2.5% annual
     const inflationRate = 0.02; // 2% for expenses
@@ -79,6 +96,13 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
       });
     }
 
+    console.log('[InvestmentProjections] Projections calculated:', {
+      yearsCalculated: yearlyData.length,
+      firstYear: yearlyData[0],
+      lastYear: yearlyData[yearlyData.length - 1],
+      hasPositiveReturns: yearlyData.some(d => d.totalReturn > 0)
+    });
+
     return yearlyData;
   }, [analysis, timeframe]);
 
@@ -92,6 +116,18 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
   };
 
   const lastYear = projections[projections.length - 1];
+
+  // If no projections data, show a message
+  if (!projections.length || !lastYear) {
+    return (
+      <div className="bg-card rounded-xl border border-border p-6">
+        <h3 className="text-lg font-semibold text-primary mb-4">Investment Projections</h3>
+        <div className="text-center py-8 text-muted">
+          <p>Unable to generate projections. Missing rental or property data.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-xl border border-border p-6">
@@ -183,8 +219,19 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
             {/* Bars */}
             <div className="relative h-full flex items-end justify-between gap-2 px-2">
               {projections.map((data, index) => {
-                const heightPercent = Math.max(0, (data.totalReturn / lastYear.totalReturn) * 100);
+                // Handle case where lastYear.totalReturn might be 0 or invalid
+                const maxReturn = Math.max(...projections.map(p => Math.abs(p.totalReturn)), 1);
+                const heightPercent = lastYear.totalReturn > 0 
+                  ? Math.max(0, (data.totalReturn / lastYear.totalReturn) * 100)
+                  : Math.max(0, (data.totalReturn / maxReturn) * 100);
                 const isNegative = data.totalReturn < 0;
+                
+                console.log(`[Bar ${data.year}]`, {
+                  totalReturn: data.totalReturn,
+                  maxReturn,
+                  heightPercent,
+                  isNegative
+                });
                 
                 // Show every year for 5-year view, every 2 years for 10-year, every 4 years for 20-year
                 const showBar = timeframe === '5' || 
