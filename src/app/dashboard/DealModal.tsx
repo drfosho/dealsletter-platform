@@ -46,6 +46,13 @@ interface Deal {
   // Listing URL fields
   listingUrl?: string;
   listingSource?: string;
+  // Multi-family fields
+  units?: number;
+  isMultiFamily?: boolean;
+  isOnMarket?: boolean;
+  avm?: number;
+  rentPerUnit?: number;
+  totalMonthlyRent?: number;
   // Allow other properties but with proper types
   [key: string]: unknown;
 }
@@ -3494,6 +3501,30 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
               {activeTab === 'overview' ? (
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-4">Property Overview</h3>
+                  
+                  {/* Price Warning for AVM vs List Price */}
+                  {deal.isOnMarket && deal.listingPrice && deal.avm && 
+                   Math.abs((deal.listingPrice as number) - (deal.avm as number)) > 50000 && (
+                    <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <h4 className="font-semibold text-gray-900">Price Notice</h4>
+                          <p className="text-sm text-gray-700 mt-1">
+                            Analysis based on: <strong>AVM Estimate ${(deal.avm as number)?.toLocaleString()}</strong>
+                          </p>
+                          <p className="text-sm text-gray-700">
+                            Current List Price: <strong>${(deal.listingPrice as number)?.toLocaleString()}</strong> 
+                            ({(((deal.listingPrice as number) - (deal.avm as number)) / (deal.avm as number) * 100).toFixed(1)}% 
+                            {(deal.listingPrice as number) > (deal.avm as number) ? 'higher' : 'lower'})
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -3504,6 +3535,12 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                           {deal.sqft && <p className="text-sm"><span className="text-muted">Square Feet:</span> <span className="font-medium">{deal.sqft.toLocaleString()}</span></p>}
                           {deal.yearBuilt && <p className="text-sm"><span className="text-muted">Year Built:</span> <span className="font-medium">{deal.yearBuilt}</span></p>}
                           {deal.propertyType && <p className="text-sm"><span className="text-muted">Property Type:</span> <span className="font-medium">{deal.propertyType}</span></p>}
+                          {deal.units && deal.units > 1 && (
+                            <p className="text-sm">
+                              <span className="text-muted">Units:</span> 
+                              <span className="font-medium text-accent text-lg ml-1">{deal.units} Units</span>
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div>
