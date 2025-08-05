@@ -857,9 +857,11 @@ Return only valid JSON matching the exact schema provided.`,
         
         // Determine if we should retry based on error type
         const isRetryableError = isOverloaded || 
-          error.message.includes('timeout') ||
-          error.message.includes('ECONNRESET') ||
-          error.message.includes('ETIMEDOUT');
+          (error instanceof Error && (
+            error.message.includes('timeout') ||
+            error.message.includes('ECONNRESET') ||
+            error.message.includes('ETIMEDOUT')
+          ));
         
         // If overloaded and we have a fallback model, switch immediately
         if (isOverloaded && modelIndex < models.length - 1) {
