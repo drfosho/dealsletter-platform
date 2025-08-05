@@ -207,18 +207,41 @@ export default function AdminPropertiesPage() {
         // Handle fallback to manual
         if (analysisResult.fallbackToManual) {
           setProcessingStatus('');
-          const useManual = confirm(
-            `${analysisResult.error}\n\n` +
-            'Would you like to add the property manually instead?'
-          );
           
-          if (useManual) {
-            // Reset and let user add manually
-            setIsProcessing(false);
-            return;
+          // Check if it's an overload issue
+          if (analysisResult.isOverloaded) {
+            const retry = confirm(
+              'The AI service is currently experiencing high demand.\n\n' +
+              'You can:\n' +
+              '1. Click OK to wait a moment and try again\n' +
+              '2. Click Cancel to add the property manually\n\n' +
+              'Would you like to retry in 30 seconds?'
+            );
+            
+            if (retry) {
+              setIsProcessing(false);
+              setProcessingStatus('Waiting 30 seconds before retry...');
+              setTimeout(() => {
+                setProcessingStatus('');
+                handleAIAnalysis(); // Retry the analysis
+              }, 30000);
+              return;
+            }
+          } else {
+            const useManual = confirm(
+              `${analysisResult.error}\n\n` +
+              'Would you like to add the property manually instead?'
+            );
+            
+            if (!useManual) {
+              setIsProcessing(false);
+              return;
+            }
           }
           
-          throw new Error(analysisResult.error);
+          // Reset and let user add manually
+          setIsProcessing(false);
+          return;
         }
         
         // Check if we have partial data

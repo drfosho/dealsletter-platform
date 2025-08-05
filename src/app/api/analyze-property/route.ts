@@ -708,21 +708,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Claude API with retry logic
+    // Call Claude API with retry logic and model fallback
     let lastError: Error | null = null;
     let propertyData: PropertyData | null = null;
+    let totalAttempts = 0;
+    const models = [
+      'claude-opus-4-20250514',  // Primary model for best quality
+      'claude-3-5-sonnet-20241022'  // Fallback model if Opus is overloaded
+    ];
     
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        console.log(`Attempting Claude API call (attempt ${attempt}/${MAX_RETRIES})`);
-        console.log(`Using model: ${metrics.model}`);
-        
-        const apiStartTime = Date.now();
-        
-        const message = await anthropic.messages.create({
-          model: metrics.model, // Using claude-opus-4-20250514 for comprehensive analysis
-          max_tokens: 8000, // Increased for comprehensive newsletter-quality data
-          temperature: 0.1, // Lower for more consistent parsing
+    // Try each model with retries
+    modelLoop: for (let modelIndex = 0; modelIndex < models.length && !propertyData; modelIndex++) {
+      const currentModel = models[modelIndex];
+      metrics.model = currentModel;
+      
+      for (let attempt = 1; attempt <= MAX_RETRIES && !propertyData; attempt++) {
+        totalAttempts++;
+        try {
+          console.log(`Attempting Claude API call (attempt ${attempt}/${MAX_RETRIES}, model: ${currentModel})`);
+          
+          const apiStartTime = Date.now();
+          
+          const message = await anthropic.messages.create({
+            model: currentModel,
+            max_tokens: currentModel.includes('opus') ? 8000 : 6000, // Adjust based on model
+            temperature: 0.1, // Lower for more consistent parsing
           system: `You are an expert real estate investment analyst with 20+ years of experience creating premium newsletter content for sophisticated investors. 
 
 CRITICAL: Create ORIGINAL investment analysis - do NOT copy seller descriptions. Write as if you are presenting this opportunity to your high-net-worth clients.
@@ -799,27 +809,45 @@ Return only valid JSON matching the exact schema provided.`,
         
       } catch (error) {
         lastError = error as Error;
-        console.error(`Attempt ${attempt} failed:`, error);
+        console.error(`Attempt ${attempt} with ${currentModel} failed:`, error);
+        
+        // Check if it's an overloaded error (529)
+        const isOverloaded = error instanceof Error && 
+          (error.message.includes('529') || error.message.includes('overloaded'));
+        
+        if (isOverloaded && modelIndex < models.length - 1) {
+          console.log(`Model ${currentModel} is overloaded, switching to fallback model...`);
+          continue modelLoop; // Try next model
+        }
         
         if (attempt < MAX_RETRIES) {
-          console.log(`Retrying in ${RETRY_DELAY}ms...`);
-          await sleep(RETRY_DELAY * attempt); // Exponential backoff
+          const backoffDelay = RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
+          console.log(`Retrying in ${backoffDelay}ms...`);
+          await sleep(backoffDelay);
         }
       }
     }
+  }
     
     // If all retries failed
     if (!propertyData) {
-      console.error('All retry attempts failed:', lastError);
+      console.error(`All ${totalAttempts} attempts across ${models.length} models failed:`, lastError);
       const processingTime = Date.now() - startTime;
       trackUsage(false, false, processingTime, 'all_retries_failed');
+      
+      // Check if it was due to overload
+      const isOverloaded = lastError?.message?.includes('overloaded') || lastError?.message?.includes('529');
+      
       return NextResponse.json({
         success: false,
-        error: 'Failed to analyze property after multiple attempts. Please try again or add manually.',
+        error: isOverloaded 
+          ? 'AI service is currently overloaded. Please try again in a few minutes or add the property manually.'
+          : 'Failed to analyze property after multiple attempts. Please try again or add manually.',
         fallbackToManual: true,
         technicalError: lastError?.message,
-        processingTime
-      }, { status: 500 });
+        processingTime,
+        isOverloaded
+      }, { status: isOverloaded ? 503 : 500 });
     }
 
     // Add computed fields
