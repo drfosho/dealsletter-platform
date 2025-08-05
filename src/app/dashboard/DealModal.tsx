@@ -3521,7 +3521,6 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                 <div>
                   <h3 className="text-xl font-semibold text-primary mb-4">Property Overview</h3>
                   
-                  {/* Price Warning for AVM vs List Price */}
                   {deal.isOnMarket && deal.listingPrice && deal.avm && 
                    Math.abs((deal.listingPrice as number) - (deal.avm as number)) > 50000 && (
                     <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
