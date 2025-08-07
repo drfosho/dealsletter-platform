@@ -51,7 +51,7 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
         rental: searchResults.rental,
         comparables: searchResults.comparables,
         market: searchResults.market,
-        listing: searchResults.listing
+        listing: (searchResults as any).listing || null
       };
       
       console.log('[PropertySearch] Formatted data:', formattedData);

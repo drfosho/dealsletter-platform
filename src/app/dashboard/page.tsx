@@ -100,82 +100,85 @@ export default function Dashboard() {
           console.log('Dashboard: Fetched properties:', data.length);
           console.log('Dashboard: Raw properties data:', data);
           console.log('Dashboard: First property:', data[0]);
-          const formattedProperties = data.map((prop: Deal & Record<string, unknown>, index: number) => ({
-            // Core identifiers
-            id: typeof prop.id === 'string' ? parseInt(prop.id) : prop.id || 1000 + index,
-            title: prop.title || prop.address,
-            address: prop.address,
-            
-            // Location data
-            location: prop.location || `${prop.city}, ${prop.state} ${prop.zipCode}`.trim(),
-            city: prop.city,
-            state: prop.state,
-            zipCode: prop.zipCode,
-            neighborhood: prop.neighborhood,
-            
-            // Property details
-            type: prop.type || prop.propertyType,
-            propertyType: prop.propertyType,
-            strategy: prop.strategy || prop.investmentStrategy,
-            investmentStrategy: prop.investmentStrategy,
-            price: prop.price,
-            
-            // Financial metrics - IMPORTANT: Pass all for proper display
-            downPayment: prop.downPayment,
-            downPaymentPercent: prop.downPaymentPercent,
-            monthlyRent: prop.monthlyRent,
-            monthlyCashFlow: prop.monthlyCashFlow, // CRITICAL: For house hack detection
-            cashFlow: prop.monthlyCashFlow || prop.cashFlow,
-            totalROI: prop.totalROI,
-            roi: prop.roi,
-            capRate: prop.capRate,
-            currentCapRate: prop.currentCapRate,
-            proFormaCapRate: prop.proFormaCapRate,
-            proFormaCashFlow: prop.proFormaCashFlow,
-            cashOnCashReturn: prop.cashOnCashReturn,
-            noi: prop.noi,
-            grossYield: prop.grossYield,
-            
-            // Property characteristics
-            bedrooms: prop.bedrooms,
-            bathrooms: prop.bathrooms,
-            sqft: prop.sqft || prop.squareFootage,
-            squareFootage: prop.squareFootage,
-            yearBuilt: prop.yearBuilt,
-            features: prop.features,
-            description: prop.description,
-            
-            // Investment details
-            confidence: prop.confidence || 'medium',
-            status: prop.status || 'active',
-            daysOnMarket: prop.daysOnMarket,
-            riskLevel: prop.riskLevel,
-            timeframe: prop.holdPeriod ? `${prop.holdPeriod} years` : prop.timeframe || 'Long-term',
-            holdPeriod: prop.holdPeriod,
-            
-            // Costs
-            cashRequired: prop.cashRequired || (prop.downPayment + (typeof prop.closingCosts === 'number' ? prop.closingCosts : 0) + (typeof prop.rehabCosts === 'number' ? prop.rehabCosts : 0)),
-            closingCosts: prop.closingCosts,
-            rehabCosts: prop.rehabCosts,
-            estimatedRehab: prop.estimatedRehab,
-            renovationCosts: prop.renovationCosts,
-            
-            // Images
-            images: prop.images || ["/api/placeholder/400/300"],
-            
-            // Comprehensive analysis data (from admin imports)
-            strategicOverview: prop.strategicOverview,
-            executiveSummary: prop.executiveSummary,
-            valueAddDescription: prop.valueAddDescription,
-            locationAnalysis: prop.locationAnalysis,
-            rentAnalysis: prop.rentAnalysis,
-            propertyMetrics: prop.propertyMetrics,
-            financingScenarios: prop.financingScenarios,
-            thirtyYearProjections: prop.thirtyYearProjections,
-            
-            // Keep all other fields
-            ...prop
-          }));
+          const formattedProperties = data.map((prop: Deal & Record<string, unknown>, index: number) => {
+            const { id: _id, ...restProp } = prop;
+            return {
+              // Keep all other fields first
+              ...restProp,
+              
+              // Core identifiers (override with our logic)
+              id: typeof prop.id === 'string' ? parseInt(prop.id) : prop.id || 1000 + index,
+              title: prop.title || prop.address,
+              address: prop.address,
+              
+              // Location data
+              location: prop.location || `${prop.city}, ${prop.state} ${prop.zipCode}`.trim(),
+              city: prop.city,
+              state: prop.state,
+              zipCode: prop.zipCode,
+              neighborhood: prop.neighborhood,
+              
+              // Property details
+              type: prop.type || prop.propertyType,
+              propertyType: prop.propertyType,
+              strategy: prop.strategy || prop.investmentStrategy,
+              investmentStrategy: prop.investmentStrategy,
+              price: prop.price,
+              
+              // Financial metrics - IMPORTANT: Pass all for proper display
+              downPayment: prop.downPayment,
+              downPaymentPercent: prop.downPaymentPercent,
+              monthlyRent: prop.monthlyRent,
+              monthlyCashFlow: prop.monthlyCashFlow, // CRITICAL: For house hack detection
+              cashFlow: prop.monthlyCashFlow || prop.cashFlow,
+              totalROI: prop.totalROI,
+              roi: prop.roi,
+              capRate: prop.capRate,
+              currentCapRate: prop.currentCapRate,
+              proFormaCapRate: prop.proFormaCapRate,
+              proFormaCashFlow: prop.proFormaCashFlow,
+              cashOnCashReturn: prop.cashOnCashReturn,
+              noi: prop.noi,
+              grossYield: prop.grossYield,
+              
+              // Property characteristics
+              bedrooms: prop.bedrooms,
+              bathrooms: prop.bathrooms,
+              sqft: prop.sqft || prop.squareFootage,
+              squareFootage: prop.squareFootage,
+              yearBuilt: prop.yearBuilt,
+              features: prop.features,
+              description: prop.description,
+              
+              // Investment details
+              confidence: prop.confidence || 'medium',
+              status: prop.status || 'active',
+              daysOnMarket: prop.daysOnMarket,
+              riskLevel: prop.riskLevel,
+              timeframe: prop.holdPeriod ? `${prop.holdPeriod} years` : prop.timeframe || 'Long-term',
+              holdPeriod: prop.holdPeriod,
+              
+              // Costs
+              cashRequired: prop.cashRequired || (prop.downPayment + (typeof prop.closingCosts === 'number' ? prop.closingCosts : 0) + (typeof prop.rehabCosts === 'number' ? prop.rehabCosts : 0)),
+              closingCosts: prop.closingCosts,
+              rehabCosts: prop.rehabCosts,
+              estimatedRehab: prop.estimatedRehab,
+              renovationCosts: prop.renovationCosts,
+              
+              // Images
+              images: prop.images || ["/api/placeholder/400/300"],
+              
+              // Comprehensive analysis data (from admin imports)
+              strategicOverview: prop.strategicOverview,
+              executiveSummary: prop.executiveSummary,
+              valueAddDescription: prop.valueAddDescription,
+              locationAnalysis: prop.locationAnalysis,
+              rentAnalysis: prop.rentAnalysis,
+              propertyMetrics: prop.propertyMetrics,
+              financingScenarios: prop.financingScenarios,
+              thirtyYearProjections: prop.thirtyYearProjections
+            };
+          });
           console.log('Dashboard: Formatted properties:', formattedProperties.length);
           console.log('Dashboard: First formatted property:', formattedProperties[0]);
           setDynamicProperties(formattedProperties);

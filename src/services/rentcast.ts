@@ -267,7 +267,7 @@ class RentCastService {
           const rentalData = await this.getRentalEstimate(address);
           if (rentalData && (rentalData as any).comparables) {
             comparables = (rentalData as any).comparables;
-            console.log('[RentCast] Found', comparables.length, 'rental comparables for estimation');
+            console.log('[RentCast] Found', comparables?.length || 0, 'rental comparables for estimation');
           }
         } catch (error) {
           console.log('[RentCast] Could not fetch rental comparables for estimation:', error);

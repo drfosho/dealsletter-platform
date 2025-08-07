@@ -118,7 +118,7 @@ export default function PremiumPropertyCard({
       deal.price, 
       deal.downPaymentPercent || 25,
       deal.monthlyRent || 0,
-      deal.interestRate ? deal.interestRate / 100 : undefined // Convert to decimal if provided
+      deal.interestRate ? Number(deal.interestRate) / 100 : undefined // Convert to decimal if provided
     ) : 0;
   
   // Get the total mortgage payment for display
@@ -126,7 +126,7 @@ export default function PremiumPropertyCard({
     calculateMonthlyMortgage(
       deal.price, 
       deal.downPaymentPercent || 25,
-      deal.interestRate ? deal.interestRate / 100 : undefined // Convert to decimal if provided
+      deal.interestRate ? Number(deal.interestRate) / 100 : undefined // Convert to decimal if provided
     ) : 0;
 
   // Get metric color with strategy-specific logic
@@ -239,18 +239,18 @@ export default function PremiumPropertyCard({
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-primary">
-                    {formatCurrency(deal.isOnMarket && deal.avm ? deal.avm : deal.price)}
+                    {formatCurrency(deal.isOnMarket && deal.avm ? Number(deal.avm) : deal.price)}
                   </div>
                   <div className="text-xs text-muted">
-                    {deal.isOnMarket && deal.avm && Math.abs(deal.avm - deal.price) > 50000 
+                    {deal.isOnMarket && deal.avm && Math.abs(Number(deal.avm) - deal.price) > 50000 
                       ? 'AVM Estimate' 
                       : 'Purchase Price'}
                   </div>
-                  {deal.isOnMarket && deal.avm && Math.abs(deal.avm - deal.price) > 50000 && (
+                  {deal.isOnMarket && deal.avm && Math.abs(Number(deal.avm) - deal.price) > 50000 ? (
                     <div className="text-xs text-amber-600 dark:text-amber-500 mt-1">
                       List: {formatCurrency(deal.price)}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -292,14 +292,14 @@ export default function PremiumPropertyCard({
                     </div>
                   </div>
                 )}
-                {deal.units && deal.units > 1 && deal.monthlyRent && (
+                {deal.units && Number(deal.units) > 1 && deal.monthlyRent ? (
                   <div>
                     <div className="text-xs text-muted mb-1">Rent/Unit</div>
                     <div className="font-semibold">
-                      {formatCurrency(Math.round(deal.monthlyRent / deal.units))}/mo
+                      {formatCurrency(Math.round(deal.monthlyRent / Number(deal.units)))}/mo
                     </div>
                   </div>
-                )}
+                ) : null}
                 {deal.monthlyCashFlow !== undefined && (
                   <div>
                     <div className="text-xs text-muted mb-1">
@@ -451,11 +451,11 @@ export default function PremiumPropertyCard({
                 {deal.bedrooms} BR / {deal.bathrooms} BA
               </span>
             )}
-            {deal.units && deal.units > 1 && (
+            {deal.units && Number(deal.units) > 1 ? (
               <span className="px-3 py-1 bg-blue-500/10 text-blue-700 rounded-full text-xs font-medium">
-                {deal.units} UNITS
+                {String(deal.units)} UNITS
               </span>
-            )}
+            ) : null}
           </div>
 
           {/* Key Metrics Grid */}

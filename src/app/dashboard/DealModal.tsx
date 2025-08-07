@@ -3522,7 +3522,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                   <h3 className="text-xl font-semibold text-primary mb-4">Property Overview</h3>
                   
                   {deal.isOnMarket && deal.listingPrice && deal.avm && 
-                   Math.abs((deal.listingPrice as number) - (deal.avm as number)) > 50000 && (
+                   Math.abs((deal.listingPrice as number) - (deal.avm as number)) > 50000 ? (
                     <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                       <div className="flex items-start">
                         <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3541,7 +3541,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
                         </div>
                       </div>
                     </div>
-                  )}
+                  ) : null}
                   
                   <div className="bg-card rounded-lg p-6 shadow-lg border border-border/20">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
