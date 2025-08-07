@@ -8,6 +8,7 @@ import ComprehensiveReviewModal from '@/components/ComprehensiveReviewModal';
 import ComprehensivePropertyView from '@/components/ComprehensivePropertyView';
 import BulkPropertyAnalysis from '@/components/admin/BulkPropertyAnalysis';
 import AdminPropertyImport from '@/components/admin/AdminPropertyImport';
+import ManualPropertyImport from '@/components/admin/ManualPropertyImport';
 import type { PropertyData } from '@/types/property';
 
 interface Property {
@@ -105,6 +106,7 @@ export default function AdminPropertiesPage() {
   const [comprehensiveProperty, setComprehensiveProperty] = useState<Property | null>(null);
   const [showBulkAnalysis, setShowBulkAnalysis] = useState(false);
   const [showAdminImport, setShowAdminImport] = useState(false);
+  const [showManualImport, setShowManualImport] = useState(false);
 
   // Fetch properties
   const fetchProperties = async () => {
@@ -465,8 +467,24 @@ export default function AdminPropertiesPage() {
           <div className="mb-6 flex gap-3 flex-wrap">
             <button
               onClick={() => {
+                setShowManualImport(!showManualImport);
+                setShowAdminImport(false);
+                setShowBulkAnalysis(false);
+              }}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                showManualImport 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-card border border-border hover:border-green-600'
+              }`}
+            >
+              {showManualImport ? 'Hide' : '➕ Add Property Manually'}
+            </button>
+
+            <button
+              onClick={() => {
                 setShowAdminImport(!showAdminImport);
                 setShowBulkAnalysis(false);
+                setShowManualImport(false);
               }}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                 showAdminImport 
@@ -481,6 +499,7 @@ export default function AdminPropertiesPage() {
               onClick={() => {
                 setShowBulkAnalysis(!showBulkAnalysis);
                 setShowAdminImport(false);
+                setShowManualImport(false);
               }}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                 showBulkAnalysis 
@@ -493,7 +512,15 @@ export default function AdminPropertiesPage() {
           </div>
 
           {/* Show appropriate tool based on selection */}
-          {showAdminImport ? (
+          {showManualImport ? (
+            <ManualPropertyImport 
+              onPropertyAdd={async () => {
+                // Refresh the properties list after adding
+                await fetchProperties();
+                setShowManualImport(false);
+              }}
+            />
+          ) : showAdminImport ? (
             <AdminPropertyImport />
           ) : showBulkAnalysis ? (
             <BulkPropertyAnalysis 
