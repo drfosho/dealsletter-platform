@@ -66,8 +66,9 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-auto">
-      <div className="bg-card rounded-2xl border border-border/60 shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
+      <div className="min-h-screen flex items-start justify-center p-4 md:p-8">
+        <div className="bg-card rounded-2xl border border-border/60 shadow-2xl max-w-7xl w-full my-8">
         {/* Header with Image Gallery */}
         <div className="relative">
           {/* Image Gallery */}
@@ -210,8 +211,8 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Content Area - Removed internal scroll */}
+        <div>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="p-8 space-y-8">
@@ -918,6 +919,7 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
           >
             Close
           </button>
+        </div>
         </div>
       </div>
     </div>

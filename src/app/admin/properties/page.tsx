@@ -8,7 +8,7 @@ import ComprehensiveReviewModal from '@/components/ComprehensiveReviewModal';
 import ComprehensivePropertyView from '@/components/ComprehensivePropertyView';
 import BulkPropertyAnalysis from '@/components/admin/BulkPropertyAnalysis';
 import AdminPropertyImport from '@/components/admin/AdminPropertyImport';
-import ManualPropertyImport from '@/components/admin/ManualPropertyImport';
+import PropertyEditModal from '@/components/admin/PropertyEditModal';
 import type { PropertyData } from '@/types/property';
 
 interface Property {
@@ -94,6 +94,8 @@ export default function AdminPropertiesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [editingPropertyId, setEditingPropertyId] = useState<string | number | null>(null);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Property | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [analysisText, setAnalysisText] = useState('');
@@ -106,7 +108,6 @@ export default function AdminPropertiesPage() {
   const [comprehensiveProperty, setComprehensiveProperty] = useState<Property | null>(null);
   const [showBulkAnalysis, setShowBulkAnalysis] = useState(false);
   const [showAdminImport, setShowAdminImport] = useState(false);
-  const [showManualImport, setShowManualImport] = useState(false);
 
   // Fetch properties
   const fetchProperties = async () => {
@@ -448,11 +449,37 @@ export default function AdminPropertiesPage() {
   });
 
   const handleEditClick = (propertyId: string | number) => {
-    setEditingPropertyId(propertyId);
+    const property = properties.find(p => p.id === propertyId);
+    if (property) {
+      setEditingProperty(property);
+      setShowEditModal(true);
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingPropertyId(null);
+    setEditingProperty(null);
+    setShowEditModal(false);
+  };
+
+  const handleSaveEditedProperty = async (updatedProperty: PropertyData) => {
+    try {
+      const response = await fetch('/api/admin/properties', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedProperty)
+      });
+      
+      if (!response.ok) throw new Error('Failed to update property');
+      
+      await fetchProperties();
+      setShowEditModal(false);
+      setEditingProperty(null);
+      alert('Property updated successfully!');
+    } catch (error) {
+      console.error('Error updating property:', error);
+      alert('Failed to update property');
+    }
   };
 
   return (
@@ -467,24 +494,8 @@ export default function AdminPropertiesPage() {
           <div className="mb-6 flex gap-3 flex-wrap">
             <button
               onClick={() => {
-                setShowManualImport(!showManualImport);
-                setShowAdminImport(false);
-                setShowBulkAnalysis(false);
-              }}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                showManualImport 
-                  ? 'bg-green-600 text-white' 
-                  : 'bg-card border border-border hover:border-green-600'
-              }`}
-            >
-              {showManualImport ? 'Hide' : '➕ Add Property Manually'}
-            </button>
-
-            <button
-              onClick={() => {
                 setShowAdminImport(!showAdminImport);
                 setShowBulkAnalysis(false);
-                setShowManualImport(false);
               }}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                 showAdminImport 
@@ -492,14 +503,13 @@ export default function AdminPropertiesPage() {
                   : 'bg-card border border-border hover:border-accent'
               }`}
             >
-              {showAdminImport ? 'Hide' : 'Show'} Admin Import
+              {showAdminImport ? 'Hide' : 'Show'} URL Import
             </button>
             
             <button
               onClick={() => {
                 setShowBulkAnalysis(!showBulkAnalysis);
                 setShowAdminImport(false);
-                setShowManualImport(false);
               }}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                 showBulkAnalysis 
@@ -512,15 +522,7 @@ export default function AdminPropertiesPage() {
           </div>
 
           {/* Show appropriate tool based on selection */}
-          {showManualImport ? (
-            <ManualPropertyImport 
-              onPropertyAdd={async () => {
-                // Refresh the properties list after adding
-                await fetchProperties();
-                setShowManualImport(false);
-              }}
-            />
-          ) : showAdminImport ? (
+          {showAdminImport ? (
             <AdminPropertyImport />
           ) : showBulkAnalysis ? (
             <BulkPropertyAnalysis 
@@ -629,16 +631,10 @@ export default function AdminPropertiesPage() {
                 key={property.id}
                 deal={convertToDeal(property)}
                 viewMode={viewMode}
-                isEditing={editingPropertyId === property.id}
+                isEditing={false}
                 showAdminControls={true}
                 onEdit={() => handleEditClick(property.id)}
                 onDelete={() => handleDelete(property.id)}
-                onSave={(updatedDeal) => handleSaveProperty(property.id, {
-                  ...property,
-                  ...updatedDeal,
-                  id: property.id
-                })}
-                onCancel={handleCancelEdit}
                 onViewDetails={() => {
                   // Check if property has comprehensive data
                   if (property.strategicOverview || property.thirtyYearProjections || property.locationAnalysis) {
@@ -691,6 +687,17 @@ export default function AdminPropertiesPage() {
         onClose={() => {
           setShowComprehensiveView(false);
           setComprehensiveProperty(null);
+        }}
+      />
+
+      {/* Property Edit Modal */}
+      <PropertyEditModal
+        isOpen={showEditModal}
+        property={editingProperty}
+        onSave={handleSaveEditedProperty}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingProperty(null);
         }}
       />
     </div>
