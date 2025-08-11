@@ -28,6 +28,16 @@ const blogPosts: BlogPost[] = [
     slug: 'la-real-estate-market-2025'
   },
   {
+    id: '7',
+    title: 'CRE Market Deep Dive: Office is a bloodbath, industrial holding strong, retail surprisingly stable',
+    excerpt: 'The most fragmented CRE market in 15+ years. Office vacancy hits 20.8%, $957B in loans maturing, but industrial and data centers are printing money. Here&apos;s our complete sector-by-sector breakdown with the numbers that matter.',
+    date: 'January 11, 2025',
+    readTime: '12 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/CRE BLOG HEADER.png',
+    slug: 'cre-market-deep-dive-2025'
+  },
+  {
     id: '1',
     title: 'Missouri Just Changed the Game for Investors &mdash; Here&apos;s What It Means for You',
     excerpt: 'Missouri is about to become the first state in the nation to completely eliminate capital gains tax for individuals. This massive shift will impact how smart investors think about where they do business.',
@@ -268,7 +278,7 @@ export default function BlogPage() {
 
           {/* Article Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {blogPosts.filter(post => post.id !== '6').map((post) => (
+            {blogPosts.slice(1).map((post) => (
               <article key={post.id} className="bg-card rounded-xl border border-border/60 overflow-hidden hover:shadow-xl transition-all duration-300 group">
                 <div className="h-48 relative bg-muted/10">
                   {post.slug === 'big-beautiful-bill-tax-reform' ? (
@@ -282,6 +292,13 @@ export default function BlogPage() {
                     <Image
                       src="/logos/ARTICLE 3.png"
                       alt="Property Deals Recap"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'cre-market-deep-dive-2025' ? (
+                    <Image
+                      src="/logos/CRE BLOG HEADER.png"
+                      alt="CRE Market Analysis"
                       fill
                       className="object-cover"
                     />
