@@ -93,7 +93,7 @@ export default function AdminPropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [editingPropertyId, setEditingPropertyId] = useState<string | number | null>(null);
+  const [_editingPropertyId, setEditingPropertyId] = useState<string | number | null>(null);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Property | null>(null);
@@ -149,7 +149,7 @@ export default function AdminPropertiesPage() {
   };
 
   // Handle property update
-  const handleSaveProperty = async (propertyId: string | number, updatedProperty: Property) => {
+  const _handleSaveProperty = async (propertyId: string | number, updatedProperty: Property) => {
     try {
       const response = await fetch('/api/admin/properties', {
         method: 'PUT',
@@ -456,7 +456,7 @@ export default function AdminPropertiesPage() {
     }
   };
 
-  const handleCancelEdit = () => {
+  const _handleCancelEdit = () => {
     setEditingPropertyId(null);
     setEditingProperty(null);
     setShowEditModal(false);

@@ -69,7 +69,7 @@ export default function PropertyEditModal({ isOpen, property, onSave, onClose }:
       
       setImageUrls([...imageUrls, url]);
       setNewImageUrl('');
-    } catch (error) {
+    } catch {
       alert('Please enter a valid URL');
     }
   };
