@@ -1,315 +1,429 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
-import Navigation from '@/components/Navigation';
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import Logo from '@/components/Logo'
+import { Check } from 'lucide-react'
+import { loadStripe } from '@stripe/stripe-js'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface PricingTier {
-  id: string;
-  name: string;
-  icon: string;
-  price: number;
-  period: string;
-  description: string;
-  features: string[];
-  personalAnalysis: string;
-  highlighted?: boolean;
-  buttonText: string;
-  buttonStyle: string;
+  name: string
+  price: number
+  description: string
+  features: string[]
+  limitations?: string[]
+  ctaText: string
+  popular?: boolean
+  color: string
+  icon: string
+  priceId?: string
+  analysisLimit: number | 'unlimited'
 }
 
+const pricingTiers: PricingTier[] = [
+  {
+    name: 'FREE',
+    price: 0,
+    description: 'Perfect for browsing and exploring deals',
+    features: [
+      'View all curated deals (unlimited)',
+      'Basic deal comparison',
+      '30-day archive access',
+      'Market trend insights',
+      'Newsletter subscription'
+    ],
+    ctaText: 'Get Started Free',
+    color: 'from-green-500 to-emerald-500',
+    icon: '🟢',
+    analysisLimit: 0
+  },
+  {
+    name: 'STARTER',
+    price: 29,
+    description: 'For serious investors getting started',
+    features: [
+      'Everything in Free',
+      '12 personal property analyses per month',
+      'Deal alerts and filters',
+      'PDF exports',
+      'Email support',
+      '14-day free trial'
+    ],
+    ctaText: 'Start Free Trial',
+    color: 'from-blue-500 to-cyan-500',
+    icon: '🔵',
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    analysisLimit: 12
+  },
+  {
+    name: 'PRO',
+    price: 69,
+    description: 'For active investors and professionals',
+    features: [
+      'Everything in Starter',
+      '35 personal property analyses per month',
+      'Advanced analytics dashboard',
+      'Early deal access (24hrs before others)',
+      'Priority support',
+      'Market reports',
+      '14-day free trial'
+    ],
+    ctaText: 'Start Free Trial',
+    popular: true,
+    color: 'from-purple-500 to-pink-500',
+    icon: '🚀',
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+    analysisLimit: 35
+  },
+  {
+    name: 'PREMIUM',
+    price: 159,
+    description: 'For power users and investment firms',
+    features: [
+      'Everything in Pro',
+      'Unlimited analyses* (fair use policy)',
+      'Weekly strategy sessions',
+      'Custom deal sourcing',
+      'Phone support',
+      'API access',
+      'Team collaboration tools',
+      '14-day free trial'
+    ],
+    limitations: [
+      '*Fair use: Overage at $2 per analysis beyond reasonable usage'
+    ],
+    ctaText: 'Start Free Trial',
+    color: 'from-amber-500 to-orange-500',
+    icon: '💎',
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
+    analysisLimit: 'unlimited'
+  }
+]
+
 export default function PricingPage() {
-  const { user } = useAuth();
-  const [isAnnual, setIsAnnual] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null)
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
+  const router = useRouter()
 
-  const pricingTiers: PricingTier[] = [
-    {
-      id: 'basic',
-      name: 'BASIC',
-      icon: '📊',
-      price: isAnnual ? 24 : 29,
-      period: 'month',
-      description: 'Perfect for getting started with real estate investing',
-      personalAnalysis: '0',
-      features: [
-        'View ALL curated deals (unlimited)',
-        'Deal archive and comparison tools',
-        'Basic market insights',
-        'Email support',
-        'Mobile app access'
-      ],
-      buttonText: 'Get Started',
-      buttonStyle: 'bg-muted/20 text-primary hover:bg-muted/30'
-    },
-    {
-      id: 'pro',
-      name: 'PRO',
-      icon: '🚀',
-      price: isAnnual ? 66 : 79,
-      period: 'month',
-      description: 'Advanced tools for serious investors',
-      personalAnalysis: '15 properties/month',
-      features: [
-        'Everything in Basic',
-        'Personal Analysis: 15 properties/month',
-        'Advanced analytics dashboard',
-        'Deal alerts with filters',
-        'PDF exports and sharing',
-        'Priority email support',
-        'Historical deal data'
-      ],
-      highlighted: true,
-      buttonText: 'Start Pro',
-      buttonStyle: 'bg-primary text-secondary hover:bg-primary/90'
-    },
-    {
-      id: 'premium',
-      name: 'PREMIUM',
-      icon: '💎',
-      price: isAnnual ? 166 : 199,
-      period: 'month',
-      description: 'Complete solution for professional investors',
-      personalAnalysis: 'Unlimited',
-      features: [
-        'Everything in Pro',
-        'Personal Analysis: Unlimited',
-        'Weekly new deal notifications',
-        'Monthly group strategy calls',
-        'Phone support',
-        'Custom deal sourcing',
-        'API access',
-        'White-label reports'
-      ],
-      buttonText: 'Go Premium',
-      buttonStyle: 'bg-accent text-white hover:bg-accent/90'
+  const handleSubscribe = async (tier: PricingTier) => {
+    if (tier.price === 0) {
+      // Handle free tier - just redirect to signup
+      router.push('/auth/signup')
+      return
     }
-  ];
 
-  const handleSubscribe = (tierId: string) => {
-    // TODO: Integrate with Stripe
-    console.log(`Subscribe to ${tierId} tier`);
-    if (!user) {
-      // Redirect to signup with selected plan
-      window.location.href = `/auth/signup?plan=${tierId}`;
-    } else {
-      // Handle subscription for logged-in user
-      alert(`Subscription feature coming soon! Selected: ${tierId.toUpperCase()}`);
+    setLoading(tier.name)
+    
+    try {
+      // Call our API to create a checkout session
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: tier.priceId,
+          tierName: tier.name,
+        }),
+      })
+
+      const { sessionId, error } = await response.json()
+
+      if (error) {
+        console.error('Error creating checkout session:', error)
+        alert('Something went wrong. Please try again.')
+        return
+      }
+
+      // Redirect to Stripe Checkout
+      const stripe = await stripePromise
+      if (!stripe) {
+        console.error('Stripe not loaded')
+        return
+      }
+
+      const { error: stripeError } = await stripe.redirectToCheckout({
+        sessionId,
+      })
+
+      if (stripeError) {
+        console.error('Stripe redirect error:', stripeError)
+        alert('Something went wrong. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Something went wrong. Please try again.')
+    } finally {
+      setLoading(null)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation variant="default" />
-
-      {/* Hero Section */}
-      <section className="py-16 bg-gradient-to-br from-background to-muted/5">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
-            Choose Your Investment Plan
-          </h1>
-          <p className="text-xl text-muted mb-8 max-w-3xl mx-auto">
-            Get access to curated real estate deals, advanced analytics, and personalized insights. 
-            Start building your portfolio today.
-          </p>
+      {/* Navigation */}
+      <nav className="fixed top-0 w-full px-6 py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Link href="/" className="hover:opacity-80 transition-opacity">
+              <div className="relative">
+                <Logo 
+                  width={300}
+                  height={75}
+                  className="h-12 md:h-16 w-auto"
+                  priority
+                />
+                <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+              </div>
+            </Link>
+          </div>
           
-          {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-3 mb-12 px-4">
-            <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-primary' : 'text-muted'}`}>
-              Monthly
-            </span>
-            <button
-              onClick={() => setIsAnnual(!isAnnual)}
-              className="relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-muted/30 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-              role="switch"
-              aria-checked={isAnnual}
-            >
-              <span className="sr-only">Toggle annual billing</span>
-              <span
-                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-primary shadow-lg ring-0 transition duration-200 ease-in-out ${
-                  isAnnual ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-            <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-primary' : 'text-muted'}`}>
-              Annual
-            </span>
-            {isAnnual && (
-              <span className="ml-2 inline-flex items-center rounded-md bg-green-500/20 px-2.5 py-1 text-xs font-medium text-green-600 whitespace-nowrap">
-                Save 17%
-              </span>
-            )}
+          <div className="hidden md:flex items-center space-x-6">
+            <Link href="/" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
+              Home
+            </Link>
+            <Link href="/blog" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
+              Blog
+            </Link>
+            <Link href="/pricing" className="px-6 py-3 text-primary transition-colors font-medium">
+              Pricing
+            </Link>
+            <Link href="/contact" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
+              Contact
+            </Link>
+            <Link href="/auth/login" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
+              Log In
+            </Link>
+            <Link href="/auth/signup" className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium">
+              Get Started
+            </Link>
           </div>
         </div>
-      </section>
+      </nav>
 
-      {/* Pricing Cards */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {pricingTiers.map((tier) => (
-              <div
-                key={tier.id}
-                className={`bg-card rounded-xl border transition-all duration-200 hover:shadow-lg ${
-                  tier.highlighted 
-                    ? 'border-accent shadow-lg scale-105' 
-                    : 'border-border/60 hover:border-accent/50'
+      {/* Pricing Content */}
+      <div className="pt-32 px-6 pb-20">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
+              Choose Your Investment Edge
+            </h1>
+            <p className="text-lg text-muted max-w-2xl mx-auto">
+              From browsing deals to unlimited analysis, we have a plan that fits your investment strategy
+            </p>
+
+            {/* Billing Toggle */}
+            <div className="mt-8 inline-flex items-center bg-card rounded-lg border border-border/60 p-1">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  billingCycle === 'monthly'
+                    ? 'bg-primary text-secondary'
+                    : 'text-muted hover:text-primary'
                 }`}
               >
-                {tier.highlighted && (
-                  <div className="bg-accent text-white text-center py-3 rounded-t-xl">
-                    <span className="text-sm font-semibold">MOST POPULAR</span>
-                  </div>
-                )}
-                
-                <div className="p-8">
-                  {/* Header */}
-                  <div className="text-center mb-6">
-                    <div className="text-4xl mb-2">{tier.icon}</div>
-                    <h3 className="text-xl font-bold text-primary mb-2">{tier.name}</h3>
-                    <p className="text-sm text-muted mb-4">{tier.description}</p>
-                    
-                    <div className="flex items-baseline justify-center gap-1 mb-2">
-                      <span className="text-3xl font-bold text-primary">${tier.price}</span>
-                      <span className="text-muted">/{tier.period}</span>
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle('yearly')}
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  billingCycle === 'yearly'
+                    ? 'bg-primary text-secondary'
+                    : 'text-muted hover:text-primary'
+                }`}
+              >
+                Yearly
+                <span className="ml-2 text-xs bg-accent/20 text-accent px-2 py-1 rounded-full">
+                  Save 20%
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Pricing Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {pricingTiers.map((tier) => {
+              const displayPrice = billingCycle === 'yearly' 
+                ? Math.floor(tier.price * 0.8 * 12) 
+                : tier.price
+
+              return (
+                <div
+                  key={tier.name}
+                  className={`relative bg-card rounded-2xl border ${
+                    tier.popular
+                      ? 'border-primary shadow-xl scale-105'
+                      : 'border-border/60'
+                  } p-6 hover:shadow-xl transition-all duration-300`}
+                >
+                  {tier.popular && (
+                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                      <span className="px-4 py-1 bg-primary text-secondary rounded-full text-sm font-semibold">
+                        MOST POPULAR
+                      </span>
                     </div>
-                    
-                    {isAnnual && (
-                      <p className="text-xs text-green-600">
-                        Save ${((tier.price / 0.83) - tier.price).toFixed(0)}/month
-                      </p>
+                  )}
+
+                  {/* Icon and Name */}
+                  <div className="mb-4">
+                    <div className="text-4xl mb-2">{tier.icon}</div>
+                    <h3 className="text-2xl font-bold text-primary">{tier.name}</h3>
+                    <p className="text-sm text-muted mt-1">{tier.description}</p>
+                  </div>
+
+                  {/* Price */}
+                  <div className="mb-6">
+                    <div className="flex items-baseline">
+                      {billingCycle === 'yearly' && tier.price > 0 ? (
+                        <>
+                          <span className="text-4xl font-bold text-primary">
+                            ${displayPrice}
+                          </span>
+                          <span className="text-muted ml-2">/year</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-4xl font-bold text-primary">
+                            ${tier.price}
+                          </span>
+                          <span className="text-muted ml-2">/month</span>
+                        </>
+                      )}
+                    </div>
+                    {billingCycle === 'yearly' && tier.price > 0 && (
+                      <div className="text-sm text-muted mt-1">
+                        <span className="line-through">${tier.price * 12}</span>
+                        <span className="text-accent ml-2">
+                          Save ${tier.price * 12 - displayPrice}
+                        </span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Personal Analysis Highlight */}
-                  <div className="bg-muted/10 rounded-lg p-4 mb-6 text-center">
-                    <p className="text-sm text-muted mb-1">Personal Analysis</p>
-                    <p className="text-lg font-semibold text-primary">{tier.personalAnalysis}</p>
+                  {/* Analysis Limit Badge */}
+                  <div className="mb-4">
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r ${tier.color} text-white`}>
+                      {tier.analysisLimit === 'unlimited' 
+                        ? 'Unlimited Analyses*' 
+                        : tier.analysisLimit === 0
+                        ? 'View Deals Only'
+                        : `${tier.analysisLimit} Analyses/month`}
+                    </div>
                   </div>
 
                   {/* Features */}
-                  <ul className="space-y-3 mb-8">
+                  <ul className="space-y-3 mb-6">
                     {tier.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                      <li key={index} className="flex items-start">
+                        <Check className="w-5 h-5 text-accent mr-2 flex-shrink-0 mt-0.5" />
                         <span className="text-sm text-muted">{feature}</span>
                       </li>
                     ))}
                   </ul>
 
+                  {/* Limitations */}
+                  {tier.limitations && (
+                    <div className="mb-4 p-3 bg-muted/5 rounded-lg">
+                      {tier.limitations.map((limitation, index) => (
+                        <p key={index} className="text-xs text-muted italic">
+                          {limitation}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
                   {/* CTA Button */}
                   <button
-                    onClick={() => handleSubscribe(tier.id)}
-                    className={`w-full px-6 py-3 rounded-lg font-medium transition-colors ${tier.buttonStyle}`}
+                    onClick={() => handleSubscribe(tier)}
+                    disabled={loading === tier.name}
+                    className={`w-full py-3 px-6 rounded-lg font-medium transition-all ${
+                      tier.popular
+                        ? 'bg-primary text-secondary hover:bg-primary/90'
+                        : tier.price === 0
+                        ? 'bg-accent text-secondary hover:bg-accent/90'
+                        : 'bg-muted/10 text-primary hover:bg-muted/20 border border-border/60'
+                    } ${loading === tier.name ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    {tier.buttonText}
+                    {loading === tier.name ? 'Processing...' : tier.ctaText}
                   </button>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
-        </div>
-      </section>
 
-      {/* FAQ Section */}
-      <section className="py-16 bg-muted/5">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-primary text-center mb-12">
-            Frequently Asked Questions
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">
-                  What&apos;s included in Personal Analysis?
-                </h3>
-                <p className="text-muted">
-                  Detailed financial analysis including cash flow projections, ROI calculations, 
-                  cap rates, and investment recommendations tailored to your criteria.
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">
-                  Can I upgrade or downgrade anytime?
-                </h3>
-                <p className="text-muted">
-                  Yes! You can change your plan at any time. Upgrades take effect immediately, 
-                  and downgrades take effect at your next billing cycle.
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">
-                  Is there a free trial?
-                </h3>
-                <p className="text-muted">
-                  We offer a 7-day free trial for all plans. No credit card required to start your trial.
-                </p>
-              </div>
-            </div>
+          {/* FAQ Section */}
+          <div className="mt-20 max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold text-primary text-center mb-8">
+              Frequently Asked Questions
+            </h2>
             
             <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">
-                  What payment methods do you accept?
+              <div className="bg-card rounded-xl border border-border/60 p-6">
+                <h3 className="font-semibold text-primary mb-2">
+                  What's included in the free trial?
                 </h3>
                 <p className="text-muted">
-                  We accept all major credit cards, PayPal, and ACH transfers for annual plans.
+                  All paid plans include a 14-day free trial with full access to all features. No credit card required to start.
                 </p>
               </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">
-                  How often are deals updated?
+
+              <div className="bg-card rounded-xl border border-border/60 p-6">
+                <h3 className="font-semibold text-primary mb-2">
+                  What counts as a property analysis?
                 </h3>
                 <p className="text-muted">
-                  Our team curates and adds new deals daily. Premium members get early access 
-                  to the best opportunities.
+                  Each time you run a detailed analysis on a property (cash flow, ROI calculations, market comparisons), it counts as one analysis. Viewing curated deals doesn't count towards your limit.
                 </p>
               </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold text-primary mb-2">
-                  Need help choosing a plan?
+
+              <div className="bg-card rounded-xl border border-border/60 p-6">
+                <h3 className="font-semibold text-primary mb-2">
+                  Can I change plans anytime?
                 </h3>
                 <p className="text-muted">
-                  Contact our team for a personalized recommendation based on your investment goals.
+                  Yes! You can upgrade or downgrade your plan at any time. Changes take effect on your next billing cycle.
+                </p>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border/60 p-6">
+                <h3 className="font-semibold text-primary mb-2">
+                  What's the fair use policy for Premium?
+                </h3>
+                <p className="text-muted">
+                  Premium includes unlimited analyses under fair use. If you exceed 200 analyses/month, additional analyses are $2 each. This ensures the service remains fast for all users.
                 </p>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-16">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-primary mb-4">
-            Ready to Start Investing?
-          </h2>
-          <p className="text-xl text-muted mb-8">
-            Join thousands of investors who are building wealth through real estate.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link 
-              href="/auth/signup" 
-              className="px-8 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
-            >
-              Start Free Trial
-            </Link>
-            <Link 
-              href="/contact" 
-              className="px-8 py-3 bg-muted/20 text-primary rounded-lg hover:bg-muted/30 transition-colors font-medium"
-            >
-              Contact Sales
-            </Link>
+          {/* Bottom CTA */}
+          <div className="mt-20 text-center bg-primary/5 rounded-2xl border border-primary/20 p-12">
+            <h2 className="text-3xl font-bold text-primary mb-4">
+              Ready to Level Up Your Real Estate Investing?
+            </h2>
+            <p className="text-muted mb-8 max-w-2xl mx-auto">
+              Join thousands of investors using Dealsletter to find and analyze the best deals. Start your free trial today.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/auth/signup"
+                className="px-8 py-4 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-all font-medium text-lg"
+              >
+                Start Free Trial
+              </Link>
+              <Link
+                href="/contact"
+                className="px-8 py-4 bg-card text-primary rounded-lg hover:bg-muted/10 transition-all font-medium text-lg border border-border/60"
+              >
+                Contact Sales
+              </Link>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
-  );
+  )
 }

@@ -1,82 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { propertyAPI } from '@/services/property-api';
-import { logError } from '@/utils/error-utils';
-import Anthropic from '@anthropic-ai/sdk';
-import { getAdminConfig } from '@/lib/admin-config';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { propertyAPI } from '@/services/property-api'
+import { logError } from '@/utils/error-utils'
+import Anthropic from '@anthropic-ai/sdk'
+import { getAdminConfig } from '@/lib/admin-config'
+import { checkSubscriptionLimit, incrementAnalysisUsage } from '@/lib/subscription-guard'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+})
 
 export async function POST(request: NextRequest) {
   try {
-    // Create Supabase client
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          },
-        },
-      }
-    );
+    const supabase = await createClient()
 
     // Check authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
-      );
-    }
-
-    // Check usage limits
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-    const { data: usage } = await supabase
-      .from('user_usage')
-      .select('analyses_count')
-      .eq('user_id', user.id)
-      .eq('month_year', currentMonth)
-      .single();
-
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('subscription_tier')
-      .eq('id', user.id)
-      .single();
-
-    const { data: tier } = await supabase
-      .from('subscription_tiers')
-      .select('monthly_analysis_limit')
-      .eq('name', profile?.subscription_tier || 'free')
-      .single();
-
-    // Check if user is admin
-    const adminConfig = getAdminConfig(user.email);
-    
-    const limit = adminConfig.bypassSubscriptionLimits ? 9999 : (tier?.monthly_analysis_limit || 5);
-    const currentUsage = usage?.analyses_count || 0;
-
-    if (!adminConfig.bypassSubscriptionLimits && limit !== -1 && currentUsage >= limit) {
-      return NextResponse.json(
-        { error: 'Monthly analysis limit reached. Please upgrade your plan.' },
-        { status: 403 }
-      );
+      )
     }
 
     // Parse request body
-    const body = await request.json();
-    const { address, strategy, purchasePrice, downPayment, loanTerms, rehabCosts } = body;
+    const body = await request.json()
+    const { address, strategy, purchasePrice, downPayment, loanTerms, rehabCosts } = body
+
+    // Check if user is admin
+    const adminConfig = getAdminConfig(user.email)
+    
+    // Check subscription limits (skip for admins)
+    if (!adminConfig.bypassSubscriptionLimits) {
+      const subscriptionCheck = await checkSubscriptionLimit(user.id)
+      
+      if (!subscriptionCheck.allowed) {
+        return NextResponse.json(
+          { 
+            error: subscriptionCheck.message,
+            tier: subscriptionCheck.tier,
+            requiresUpgrade: true,
+            upgradeUrl: '/pricing'
+          },
+          { status: 403 }
+        )
+      }
+    }
 
     // Fetch property data
     const propertyData = await propertyAPI.searchProperty({
@@ -84,10 +53,10 @@ export async function POST(request: NextRequest) {
       includeRentEstimates: true,
       includeComparables: true,
       includeMarketData: true
-    });
+    })
 
     // Generate AI analysis
-    const analysisPrompt = prepareAnalysisContext(propertyData, body);
+    const analysisPrompt = prepareAnalysisContext(propertyData, body)
     const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 2000,
@@ -99,10 +68,10 @@ export async function POST(request: NextRequest) {
           content: analysisPrompt
         }
       ]
-    });
+    })
 
-    const analysisText = response.content[0].type === 'text' ? response.content[0].text : '';
-    const analysisData = parseAnalysisResponse(analysisText, strategy);
+    const analysisText = response.content[0].type === 'text' ? response.content[0].text : ''
+    const analysisData = parseAnalysisResponse(analysisText, strategy)
 
     // Save analysis to database
     const { data: analysis, error: insertError } = await supabase
@@ -119,79 +88,88 @@ export async function POST(request: NextRequest) {
         rehab_costs: rehabCosts || 0
       })
       .select()
-      .single();
+      .single()
 
     if (insertError) {
-      throw insertError;
+      throw insertError
     }
 
-    return NextResponse.json(analysis);
+    // Increment usage count (skip for admins)
+    if (!adminConfig.bypassSubscriptionLimits) {
+      await incrementAnalysisUsage(
+        user.id,
+        analysis.id,
+        address
+      )
+    }
+
+    return NextResponse.json(analysis)
 
   } catch (error) {
-    logError('Create Analysis API', error);
+    logError('Create Analysis API', error)
     return NextResponse.json(
       { error: 'Failed to create analysis', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
-    );
+    )
   }
 }
 
 interface AnalysisRequest {
-  strategy: string;
-  purchasePrice: number;
-  downPayment: number;
+  strategy: string
+  purchasePrice: number
+  downPayment: number
   loanTerms: {
-    interestRate: number;
-    loanTerm: number;
-  };
-  rehabCosts?: number;
+    interestRate: number
+    loanTerm: number
+  }
+  rehabCosts?: number
 }
 
 interface PropertyDataResponse {
   property: {
-    addressLine1: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    propertyType: string;
-    squareFootage: number;
-    bedrooms: number;
-    bathrooms: number;
-    yearBuilt: number;
+    addressLine1: string
+    city: string
+    state: string
+    zipCode: string
+    propertyType: string
+    squareFootage: number
+    bedrooms: number
+    bathrooms: number
+    yearBuilt: number
   } | Array<{
-    addressLine1: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    propertyType: string;
-    squareFootage: number;
-    bedrooms: number;
-    bathrooms: number;
-    yearBuilt: number;
-  }>;
+    addressLine1: string
+    city: string
+    state: string
+    zipCode: string
+    propertyType: string
+    squareFootage: number
+    bedrooms: number
+    bathrooms: number
+    yearBuilt: number
+  }>
   rental?: {
-    rent?: number;
-    rentRangeLow?: number;
-    rentRangeHigh?: number;
-  };
+    rent?: number
+    rentRangeLow?: number
+    rentRangeHigh?: number
+  }
   comparables?: {
-    value?: number;
-    valueRangeLow?: number;
-    valueRangeHigh?: number;
-  };
+    value?: number
+    valueRangeLow?: number
+    valueRangeHigh?: number
+  }
   market?: {
     saleData?: {
-      medianPrice?: number;
-    };
+      medianPrice?: number
+    }
     rentalData?: {
-      medianRent?: number;
-    };
-  };
+      medianRent?: number
+    }
+  }
 }
 
 function prepareAnalysisContext(propertyData: PropertyDataResponse, request: AnalysisRequest): string {
-  const { property, rental, comparables, market } = propertyData;
-  const prop = Array.isArray(property) ? property[0] : property;
+  const { property, rental, comparables, market } = propertyData
+  const prop = Array.isArray(property) ? property[0] : property
   
   return `Analyze this property for a ${request.strategy} investment strategy:
 
@@ -226,34 +204,34 @@ Provide a comprehensive investment analysis including:
 5. Risk Assessment
 6. Investment Recommendation
 
-Format your response with clear sections and specific numbers.`;
+Format your response with clear sections and specific numbers.`
 }
 
 interface ParsedAnalysis {
-  summary: string;
-  marketPosition: string;
+  summary: string
+  marketPosition: string
   financialProjections: {
-    cashFlow: number;
-    capRate: number;
-    roi: number;
-    cocReturn: number;
-    details: string;
-  };
+    cashFlow: number
+    capRate: number
+    roi: number
+    cocReturn: number
+    details: string
+  }
   strategyAnalysis: {
-    type: string;
-    details: string;
-  };
+    type: string
+    details: string
+  }
   riskAssessment: {
-    factors: string[];
-    details: string;
-  };
-  recommendation: string;
-  fullAnalysis: string;
+    factors: string[]
+    details: string
+  }
+  recommendation: string
+  fullAnalysis: string
 }
 
 function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAnalysis {
   // Simple parsing - in production, you'd want more sophisticated parsing
-  const sections = analysisText.split('\n\n');
+  const sections = analysisText.split('\n\n')
   
   return {
     summary: sections[0] || 'Analysis completed',
@@ -275,5 +253,5 @@ function parseAnalysisResponse(analysisText: string, strategy: string): ParsedAn
     },
     recommendation: sections[5] || 'Investment recommendation available',
     fullAnalysis: analysisText
-  };
+  }
 }
