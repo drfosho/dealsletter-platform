@@ -9,6 +9,7 @@ interface PropertyCardProps {
   deal: {
     id: number;
     title: string;
+    address?: string;
     location: string;
     type: string;
     strategy: string;
@@ -26,6 +27,8 @@ interface PropertyCardProps {
     capRate?: string | number;
     proFormaCashFlow?: string;
     monthlyCashFlow?: number;
+    rehabCosts?: number;
+    flipROI?: number;
     [key: string]: unknown;
   };
   viewMode?: 'grid' | 'list';
@@ -99,7 +102,7 @@ export default function PropertyCard({ deal, viewMode = 'grid', onViewDetails, i
       <div className={viewMode === 'grid' ? 'p-6' : ''}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-primary mb-1">{deal.title}</h3>
+            <h3 className="text-lg font-semibold text-primary mb-1">{deal.address || deal.title}</h3>
             <p className="text-sm text-muted mb-2">{deal.location}</p>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="px-2 py-1 bg-accent/10 text-accent rounded-md text-xs font-medium">
@@ -140,6 +143,13 @@ export default function PropertyCard({ deal, viewMode = 'grid', onViewDetails, i
             <span className="font-semibold text-primary">${deal.downPayment.toLocaleString()}</span>
           </div>
           
+          {deal.rehabCosts && deal.rehabCosts > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted">Rehab Costs</span>
+              <span className="font-semibold text-orange-600">${deal.rehabCosts.toLocaleString()}</span>
+            </div>
+          )}
+          
           {(deal.proFormaCapRate || deal.capRate) && (
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted">Pro Forma Cap</span>
@@ -150,11 +160,13 @@ export default function PropertyCard({ deal, viewMode = 'grid', onViewDetails, i
             </div>
           )}
           
-          {(deal.roi || deal.totalROI) && (
+          {(deal.roi || deal.totalROI || deal.flipROI) && (
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted">ROI</span>
+              <span className="text-sm text-muted">{deal.strategy === 'Fix & Flip' || deal.strategy === 'Flip' ? 'Flip ROI' : 'ROI'}</span>
               <span className="font-semibold text-green-600">
-                {deal.roi || `${(deal.totalROI || 0).toFixed(1)}%`}
+                {deal.flipROI && (deal.strategy === 'Fix & Flip' || deal.strategy === 'Flip') 
+                  ? `${deal.flipROI}%`
+                  : (deal.roi || `${(deal.totalROI || 0).toFixed(1)}%`)}
               </span>
             </div>
           )}

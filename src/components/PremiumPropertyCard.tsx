@@ -18,6 +18,7 @@ interface PremiumPropertyCardProps {
   deal: {
     id: number;
     title: string;
+    address?: string;
     location: string;
     type: string;
     strategy: string;
@@ -234,7 +235,7 @@ export default function PremiumPropertyCard({
             <div className="flex-1">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-primary mb-1">{deal.title}</h3>
+                  <h3 className="text-lg font-semibold text-primary mb-1">{deal.address || deal.title}</h3>
                   <p className="text-sm text-muted">{deal.location}</p>
                 </div>
                 <div className="text-right">
@@ -423,7 +424,7 @@ export default function PremiumPropertyCard({
           <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
             <div className="flex items-end justify-between">
               <div className="text-white">
-                <h3 className="text-xl font-bold mb-1">{deal.title}</h3>
+                <h3 className="text-xl font-bold mb-1">{deal.address || deal.title}</h3>
                 <p className="text-sm opacity-90">{deal.location}</p>
               </div>
               <div className="text-right text-white">

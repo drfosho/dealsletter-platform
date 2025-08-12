@@ -318,14 +318,24 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                     {[
                       { label: 'Down Payment', value: formatCurrency(property.downPayment) },
                       { label: 'Down Payment %', value: formatPercent(property.downPaymentPercent, 0) },
+                      ...(property.rehabCosts && property.rehabCosts > 0 ? [{ 
+                        label: 'Rehab Costs', 
+                        value: formatCurrency(property.rehabCosts),
+                        color: 'text-orange-600'
+                      }] : []),
                       { label: 'Monthly Rent', value: formatCurrency(property.monthlyRent) },
                       { label: 'Cash Required', value: formatCurrency(property.cashRequired) },
                       { label: 'Pro Forma Cap', value: formatPercent(property.proFormaCapRate) },
                       { label: 'Cash-on-Cash', value: formatPercent(property.cashOnCashReturn) },
+                      ...((property.strategy === 'Fix & Flip' || property.strategy === 'Flip') && property.flipROI ? [{
+                        label: 'Flip ROI',
+                        value: formatPercent(property.flipROI),
+                        color: 'text-green-600'
+                      }] : []),
                     ].map(item => (
                       <div key={item.label} className="flex justify-between items-center py-2 border-b border-border/30 last:border-0">
                         <dt className="text-sm text-muted">{item.label}:</dt>
-                        <dd className="font-medium">{item.value}</dd>
+                        <dd className={`font-medium ${item.color || ''}`}>{item.value}</dd>
                       </div>
                     ))}
                   </dl>

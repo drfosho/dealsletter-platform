@@ -335,6 +335,8 @@ export default function AdminPropertiesPage() {
         ...propertyData,
         // Ensure unique numeric ID for dashboard compatibility
         id: propertyData.id || Date.now() + Math.floor(Math.random() * 1000),
+        // Ensure address field is set (priority: address > title > generated from components)
+        address: propertyData.address || propertyData.title || `${propertyData.addressLine1 || ''} ${propertyData.city || ''}, ${propertyData.state || ''} ${propertyData.zipCode || ''}`.trim(),
         // Ensure location field is set
         location: propertyData.location || `${propertyData.city}, ${propertyData.state} ${propertyData.zipCode}`.trim(),
         // Ensure type matches strategy if not set
