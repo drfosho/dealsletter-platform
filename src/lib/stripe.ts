@@ -1,8 +1,21 @@
 import Stripe from 'stripe'
 
-// Initialize Stripe with API version
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-07-30.basil',
+// Initialize Stripe with API version - lazy initialization to avoid build-time errors
+let stripeInstance: Stripe | null = null
+
+export const stripe = new Proxy({} as Stripe, {
+  get(target, prop, receiver) {
+    if (!stripeInstance) {
+      const key = process.env.STRIPE_SECRET_KEY
+      if (!key) {
+        throw new Error('STRIPE_SECRET_KEY is not configured')
+      }
+      stripeInstance = new Stripe(key, {
+        apiVersion: '2025-07-30.basil',
+      })
+    }
+    return Reflect.get(stripeInstance, prop, receiver)
+  }
 })
 
 // Subscription tiers configuration
