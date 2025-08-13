@@ -33,25 +33,29 @@ async function getRawBody(request: NextRequest): Promise<Buffer> {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('[Webhook] Received webhook request');
+  
   try {
     const body = await getRawBody(request);
     const signature = request.headers.get('stripe-signature');
     
     if (!signature) {
+      console.error('[Webhook] No signature found in request headers');
       return NextResponse.json({ error: 'No signature' }, { status: 400 });
     }
 
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
-      console.error('Webhook secret not configured');
+      console.error('[Webhook] STRIPE_WEBHOOK_SECRET not configured');
       return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log(`[Webhook] Verified event: ${event.type}`);
     } catch (err) {
-      console.error('Webhook signature verification failed:', err);
+      console.error('[Webhook] Signature verification failed:', err);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingEvent) {
-      console.log('Event already processed:', event.id);
+      console.log(`[Webhook] Event already processed: ${event.id}`);
       return NextResponse.json({ received: true });
     }
 
@@ -82,6 +86,7 @@ export async function POST(request: NextRequest) {
     // Handle the event
     switch (event.type) {
       case 'customer.subscription.created': {
+        console.log('[Webhook] Processing customer.subscription.created');
         const subscription = event.data.object as Stripe.Subscription;
         
         // Get user ID from metadata
@@ -104,167 +109,25 @@ export async function POST(request: NextRequest) {
                 metadata: { ...subscription.metadata, supabaseUserId: authUser.id }
               });
               
-              // Create subscription record
-              const priceId = subscription.items.data[0].price.id;
-              const tierName = subscription.metadata.tierName || 'starter';
-              
-              await supabase
-                .from('subscriptions')
-                .upsert({
-                  user_id: authUser.id,
-                  stripe_customer_id: subscription.customer as string,
-                  stripe_subscription_id: subscription.id,
-                  stripe_price_id: priceId,
-                  status: subscription.status as any,
-                  tier: tierName.toLowerCase() as any,
-                  current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-                  current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-                  cancel_at_period_end: subscription.cancel_at_period_end,
-                  trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-                  trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-                  metadata: subscription.metadata
-                }, {
-                  onConflict: 'user_id'
-                });
-
-              // Initialize usage tracking
-              const periodStart = new Date((subscription as any).current_period_start * 1000);
-              const periodEnd = new Date((subscription as any).current_period_end * 1000);
-              
-              await supabase
-                .from('usage_tracking')
-                .upsert({
-                  user_id: authUser.id,
-                  subscription_id: subscription.id,
-                  period_start: periodStart.toISOString(),
-                  period_end: periodEnd.toISOString(),
-                  analysis_count: 0
-                }, {
-                  onConflict: 'user_id,period_start'
-                });
+              await handleSubscriptionCreated(supabase, subscription, authUser.id);
+            } else {
+              console.error('[Webhook] Could not find user for subscription:', subscription.id);
             }
           }
         } else {
-          // Create subscription record with existing user ID
-          const priceId = subscription.items.data[0].price.id;
-          const tierName = subscription.metadata.tierName || 'starter';
-          
-          await supabase
-            .from('subscriptions')
-            .upsert({
-              user_id: userId,
-              stripe_customer_id: subscription.customer as string,
-              stripe_subscription_id: subscription.id,
-              stripe_price_id: priceId,
-              status: subscription.status as any,
-              tier: tierName.toLowerCase() as any,
-              current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-              current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-              cancel_at_period_end: subscription.cancel_at_period_end,
-              trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-              trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-              metadata: subscription.metadata
-            }, {
-              onConflict: 'user_id'
-            });
-
-          // Initialize usage tracking
-          const periodStart = new Date((subscription as any).current_period_start * 1000);
-          const periodEnd = new Date((subscription as any).current_period_end * 1000);
-          
-          await supabase
-            .from('usage_tracking')
-            .upsert({
-              user_id: userId,
-              subscription_id: subscription.id,
-              period_start: periodStart.toISOString(),
-              period_end: periodEnd.toISOString(),
-              analysis_count: 0
-            }, {
-              onConflict: 'user_id,period_start'
-            });
-        }
-        break;
-      }
-
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        
-        if (session.mode === 'subscription') {
-          // Get the subscription details
-          const subscription = await stripe.subscriptions.retrieve(
-            session.subscription as string
-          ) as Stripe.Subscription;
-
-          // Get or create customer
-          const customerId = session.customer as string;
-          const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
-          
-          // Get user ID from metadata or email
-          let userId = subscription.metadata.supabaseUserId || session.metadata?.supabaseUserId;
-          
-          if (!userId && customer.email) {
-            // Try to find user by email
-            const { data: authUser } = await supabase
-              .from('auth.users')
-              .select('id')
-              .eq('email', customer.email)
-              .single();
-            
-            userId = authUser?.id;
-          }
-
-          if (userId) {
-            // Get the price ID and tier
-            const priceId = subscription.items.data[0].price.id;
-            const tierName = subscription.metadata.tierName || 'starter';
-            
-            // Create or update subscription record
-            await supabase
-              .from('subscriptions')
-              .upsert({
-                user_id: userId,
-                stripe_customer_id: customerId,
-                stripe_subscription_id: subscription.id,
-                stripe_price_id: priceId,
-                status: subscription.status as any,
-                tier: tierName.toLowerCase() as any,
-                current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-                current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-                cancel_at_period_end: subscription.cancel_at_period_end,
-                trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-                trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-                metadata: subscription.metadata
-              }, {
-                onConflict: 'user_id'
-              });
-
-            // Initialize usage tracking for the new period
-            const periodStart = new Date((subscription as any).current_period_start * 1000);
-            const periodEnd = new Date((subscription as any).current_period_end * 1000);
-            
-            await supabase
-              .from('usage_tracking')
-              .upsert({
-                user_id: userId,
-                period_start: periodStart.toISOString(),
-                period_end: periodEnd.toISOString(),
-                analysis_count: 0
-              }, {
-                onConflict: 'user_id,period_start'
-              });
-          }
+          await handleSubscriptionCreated(supabase, subscription, userId);
         }
         break;
       }
 
       case 'customer.subscription.updated': {
+        console.log('[Webhook] Processing customer.subscription.updated');
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.supabaseUserId;
 
         if (userId) {
           const priceId = subscription.items.data[0].price.id;
-          const tierName = subscription.metadata.tierName || 'starter';
+          const tierName = subscription.metadata.tierName || determineTierFromPriceId(priceId);
           
           // Update subscription details
           await supabase
@@ -280,14 +143,18 @@ export async function POST(request: NextRequest) {
               canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
               trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
               trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-              metadata: subscription.metadata
+              metadata: subscription.metadata,
+              updated_at: new Date().toISOString()
             })
             .eq('stripe_subscription_id', subscription.id);
+          
+          console.log(`[Webhook] Updated subscription ${subscription.id} for user ${userId}`);
         }
         break;
       }
 
       case 'customer.subscription.deleted': {
+        console.log('[Webhook] Processing customer.subscription.deleted');
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.supabaseUserId;
 
@@ -297,14 +164,18 @@ export async function POST(request: NextRequest) {
             .from('subscriptions')
             .update({
               status: 'canceled',
-              canceled_at: new Date().toISOString()
+              canceled_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
             })
             .eq('stripe_subscription_id', subscription.id);
+          
+          console.log(`[Webhook] Canceled subscription ${subscription.id} for user ${userId}`);
         }
         break;
       }
 
       case 'invoice.payment_succeeded': {
+        console.log('[Webhook] Processing invoice.payment_succeeded');
         const invoice = event.data.object as Stripe.Invoice;
         
         if ((invoice as any).subscription) {
@@ -336,18 +207,22 @@ export async function POST(request: NextRequest) {
               .from('usage_tracking')
               .upsert({
                 user_id: userId,
+                subscription_id: subscription.id,
                 period_start: periodStart.toISOString(),
                 period_end: periodEnd.toISOString(),
                 analysis_count: 0
               }, {
                 onConflict: 'user_id,period_start'
               });
+            
+            console.log(`[Webhook] Recorded payment for user ${userId}, invoice ${invoice.id}`);
           }
         }
         break;
       }
 
       case 'invoice.payment_failed': {
+        console.log('[Webhook] Processing invoice.payment_failed');
         const invoice = event.data.object as Stripe.Invoice;
         
         if ((invoice as any).subscription) {
@@ -361,7 +236,8 @@ export async function POST(request: NextRequest) {
             await supabase
               .from('subscriptions')
               .update({
-                status: 'past_due'
+                status: 'past_due',
+                updated_at: new Date().toISOString()
               })
               .eq('stripe_subscription_id', subscription.id);
 
@@ -374,26 +250,79 @@ export async function POST(request: NextRequest) {
                 stripe_payment_intent_id: (invoice as any).payment_intent as string,
                 amount_paid: 0,
                 currency: invoice.currency,
-                status: 'failed'
+                status: 'failed',
+                created_at: new Date().toISOString()
               });
+            
+            console.log(`[Webhook] Recorded failed payment for user ${userId}, invoice ${invoice.id}`);
+          }
+        }
+        break;
+      }
+
+      case 'checkout.session.completed': {
+        console.log('[Webhook] Processing checkout.session.completed');
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        if (session.mode === 'subscription') {
+          // Get the subscription details
+          const subscription = await stripe.subscriptions.retrieve(
+            session.subscription as string
+          ) as Stripe.Subscription;
+
+          // Get or create customer
+          const customerId = session.customer as string;
+          const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+          
+          // Get user ID from metadata or email
+          let userId = subscription.metadata.supabaseUserId || session.metadata?.supabaseUserId;
+          
+          if (!userId && customer.email) {
+            // Try to find user by email
+            const { data: authUser } = await supabase
+              .from('auth.users')
+              .select('id')
+              .eq('email', customer.email)
+              .single();
+            
+            userId = authUser?.id;
+          }
+
+          if (userId) {
+            await handleSubscriptionCreated(supabase, subscription, userId);
+            console.log(`[Webhook] Created subscription from checkout for user ${userId}`);
           }
         }
         break;
       }
 
       case 'customer.subscription.trial_will_end': {
+        console.log('[Webhook] Processing customer.subscription.trial_will_end');
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.supabaseUserId;
 
         if (userId) {
           // You can send an email notification here
-          console.log(`Trial ending soon for user ${userId}`);
+          console.log(`[Webhook] Trial ending soon for user ${userId}`);
+          
+          // Optionally update metadata to track notification sent
+          await supabase
+            .from('subscriptions')
+            .update({
+              metadata: { 
+                ...subscription.metadata, 
+                trial_ending_notification_sent: true,
+                trial_ending_notification_date: new Date().toISOString()
+              },
+              updated_at: new Date().toISOString()
+            })
+            .eq('stripe_subscription_id', subscription.id);
         }
         break;
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log(`[Webhook] Unhandled event type: ${event.type}`);
     }
 
     // Mark event as processed
@@ -405,9 +334,11 @@ export async function POST(request: NextRequest) {
       })
       .eq('stripe_event_id', event.id);
 
+    console.log(`[Webhook] Successfully processed event: ${event.id}`);
     return NextResponse.json({ received: true });
+    
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('[Webhook] Error processing webhook:', error);
     
     // Record error in webhook_events if we have the event ID
     if ((error as any).event?.id) {
@@ -426,4 +357,63 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Helper function to handle subscription creation
+async function handleSubscriptionCreated(
+  supabase: any,
+  subscription: Stripe.Subscription,
+  userId: string
+) {
+  const priceId = subscription.items.data[0].price.id;
+  const tierName = subscription.metadata.tierName || determineTierFromPriceId(priceId);
+  
+  // Create or update subscription record
+  await supabase
+    .from('subscriptions')
+    .upsert({
+      user_id: userId,
+      stripe_customer_id: subscription.customer as string,
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: priceId,
+      status: subscription.status as any,
+      tier: tierName.toLowerCase() as any,
+      current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+      current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+      cancel_at_period_end: subscription.cancel_at_period_end,
+      trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+      trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+      metadata: subscription.metadata,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id'
+    });
+
+  // Initialize usage tracking for the new period
+  const periodStart = new Date((subscription as any).current_period_start * 1000);
+  const periodEnd = new Date((subscription as any).current_period_end * 1000);
+  
+  await supabase
+    .from('usage_tracking')
+    .upsert({
+      user_id: userId,
+      subscription_id: subscription.id,
+      period_start: periodStart.toISOString(),
+      period_end: periodEnd.toISOString(),
+      analysis_count: 0
+    }, {
+      onConflict: 'user_id,period_start'
+    });
+}
+
+// Helper function to determine tier from price ID
+function determineTierFromPriceId(priceId: string): string {
+  const priceTiers: Record<string, string> = {
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || '']: 'starter',
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '']: 'pro',
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || '']: 'premium',
+  };
+  
+  return priceTiers[priceId] || 'starter';
 }

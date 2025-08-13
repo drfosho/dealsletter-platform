@@ -4,6 +4,18 @@ import { useState, useEffect } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
 import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
 
+// Map UI renovation levels to RehabLevel enum
+function mapRenovationLevelToRehabLevel(renovationLevel?: string): RehabLevel {
+  const mapping: Record<string, RehabLevel> = {
+    'cosmetic': RehabLevel.LIGHT,
+    'moderate': RehabLevel.MEDIUM,
+    'extensive': RehabLevel.HEAVY,
+    'gut': RehabLevel.HEAVY,
+  };
+  
+  return mapping[renovationLevel || ''] || RehabLevel.MEDIUM;
+}
+
 interface Step3FinancialProps {
   data: WizardData;
   updateData: (data: Partial<WizardData>) => void;
@@ -214,7 +226,7 @@ export default function Step3Financial({
   // Calculate rehab costs based on property size and renovation level
   useEffect(() => {
     const propertyData = data.propertyData as any;
-    const renovationLevel = data.strategyDetails?.renovationLevel as RehabLevel;
+    const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
     
     // Try multiple locations for square footage
     const squareFootage = propertyData?.property?.squareFootage || 
@@ -1177,7 +1189,7 @@ export default function Step3Financial({
                 <p className="text-xs text-muted mt-1">
                   {(() => {
                     const propertyData = data.propertyData as any;
-                    const renovationLevel = data.strategyDetails?.renovationLevel as RehabLevel;
+                    const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
                     const squareFootage = propertyData?.property?.squareFootage;
                     
                     if (squareFootage && renovationLevel) {
