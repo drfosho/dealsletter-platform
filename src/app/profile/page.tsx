@@ -956,11 +956,7 @@ export default function ProfilePage() {
 
             {/* Usage Tracker */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <UsageTracker 
-                userId={user.id} 
-                subscriptionTier={subscriptionTier}
-                variant="detailed"
-              />
+              <UsageTracker />
               
               {/* Subscription Details */}
               <div className="bg-card rounded-xl border border-border/60 p-6">

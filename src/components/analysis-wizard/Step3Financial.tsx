@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
-import { calculateRehabCosts, type RenovationLevel } from '@/utils/rehab-calculator';
+import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
 
 interface Step3FinancialProps {
   data: WizardData;
@@ -214,7 +214,7 @@ export default function Step3Financial({
   // Calculate rehab costs based on property size and renovation level
   useEffect(() => {
     const propertyData = data.propertyData as any;
-    const renovationLevel = data.strategyDetails?.renovationLevel as RenovationLevel;
+    const renovationLevel = data.strategyDetails?.renovationLevel as RehabLevel;
     
     // Try multiple locations for square footage
     const squareFootage = propertyData?.property?.squareFootage || 
@@ -1152,7 +1152,7 @@ export default function Step3Financial({
                   />
                   {(() => {
                     const propertyData = data.propertyData as any;
-                    const renovationLevel = data.strategyDetails?.renovationLevel as RenovationLevel;
+                    const renovationLevel = data.strategyDetails?.renovationLevel as RehabLevel;
                     const squareFootage = propertyData?.property?.squareFootage;
                     
                     if (squareFootage && renovationLevel) {
@@ -1177,14 +1177,14 @@ export default function Step3Financial({
                 <p className="text-xs text-muted mt-1">
                   {(() => {
                     const propertyData = data.propertyData as any;
-                    const renovationLevel = data.strategyDetails?.renovationLevel as RenovationLevel;
+                    const renovationLevel = data.strategyDetails?.renovationLevel as RehabLevel;
                     const squareFootage = propertyData?.property?.squareFootage;
                     
                     if (squareFootage && renovationLevel) {
                       const { lowEstimate, highEstimate } = calculateRehabCosts(squareFootage, renovationLevel);
-                      const levelLabel = renovationLevel === 'cosmetic' ? 'Cosmetic' :
-                                       renovationLevel === 'moderate' ? 'Moderate' :
-                                       renovationLevel === 'extensive' ? 'Extensive' : 'Gut';
+                      const levelLabel = renovationLevel === RehabLevel.LIGHT ? 'Light' :
+                                       renovationLevel === RehabLevel.MEDIUM ? 'Medium' :
+                                       renovationLevel === RehabLevel.HEAVY ? 'Heavy' : 'None';
                       
                       const baseText = `${levelLabel} renovation estimate: $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()} (${squareFootage?.toLocaleString() || 'N/A'} sqft)`;
                       

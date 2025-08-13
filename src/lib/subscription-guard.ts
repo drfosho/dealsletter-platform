@@ -60,10 +60,10 @@ export async function checkSubscriptionLimit(userId: string): Promise<Subscripti
       }
     }
 
-    if (!limitCheck.can_analyze) {
+    if (!(limitCheck as any).can_analyze) {
       return {
         allowed: false,
-        message: `You've reached your monthly limit of ${limitCheck.tier_limit} analyses. Upgrade your plan to continue.`,
+        message: `You've reached your monthly limit of ${(limitCheck as any).tier_limit} analyses. Upgrade your plan to continue.`,
         tier: profile.subscription_tier,
         remainingAnalyses: 0
       }
@@ -72,7 +72,7 @@ export async function checkSubscriptionLimit(userId: string): Promise<Subscripti
     return {
       allowed: true,
       tier: profile.subscription_tier,
-      remainingAnalyses: limitCheck.remaining_analyses
+      remainingAnalyses: (limitCheck as any).remaining_analyses
     }
   } catch (error) {
     console.error('Subscription check error:', error)

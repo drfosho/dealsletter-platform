@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         // Get the subscription details
         const subscription = await stripe.subscriptions.retrieve(
           session.subscription as string
-        )
+        ) as Stripe.Subscription
 
         // Get the price ID from the subscription
         const priceId = subscription.items.data[0].price.id
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
               subscription_status: 'active',
               stripe_subscription_id: subscription.id,
               stripe_price_id: priceId,
-              subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              subscription_current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             })
             .eq('id', userId)
         }
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
               subscription_tier: subscription.metadata.tierName || 'starter',
               subscription_status: subscription.status,
               stripe_price_id: priceId,
-              subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              subscription_current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
             })
             .eq('id', userId)
         }
@@ -129,10 +129,10 @@ export async function POST(request: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice
         
         // Reset monthly analysis count on successful payment
-        if (invoice.subscription) {
+        if ((invoice as any).subscription) {
           const subscription = await stripe.subscriptions.retrieve(
-            invoice.subscription as string
-          )
+            (invoice as any).subscription as string
+          ) as Stripe.Subscription
           const userId = subscription.metadata.supabaseUserId
 
           if (userId) {
@@ -153,10 +153,10 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
         
-        if (invoice.subscription) {
+        if ((invoice as any).subscription) {
           const subscription = await stripe.subscriptions.retrieve(
-            invoice.subscription as string
-          )
+            (invoice as any).subscription as string
+          ) as Stripe.Subscription
           const userId = subscription.metadata.supabaseUserId
 
           if (userId) {
