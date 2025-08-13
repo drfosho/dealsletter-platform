@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Ensure proper mobile viewport */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 :root {
   --background: #f2f2f2;
   --foreground: #0a0a0a;
@@ -125,6 +135,106 @@ body {
 
 .transition-transform {
   transition: transform 0.2s ease;
+}
+
+/* Mobile-specific fixes */
+@media (max-width: 768px) {
+  /* Prevent horizontal overflow */
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+  
+  /* Ensure containers don't overflow */
+  .container {
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Fix for flex items that might overflow */
+  .flex, .flex-row, .flex-col {
+    min-width: 0;
+  }
+  
+  /* Ensure images don't overflow */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Fix for grid layouts on mobile */
+  .grid {
+    gap: 1rem;
+  }
+  
+  /* Ensure text doesn't overflow */
+  h1, h2, h3, h4, h5, h6, p {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  
+  /* Fix for code blocks */
+  pre, code {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  
+  /* Ensure buttons and inputs are touch-friendly */
+  button, input, select, textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Fix for tables on mobile */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Additional mobile breakpoint for very small screens */
+@media (max-width: 380px) {
+  body {
+    font-size: 14px;
+  }
+  
+  .text-xs {
+    font-size: 0.7rem;
+  }
+  
+  .text-sm {
+    font-size: 0.8rem;
+  }
+  
+  .text-base {
+    font-size: 0.9rem;
+  }
+  
+  .text-lg {
+    font-size: 1rem;
+  }
+  
+  .text-xl {
+    font-size: 1.1rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem;
+  }
+  
+  .text-3xl {
+    font-size: 1.5rem;
+  }
+  
+  .text-4xl {
+    font-size: 1.75rem;
+  }
+  
+  .text-5xl {
+    font-size: 2rem;
+  }
 }
 
 .transition-opacity {
