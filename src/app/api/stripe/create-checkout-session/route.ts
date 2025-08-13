@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { priceId, tierName } = await request.json()
+    const { priceId, tierName, email } = await request.json()
 
     if (!priceId) {
       return NextResponse.json(
@@ -13,47 +13,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the current user
+    // Get the current user (if logged in)
     const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'You must be logged in to subscribe' },
-        { status: 401 }
-      )
-    }
+    // Allow both authenticated and unauthenticated users
+    // For unauthenticated users, we'll use the email they provide
 
-    // Check if user already has a Stripe customer ID
     let customerId = null
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_customer_id')
-      .eq('id', user.id)
-      .single()
+    let customerEmail = user?.email || email
 
-    if (profile?.stripe_customer_id) {
-      customerId = profile.stripe_customer_id
-    } else {
-      // Create a new Stripe customer
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: {
-          supabaseUserId: user.id,
-        },
-      })
-      customerId = customer.id
-
-      // Save the customer ID to the user's profile
-      await supabase
+    // If user is logged in, check for existing Stripe customer
+    if (user) {
+      const { data: profile } = await supabase
         .from('profiles')
-        .update({ stripe_customer_id: customerId })
+        .select('stripe_customer_id')
         .eq('id', user.id)
+        .single()
+
+      if (profile?.stripe_customer_id) {
+        customerId = profile.stripe_customer_id
+      } else {
+        // Create a new Stripe customer
+        const customer = await stripe.customers.create({
+          email: customerEmail,
+          metadata: {
+            supabaseUserId: user.id,
+          },
+        })
+        customerId = customer.id
+
+        // Save the customer ID to the user's profile
+        await supabase
+          .from('profiles')
+          .update({ stripe_customer_id: customerId })
+          .eq('id', user.id)
+      }
     }
 
-    // Create the checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
+    // Create checkout session configuration
+    const sessionConfig: any = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -67,11 +66,24 @@ export async function POST(request: NextRequest) {
       subscription_data: {
         trial_period_days: 14, // 14-day free trial
         metadata: {
-          supabaseUserId: user.id,
           tierName: tierName,
         },
       },
-    })
+    }
+
+    // Add customer or email to session
+    if (customerId) {
+      sessionConfig.customer = customerId
+      if (user) {
+        sessionConfig.subscription_data.metadata.supabaseUserId = user.id
+      }
+    } else {
+      // For unauthenticated users, collect email during checkout
+      sessionConfig.customer_email = customerEmail
+    }
+
+    // Create the checkout session
+    const session = await stripe.checkout.sessions.create(sessionConfig)
 
     return NextResponse.json({ sessionId: session.id })
   } catch (error) {
