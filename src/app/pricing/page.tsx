@@ -20,6 +20,7 @@ interface PricingTier {
   color: string
   icon: string
   priceId?: string
+  priceIdYearly?: string
   analysisLimit: number | 'unlimited'
 }
 
@@ -55,7 +56,8 @@ const pricingTiers: PricingTier[] = [
     ctaText: 'Start Free Trial',
     color: 'from-blue-500 to-cyan-500',
     icon: '🔵',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || process.env.STRIPE_PRICE_STARTER_MONTHLY,
+    priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY || process.env.STRIPE_PRICE_STARTER_YEARLY,
     analysisLimit: 12
   },
   {
@@ -75,7 +77,8 @@ const pricingTiers: PricingTier[] = [
     popular: true,
     color: 'from-purple-500 to-pink-500',
     icon: '🚀',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || process.env.STRIPE_PRICE_PRO_MONTHLY,
+    priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY || process.env.STRIPE_PRICE_PRO_YEARLY,
     analysisLimit: 35
   },
   {
@@ -98,7 +101,8 @@ const pricingTiers: PricingTier[] = [
     ctaText: 'Start Free Trial',
     color: 'from-amber-500 to-orange-500',
     icon: '💎',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || process.env.STRIPE_PRICE_PREMIUM_MONTHLY,
+    priceIdYearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_YEARLY || process.env.STRIPE_PRICE_PREMIUM_YEARLY,
     analysisLimit: 'unlimited'
   }
 ]
@@ -118,6 +122,17 @@ export default function PricingPage() {
     setLoading(tier.name)
     
     try {
+      // Determine which price ID to use based on billing cycle
+      const priceId = billingCycle === 'yearly' ? tier.priceIdYearly : tier.priceId
+      
+      console.log('[Pricing] Subscribe clicked:', {
+        tier: tier.name,
+        billingCycle,
+        priceId,
+        monthlyPriceId: tier.priceId,
+        yearlyPriceId: tier.priceIdYearly
+      })
+      
       // Call our API to create a checkout session
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
@@ -125,8 +140,9 @@ export default function PricingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId: tier.priceId,
+          priceId: priceId,
           tierName: tier.name,
+          billingPeriod: billingCycle,
         }),
       })
 

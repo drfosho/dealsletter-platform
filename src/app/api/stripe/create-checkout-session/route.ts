@@ -19,29 +19,46 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('[Checkout] Request Body:', JSON.stringify(body, null, 2))
     
-    let { priceId, tierName, email } = body
+    let { priceId, tierName, email, billingPeriod } = body
+    
+    // Default to monthly if not specified
+    billingPeriod = billingPeriod || 'monthly'
+    console.log('[Checkout] Billing Period:', billingPeriod)
 
     // Fallback: If priceId is missing, try to map from tierName
     if (!priceId && tierName) {
       console.log('[Checkout] Price ID missing, attempting to map from tier name:', tierName)
+      console.log('[Checkout] Billing Period:', billingPeriod)
       
       // Try all possible environment variable naming conventions
       const upperTier = tierName.toUpperCase()
+      const billingPeriodUpper = billingPeriod.toUpperCase()
       
       // Log all available environment variables for debugging
-      console.log('[Checkout] Checking environment variables for tier:', upperTier)
+      console.log('[Checkout] Checking environment variables for tier:', upperTier, 'period:', billingPeriodUpper)
+      
+      if (billingPeriod === 'yearly') {
+        console.log('[Checkout] - STRIPE_PRICE_' + upperTier + '_YEARLY:', process.env[`STRIPE_PRICE_${upperTier}_YEARLY`])
+        console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + '_YEARLY:', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_YEARLY`])
+      }
+      
       console.log('[Checkout] - STRIPE_PRICE_' + upperTier + '_MONTHLY:', process.env[`STRIPE_PRICE_${upperTier}_MONTHLY`])
       console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + '_MONTHLY:', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`])
       console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + ':', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`])
       console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_ID_' + upperTier + ':', process.env[`NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`])
       
       // Try multiple naming conventions in priority order
-      const possibleEnvVars = [
-        `STRIPE_PRICE_${upperTier}_MONTHLY`,           // Server-side env var format
+      const possibleEnvVars = billingPeriod === 'yearly' ? [
+        `STRIPE_PRICE_${upperTier}_YEARLY`,              // Server-side env var format for yearly
+        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_YEARLY`,  // Client-side with YEARLY
+        `STRIPE_PRICE_${upperTier}_ANNUAL`,              // Alternative naming for yearly
+        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_ANNUAL`,  // Client-side with ANNUAL
+      ] : [
+        `STRIPE_PRICE_${upperTier}_MONTHLY`,             // Server-side env var format
         `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`, // Client-side with MONTHLY
-        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`,       // Client-side without MONTHLY
-        `NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`,    // Client-side with ID
-        `STRIPE_PRICE_${upperTier}`,                   // Server-side without MONTHLY
+        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`,         // Client-side without MONTHLY
+        `NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`,      // Client-side with ID
+        `STRIPE_PRICE_${upperTier}`,                     // Server-side without MONTHLY
       ]
       
       for (const envVar of possibleEnvVars) {
@@ -56,7 +73,20 @@ export async function POST(request: NextRequest) {
       
       // Also try the hardcoded mapping as fallback
       if (!priceId) {
-        const tierToPriceMap: Record<string, string | undefined> = {
+        const tierToPriceMap: Record<string, string | undefined> = billingPeriod === 'yearly' ? {
+          'STARTER': process.env.STRIPE_PRICE_STARTER_YEARLY || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY ||
+                     process.env.STRIPE_PRICE_STARTER_ANNUAL || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL,
+          'PRO': process.env.STRIPE_PRICE_PRO_YEARLY || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY ||
+                 process.env.STRIPE_PRICE_PRO_ANNUAL || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL,
+          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_YEARLY || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_YEARLY ||
+                     process.env.STRIPE_PRICE_PREMIUM_ANNUAL || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_ANNUAL,
+        } : {
           'STARTER': process.env.STRIPE_PRICE_STARTER_MONTHLY || 
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 
@@ -72,19 +102,43 @@ export async function POST(request: NextRequest) {
         }
         
         priceId = tierToPriceMap[upperTier]
-        console.log('[Checkout] Hardcoded mapping result:', tierToPriceMap)
+        console.log('[Checkout] Hardcoded mapping result for', billingPeriod, ':', tierToPriceMap)
       }
       
       console.log('[Checkout] Final mapped price ID:', priceId || 'NOT FOUND')
       
+      if (!priceId && billingPeriod === 'yearly') {
+        console.warn('[Checkout] WARNING: No yearly price found, falling back to monthly')
+        
+        // Fallback to monthly price if yearly not found
+        const monthlyEnvVars = [
+          `STRIPE_PRICE_${upperTier}_MONTHLY`,
+          `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`,
+          `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`,
+          `NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`,
+          `STRIPE_PRICE_${upperTier}`,
+        ]
+        
+        for (const envVar of monthlyEnvVars) {
+          const value = process.env[envVar]
+          if (value) {
+            priceId = value
+            console.log(`[Checkout] ⚠️ Using monthly price as fallback: ${envVar}`)
+            break
+          }
+        }
+      }
+      
       if (!priceId) {
         console.error('[Checkout] ERROR: Could not map tier to price ID')
+        console.error('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
         console.error('[Checkout] All Stripe env vars:', Object.keys(process.env).filter(k => k.includes('STRIPE')))
       }
     }
 
     if (!priceId) {
       console.error('[Checkout] ERROR: Price ID is missing after mapping attempt')
+      console.error('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
       console.error('[Checkout] Available env vars with STRIPE_PRICE:', 
         Object.keys(process.env)
           .filter(k => k.includes('STRIPE_PRICE'))
@@ -95,7 +149,8 @@ export async function POST(request: NextRequest) {
           error: 'Price ID is required',
           debug: { 
             priceId, 
-            tierName, 
+            tierName,
+            billingPeriod, 
             email,
             availableEnvVars: Object.keys(process.env).filter(k => k.includes('STRIPE_PRICE'))
           }
@@ -106,6 +161,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Checkout] Price ID:', priceId)
     console.log('[Checkout] Tier Name:', tierName)
+    console.log('[Checkout] Billing Period:', billingPeriod)
     console.log('[Checkout] Email:', email)
 
     // Get the current user (if logged in)
@@ -195,6 +251,7 @@ export async function POST(request: NextRequest) {
         trial_period_days: 14, // 14-day free trial
         metadata: {
           tierName: tierName || 'unknown',
+          billingPeriod: billingPeriod || 'monthly',
         },
       },
     }
