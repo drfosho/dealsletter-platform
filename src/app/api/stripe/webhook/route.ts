@@ -33,13 +33,20 @@ async function getRawBody(request: NextRequest): Promise<Buffer> {
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  console.log('[Webhook] ========================================');
+  console.log('[Webhook] Incoming webhook request received');
+  console.log('[Webhook] Time:', new Date().toISOString());
+  
   try {
     const body = await getRawBody(request);
     const signature = request.headers.get('stripe-signature');
     
     if (!signature) {
+      console.error('[Webhook] ❌ No signature found in request');
       return NextResponse.json({ error: 'No signature' }, { status: 400 });
     }
+    console.log('[Webhook] ✓ Signature found');
 
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
@@ -50,8 +57,11 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log('[Webhook] ✓ Signature verified');
+      console.log('[Webhook] Event Type:', event.type);
+      console.log('[Webhook] Event ID:', event.id);
     } catch (err) {
-      console.error('Webhook signature verification failed:', err);
+      console.error('[Webhook] ❌ Signature verification failed:', err);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -65,9 +75,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingEvent) {
-      console.log('Event already processed:', event.id);
+      console.log('[Webhook] ⚠️ Event already processed:', event.id);
+      console.log('[Webhook] Skipping duplicate processing');
+      console.log('[Webhook] ========================================');
       return NextResponse.json({ received: true });
     }
+    console.log('[Webhook] ✓ New event, processing...');
 
     // Record the event
     await supabase
@@ -82,6 +95,7 @@ export async function POST(request: NextRequest) {
     // Handle the event
     switch (event.type) {
       case 'customer.subscription.created': {
+        console.log('[Webhook] 📋 Processing customer.subscription.created');
         const subscription = event.data.object as Stripe.Subscription;
         
         // Get user ID from metadata
@@ -259,8 +273,11 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.updated': {
+        console.log('[Webhook] 📝 Processing customer.subscription.updated');
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.supabaseUserId;
+        console.log('[Webhook] Subscription ID:', subscription.id);
+        console.log('[Webhook] User ID:', userId || 'Not found');
 
         if (userId) {
           const priceId = subscription.items.data[0].price.id;
@@ -288,8 +305,11 @@ export async function POST(request: NextRequest) {
       }
 
       case 'customer.subscription.deleted': {
+        console.log('[Webhook] 🗑️ Processing customer.subscription.deleted');
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata.supabaseUserId;
+        console.log('[Webhook] Subscription ID:', subscription.id);
+        console.log('[Webhook] User ID:', userId || 'Not found');
 
         if (userId) {
           // Update subscription status to canceled
@@ -305,7 +325,10 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_succeeded': {
+        console.log('[Webhook] 💰 Processing invoice.payment_succeeded');
         const invoice = event.data.object as Stripe.Invoice;
+        console.log('[Webhook] Invoice ID:', invoice.id);
+        console.log('[Webhook] Amount:', invoice.amount_paid / 100, invoice.currency?.toUpperCase());
         
         if ((invoice as any).subscription) {
           const subscription = await stripe.subscriptions.retrieve(
@@ -348,7 +371,10 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_failed': {
+        console.log('[Webhook] ❌ Processing invoice.payment_failed');
         const invoice = event.data.object as Stripe.Invoice;
+        console.log('[Webhook] Invoice ID:', invoice.id);
+        console.log('[Webhook] Amount attempted:', invoice.amount_due / 100, invoice.currency?.toUpperCase());
         
         if ((invoice as any).subscription) {
           const subscription = await stripe.subscriptions.retrieve(
@@ -405,9 +431,15 @@ export async function POST(request: NextRequest) {
       })
       .eq('stripe_event_id', event.id);
 
+    const processingTime = Date.now() - startTime;
+    console.log('[Webhook] ✅ Event processed successfully');
+    console.log('[Webhook] Processing time:', processingTime, 'ms');
+    console.log('[Webhook] ========================================');
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('[Webhook] ❌ CRITICAL ERROR:', error);
+    console.error('[Webhook] Stack trace:', (error as Error).stack);
+    console.log('[Webhook] ========================================');
     
     // Record error in webhook_events if we have the event ID
     if ((error as any).event?.id) {
