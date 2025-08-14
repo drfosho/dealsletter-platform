@@ -130,23 +130,37 @@ export async function POST(request: NextRequest) {
           const tierName = subscription.metadata.tierName || determineTierFromPriceId(priceId);
           
           // Update subscription details
-          await supabase
+          const updateData: any = {
+            stripe_price_id: priceId,
+            status: subscription.status as any,
+            tier: tierName.toLowerCase() as any,
+            current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+            current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
+            canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
+            trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+            trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            updated_at: new Date().toISOString()
+          };
+
+          // Try with metadata first
+          let updateResult = await supabase
             .from('subscriptions')
             .update({
-              stripe_price_id: priceId,
-              status: subscription.status as any,
-              tier: tierName.toLowerCase() as any,
-              current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-              current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-              cancel_at_period_end: subscription.cancel_at_period_end,
-              cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
-              canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
-              trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-              trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-              metadata: subscription.metadata,
-              updated_at: new Date().toISOString()
+              ...updateData,
+              metadata: subscription.metadata
             })
             .eq('stripe_subscription_id', subscription.id);
+
+          // If metadata column doesn't exist, try without it
+          if (updateResult.error && updateResult.error.message.includes('metadata')) {
+            console.log('[Webhook] Metadata column not found, updating without it');
+            await supabase
+              .from('subscriptions')
+              .update(updateData)
+              .eq('stripe_subscription_id', subscription.id);
+          }
           
           console.log(`[Webhook] Updated subscription ${subscription.id} for user ${userId}`);
         }
@@ -306,17 +320,8 @@ export async function POST(request: NextRequest) {
           console.log(`[Webhook] Trial ending soon for user ${userId}`);
           
           // Optionally update metadata to track notification sent
-          await supabase
-            .from('subscriptions')
-            .update({
-              metadata: { 
-                ...subscription.metadata, 
-                trial_ending_notification_sent: true,
-                trial_ending_notification_date: new Date().toISOString()
-              },
-              updated_at: new Date().toISOString()
-            })
-            .eq('stripe_subscription_id', subscription.id);
+          // Skip metadata update if column doesn't exist
+          console.log('[Webhook] Trial ending notification tracking skipped (metadata column may not exist)');
         }
         break;
       }
@@ -369,26 +374,41 @@ async function handleSubscriptionCreated(
   const tierName = subscription.metadata.tierName || determineTierFromPriceId(priceId);
   
   // Create or update subscription record
-  await supabase
+  const subscriptionData: any = {
+    user_id: userId,
+    stripe_customer_id: subscription.customer as string,
+    stripe_subscription_id: subscription.id,
+    stripe_price_id: priceId,
+    status: subscription.status as any,
+    tier: tierName.toLowerCase() as any,
+    current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+    current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+    cancel_at_period_end: subscription.cancel_at_period_end,
+    trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+    trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  // Try with metadata first, if it fails, try without
+  let result = await supabase
     .from('subscriptions')
     .upsert({
-      user_id: userId,
-      stripe_customer_id: subscription.customer as string,
-      stripe_subscription_id: subscription.id,
-      stripe_price_id: priceId,
-      status: subscription.status as any,
-      tier: tierName.toLowerCase() as any,
-      current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-      current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
-      cancel_at_period_end: subscription.cancel_at_period_end,
-      trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-      trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
-      metadata: subscription.metadata,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      ...subscriptionData,
+      metadata: subscription.metadata
     }, {
       onConflict: 'user_id'
     });
+
+  // If metadata column doesn't exist, try without it
+  if (result.error && result.error.message.includes('metadata')) {
+    console.log('[Webhook] Metadata column not found, creating subscription without it');
+    result = await supabase
+      .from('subscriptions')
+      .upsert(subscriptionData, {
+        onConflict: 'user_id'
+      });
+  }
 
   // Initialize usage tracking for the new period
   const periodStart = new Date((subscription as any).current_period_start * 1000);

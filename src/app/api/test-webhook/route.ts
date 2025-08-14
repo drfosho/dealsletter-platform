@@ -45,26 +45,47 @@ export async function POST(request: NextRequest) {
         console.log(`[Test Webhook] Creating subscription for user ${userId}`);
         
         // Create test subscription
-        const { data: subscription, error } = await supabase
+        // First check if metadata column exists
+        const subscriptionData: any = {
+          user_id: userId,
+          stripe_customer_id: `test_cus_${Date.now()}`,
+          stripe_subscription_id: body.subscriptionId || `test_sub_${Date.now()}`,
+          stripe_price_id: `test_price_${body.tier || 'starter'}`,
+          status: 'active',
+          tier: body.tier || 'starter',
+          current_period_start: timestamp,
+          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+          cancel_at_period_end: false,
+          created_at: timestamp,
+          updated_at: timestamp
+        };
+
+        // Try with metadata first, fallback to without if it fails
+        let { data: subscription, error } = await supabase
           .from('subscriptions')
           .upsert({
-            user_id: userId,
-            stripe_customer_id: `test_cus_${Date.now()}`,
-            stripe_subscription_id: body.subscriptionId || `test_sub_${Date.now()}`,
-            stripe_price_id: `test_price_${body.tier || 'starter'}`,
-            status: 'active',
-            tier: body.tier || 'starter',
-            current_period_start: timestamp,
-            current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-            cancel_at_period_end: false,
-            metadata: { test: true, created_via: 'test_webhook' },
-            created_at: timestamp,
-            updated_at: timestamp
+            ...subscriptionData,
+            metadata: { test: true, created_via: 'test_webhook' }
           }, {
             onConflict: 'user_id'
           })
           .select()
           .single();
+
+        // If metadata column doesn't exist, try without it
+        if (error && error.message.includes('metadata')) {
+          console.log('[Test Webhook] Metadata column not found, creating without it');
+          const result = await supabase
+            .from('subscriptions')
+            .upsert(subscriptionData, {
+              onConflict: 'user_id'
+            })
+            .select()
+            .single();
+          
+          subscription = result.data;
+          error = result.error;
+        }
 
         if (error) {
           console.error('[Test Webhook] Error creating subscription:', error);
@@ -96,17 +117,36 @@ export async function POST(request: NextRequest) {
         console.log(`[Test Webhook] Updating subscription for user ${userId}`);
         
         // Update existing subscription
-        const { data: subscription, error } = await supabase
+        const updateData: any = {
+          tier: body.tier || 'pro',
+          status: 'active',
+          updated_at: timestamp
+        };
+
+        // Try with metadata first, fallback to without if it fails
+        let { data: subscription, error } = await supabase
           .from('subscriptions')
           .update({
-            tier: body.tier || 'pro',
-            status: 'active',
-            updated_at: timestamp,
+            ...updateData,
             metadata: { test: true, updated_via: 'test_webhook' }
           })
           .eq('user_id', userId)
           .select()
           .single();
+
+        // If metadata column doesn't exist, try without it
+        if (error && error.message.includes('metadata')) {
+          console.log('[Test Webhook] Metadata column not found, updating without it');
+          const result = await supabase
+            .from('subscriptions')
+            .update(updateData)
+            .eq('user_id', userId)
+            .select()
+            .single();
+          
+          subscription = result.data;
+          error = result.error;
+        }
 
         if (error) {
           console.error('[Test Webhook] Error updating subscription:', error);
