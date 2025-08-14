@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(_request: NextRequest) {
   console.log('[Yearly Test] ====== YEARLY PRICING TEST ======')
   
-  const results = {
+  const results: any = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     yearlyPrices: {
