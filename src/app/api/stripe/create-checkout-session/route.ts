@@ -19,14 +19,43 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log('[Checkout] Request Body:', JSON.stringify(body, null, 2))
     
-    const { priceId, tierName, email } = body
+    let { priceId, tierName, email } = body
+
+    // Fallback: If priceId is missing, try to map from tierName
+    if (!priceId && tierName) {
+      console.log('[Checkout] Price ID missing, attempting to map from tier name:', tierName)
+      
+      const tierToPriceMap: Record<string, string | undefined> = {
+        'STARTER': process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER,
+        'PRO': process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
+        'PREMIUM': process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM,
+      }
+      
+      priceId = tierToPriceMap[tierName.toUpperCase()]
+      console.log('[Checkout] Mapped tier', tierName, 'to price ID:', priceId || 'NOT FOUND')
+      
+      if (!priceId) {
+        console.error('[Checkout] ERROR: Could not map tier to price ID')
+        console.error('[Checkout] Available mappings:', tierToPriceMap)
+      }
+    }
 
     if (!priceId) {
-      console.error('[Checkout] ERROR: Price ID is missing')
+      console.error('[Checkout] ERROR: Price ID is missing after mapping attempt')
+      console.error('[Checkout] Available env vars with STRIPE_PRICE:', 
+        Object.keys(process.env)
+          .filter(k => k.includes('STRIPE_PRICE'))
+          .map(k => `${k}=${process.env[k]?.substring(0, 15)}...`)
+      )
       return NextResponse.json(
         { 
           error: 'Price ID is required',
-          debug: { priceId, tierName, email }
+          debug: { 
+            priceId, 
+            tierName, 
+            email,
+            availableEnvVars: Object.keys(process.env).filter(k => k.includes('STRIPE_PRICE'))
+          }
         },
         { status: 400 }
       )

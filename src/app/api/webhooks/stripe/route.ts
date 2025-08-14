@@ -410,10 +410,18 @@ async function handleSubscriptionCreated(
 // Helper function to determine tier from price ID
 function determineTierFromPriceId(priceId: string): string {
   const priceTiers: Record<string, string> = {
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || '']: 'starter',
     [process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || '']: 'starter',
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '']: 'pro',
     [process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '']: 'pro',
+    [process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || '']: 'premium',
     [process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || '']: 'premium',
   };
+  
+  // Remove empty keys
+  Object.keys(priceTiers).forEach(key => {
+    if (!key) delete priceTiers[key];
+  });
   
   return priceTiers[priceId] || 'starter';
 }

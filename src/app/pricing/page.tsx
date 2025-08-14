@@ -55,7 +55,7 @@ const pricingTiers: PricingTier[] = [
     ctaText: 'Start Free Trial',
     color: 'from-blue-500 to-cyan-500',
     icon: '🔵',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER,
     analysisLimit: 12
   },
   {
@@ -75,7 +75,7 @@ const pricingTiers: PricingTier[] = [
     popular: true,
     color: 'from-purple-500 to-pink-500',
     icon: '🚀',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
     analysisLimit: 35
   },
   {
@@ -98,7 +98,7 @@ const pricingTiers: PricingTier[] = [
     ctaText: 'Start Free Trial',
     color: 'from-amber-500 to-orange-500',
     icon: '💎',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM,
     analysisLimit: 'unlimited'
   }
 ]

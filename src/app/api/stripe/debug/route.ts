@@ -15,9 +15,12 @@ export async function GET(_request: NextRequest) {
         isTestMode: process.env.STRIPE_SECRET_KEY?.includes('sk_test') || false,
       },
       priceIds: {
-        starter: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || 'not set',
-        pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || 'not set',
-        premium: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || 'not set',
+        starter: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || 'not set',
+        starterAlt: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || 'not set',
+        pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || 'not set',
+        proAlt: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || 'not set',
+        premium: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || 'not set',
+        premiumAlt: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || 'not set',
       },
       urls: {
         appUrl: process.env.NEXT_PUBLIC_APP_URL || 'not set',
