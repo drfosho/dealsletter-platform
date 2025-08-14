@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { AlertCircle, CheckCircle, Clock, RefreshCw, Send, Trash2 } from 'lucide-react';
+import Navigation from '@/components/Navigation';
 
 interface WebhookEvent {
   id: string;
@@ -111,7 +112,9 @@ export default function WebhookEventsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <>
+        <Navigation />
+        <div className="container mx-auto px-4 py-8">
         <div className="animate-pulse">
           <div className="h-8 bg-muted/20 rounded w-1/3 mb-6"></div>
           <div className="space-y-3">
@@ -121,11 +124,15 @@ export default function WebhookEventsPage() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
+      <Navigation />
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 pt-24">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Webhook Events Monitor</h1>
         <div className="flex gap-2">
@@ -303,5 +310,7 @@ export default function WebhookEventsPage() {
         </div>
       )}
     </div>
+    </div>
+    </>
   );
 }

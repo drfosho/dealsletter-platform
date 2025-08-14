@@ -5,6 +5,7 @@ import TestSubscriptionFlow from '@/components/test/TestSubscriptionFlow';
 import { createClient } from '@/lib/supabase/client';
 import { validateDatabaseSync } from '@/lib/webhook-validation';
 import { CheckCircle, AlertCircle, Info, RefreshCw } from 'lucide-react';
+import Navigation from '@/components/Navigation';
 
 export default function TestWebhooksPage() {
   const [user, setUser] = useState<any>(null);
@@ -37,7 +38,9 @@ export default function TestWebhooksPage() {
 
   if (!user) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <>
+        <Navigation />
+        <div className="container mx-auto px-4 py-8">
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-6">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
@@ -53,11 +56,15 @@ export default function TestWebhooksPage() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <>
+      <Navigation />
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 pt-24">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Webhook Testing & Validation</h1>
         
@@ -198,5 +205,7 @@ export default function TestWebhooksPage() {
         </div>
       </div>
     </div>
+    </div>
+    </>
   );
 }
