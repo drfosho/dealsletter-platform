@@ -25,18 +25,61 @@ export async function POST(request: NextRequest) {
     if (!priceId && tierName) {
       console.log('[Checkout] Price ID missing, attempting to map from tier name:', tierName)
       
-      const tierToPriceMap: Record<string, string | undefined> = {
-        'STARTER': process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER,
-        'PRO': process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
-        'PREMIUM': process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM,
+      // Try all possible environment variable naming conventions
+      const upperTier = tierName.toUpperCase()
+      
+      // Log all available environment variables for debugging
+      console.log('[Checkout] Checking environment variables for tier:', upperTier)
+      console.log('[Checkout] - STRIPE_PRICE_' + upperTier + '_MONTHLY:', process.env[`STRIPE_PRICE_${upperTier}_MONTHLY`])
+      console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + '_MONTHLY:', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`])
+      console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + ':', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`])
+      console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_ID_' + upperTier + ':', process.env[`NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`])
+      
+      // Try multiple naming conventions in priority order
+      const possibleEnvVars = [
+        `STRIPE_PRICE_${upperTier}_MONTHLY`,           // Server-side env var format
+        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`, // Client-side with MONTHLY
+        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`,       // Client-side without MONTHLY
+        `NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`,    // Client-side with ID
+        `STRIPE_PRICE_${upperTier}`,                   // Server-side without MONTHLY
+      ]
+      
+      for (const envVar of possibleEnvVars) {
+        const value = process.env[envVar]
+        console.log(`[Checkout] Checking ${envVar}: ${value ? 'FOUND' : 'not found'}`)
+        if (value) {
+          priceId = value
+          console.log(`[Checkout] ✅ Found price ID in ${envVar}: ${priceId}`)
+          break
+        }
       }
       
-      priceId = tierToPriceMap[tierName.toUpperCase()]
-      console.log('[Checkout] Mapped tier', tierName, 'to price ID:', priceId || 'NOT FOUND')
+      // Also try the hardcoded mapping as fallback
+      if (!priceId) {
+        const tierToPriceMap: Record<string, string | undefined> = {
+          'STARTER': process.env.STRIPE_PRICE_STARTER_MONTHLY || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY ||
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER,
+          'PRO': process.env.STRIPE_PRICE_PRO_MONTHLY || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY ||
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
+          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_MONTHLY || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_MONTHLY ||
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM,
+        }
+        
+        priceId = tierToPriceMap[upperTier]
+        console.log('[Checkout] Hardcoded mapping result:', tierToPriceMap)
+      }
+      
+      console.log('[Checkout] Final mapped price ID:', priceId || 'NOT FOUND')
       
       if (!priceId) {
         console.error('[Checkout] ERROR: Could not map tier to price ID')
-        console.error('[Checkout] Available mappings:', tierToPriceMap)
+        console.error('[Checkout] All Stripe env vars:', Object.keys(process.env).filter(k => k.includes('STRIPE')))
       }
     }
 

@@ -15,12 +15,21 @@ export async function GET(_request: NextRequest) {
         isTestMode: process.env.STRIPE_SECRET_KEY?.includes('sk_test') || false,
       },
       priceIds: {
-        starter: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || 'not set',
-        starterAlt: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || 'not set',
-        pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || 'not set',
-        proAlt: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || 'not set',
-        premium: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || 'not set',
-        premiumAlt: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || 'not set',
+        starter: process.env.STRIPE_PRICE_STARTER_MONTHLY || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY ||
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER || 'not set',
+        starterMonthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || 'not set',
+        pro: process.env.STRIPE_PRICE_PRO_MONTHLY || 
+             process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY ||
+             process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 
+             process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || 'not set',
+        proMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY || 'not set',
+        premium: process.env.STRIPE_PRICE_PREMIUM_MONTHLY || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_MONTHLY ||
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM || 'not set',
+        premiumMonthly: process.env.STRIPE_PRICE_PREMIUM_MONTHLY || 'not set',
       },
       urls: {
         appUrl: process.env.NEXT_PUBLIC_APP_URL || 'not set',
@@ -104,9 +113,12 @@ export async function GET(_request: NextRequest) {
     }
 
     debug.checks.priceValidation = {
-      starter: checkPriceId('NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER', 'Starter'),
-      pro: checkPriceId('NEXT_PUBLIC_STRIPE_PRICE_ID_PRO', 'Pro'),
-      premium: checkPriceId('NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM', 'Premium'),
+      starter: checkPriceId('STRIPE_PRICE_STARTER_MONTHLY', 'Starter') || 
+               checkPriceId('NEXT_PUBLIC_STRIPE_PRICE_STARTER', 'Starter'),
+      pro: checkPriceId('STRIPE_PRICE_PRO_MONTHLY', 'Pro') || 
+           checkPriceId('NEXT_PUBLIC_STRIPE_PRICE_PRO', 'Pro'),
+      premium: checkPriceId('STRIPE_PRICE_PREMIUM_MONTHLY', 'Premium') || 
+               checkPriceId('NEXT_PUBLIC_STRIPE_PRICE_PREMIUM', 'Premium'),
       totalPricesFound: prices.data.length,
       allPriceIds: prices.data.map(p => p.id),
     }
