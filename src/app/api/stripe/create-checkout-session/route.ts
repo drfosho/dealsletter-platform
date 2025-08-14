@@ -3,55 +3,111 @@ import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
+  console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG START ======')
+  console.log('[Checkout] Timestamp:', new Date().toISOString())
+  console.log('[Checkout] Environment:', process.env.NODE_ENV)
+  
+  // Debug: Check environment variables
+  console.log('[Checkout] Environment Variables Check:')
+  console.log('[Checkout] - STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY)
+  console.log('[Checkout] - STRIPE_SECRET_KEY length:', process.env.STRIPE_SECRET_KEY?.length)
+  console.log('[Checkout] - STRIPE_SECRET_KEY prefix:', process.env.STRIPE_SECRET_KEY?.substring(0, 7))
+  console.log('[Checkout] - NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
+  console.log('[Checkout] - Is Test Mode:', process.env.STRIPE_SECRET_KEY?.includes('sk_test'))
+  
   try {
-    const { priceId, tierName, email } = await request.json()
+    const body = await request.json()
+    console.log('[Checkout] Request Body:', JSON.stringify(body, null, 2))
+    
+    const { priceId, tierName, email } = body
 
     if (!priceId) {
+      console.error('[Checkout] ERROR: Price ID is missing')
       return NextResponse.json(
-        { error: 'Price ID is required' },
+        { 
+          error: 'Price ID is required',
+          debug: { priceId, tierName, email }
+        },
         { status: 400 }
       )
     }
 
+    console.log('[Checkout] Price ID:', priceId)
+    console.log('[Checkout] Tier Name:', tierName)
+    console.log('[Checkout] Email:', email)
+
     // Get the current user (if logged in)
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError) {
+      console.log('[Checkout] Auth Error (non-fatal):', authError.message)
+    }
+    
+    console.log('[Checkout] User:', user ? `${user.id} (${user.email})` : 'Not authenticated')
 
     // Allow both authenticated and unauthenticated users
-    // For unauthenticated users, we'll use the email they provide
-
     let customerId = null
     let customerEmail = user?.email || email
 
     // If user is logged in, check for existing Stripe customer
     if (user) {
-      const { data: profile } = await supabase
+      console.log('[Checkout] Checking for existing Stripe customer...')
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('stripe_customer_id')
         .eq('id', user.id)
         .single()
 
+      if (profileError) {
+        console.log('[Checkout] Profile fetch error (non-fatal):', profileError.message)
+      }
+
       if (profile?.stripe_customer_id) {
         customerId = profile.stripe_customer_id
+        console.log('[Checkout] Found existing customer:', customerId)
       } else {
-        // Create a new Stripe customer
-        const customer = await stripe.customers.create({
-          email: customerEmail,
-          metadata: {
-            supabaseUserId: user.id,
-          },
-        })
-        customerId = customer.id
+        console.log('[Checkout] Creating new Stripe customer...')
+        try {
+          const customer = await stripe.customers.create({
+            email: customerEmail,
+            metadata: {
+              supabaseUserId: user.id,
+            },
+          })
+          customerId = customer.id
+          console.log('[Checkout] Created new customer:', customerId)
 
-        // Save the customer ID to the user's profile
-        await supabase
-          .from('profiles')
-          .update({ stripe_customer_id: customerId })
-          .eq('id', user.id)
+          // Save the customer ID to the user's profile
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', user.id)
+          
+          if (updateError) {
+            console.error('[Checkout] Failed to update profile with customer ID:', updateError)
+          }
+        } catch (stripeError: any) {
+          console.error('[Checkout] Stripe customer creation error:', {
+            message: stripeError.message,
+            type: stripeError.type,
+            code: stripeError.code,
+            statusCode: stripeError.statusCode,
+            raw: stripeError.raw
+          })
+          throw stripeError
+        }
       }
     }
 
     // Create checkout session configuration
+    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&tier=${tierName}`
+    const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`
+    
+    console.log('[Checkout] URLs:')
+    console.log('[Checkout] - Success URL:', successUrl)
+    console.log('[Checkout] - Cancel URL:', cancelUrl)
+
     const sessionConfig: any = {
       payment_method_types: ['card'],
       line_items: [
@@ -61,12 +117,12 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&tier=${tierName}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       subscription_data: {
         trial_period_days: 14, // 14-day free trial
         metadata: {
-          tierName: tierName,
+          tierName: tierName || 'unknown',
         },
       },
     }
@@ -77,19 +133,117 @@ export async function POST(request: NextRequest) {
       if (user) {
         sessionConfig.subscription_data.metadata.supabaseUserId = user.id
       }
+      console.log('[Checkout] Using existing customer:', customerId)
     } else {
       // For unauthenticated users, collect email during checkout
       sessionConfig.customer_email = customerEmail
+      console.log('[Checkout] Using customer email:', customerEmail)
     }
 
-    // Create the checkout session
-    const session = await stripe.checkout.sessions.create(sessionConfig)
+    console.log('[Checkout] Session Config:', JSON.stringify(sessionConfig, null, 2))
 
-    return NextResponse.json({ sessionId: session.id })
-  } catch (error) {
-    console.error('Error creating checkout session:', error)
+    // Create the checkout session
+    console.log('[Checkout] Creating Stripe checkout session...')
+    let session
+    try {
+      session = await stripe.checkout.sessions.create(sessionConfig)
+      console.log('[Checkout] Session created successfully:', session.id)
+      console.log('[Checkout] Session URL:', session.url)
+    } catch (stripeError: any) {
+      console.error('[Checkout] ❌ STRIPE SESSION CREATION ERROR:')
+      console.error('[Checkout] Error Type:', stripeError.type)
+      console.error('[Checkout] Error Code:', stripeError.code)
+      console.error('[Checkout] Error Message:', stripeError.message)
+      console.error('[Checkout] Status Code:', stripeError.statusCode)
+      console.error('[Checkout] Request ID:', stripeError.requestId)
+      
+      if (stripeError.raw) {
+        console.error('[Checkout] Raw Error:', JSON.stringify(stripeError.raw, null, 2))
+      }
+      
+      // Check for specific error types
+      if (stripeError.code === 'resource_missing') {
+        console.error('[Checkout] RESOURCE MISSING - Price ID may not exist:', priceId)
+        return NextResponse.json(
+          { 
+            error: 'Invalid price ID - the price does not exist in Stripe',
+            details: {
+              priceId,
+              message: stripeError.message,
+              code: stripeError.code
+            }
+          },
+          { status: 400 }
+        )
+      }
+      
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        console.error('[Checkout] INVALID REQUEST - Check parameters')
+        return NextResponse.json(
+          { 
+            error: 'Invalid request to Stripe API',
+            details: {
+              message: stripeError.message,
+              param: stripeError.param,
+              code: stripeError.code,
+              type: stripeError.type
+            }
+          },
+          { status: 400 }
+        )
+      }
+      
+      if (stripeError.type === 'StripeAuthenticationError') {
+        console.error('[Checkout] AUTHENTICATION ERROR - Check API key')
+        return NextResponse.json(
+          { 
+            error: 'Stripe authentication failed - check API key configuration',
+            details: {
+              message: stripeError.message,
+              code: stripeError.code
+            }
+          },
+          { status: 401 }
+        )
+      }
+      
+      // Generic error response with details
+      return NextResponse.json(
+        { 
+          error: 'Failed to create checkout session',
+          details: {
+            message: stripeError.message,
+            type: stripeError.type,
+            code: stripeError.code,
+            statusCode: stripeError.statusCode
+          }
+        },
+        { status: stripeError.statusCode || 500 }
+      )
+    }
+
+    console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG END (SUCCESS) ======')
+    return NextResponse.json({ 
+      sessionId: session.id,
+      debug: process.env.NODE_ENV === 'development' ? {
+        url: session.url,
+        customerId: customerId || 'none',
+        email: customerEmail
+      } : undefined
+    })
+  } catch (error: any) {
+    console.error('[Checkout] ❌ UNEXPECTED ERROR:', error)
+    console.error('[Checkout] Error Stack:', error.stack)
+    console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG END (ERROR) ======')
+    
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { 
+        error: 'Unexpected error occurred',
+        details: {
+          message: error.message,
+          type: error.constructor.name
+        }
+      },
       { status: 500 }
     )
   }
