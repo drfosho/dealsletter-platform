@@ -8,7 +8,7 @@ export async function GET(_request: NextRequest) {
     const supabase = await createClient()
     
     // First, let's check if the column exists by trying to query it
-    const { data: testQuery, error: queryError } = await supabase
+    const { error: queryError } = await supabase
       .from('subscriptions')
       .select('id, metadata')
       .limit(1)
