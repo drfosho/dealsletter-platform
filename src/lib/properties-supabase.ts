@@ -135,7 +135,7 @@ export async function createProperty(property: Record<string, unknown>) {
     const propertyId = property.id || `prop_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     
     // Map common field names that might be different
-    const mappedProperty = {
+    const mappedProperty: Record<string, unknown> = {
       ...property,
       // Ensure consistent field naming - map camelCase to snake_case
       zip_code: property.zipCode || property.zip_code,
