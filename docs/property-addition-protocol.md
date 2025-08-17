@@ -2,6 +2,35 @@
 
 ## CRITICAL: This document must be referenced every time properties are added to the dashboard
 
+## CRITICAL: NO "N/A" RULE
+
+**NEVER use "N/A" for any financial data when information is provided in the analysis.**
+
+### Required Calculations for 30-Year Projections:
+- If property analysis provides income data → Calculate 30-year projections
+- If property analysis provides cap rates → Use for value projections  
+- If property analysis provides growth assumptions → Apply them
+- If property analysis provides exit strategies → Model them
+
+### Standard Assumptions When Not Specified:
+- Rent growth: 3% annually
+- Expense growth: 2.5% annually
+- Appreciation: 4% annually
+- Vacancy rate: 5%
+
+### Property Type Guidelines:
+- RENTALS: Full 30-year projections required
+- FLIPS: Show profit timeline only (no 30-year needed)
+- HOUSE HACKS: Show transition from house hack to full rental
+
+### Required Field Names for Display Components:
+- Use `netOperatingIncome` not `noi` or `annualNOI`
+- Use `cashFlow` not `annualCashFlow`
+- Exit strategies must include: `strategy`, `description`, `timeline`, `estimatedProfit`
+- Rent analysis must include: `currentRentPerUnit`, `marketRentPerUnit`, `monthlyRentUpside`
+
+**REMEMBER: Your job is to CALCULATE, not to use "N/A" placeholders!**
+
 ### MANDATORY RULES
 1. Add properties manually to dashboard (NO Supabase operations unless specifically requested)
 2. Include EVERY piece of financial data provided in the analysis

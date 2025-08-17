@@ -37,6 +37,14 @@ export const staticDeals = [
     isDraft: false,
     listingUrl: "https://www.zillow.com/homedetails/4223-Menlo-Ave-San-Diego-CA-92105/17061899_zpid/",
     listingSource: "Zillow",
+    rentAnalysis: {
+      currentRentPerUnit: 5500,
+      marketRentPerUnit: 5500,
+      monthlyRentUpside: 0,
+      totalCurrentMonthlyRent: 5500,
+      totalMarketMonthlyRent: 5500,
+      percentRentIncrease: 0
+    },
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -77,6 +85,14 @@ export const staticDeals = [
     cashRequired: 287500,
     totalROI: 18.5,
     isDraft: false,
+    rentAnalysis: {
+      currentRentPerUnit: 2600,
+      marketRentPerUnit: 3380,
+      monthlyRentUpside: 1560,
+      totalCurrentMonthlyRent: 5200,
+      totalMarketMonthlyRent: 6760,
+      percentRentIncrease: 30
+    },
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -194,6 +210,14 @@ export const staticDeals = [
     cashRequired: 373750,
     totalROI: 15.6,
     isDraft: false,
+    rentAnalysis: {
+      currentRentPerUnit: 1800,
+      marketRentPerUnit: 2100,
+      monthlyRentUpside: 1200,
+      totalCurrentMonthlyRent: 7200,
+      totalMarketMonthlyRent: 8400,
+      percentRentIncrease: 16.7
+    },
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -233,6 +257,14 @@ export const staticDeals = [
     totalROI: 8.9,
     hoaFees: 850,
     isDraft: false,
+    rentAnalysis: {
+      currentRentPerUnit: 4500,
+      marketRentPerUnit: 4500,
+      monthlyRentUpside: 0,
+      totalCurrentMonthlyRent: 4500,
+      totalMarketMonthlyRent: 4500,
+      percentRentIncrease: 0
+    },
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -272,6 +304,14 @@ export const staticDeals = [
     cashRequired: 273750,
     totalROI: 35.4,
     isDraft: false,
+    rentAnalysis: {
+      currentRentPerUnit: 3200,
+      marketRentPerUnit: 5600,
+      monthlyRentUpside: 2400,
+      totalCurrentMonthlyRent: 3200,
+      totalMarketMonthlyRent: 5600,
+      percentRentIncrease: 75
+    },
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -371,6 +411,14 @@ export const staticDeals = [
     isDraft: false,
     listingUrl: "https://www.loopnet.com/Listing/10116-Lake-Ave-Tampa-FL/29876543/",
     listingSource: "LoopNet",
+    rentAnalysis: {
+      currentRentPerUnit: 1215,
+      marketRentPerUnit: 1400,
+      monthlyRentUpside: 5550,
+      totalCurrentMonthlyRent: 36442,
+      totalMarketMonthlyRent: 42000,
+      percentRentIncrease: 15.2
+    },
     createdAt: new Date(),
     updatedAt: new Date()
   },
@@ -633,7 +681,13 @@ export const staticDeals = [
         { address: "2BR Unit Nearby", rent: 2800, sqft: 900 }
       ],
       totalUnits: 3,
-      currentOccupancy: 100
+      currentOccupancy: 100,
+      currentRentPerUnit: 1867,
+      marketRentPerUnit: 2700,
+      monthlyRentUpside: 2500,
+      totalCurrentMonthlyRent: 5600,
+      totalMarketMonthlyRent: 8100,
+      percentRentIncrease: 44.6
     },
     
     propertyMetrics: {
@@ -696,13 +750,13 @@ export const staticDeals = [
         capExRate: 5
       },
       projections: [
-        { year: 1, annualCashFlow: -14880, cumulativeCashFlow: -14880, propertyValue: 866250, equity: 69125, loanBalance: 797125, totalROI: -32.8 },
-        { year: 2, annualCashFlow: 15120, cumulativeCashFlow: 255, propertyValue: 909563, equity: 212438, loanBalance: 697125, totalROI: 33.4, note: "Warehouse ADU complete" },
-        { year: 3, annualCashFlow: 15876, cumulativeCashFlow: 16131, propertyValue: 955041, equity: 259916, loanBalance: 695125, totalROI: 55.5 },
-        { year: 5, annualCashFlow: 17500, cumulativeCashFlow: 51631, propertyValue: 1052622, equity: 361497, loanBalance: 691125, totalROI: 113.8 },
-        { year: 10, annualCashFlow: 22750, cumulativeCashFlow: 165381, propertyValue: 1344589, equity: 668464, loanBalance: 676125, totalROI: 364.2 },
-        { year: 20, annualCashFlow: 36400, cumulativeCashFlow: 455381, propertyValue: 2194481, equity: 1568356, loanBalance: 626125, totalROI: 1584.2 },
-        { year: 30, annualCashFlow: 58240, cumulativeCashFlow: 925381, propertyValue: 3569906, equity: 3569906, loanBalance: 0, totalROI: 3204.9 }
+        { year: 1, cashFlow: -14880, cumulativeCashFlow: -14880, propertyValue: 866250, equity: 69125, loanBalance: 797125, totalROI: -32.8 },
+        { year: 2, cashFlow: 15120, cumulativeCashFlow: 255, propertyValue: 909563, equity: 212438, loanBalance: 697125, totalROI: 33.4, note: "Warehouse ADU complete" },
+        { year: 3, cashFlow: 15876, cumulativeCashFlow: 16131, propertyValue: 955041, equity: 259916, loanBalance: 695125, totalROI: 55.5 },
+        { year: 5, cashFlow: 17500, cumulativeCashFlow: 51631, propertyValue: 1052622, equity: 361497, loanBalance: 691125, totalROI: 113.8 },
+        { year: 10, cashFlow: 22750, cumulativeCashFlow: 165381, propertyValue: 1344589, equity: 668464, loanBalance: 676125, totalROI: 364.2 },
+        { year: 20, cashFlow: 36400, cumulativeCashFlow: 455381, propertyValue: 2194481, equity: 1568356, loanBalance: 626125, totalROI: 1584.2 },
+        { year: 30, cashFlow: 58240, cumulativeCashFlow: 925381, propertyValue: 3569906, equity: 3569906, loanBalance: 0, totalROI: 3204.9 }
       ],
       totalRentalIncome: 2016000,
       totalCashFlow: 925381,
@@ -787,6 +841,1981 @@ export const staticDeals = [
       postRehabValue: 1100000,
       valueAdd: 275000,
       rehabROI: 177
+    },
+    
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: 16,
+    title: "Oakland 5-Plex - CASH FLOW MONSTER in Opportunity Zone!",
+    address: "2023 80th Ave",
+    city: "Oakland",
+    state: "CA",
+    zipCode: "94621",
+    location: "Oakland, CA 94621",
+    type: "Multi-Family Investment",
+    propertyType: "Multi-Family",
+    strategy: "Buy & Hold with Value-Add",
+    investmentStrategy: "Buy & Hold",
+    units: 5,
+    isMultiFamily: true,
+    price: 1100000,
+    downPayment: 275000,
+    downPaymentPercent: 25,
+    currentCapRate: 8.90,
+    capRate: 8.90,
+    proFormaCapRate: 9.9,
+    monthlyRent: 9476,
+    currentRent: 9476,
+    projectedRent: 14000,
+    proFormaCashFlow: 3688,
+    monthlyCashFlow: 2876,
+    rentUpside: 4524,
+    status: "active",
+    daysOnMarket: 0,
+    confidence: "high",
+    images: ["/api/placeholder/400/300"],
+    bedrooms: 10,
+    bathrooms: 6,
+    sqft: null,
+    yearBuilt: 1963,
+    features: [
+      "8.90% Cap Rate - Exceptional!",
+      "Federal Opportunity Zone - Tax Benefits",
+      "1:1 Parking Ratio - Rare!",
+      "One Vacant Unit - Immediate Upside",
+      "Park Location - Next to Arroyo Viejo Park",
+      "$220,000 per unit",
+      "0.14 Acre Lot - ADU Potential",
+      "Gated Parking Lot",
+      "Strong Rental Demand",
+      "Below Replacement Cost"
+    ],
+    description: "East Oakland property delivering an incredible 8.90% cap rate with immediate upside! Located in a federal Opportunity Zone with tax benefits, featuring 1:1 parking, and one vacant unit ready for rent increase. At just $220k/unit with strong cash flow, this is a rare Oakland opportunity!",
+    riskLevel: "medium",
+    timeframe: "immediate",
+    cashRequired: 275000,
+    totalROI: 285,
+    cashOnCashReturn: 12.5,
+    cashFlow: 34512,
+    isDraft: false,
+    listingUrl: "https://www.loopnet.com/Listing/2023-80th-Ave-Oakland-CA/37275325/",
+    listingSource: "LoopNet",
+    
+    // Financial Details
+    interestRate: 7.25,
+    loanTerm: 30,
+    loanAmount: 825000,
+    monthlyPI: 5632,
+    closingCosts: 22000,
+    rehabCosts: 100000,
+    rehabDetails: {
+      "ADU Addition (750 SF)": 100000,
+      "Security Cameras": 5000,
+      "Deferred Maintenance": 15000,
+      "Unit Improvements": 20000
+    },
+    propertyTaxes: 1146,
+    insurance: 458,
+    hoa: 0,
+    hoaFees: 0,
+    utilities: 200,
+    maintenance: 550,
+    propertyManagement: 1050,
+    vacancy: 656,
+    capitalExpenditures: 558,
+    operatingExpenses: 4568,
+    monthlyExpenses: 4568,
+    annualExpenses: 54819,
+    netOperatingIncome: 102093,
+    
+    // Unit Mix and Rent Details
+    unitMix: {
+      "2BR/1BA Units (4)": {
+        quantity: 4,
+        currentRent: 2369,
+        marketRent: 2600,
+        totalCurrent: 9476,
+        totalMarket: 10400
+      },
+      "4BR/2BA Unit": {
+        quantity: 1,
+        currentRent: 0,
+        marketRent: 3600,
+        totalCurrent: 0,
+        totalMarket: 3600
+      }
+    },
+    
+    // Opportunity Zone Benefits
+    opportunityZoneBenefits: {
+      taxDeferral: "Defer capital gains taxes",
+      year5Reduction: "10% reduction in tax basis",
+      year7Reduction: "15% reduction in tax basis",
+      year10Benefit: "ZERO taxes on appreciation after 10 years",
+      exampleSavings: {
+        capitalGain: 100000,
+        year5Savings: 1500,
+        year7Savings: 2500,
+        year10AppreciationValue: 1900000,
+        year10TaxSavings: 190000,
+        note: "Based on 23.8% capital gains rate"
+      }
+    },
+    
+    // Neighborhood & Location
+    neighborhoodClass: "C",
+    neighborhood: "East Oakland",
+    lotSize: "0.14 acres",
+    walkScore: 65,
+    
+    // Location Analysis
+    locationAnalysis: {
+      neighborhood: "East Oakland",
+      walkScore: 65,
+      transitScore: 45,
+      bikeScore: 60,
+      proximityToDowntown: "7 miles to Downtown Oakland",
+      proximityToHighway: "1 mile to I-580",
+      nearbyEmployers: [
+        { name: "Oakland International Airport", distance: "5 miles", employees: "10,000+" },
+        { name: "Kaiser Permanente", distance: "8 miles", employees: "15,000+" },
+        { name: "Port of Oakland", distance: "10 miles", employees: "5,000+" }
+      ],
+      publicTransit: {
+        busLines: ["AC Transit Lines 45, 46, 73"],
+        nearestStop: "0.2 miles",
+        commuteOptions: "BART Coliseum Station 3 miles"
+      },
+      schools: {
+        elementary: "East Oakland Pride Elementary - 0.5 miles",
+        middle: "Frick Academy - 0.7 miles",
+        high: "Castlemont High - 0.9 miles",
+        district: "Oakland USD"
+      },
+      shopping: [
+        { name: "Eastmont Town Center", distance: "1.5 miles", type: "Shopping Center" },
+        { name: "Foothill Square", distance: "2 miles", type: "Retail" },
+        { name: "Walmart", distance: "2.5 miles", type: "Grocery" }
+      ],
+      amenities: [
+        "Arroyo Viejo Park - Next Door!",
+        "Recreation Center - Community Hub",
+        "AC Transit Lines",
+        "Eastmont Town Center",
+        "Working Family Neighborhood"
+      ],
+      demographics: {
+        population: 35000,
+        medianAge: 35,
+        medianIncome: 55000,
+        collegeEducated: 22,
+        ownerOccupied: 35
+      },
+      crimeRate: "Higher than Oakland average",
+      futureDeveopment: "Limited new construction",
+      appreciationHistory: "3-5% annual average",
+      marketTrends: "Strong rental demand, affordable for working families, improving neighborhood"
+    },
+    
+    // Rental Analysis
+    rentAnalysis: {
+      currentRents: {
+        "Unit 1 (2BR/1BA)": 2369,
+        "Unit 2 (2BR/1BA)": 2369,
+        "Unit 3 (4BR/2BA)": 0,
+        "Unit 4 (2BR/1BA)": 2369,
+        "Unit 5 (2BR/1BA)": 2369
+      },
+      marketRents: {
+        "2BR/1BA": 2600,
+        "4BR/2BA": 3600,
+        "ADU (750 SF)": 1800,
+        "Parking Space": 100,
+        "RV/Boat Storage": 200
+      },
+      rentalDemand: "Very Strong",
+      vacancyRate: 5,
+      rentGrowth: "3-4% annually",
+      rentGrowthRate: 3.5,
+      comparableRents: [
+        { address: "Similar 2BR East Oakland", rent: 2550, sqft: 900 },
+        { address: "4BR House Nearby", rent: 3500, sqft: 1400 },
+        { address: "2BR Unit Complex", rent: 2650, sqft: 850 }
+      ],
+      totalUnits: 5,
+      currentOccupancy: 80,
+      proFormaOccupancy: 95,
+      currentRentPerUnit: 1895,
+      marketRentPerUnit: 2800,
+      monthlyRentUpside: 4524,
+      percentRentIncrease: 47.7,
+      averageCurrentRent: 1895,
+      averageMarketRent: 2800,
+      totalCurrentMonthlyRent: 9476,
+      totalMarketMonthlyRent: 14000
+    },
+    
+    // Property Metrics
+    propertyMetrics: {
+      pricePerUnit: 220000,
+      pricePerSqFt: null,
+      grossRentMultiplier: 9.7,
+      currentGrossRentMultiplier: 9.7,
+      proFormaGrossRentMultiplier: 6.5,
+      debtServiceCoverageRatio: 1.51,
+      breakEvenOccupancy: 65,
+      internalRateOfReturn: 22,
+      equityMultiple: 3.85,
+      paybackPeriod: 8.0,
+      currentYield: 8.90,
+      proFormaYield: 9.9
+    },
+    
+    // Investment Scenarios
+    investmentScenarios: {
+      conservative: {
+        name: "As-Is + Vacant Unit Only",
+        strategy: "Lease vacant unit, keep current rents",
+        monthlyIncome: 13076,
+        annualIncome: 156912,
+        netOperatingIncome: 102093,
+        capRate: 9.3,
+        monthlyCashFlow: 2876,
+        cashFlow: 34512,
+        cashOnCashReturn: 12.5,
+        totalROI: 125
+      },
+      realistic: {
+        name: "Bring All Units to Market",
+        strategy: "Market rents + parking income",
+        monthlyIncome: 14000,
+        annualIncome: 168000,
+        netOperatingIncome: 109200,
+        capRate: 9.9,
+        monthlyCashFlow: 3688,
+        cashFlow: 44256,
+        cashOnCashReturn: 16.1,
+        totalROI: 161
+      },
+      aggressive: {
+        name: "Full Optimization with ADU",
+        strategy: "Market rents + ADU + maximize all income",
+        monthlyIncome: 16300,
+        annualIncome: 195600,
+        netOperatingIncome: 127140,
+        capRate: 11.6,
+        monthlyCashFlow: 5400,
+        cashFlow: 65000,
+        cashOnCashReturn: 20,
+        totalROI: 200,
+        additionalInvestment: 100000
+      }
+    },
+    
+    // Value Add Strategies
+    valueAddStrategies: [
+      {
+        strategy: "Lease Vacant Unit IMMEDIATELY",
+        description: "Unit 3 (4BR/2BA) currently vacant. Market rent $3,600/month",
+        investment: 0,
+        annualIncomeIncrease: 43200,
+        roiImpact: "Increases NOI instantly"
+      },
+      {
+        strategy: "Bring ALL Units to Market Rents",
+        description: "2BR units from $2,369 to $2,600 (+$231 each), 4BR to $3,600",
+        investment: 5000,
+        monthlyIncomeIncrease: 4524,
+        annualIncomeIncrease: 54288,
+        newCapRate: 9.9
+      },
+      {
+        strategy: "ADU Addition",
+        description: "Build 750 SF ADU on 0.14 acre lot",
+        investment: 100000,
+        monthlyRent: 1800,
+        annualIncomeIncrease: 21600,
+        valueIncrease: 250000
+      },
+      {
+        strategy: "Parking Income",
+        description: "Rent extra spaces and RV/boat storage",
+        investment: 2000,
+        monthlyIncome: 500,
+        annualIncomeIncrease: 6000
+      },
+      {
+        strategy: "Opportunity Zone Tax Strategy",
+        description: "Maximize tax benefits through long-term hold",
+        taxSavings: "Defer gains, 10-15% reduction, zero taxes on appreciation after 10 years",
+        tenYearProjectedValue: 1900000,
+        taxFreeProfits: 800000
+      }
+    ],
+    
+    // 5-Year Investment Plan
+    fiveYearPlan: {
+      year1: {
+        action: "Stabilize - Lease vacant 4BR unit",
+        monthlyIncome: 13076,
+        cashFlow: 34512,
+        propertyValue: 1155000
+      },
+      year2to3: {
+        action: "Optimize - Raise rents to market, add parking income",
+        monthlyIncome: 14500,
+        cashFlow: 50000,
+        propertyValue: 1270000
+      },
+      year4to5: {
+        action: "Expand - Consider ADU addition",
+        monthlyIncome: 16000,
+        cashFlow: 65000,
+        propertyValue: 1885000
+      },
+      exitValue: 1885000,
+      totalProfit: 785000,
+      fiveYearROI: 285
+    },
+    
+    // 30-Year Projections
+    thirtyYearProjections: {
+      assumptions: {
+        rentGrowthRate: 3.5,
+        expenseGrowthRate: 2.5,
+        appreciationRate: 4,
+        vacancyRate: 5,
+        managementFee: 8,
+        maintenanceRate: 10,
+        capExRate: 10
+      },
+      projections: [
+        { 
+          year: 1,
+          grossRent: 113712,
+          vacancy: 5686,
+          effectiveRent: 108026,
+          expenses: 54819,
+          netOperatingIncome: 53207,
+          debtService: 67584,
+          cashFlow: -14377,
+          cumulativeCashFlow: -14377,
+          propertyValue: 1144000,
+          loanBalance: 817460,
+          equity: 326540,
+          principalPaydown: 7540,
+          totalReturn: 19163,
+          totalROI: 7.0,
+          note: "With vacant unit leased"
+        },
+        { 
+          year: 2,
+          grossRent: 156912,
+          vacancy: 7846,
+          effectiveRent: 149066,
+          expenses: 56189,
+          netOperatingIncome: 92877,
+          debtService: 67584,
+          cashFlow: 25293,
+          cumulativeCashFlow: 10916,
+          propertyValue: 1189760,
+          loanBalance: 809633,
+          equity: 380127,
+          principalPaydown: 7827,
+          totalReturn: 93880,
+          totalROI: 34.1,
+          note: "Full occupancy achieved"
+        },
+        { 
+          year: 3,
+          grossRent: 162403,
+          vacancy: 8120,
+          effectiveRent: 154283,
+          expenses: 57594,
+          netOperatingIncome: 96689,
+          debtService: 67584,
+          cashFlow: 29105,
+          cumulativeCashFlow: 40021,
+          propertyValue: 1237350,
+          loanBalance: 801509,
+          equity: 435841,
+          principalPaydown: 8124,
+          totalReturn: 148635,
+          totalROI: 54.0
+        },
+        { 
+          year: 5,
+          grossRent: 173936,
+          vacancy: 8697,
+          effectiveRent: 165239,
+          expenses: 60484,
+          netOperatingIncome: 104755,
+          debtService: 67584,
+          cashFlow: 37171,
+          cumulativeCashFlow: 107485,
+          propertyValue: 1338226,
+          loanBalance: 784543,
+          equity: 553683,
+          principalPaydown: 8755,
+          totalReturn: 293908,
+          totalROI: 106.9
+        },
+        { 
+          year: 10,
+          grossRent: 218965,
+          vacancy: 10948,
+          effectiveRent: 208017,
+          expenses: 68446,
+          netOperatingIncome: 139571,
+          debtService: 67584,
+          cashFlow: 71987,
+          cumulativeCashFlow: 434322,
+          propertyValue: 1628895,
+          loanBalance: 736425,
+          equity: 892470,
+          principalPaydown: 11062,
+          totalReturn: 783267,
+          totalROI: 284.8
+        },
+        { 
+          year: 15,
+          grossRent: 275734,
+          vacancy: 13787,
+          effectiveRent: 261947,
+          expenses: 77491,
+          netOperatingIncome: 184456,
+          debtService: 67584,
+          cashFlow: 116872,
+          cumulativeCashFlow: 908574,
+          propertyValue: 1982134,
+          loanBalance: 672887,
+          equity: 1309247,
+          principalPaydown: 13978,
+          totalReturn: 1626295,
+          totalROI: 591.4
+        },
+        { 
+          year: 20,
+          grossRent: 347276,
+          vacancy: 17364,
+          effectiveRent: 329912,
+          expenses: 87721,
+          netOperatingIncome: 242191,
+          debtService: 67584,
+          cashFlow: 174607,
+          cumulativeCashFlow: 1608314,
+          propertyValue: 2413797,
+          loanBalance: 590194,
+          equity: 1823603,
+          principalPaydown: 17664,
+          totalReturn: 2818589,
+          totalROI: 1024.9
+        },
+        { 
+          year: 25,
+          grossRent: 437339,
+          vacancy: 21867,
+          effectiveRent: 415472,
+          expenses: 99335,
+          netOperatingIncome: 316137,
+          debtService: 67584,
+          cashFlow: 248553,
+          cumulativeCashFlow: 2576994,
+          propertyValue: 2940199,
+          loanBalance: 483719,
+          equity: 2456480,
+          principalPaydown: 22315,
+          totalReturn: 4481959,
+          totalROI: 1629.8
+        },
+        { 
+          year: 30,
+          grossRent: 550761,
+          vacancy: 27538,
+          effectiveRent: 523223,
+          expenses: 112510,
+          netOperatingIncome: 410713,
+          debtService: 67584,
+          cashFlow: 343129,
+          cumulativeCashFlow: 3901204,
+          propertyValue: 3581642,
+          loanBalance: 0,
+          equity: 3581642,
+          principalPaydown: 67584,
+          totalReturn: 6757846,
+          totalROI: 2457.4
+        }
+      ]
+    },
+    
+    // Strategic Overview
+    strategicOverview: `This East Oakland property delivers an exceptional 8.90% cap rate with immediate upside! Located in a federal Opportunity Zone with massive tax benefits, featuring 1:1 parking (rare in Oakland), and one vacant unit ready for immediate lease-up. At just $220k/unit with strong cash flow from day one, this property offers the rare combination of immediate cash flow (12.5%) with massive tax advantages and appreciation potential. The vacant 4BR/2BA unit can be leased immediately for $3,600/month, boosting annual income by $43,200. With market rents $500+ below current, bringing all units to market rates increases cash flow to $3,688/month (16.1% cash-on-cash). The 0.14 acre lot allows for ADU addition, potentially adding $1,800/month in rental income. Opportunity Zone benefits include tax deferral, 10-15% reduction in basis, and ZERO taxes on appreciation after 10 years. Perfect for investors who want immediate 12%+ returns, have capital gains to defer, understand East Oakland dynamics, can manage tenant transitions, and think long-term wealth plus tax benefits.`,
+    
+    // Risk Analysis
+    riskAnalysis: {
+      strengths: [
+        "✅ 8.90% cap rate (exceptional!)",
+        "✅ Opportunity Zone tax benefits",
+        "✅ 1:1 parking ratio (rare!)",
+        "✅ Vacant unit = immediate upside",
+        "✅ Park location premium",
+        "✅ Only $220k/unit",
+        "✅ Strong rental demand",
+        "✅ Below replacement cost",
+        "✅ Limited new construction",
+        "✅ Improving neighborhood"
+      ],
+      considerations: [
+        "❌ East Oakland location",
+        "❌ Class C building (1963)",
+        "❌ Higher crime area",
+        "❌ Tenant quality concerns",
+        "❌ Deferred maintenance likely"
+      ],
+      mitigations: [
+        "Screen tenants carefully",
+        "Install security cameras",
+        "Regular property maintenance",
+        "Build community relationships",
+        "Professional management",
+        "Security deposits and guarantors",
+        "Regular property inspections",
+        "Maintain property insurance",
+        "Build reserve fund",
+        "Work with local police"
+      ]
+    },
+    
+    // Due Diligence Items
+    dueDiligenceItems: [
+      "Full property inspection",
+      "Review all current leases",
+      "Verify actual rents collected",
+      "Check tenant payment history",
+      "Environmental assessment",
+      "Title and survey review",
+      "Verify Opportunity Zone designation",
+      "Review utility costs",
+      "Check for code violations",
+      "Assess deferred maintenance",
+      "Review property tax history",
+      "Verify insurance costs",
+      "Check zoning for ADU",
+      "Crime statistics review",
+      "Market rent survey"
+    ],
+    
+    // Exit Strategies
+    exitStrategies: [
+      {
+        strategy: "5-Year Value-Add Exit",
+        description: "Maximize rents, add ADU, sell at 7% cap rate for $1,885,000",
+        timeline: "5 years",
+        estimatedProfit: 785000,
+        projectedValue: 1885000,
+        roi: 285
+      },
+      {
+        strategy: "10-Year Opportunity Zone Hold",
+        description: "Hold for full tax benefits with zero taxes on $800,000 appreciation",
+        timeline: "10 years",
+        estimatedProfit: 800000,
+        projectedValue: 1900000,
+        taxFreeGains: 800000
+      },
+      {
+        strategy: "Refinance & Hold",
+        description: "Cash-out refinance after value-add improvements to pull out $350,000",
+        timeline: "2-3 years",
+        estimatedProfit: 350000,
+        newValue: 1500000,
+        cashOut: 350000,
+        continuedCashFlow: 4000
+      },
+      {
+        strategy: "1031 Exchange",
+        description: "Trade up to 8-12 unit building with $500,000 in deferred gains",
+        timeline: "3-5 years",
+        estimatedProfit: 500000,
+        deferredGains: 500000,
+        nextProperty: "8-12 unit building"
+      }
+    ],
+    
+    // Investment Thesis
+    investmentThesis: {
+      keyPoints: [
+        "Exceptional 8.90% cap rate in strong rental market",
+        "Opportunity Zone provides massive tax advantages",
+        "Immediate upside with vacant unit ready for lease",
+        "Below replacement cost at $220k/unit",
+        "Strong rental demand from working families",
+        "1:1 parking ratio is huge competitive advantage",
+        "Multiple value-add opportunities (ADU, parking, rent increases)",
+        "Park location provides neighborhood stability"
+      ],
+      idealInvestor: "Cash flow focused investors with capital gains to defer who understand value-add opportunities and can handle East Oakland management",
+      holdPeriod: "5-10 years for maximum returns",
+      expectedReturns: "12.5% immediate, 16%+ after optimization, 20%+ with ADU"
+    },
+    
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: 17,
+    title: "Sacramento 5-Plex - CASH COW with 9.3% Cap Rate!",
+    address: "5341 Young St",
+    city: "Sacramento",
+    state: "CA",
+    zipCode: "95824",
+    location: "Sacramento, CA 95824",
+    type: "Multi-Family Investment",
+    propertyType: "Multi-Family",
+    strategy: "Buy & Hold with Value-Add",
+    investmentStrategy: "Buy & Hold",
+    units: 5,
+    isMultiFamily: true,
+    price: 728000,
+    downPayment: 182000,
+    downPaymentPercent: 25,
+    currentCapRate: 9.29,
+    capRate: 9.29,
+    proFormaCapRate: 11,
+    monthlyRent: 6655,
+    currentRent: 6655,
+    projectedRent: 8050,
+    proFormaCashFlow: 3302,
+    monthlyCashFlow: 1907,
+    rentUpside: 1395,
+    status: "active",
+    daysOnMarket: 0,
+    confidence: "very high",
+    images: ["/api/placeholder/400/300"],
+    bedrooms: 6,
+    bathrooms: 6,
+    sqft: null,
+    yearBuilt: 1979,
+    features: [
+      "9.29% Cap Rate - Phenomenal!",
+      "Federal Opportunity Zone - Tax Benefits",
+      "100% Occupied - Fully Stabilized",
+      "15.4% Expense Ratio - Incredibly Low!",
+      "$145,600 per unit",
+      "Near Highway 99 & I-5",
+      "State Capital Stability",
+      "Growing Tech Sector",
+      "5%+ Annual Rent Growth",
+      "2-Story Unit with Laundry"
+    ],
+    description: "Fruitridge Manor property delivering an outstanding 9.29% cap rate with 100% occupancy! Located in an Opportunity Zone with extremely low expenses (15% ratio), this fully stabilized asset offers immediate cash flow with room for rent growth. At just $145,600/unit, this is Sacramento investing at its finest!",
+    riskLevel: "low",
+    timeframe: "immediate",
+    cashRequired: 182000,
+    totalROI: 262,
+    cashOnCashReturn: 12.6,
+    cashFlow: 22884,
+    isDraft: false,
+    listingUrl: "https://www.loopnet.com/Listing/5341-Young-St-Sacramento-CA/37264186/",
+    listingSource: "LoopNet",
+    
+    // Financial Details
+    interestRate: 7.25,
+    loanTerm: 30,
+    loanAmount: 546000,
+    monthlyPI: 3726,
+    closingCosts: 14560,
+    rehabCosts: 15000,
+    rehabDetails: {
+      "RUBS Implementation": 0,
+      "Coin-Operated Laundry": 5000,
+      "Storage Units Construction": 5000,
+      "Security Improvements": 5000
+    },
+    propertyTaxes: 758,
+    insurance: 303,
+    hoa: 0,
+    hoaFees: 0,
+    utilities: 400,
+    maintenance: 364,
+    propertyManagement: 532,
+    vacancy: 333,
+    capitalExpenditures: 200,
+    operatingExpenses: 1022,
+    monthlyExpenses: 1022,
+    annualExpenses: 12260,
+    netOperatingIncome: 67600,
+    
+    // Unit Mix and Rent Details
+    unitMix: {
+      "Unit 1 (1BR)": {
+        quantity: 1,
+        currentRent: 1300,
+        marketRent: 1550,
+        totalCurrent: 1300,
+        totalMarket: 1550
+      },
+      "Unit 2 (1BR)": {
+        quantity: 1,
+        currentRent: 1195,
+        marketRent: 1550,
+        totalCurrent: 1195,
+        totalMarket: 1550
+      },
+      "Unit 3 (1BR)": {
+        quantity: 1,
+        currentRent: 1450,
+        marketRent: 1550,
+        totalCurrent: 1450,
+        totalMarket: 1550
+      },
+      "Unit 4 (1BR)": {
+        quantity: 1,
+        currentRent: 1400,
+        marketRent: 1550,
+        totalCurrent: 1400,
+        totalMarket: 1550
+      },
+      "Unit 5 (2BR/2BA)": {
+        quantity: 1,
+        currentRent: 1310,
+        marketRent: 1850,
+        totalCurrent: 1310,
+        totalMarket: 1850
+      }
+    },
+    
+    // Opportunity Zone Benefits
+    opportunityZoneBenefits: {
+      taxDeferral: "Defer capital gains taxes",
+      year5Reduction: "10% reduction in tax basis",
+      year7Reduction: "15% reduction in tax basis",
+      year10Benefit: "ZERO taxes on appreciation after 10 years",
+      note: "TAX-FREE WEALTH BUILDING"
+    },
+    
+    // Neighborhood & Location
+    neighborhoodClass: "C",
+    neighborhood: "Fruitridge Manor",
+    lotSize: null,
+    walkScore: null,
+    
+    // Location Analysis
+    locationAnalysis: {
+      neighborhood: "Fruitridge Manor",
+      proximityToHighway: "Near Highway 99 & I-5",
+      nearbyEmployers: [
+        { name: "State of California", distance: "Downtown", employees: "75,000+" },
+        { name: "UC Davis Medical Center", distance: "5 miles", employees: "10,000+" },
+        { name: "Intel Folsom", distance: "20 miles", employees: "6,000+" },
+        { name: "Kaiser Permanente", distance: "3 miles", employees: "5,000+" }
+      ],
+      publicTransit: {
+        busLines: ["Multiple SacRT routes"],
+        nearestStop: "Within walking distance",
+        commuteOptions: "Blue Line light rail access"
+      },
+      schools: {
+        note: "Multiple schools within 1 mile",
+        elementary: "Within 1 mile",
+        middle: "Within 1 mile",
+        high: "Within 1 mile",
+        district: "Sacramento City USD"
+      },
+      shopping: [
+        { name: "Florin Towne Centre", distance: "Nearby", type: "Shopping Center" },
+        { name: "Local shops", distance: "Walking distance", type: "Retail" }
+      ],
+      amenities: [
+        "Near Highway 99 & I-5",
+        "Florin Towne Centre nearby",
+        "Multiple schools within 1 mile",
+        "Several parks nearby",
+        "Blue Line light rail access"
+      ],
+      demographics: {
+        marketNote: "Working-class area",
+        stateCapitalStability: true,
+        growingTechSector: true,
+        housingShortageSeverity: "High",
+        populationGrowth: "Positive",
+        rentGrowthRate: "5%+ annually"
+      },
+      marketTrends: "State capital stability, growing tech sector, housing shortage, population growth, 5%+ annual rent growth"
+    },
+    
+    // Rental Analysis
+    rentAnalysis: {
+      currentRents: {
+        "Unit 1 (1BR)": 1300,
+        "Unit 2 (1BR)": 1195,
+        "Unit 3 (1BR)": 1450,
+        "Unit 4 (1BR)": 1400,
+        "Unit 5 (2BR/2BA)": 1310
+      },
+      marketRents: {
+        "1BR": 1550,
+        "2BR/2BA": 1850,
+        "Laundry Income (per machine)": 150,
+        "Storage Unit": 50
+      },
+      rentalDemand: "Very High",
+      vacancyRate: 0,
+      currentOccupancy: 100,
+      rentGrowth: "5%+ annually",
+      rentGrowthRate: 5,
+      totalUnits: 5,
+      proFormaOccupancy: 95,
+      marketRentIncrease: 1395,
+      percentIncrease: 21,
+      comparableRents: [
+        { address: "Similar 1BR Fruitridge", rent: 1500, sqft: 650 },
+        { address: "2BR Fruitridge Manor", rent: 1800, sqft: 900 },
+        { address: "1BR Near Florin", rent: 1600, sqft: 700 }
+      ],
+      currentRentPerUnit: 1331,
+      marketRentPerUnit: 1610,
+      monthlyRentUpside: 1395,
+      percentRentIncrease: 21,
+      averageCurrentRent: 1331,
+      averageMarketRent: 1610,
+      totalCurrentMonthlyRent: 6655,
+      totalMarketMonthlyRent: 8050
+    },
+    
+    // Property Metrics
+    propertyMetrics: {
+      pricePerUnit: 145600,
+      pricePerSqFt: null,
+      grossRentMultiplier: 9.1,
+      currentGrossRentMultiplier: 9.1,
+      proFormaGrossRentMultiplier: 7.5,
+      debtServiceCoverageRatio: 1.51,
+      breakEvenOccupancy: 70,
+      internalRateOfReturn: 25,
+      equityMultiple: 3.62,
+      paybackPeriod: 8.0,
+      currentYield: 9.29,
+      proFormaYield: 11,
+      expenseRatio: 15.4,
+      note: "Exceptionally low expense ratio!",
+      annualizedReturn: 26.2,
+      monthlyNOI: 5633,
+      annualGrossIncome: 79860,
+      effectiveGrossIncome: 79860,
+      netOperatingIncome: 67600
+    },
+    
+    // Investment Scenarios
+    investmentScenarios: {
+      conservative: {
+        name: "As-Is Operations",
+        strategy: "Keep current operations, maintain occupancy",
+        monthlyIncome: 6655,
+        annualIncome: 79860,
+        netOperatingIncome: 67600,
+        capRate: 9.29,
+        monthlyCashFlow: 1907,
+        cashFlow: 22884,
+        cashOnCashReturn: 12.6,
+        totalROI: 126
+      },
+      realistic: {
+        name: "Optimized with RUBS",
+        strategy: "Market rents + RUBS + laundry income",
+        monthlyIncome: 8050,
+        annualIncome: 96600,
+        netOperatingIncome: 84340,
+        capRate: 11.6,
+        monthlyCashFlow: 3302,
+        cashFlow: 39624,
+        cashOnCashReturn: 21.8,
+        totalROI: 218
+      },
+      aggressive: {
+        name: "Full Value-Add",
+        strategy: "All improvements + maximum rents",
+        monthlyIncome: 8500,
+        annualIncome: 102000,
+        netOperatingIncome: 86700,
+        capRate: 11.9,
+        monthlyCashFlow: 3750,
+        cashFlow: 45000,
+        cashOnCashReturn: 25,
+        totalROI: 250
+      }
+    },
+    
+    // Value Add Strategies
+    valueAddStrategies: [
+      {
+        strategy: "RUBS Implementation",
+        description: "Currently tenants pay NO utilities! Implement water/sewer/trash billing",
+        investment: 0,
+        monthlySavings: 400,
+        annualSavings: 4800,
+        roiImpact: "Reduces expenses by 40%, instant NOI boost"
+      },
+      {
+        strategy: "Laundry Income",
+        description: "Add coin-operated laundry - 2 machines",
+        investment: 5000,
+        monthlyIncome: 300,
+        annualIncome: 3600,
+        firstYearROI: 72
+      },
+      {
+        strategy: "Storage/Parking",
+        description: "Build storage units and maximize lot usage",
+        investment: 5000,
+        monthlyIncome: 250,
+        annualIncome: 3000,
+        units: 5,
+        rentPerUnit: 50
+      },
+      {
+        strategy: "Rent Optimization",
+        description: "Bring all units to market rent",
+        investment: 0,
+        monthlyIncomeIncrease: 1395,
+        annualIncomeIncrease: 16740,
+        percentIncrease: 21
+      },
+      {
+        strategy: "Opportunity Zone Benefits",
+        description: "TAX-FREE WEALTH BUILDING through long-term hold",
+        taxDeferral: true,
+        year5Reduction: 10,
+        year7Reduction: 15,
+        year10Benefit: "Zero taxes on appreciation"
+      }
+    ],
+    
+    // 5-Year Investment Plan
+    fiveYearPlan: {
+      year1: {
+        action: "Optimize Operations - Implement RUBS, add laundry",
+        monthlyIncome: 7255,
+        cashFlow: 25000,
+        occupancy: 100,
+        propertyValue: 764400,
+        equity: 218400,
+        totalReturn: 43000
+      },
+      year2to3: {
+        action: "Raise Rents - Bring units to market rate, add storage",
+        monthlyIncome: 8500,
+        cashFlow: 40000,
+        propertyValue: 950000,
+        equity: 404000,
+        cumulativeCashFlow: 105000
+      },
+      year4to5: {
+        action: "Maximum Value - All improvements complete, consider selling or refi",
+        monthlyIncome: 9000,
+        cashFlow: 45000,
+        propertyValue: 1205000,
+        equity: 659000,
+        cumulativeCashFlow: 195000
+      },
+      exitValue: 1205000,
+      totalProfit: 477000,
+      fiveYearROI: 262,
+      averageAnnualReturn: 52.4,
+      totalCashFlow: 195000,
+      appreciationGain: 477000,
+      totalReturn: 672000
+    },
+    
+    // Financial Comparison
+    financialComparison: {
+      thisProperty: {
+        capRate: 9.29,
+        pricePerUnit: 145600,
+        expenseRatio: 15.4,
+        occupancy: 100,
+        cashOnCashReturn: 12.6
+      },
+      marketAverage: {
+        capRate: "5-6%",
+        pricePerUnit: "$200,000+",
+        expenseRatio: "35-40%",
+        occupancy: "93%",
+        cashOnCashReturn: "6-8%"
+      },
+      note: "EXCEPTIONAL compared to market!"
+    },
+    
+    // 30-Year Projections
+    thirtyYearProjections: {
+      assumptions: {
+        rentGrowthRate: 3,
+        expenseGrowthRate: 2.5,
+        appreciationRate: 4,
+        vacancyRate: 5,
+        managementFee: 8,
+        maintenanceRate: 10,
+        capExRate: 10
+      },
+      projections: [
+        { 
+          year: 1, 
+          grossRent: 79860,
+          vacancy: 3993,
+          effectiveRent: 75867,
+          expenses: 12260,
+          netOperatingIncome: 63607,
+          debtService: 44712,
+          cashFlow: 18895,
+          cumulativeCashFlow: 18895,
+          propertyValue: 757120,
+          loanBalance: 540290,
+          equity: 216830,
+          principalPaydown: 5710,
+          totalReturn: 48605,
+          totalROI: 26.7
+        },
+        { 
+          year: 2,
+          grossRent: 82256,
+          vacancy: 4113,
+          effectiveRent: 78143,
+          expenses: 12567,
+          netOperatingIncome: 65576,
+          debtService: 44712,
+          cashFlow: 20864,
+          cumulativeCashFlow: 39759,
+          propertyValue: 787405,
+          loanBalance: 534370,
+          equity: 253035,
+          principalPaydown: 5920,
+          totalReturn: 86764,
+          totalROI: 47.7
+        },
+        { 
+          year: 3,
+          grossRent: 84724,
+          vacancy: 4236,
+          effectiveRent: 80488,
+          expenses: 12881,
+          netOperatingIncome: 67607,
+          debtService: 44712,
+          cashFlow: 22895,
+          cumulativeCashFlow: 62654,
+          propertyValue: 818901,
+          loanBalance: 528238,
+          equity: 290663,
+          principalPaydown: 6132,
+          totalReturn: 136581,
+          totalROI: 75.0
+        },
+        { 
+          year: 4,
+          grossRent: 87266,
+          vacancy: 4363,
+          effectiveRent: 82903,
+          expenses: 13203,
+          netOperatingIncome: 69700,
+          debtService: 44712,
+          cashFlow: 24988,
+          cumulativeCashFlow: 87642,
+          propertyValue: 851657,
+          loanBalance: 521884,
+          equity: 329773,
+          principalPaydown: 6354,
+          totalReturn: 187384,
+          totalROI: 103.0
+        },
+        { 
+          year: 5,
+          grossRent: 89884,
+          vacancy: 4494,
+          effectiveRent: 85390,
+          expenses: 13533,
+          netOperatingIncome: 71857,
+          debtService: 44712,
+          cashFlow: 27145,
+          cumulativeCashFlow: 114787,
+          propertyValue: 885723,
+          loanBalance: 515298,
+          equity: 370425,
+          principalPaydown: 6586,
+          totalReturn: 241920,
+          totalROI: 133.0
+        },
+        { 
+          year: 10,
+          grossRent: 104048,
+          vacancy: 5202,
+          effectiveRent: 98846,
+          expenses: 15320,
+          netOperatingIncome: 83526,
+          debtService: 44712,
+          cashFlow: 38814,
+          cumulativeCashFlow: 282547,
+          propertyValue: 1078507,
+          loanBalance: 479847,
+          equity: 598660,
+          principalPaydown: 8316,
+          totalReturn: 515397,
+          totalROI: 283.2
+        },
+        { 
+          year: 15,
+          grossRent: 120496,
+          vacancy: 6025,
+          effectiveRent: 114471,
+          expenses: 17344,
+          netOperatingIncome: 97127,
+          debtService: 44712,
+          cashFlow: 52415,
+          cumulativeCashFlow: 519617,
+          propertyValue: 1313513,
+          loanBalance: 433282,
+          equity: 880231,
+          principalPaydown: 10507,
+          totalReturn: 932048,
+          totalROI: 512.1
+        },
+        { 
+          year: 20,
+          grossRent: 139535,
+          vacancy: 6977,
+          effectiveRent: 132558,
+          expenses: 19628,
+          netOperatingIncome: 112930,
+          debtService: 44712,
+          cashFlow: 68218,
+          cumulativeCashFlow: 833952,
+          propertyValue: 1600283,
+          loanBalance: 374798,
+          equity: 1225485,
+          principalPaydown: 13276,
+          totalReturn: 1503637,
+          totalROI: 826.2
+        },
+        { 
+          year: 25,
+          grossRent: 161571,
+          vacancy: 8079,
+          effectiveRent: 153492,
+          expenses: 22223,
+          netOperatingIncome: 131269,
+          debtService: 44712,
+          cashFlow: 86557,
+          cumulativeCashFlow: 1242346,
+          propertyValue: 1949945,
+          loanBalance: 301815,
+          equity: 1648130,
+          principalPaydown: 16775,
+          totalReturn: 2252251,
+          totalROI: 1237.5
+        },
+        { 
+          year: 30,
+          grossRent: 187069,
+          vacancy: 9353,
+          effectiveRent: 177716,
+          expenses: 25159,
+          netOperatingIncome: 152557,
+          debtService: 44712,
+          cashFlow: 107845,
+          cumulativeCashFlow: 1754858,
+          propertyValue: 2375433,
+          loanBalance: 0,
+          equity: 2375433,
+          principalPaydown: 44712,
+          totalReturn: 3312291,
+          totalROI: 1820.0
+        }
+      ]
+    },
+    
+    // Strategic Overview
+    strategicOverview: `This Fruitridge Manor property delivers an outstanding 9.29% cap rate with 100% occupancy! Located in a federal Opportunity Zone with extremely low expenses (15.4% ratio - incredibly low for the market), this fully stabilized asset offers immediate cash flow with significant rent growth potential. At just $145,600/unit with strong cash flow from day one, this property offers exceptional returns in Sacramento's growing market. The property features a 2-story unit with laundry and all units are currently occupied. With $1,395/month in rent upside potential (21% increase), simple value-adds like RUBS implementation (tenants currently pay NO utilities), and coin-operated laundry, this property can achieve 21.8% cash-on-cash returns. The Opportunity Zone location provides massive tax benefits including tax deferral, 10-15% reduction in basis, and ZERO taxes on appreciation after 10 years. Perfect for investors who want immediate double-digit returns, seek Opportunity Zone tax benefits, appreciate fully stabilized assets, can execute simple value-adds, and understand Sacramento's growth driven by state capital stability, growing tech sector, and severe housing shortage.`,
+    
+    // Risk Analysis
+    riskAnalysis: {
+      strengths: [
+        "✅ 9.29% cap rate (phenomenal!)",
+        "✅ 100% occupied",
+        "✅ 15% expense ratio (crazy low!)",
+        "✅ Opportunity Zone benefits",
+        "✅ Only $145,600/unit",
+        "✅ 2-story unit with laundry",
+        "✅ State capital stability",
+        "✅ Growing tech sector",
+        "✅ Housing shortage",
+        "✅ 5%+ annual rent growth"
+      ],
+      considerations: [
+        "❌ Fruitridge Manor (working-class area)",
+        "❌ 1979 building age",
+        "❌ Below-market rents",
+        "❌ No current RUBS"
+      ],
+      mitigations: [
+        "Professional management",
+        "Gradual rent increases",
+        "Preventive maintenance",
+        "Security improvements",
+        "Tenant screening",
+        "Build reserve fund",
+        "Regular property inspections",
+        "Maintain property insurance"
+      ]
+    },
+    
+    // Due Diligence Items
+    dueDiligenceItems: [
+      "Review actual P&L statements",
+      "Verify 15.4% expense ratio",
+      "Check all current leases",
+      "Confirm actual rents collected",
+      "Property inspection",
+      "Verify Opportunity Zone designation",
+      "Review utility billing setup",
+      "Check for deferred maintenance",
+      "Market rent survey",
+      "Environmental assessment",
+      "Title and survey review",
+      "Insurance quote verification",
+      "Property tax verification",
+      "Tenant payment history"
+    ],
+    
+    // Exit Strategies
+    exitStrategies: [
+      {
+        strategy: "5-Year Value-Add Exit",
+        description: "Optimize operations with RUBS and laundry, sell at 7% cap for $1,205,000",
+        timeline: "5 years",
+        estimatedProfit: 477000,
+        projectedValue: 1205000,
+        roi: 262
+      },
+      {
+        strategy: "10-Year Opportunity Zone Hold",
+        description: "Hold for full tax benefits with zero taxes on $772,000 appreciation",
+        timeline: "10 years",
+        estimatedProfit: 772000,
+        projectedValue: 1500000,
+        taxFreeGains: 772000
+      },
+      {
+        strategy: "Refinance & Hold",
+        description: "Cash-out refinance after value-add to pull out $200,000",
+        timeline: "2 years",
+        estimatedProfit: 200000,
+        newValue: 1000000,
+        cashOut: 200000,
+        continuedCashFlow: 3500
+      },
+      {
+        strategy: "1031 Exchange",
+        description: "Trade up to 10-20 unit building with $400,000 in deferred gains",
+        timeline: "3-5 years",
+        estimatedProfit: 400000,
+        deferredGains: 400000,
+        nextProperty: "10-20 unit building"
+      }
+    ],
+    
+    // Investment Thesis
+    investmentThesis: {
+      keyPoints: [
+        "Exceptional 9.29% cap rate",
+        "Incredibly low 15% expenses",
+        "100% occupied (no vacancy loss)",
+        "Opportunity Zone location",
+        "Simple value-add potential",
+        "Below replacement cost",
+        "Sacramento market strength",
+        "State capital stability",
+        "Tech sector growth",
+        "Severe housing shortage driving rents"
+      ],
+      idealInvestor: "Cash flow focused investors seeking immediate returns with simple value-add opportunities and Opportunity Zone tax benefits",
+      holdPeriod: "5-10 years for maximum returns",
+      expectedReturns: "12.6% immediate, 21.8% after optimization, 25%+ with all improvements",
+      warning: "At $145,600/unit with a 9.3% cap rate and 15% expenses, this is the kind of deal that builds generational wealth. Properties like this in Sacramento are EXTINCT - MOVE FAST!"
+    },
+    
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: 18,
+    title: "Kansas City 6-Plex - MIDTOWN VALUE-ADD GOLDMINE!",
+    address: "712-714 W 38th St",
+    city: "Kansas City",
+    state: "MO",
+    zipCode: "64111",
+    location: "Kansas City, MO 64111",
+    type: "Multi-Family Value-Add",
+    propertyType: "Multi-Family",
+    strategy: "Value-Add with 2BR Conversions",
+    investmentStrategy: "Value-Add",
+    units: 6,
+    isMultiFamily: true,
+    price: 775000,
+    downPayment: 193750,
+    downPaymentPercent: 25,
+    currentCapRate: 6.5,
+    capRate: 6.5,
+    proFormaCapRate: 10.5,
+    monthlyRent: 4985,
+    currentRent: 4985,
+    projectedRent: 11100,
+    proFormaCashFlow: 5614,
+    monthlyCashFlow: -78,
+    rentUpside: 6115,
+    status: "active",
+    daysOnMarket: 0,
+    confidence: "high",
+    images: ["/api/placeholder/400/300"],
+    bedrooms: 6,
+    bathrooms: 6,
+    sqft: null,
+    yearBuilt: 1923,
+    features: [
+      "Walk Score 88 - Walker's Paradise!",
+      "Valentine District - Prime Location",
+      "$129,167 per unit - Underpriced!",
+      "2BR Conversion Potential - Game Changer",
+      "Updated Systems",
+      "Original Hardwood Floors",
+      "Historic Charm + Modern Updates",
+      "0.5 miles to Westport",
+      "1 mile to Plaza District",
+      "Rapid Gentrification Area"
+    ],
+    description: "Prime Valentine neighborhood location with Walk Score 88! This charming 6-unit building features updated systems, original hardwood floors, and massive value-add potential through 2BR conversions. At just $129k/unit in KC's hottest walkable district, this property offers incredible upside!",
+    riskLevel: "medium",
+    timeframe: "12-24 months",
+    cashRequired: 241750,
+    totalROI: 345,
+    cashOnCashReturn: -0.5,
+    cashFlow: -936,
+    isDraft: false,
+    listingUrl: "https://www.loopnet.com/Listing/712-714-W-38th-St-Kansas-City-MO/37253356/",
+    listingSource: "LoopNet",
+    
+    // Financial Details
+    interestRate: 7.25,
+    loanTerm: 30,
+    loanAmount: 581250,
+    monthlyPI: 3966,
+    closingCosts: 15500,
+    rehabCosts: 48000,
+    rehabDetails: {
+      "2BR Conversion (per unit)": 8000,
+      "Total Conversion Cost (6 units)": 48000,
+      "Strategic Updates (4 units)": 12000,
+      "RUBS Implementation": 0,
+      "In-Unit Laundry (included in conversion)": 0
+    },
+    propertyTaxes: 806,
+    insurance: 323,
+    hoa: 0,
+    hoaFees: 0,
+    utilities: 300,
+    maintenance: 388,
+    propertyManagement: 478,
+    vacancy: 299,
+    capitalExpenditures: 300,
+    operatingExpenses: 2094,
+    monthlyExpenses: 2094,
+    annualExpenses: 25124,
+    netOperatingIncome: 46660,
+    
+    // Unit Mix and Rent Details
+    unitMix: {
+      "Current Configuration (1BR)": {
+        quantity: 6,
+        currentRent: 997,
+        marketRent: 1350,
+        totalCurrent: 4985,
+        totalMarket: 8100,
+        occupied: 5,
+        vacant: 1
+      },
+      "After Conversion (2BR)": {
+        quantity: 6,
+        currentRent: 0,
+        marketRent: 1850,
+        totalCurrent: 0,
+        totalMarket: 11100,
+        note: "Convert living rooms to bedrooms, add in-unit laundry"
+      }
+    },
+    
+    // Current Occupancy
+    currentOccupancy: {
+      totalUnits: 6,
+      occupied: 5,
+      vacant: 1,
+      occupancyRate: 83,
+      note: "5 of 6 units occupied"
+    },
+    
+    // Neighborhood & Location
+    neighborhoodClass: "A",
+    neighborhood: "Valentine District",
+    lotSize: null,
+    walkScore: 88,
+    
+    // Location Analysis
+    locationAnalysis: {
+      neighborhood: "Valentine District",
+      walkScore: 88,
+      walkScoreDescription: "Walker's Paradise",
+      transitScore: null,
+      bikeScore: null,
+      proximityToDowntown: "2.5 miles",
+      proximityToAmenities: {
+        westport: "0.5 miles",
+        plazaDistrict: "1 mile",
+        downtown: "2.5 miles",
+        kuMedical: "1.5 miles"
+      },
+      nearbyEmployers: [
+        { name: "KU Medical Center", distance: "1.5 miles", employees: "10,000+" },
+        { name: "Plaza District Businesses", distance: "1 mile", employees: "5,000+" },
+        { name: "Westport Entertainment District", distance: "0.5 miles", employees: "2,000+" },
+        { name: "Downtown KC", distance: "2.5 miles", employees: "50,000+" }
+      ],
+      publicTransit: {
+        busLines: ["Multiple KC Metro routes"],
+        nearestStop: "Within walking distance",
+        commuteOptions: "Street parking only"
+      },
+      schools: {
+        note: "Urban neighborhood - verify specific schools",
+        district: "Kansas City Public Schools"
+      },
+      shopping: [
+        { name: "Sun Fresh Market", distance: "Walking distance", type: "Grocery" },
+        { name: "Westport Shopping", distance: "0.5 miles", type: "Retail/Entertainment" },
+        { name: "Plaza Shopping", distance: "1 mile", type: "Premium Retail" }
+      ],
+      amenities: [
+        "Restaurants & bars everywhere",
+        "Coffee shops on every corner",
+        "Gyms and yoga studios",
+        "Parks and green spaces",
+        "Young professional magnet",
+        "Artist/creative community",
+        "Historic charm preserved"
+      ],
+      demographics: {
+        targetTenant: "Young professionals",
+        communityType: "Artist/creative community",
+        gentrificationStatus: "Rapid gentrification",
+        newConstruction: "Limited",
+        historicCharm: "Preserved"
+      },
+      marketTrends: "Young professional magnet, artist/creative community, rapid gentrification, limited new construction, historic charm preserved"
+    },
+    
+    // Rental Analysis
+    rentAnalysis: {
+      currentRents: {
+        "Average (5 occupied units)": 997,
+        "Vacant Unit": 0
+      },
+      marketRents: {
+        "1BR Current Configuration": 1350,
+        "2BR After Conversion": 1850,
+        "2BR with Premium Finishes": 2000,
+        "In-Unit Laundry Premium": 100
+      },
+      rentalDemand: "Very High",
+      vacancyRate: 17,
+      currentOccupancy: 83,
+      rentGrowth: "Strong in gentrifying area",
+      rentGrowthRate: 4,
+      totalUnits: 6,
+      proFormaOccupancy: 95,
+      rentIncreasePerUnit1BR: 353,
+      rentIncreasePerUnit2BR: 853,
+      totalRentUpside: 6115,
+      currentRentPerUnit: 831,
+      marketRentPerUnit: 1850,
+      monthlyRentUpside: 6115,
+      percentRentIncrease: 122.6,
+      averageCurrentRent: 997,
+      averageMarketRent: 1850,
+      totalCurrentMonthlyRent: 4985,
+      totalMarketMonthlyRent: 11100
+    },
+    
+    // Property Metrics
+    propertyMetrics: {
+      pricePerUnit: 129167,
+      pricePerSqFt: null,
+      grossRentMultiplier: 13.0,
+      currentGrossRentMultiplier: 13.0,
+      proFormaGrossRentMultiplier: 5.8,
+      debtServiceCoverageRatio: 0.98,
+      breakEvenOccupancy: 102,
+      internalRateOfReturn: 28,
+      equityMultiple: 4.45,
+      paybackPeriod: 7.0,
+      currentYield: 6.5,
+      proFormaYield: 10.5,
+      note: "Currently slight negative cash flow, transforms with value-add"
+    },
+    
+    // Comparable Sales Analysis
+    comparableSales: [
+      {
+        address: "1608 W 38th",
+        pricePerUnit: 137143,
+        note: "Recent Valentine sale"
+      },
+      {
+        address: "703-705 W 38th",
+        pricePerUnit: 137143,
+        note: "Recent Valentine sale"
+      },
+      {
+        address: "1610 W 38th",
+        pricePerUnit: 151667,
+        note: "Recent Volker sale"
+      }
+    ],
+    subjectComparison: {
+      subjectPricePerUnit: 129167,
+      averageCompPrice: 141984,
+      discount: "$12,817 per unit below comps",
+      conclusion: "UNDERPRICED!"
+    },
+    
+    // Investment Scenarios
+    investmentScenarios: {
+      current: {
+        name: "Current State",
+        strategy: "As-is with 5 units rented",
+        monthlyIncome: 4985,
+        annualIncome: 59820,
+        netOperatingIncome: 38877,
+        capRate: 5.0,
+        monthlyCashFlow: -78,
+        cashFlow: -936,
+        cashOnCashReturn: -0.5,
+        note: "Slight negative cash flow"
+      },
+      conservative: {
+        name: "Market Rents Only",
+        strategy: "Fill vacant unit, raise to market $1,350/month",
+        monthlyIncome: 8100,
+        annualIncome: 97200,
+        netOperatingIncome: 63180,
+        capRate: 8.2,
+        monthlyCashFlow: 2214,
+        cashFlow: 26568,
+        cashOnCashReturn: 13.7,
+        totalROI: 137
+      },
+      realistic: {
+        name: "Phased 2BR Conversion",
+        strategy: "Convert 3-4 units Year 1, complete by Year 2",
+        monthlyIncome: 9500,
+        annualIncome: 114000,
+        netOperatingIncome: 74100,
+        capRate: 9.6,
+        monthlyCashFlow: 3750,
+        cashFlow: 45000,
+        cashOnCashReturn: 20,
+        totalROI: 200,
+        totalInvestment: 241750
+      },
+      aggressive: {
+        name: "Full 2BR Conversion",
+        strategy: "All 6 units to 2BR with in-unit laundry",
+        monthlyIncome: 11100,
+        annualIncome: 133200,
+        netOperatingIncome: 86580,
+        capRate: 11.2,
+        monthlyCashFlow: 5614,
+        cashFlow: 67368,
+        cashOnCashReturn: 27.5,
+        totalROI: 275,
+        totalInvestment: 241750,
+        note: "Including $48k conversion costs"
+      },
+      luxury: {
+        name: "Premium Strategy",
+        strategy: "2BR conversions + luxury finishes, push to $2,000 rents",
+        monthlyIncome: 12000,
+        annualIncome: 144000,
+        netOperatingIncome: 93600,
+        capRate: 12.1,
+        monthlyCashFlow: 5833,
+        cashFlow: 70000,
+        cashOnCashReturn: 30,
+        totalROI: 300
+      }
+    },
+    
+    // Value Add Strategies
+    valueAddStrategies: [
+      {
+        strategy: "Raise to Market Rents",
+        description: "Current $997 to market $1,350/month",
+        investment: 0,
+        increasePerUnit: 353,
+        monthlyIncomeIncrease: 2118,
+        annualIncomeIncrease: 25416,
+        newCapRate: 8.2
+      },
+      {
+        strategy: "2BR Conversion BRILLIANCE",
+        description: "Convert living rooms to bedrooms, add in-unit laundry",
+        investment: 48000,
+        costPerUnit: 8000,
+        newRentPerUnit: 1850,
+        monthlyIncomeIncrease: 5118,
+        annualIncomeIncrease: 61416,
+        newCapRate: 11.2,
+        note: "Perfect layout for conversion"
+      },
+      {
+        strategy: "In-Unit Laundry Premium",
+        description: "Already included in 2BR conversion plan",
+        premium: 100,
+        tenantRetention: "Major retention tool",
+        competitiveAdvantage: "Eliminates laundromat trips"
+      },
+      {
+        strategy: "Luxury Unit Strategy",
+        description: "2 units already luxury finished, focus on remaining 4",
+        investment: 12000,
+        costPerUnit: 3000,
+        targetRent: 2000,
+        note: "Create consistent premium product"
+      },
+      {
+        strategy: "RUBS Implementation",
+        description: "Water currently master metered - bill back utilities",
+        investment: 0,
+        monthlySavings: 300,
+        annualSavings: 3600,
+        directNOIIncrease: true
+      }
+    ],
+    
+    // 5-Year Investment Plan
+    fiveYearPlan: {
+      year1: {
+        action: "Stabilize & Start - Fill vacant unit, begin 2BR conversions (2 units), implement RUBS",
+        monthlyIncome: 8100,
+        unitsConverted: 2,
+        occupancy: 100
+      },
+      year2: {
+        action: "Convert & Optimize - Complete remaining conversions, all units at 2BR",
+        monthlyIncome: 11100,
+        unitsConverted: 6,
+        configuration: "All 2BR with in-unit laundry"
+      },
+      year3to5: {
+        action: "Maximize - Premium finishes in all units, push rents to $2,000+, consider condo conversion",
+        monthlyIncome: 12000,
+        potentialCondoConversion: true,
+        propertyValue: 1443000
+      },
+      exitValue: 1443000,
+      totalProfit: 668000,
+      fiveYearROI: 345,
+      exitCapRate: 6
+    },
+    
+    // Strategic Overview
+    strategicOverview: `Prime Valentine neighborhood location with Walk Score 88 (Walker's Paradise)! This charming 6-unit building features updated systems, original hardwood floors, and massive value-add potential through 2BR conversions. Currently showing slight negative cash flow at -$78/month with 5 of 6 units occupied, but this transforms completely with value-add execution. The property is perfectly positioned for 2BR conversions with ideal layout - convert living rooms to bedrooms and add in-unit laundry for just $8,000/unit. At current market rents of $1,350 for 1BR units, the property achieves 13.7% cash-on-cash returns. After 2BR conversions commanding $1,850/month, cash flow jumps to $5,614/month (27.5% cash-on-cash return including conversion costs). Located in the rapidly gentrifying Valentine District just 0.5 miles from Westport and 1 mile from Plaza District, with young professionals and creative community driving demand. Recent comparable sales at $137-152k/unit prove the subject at $129,167/unit is UNDERPRICED. The 5-year plan shows exit value at $1,443,000 with $668,000 profit (345% ROI). This is textbook value-add: Buy at $129k/unit, invest $8k/unit, achieve $1,850 rents, exit at $240k/unit.`,
+    
+    // Risk Analysis
+    riskAnalysis: {
+      strengths: [
+        "✅ Walk Score 88 (incredible!)",
+        "✅ $129,167/unit (cheap!)",
+        "✅ 2BR conversion potential",
+        "✅ Updated systems",
+        "✅ Historic charm + modern updates",
+        "✅ Prime Valentine location",
+        "✅ Rapid gentrification area",
+        "✅ Young professional demand",
+        "✅ Below comparable sales",
+        "✅ Perfect conversion layout"
+      ],
+      considerations: [
+        "❌ Currently slight negative cash flow",
+        "❌ Street parking only",
+        "❌ 1923 building (maintenance)",
+        "❌ Conversion costs needed",
+        "❌ One vacant unit"
+      ],
+      mitigations: [
+        "Quick lease-up (high demand area)",
+        "Phased conversion approach",
+        "Professional management",
+        "Preventive maintenance program",
+        "Build reserve fund",
+        "Screen tenants carefully",
+        "Regular property inspections"
+      ],
+      warning: "Currently shows slight negative cash flow, but with one lease-up and market rents, immediately turns positive. The 2BR conversion strategy transforms this into a 27%+ cash-on-cash MONSTER!"
+    },
+    
+    // Due Diligence Items
+    dueDiligenceItems: [
+      "Verify conversion feasibility with city",
+      "Get contractor quotes for 2BR conversions",
+      "Inspect all mechanical systems",
+      "Review all current leases",
+      "Check parking situation thoroughly",
+      "Verify Walk Score and location benefits",
+      "Environmental assessment",
+      "Title and survey review",
+      "Review historic district requirements",
+      "Check for code violations",
+      "Assess actual maintenance needs",
+      "Market rent survey for 2BR units",
+      "Review comparable sales",
+      "Tenant payment history"
+    ],
+    
+    // Exit Strategies
+    exitStrategies: [
+      {
+        strategy: "5-Year Value-Add Exit",
+        description: "Complete 2BR conversions and sell at 6% cap for $1,443,000",
+        timeline: "5 years",
+        estimatedProfit: 668000,
+        projectedValue: 1443000,
+        roi: 345
+      },
+      {
+        strategy: "Condo Conversion",
+        description: "Convert to condos at $250,000/unit in hot Valentine market",
+        timeline: "3-4 years",
+        estimatedProfit: 725000,
+        estimatedValuePerUnit: 250000,
+        totalValue: 1500000,
+        note: "Subject to market conditions and city approval"
+      },
+      {
+        strategy: "Refinance & Hold",
+        description: "Cash-out refinance after conversions to pull out $300,000",
+        timeline: "2 years",
+        estimatedProfit: 300000,
+        newValue: 1200000,
+        cashOut: 300000,
+        continuedCashFlow: 5000
+      },
+      {
+        strategy: "1031 Exchange",
+        description: "Trade up to 10-20 unit building with $500,000 in deferred gains",
+        timeline: "3-5 years",
+        estimatedProfit: 500000,
+        deferredGains: 500000,
+        nextProperty: "10-20 unit building in Crossroads or River Market"
+      }
+    ],
+    
+    // 30-Year Projections (After 2BR Conversions)
+    thirtyYearProjections: {
+      assumptions: {
+        rentGrowthRate: 3,
+        expenseGrowthRate: 2.5,
+        appreciationRate: 4,
+        vacancyRate: 5,
+        managementFee: 8,
+        maintenanceRate: 10,
+        capExRate: 10,
+        note: "Assumes 2BR conversions completed Year 1"
+      },
+      projections: [
+        { 
+          year: 1,
+          grossRent: 71784,
+          vacancy: 3589,
+          effectiveRent: 68195,
+          expenses: 25124,
+          netOperatingIncome: 43071,
+          debtService: 47592,
+          cashFlow: -4521,
+          cumulativeCashFlow: -4521,
+          propertyValue: 806000,
+          loanBalance: 574803,
+          equity: 231197,
+          principalPaydown: 6447,
+          totalReturn: 27676,
+          totalROI: 14.3,
+          note: "During conversion period"
+        },
+        { 
+          year: 2,
+          grossRent: 133200,
+          vacancy: 6660,
+          effectiveRent: 126540,
+          expenses: 25752,
+          netOperatingIncome: 100788,
+          debtService: 47592,
+          cashFlow: 53196,
+          cumulativeCashFlow: 48675,
+          propertyValue: 838240,
+          loanBalance: 568099,
+          equity: 270141,
+          principalPaydown: 6704,
+          totalReturn: 145340,
+          totalROI: 75.0,
+          note: "2BR conversions complete"
+        },
+        { 
+          year: 3,
+          grossRent: 137196,
+          vacancy: 6860,
+          effectiveRent: 130336,
+          expenses: 26396,
+          netOperatingIncome: 103940,
+          debtService: 47592,
+          cashFlow: 56348,
+          cumulativeCashFlow: 105023,
+          propertyValue: 871770,
+          loanBalance: 561127,
+          equity: 310643,
+          principalPaydown: 6972,
+          totalReturn: 238967,
+          totalROI: 123.3
+        },
+        { 
+          year: 5,
+          grossRent: 145523,
+          vacancy: 7276,
+          effectiveRent: 138247,
+          expenses: 27716,
+          netOperatingIncome: 110531,
+          debtService: 47592,
+          cashFlow: 62939,
+          cumulativeCashFlow: 234648,
+          propertyValue: 942871,
+          loanBalance: 546105,
+          equity: 396766,
+          principalPaydown: 7532,
+          totalReturn: 439164,
+          totalROI: 226.7
+        },
+        { 
+          year: 10,
+          grossRent: 168488,
+          vacancy: 8424,
+          effectiveRent: 160064,
+          expenses: 31372,
+          netOperatingIncome: 128692,
+          debtService: 47592,
+          cashFlow: 81100,
+          cumulativeCashFlow: 601703,
+          propertyValue: 1148154,
+          loanBalance: 505971,
+          equity: 642183,
+          principalPaydown: 9515,
+          totalReturn: 889136,
+          totalROI: 459.0
+        },
+        { 
+          year: 15,
+          grossRent: 195096,
+          vacancy: 9755,
+          effectiveRent: 185341,
+          expenses: 35527,
+          netOperatingIncome: 149814,
+          debtService: 47592,
+          cashFlow: 102222,
+          cumulativeCashFlow: 1068463,
+          propertyValue: 1398374,
+          loanBalance: 454831,
+          equity: 943543,
+          principalPaydown: 12023,
+          totalReturn: 1547256,
+          totalROI: 798.6
+        },
+        { 
+          year: 20,
+          grossRent: 225865,
+          vacancy: 11293,
+          effectiveRent: 214572,
+          expenses: 40229,
+          netOperatingIncome: 174343,
+          debtService: 47592,
+          cashFlow: 126751,
+          cumulativeCashFlow: 1627718,
+          propertyValue: 1703089,
+          loanBalance: 389820,
+          equity: 1313269,
+          principalPaydown: 15195,
+          totalReturn: 2387237,
+          totalROI: 1232.1
+        },
+        { 
+          year: 25,
+          grossRent: 261538,
+          vacancy: 13077,
+          effectiveRent: 248461,
+          expenses: 45559,
+          netOperatingIncome: 202902,
+          debtService: 47592,
+          cashFlow: 155310,
+          cumulativeCashFlow: 2324383,
+          propertyValue: 2074987,
+          loanBalance: 307267,
+          equity: 1767720,
+          principalPaydown: 19208,
+          totalReturn: 3547853,
+          totalROI: 1831.4
+        },
+        { 
+          year: 30,
+          grossRent: 302875,
+          vacancy: 15144,
+          effectiveRent: 287731,
+          expenses: 51608,
+          netOperatingIncome: 236123,
+          debtService: 47592,
+          cashFlow: 188531,
+          cumulativeCashFlow: 3187608,
+          propertyValue: 2527633,
+          loanBalance: 0,
+          equity: 2527633,
+          principalPaydown: 47592,
+          totalReturn: 4962991,
+          totalROI: 2562.0
+        }
+      ]
+    },
+    
+    // Investment Thesis
+    investmentThesis: {
+      keyPoints: [
+        "Prime Valentine location with Walk Score 88",
+        "Simple 2BR conversion opportunity",
+        "$353-853/month rent upside per unit",
+        "Below market purchase price vs comps",
+        "Updated major systems",
+        "Perfect conversion layout",
+        "Rapid neighborhood gentrification",
+        "Young professional tenant base",
+        "Limited new construction supply",
+        "Historic charm creates premium"
+      ],
+      idealInvestor: "Value-add investors who understand conversion potential, can fund renovation costs, appreciate walkable locations, want Kansas City exposure, and think beyond current state",
+      holdPeriod: "2-5 years for maximum returns",
+      expectedReturns: "13.7% after market rents, 27.5% after conversions, 30%+ with premium finishes",
+      criticalSuccess: "The 2BR conversion is the key - perfect layout makes this straightforward",
+      finalThought: "With perfect conversion layout, Walk Score 88, and $850+/month rent upside per unit, this Valentine gem can go from break-even to $67k+ annual cash flow. Properties with this potential in walkable KC neighborhoods are RARE - act fast!"
     },
     
     createdAt: new Date(),
