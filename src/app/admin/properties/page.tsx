@@ -138,13 +138,48 @@ export default function AdminPropertiesPage() {
         method: 'DELETE'
       });
 
-      if (!response.ok) throw new Error('Failed to delete property');
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.error('Failed to parse error response:', e);
+          errorData = { error: 'Failed to delete property' };
+        }
+        console.error('Delete response error:', errorData);
+        throw new Error(errorData.error || 'Failed to delete property');
+      }
       
-      await fetchProperties();
-      alert('Property deleted successfully!');
-    } catch (error) {
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        console.error('Failed to parse success response:', e);
+        result = { success: false };
+      }
+      
+      if (result.success) {
+        await fetchProperties();
+        alert('Property deleted successfully!');
+      } else {
+        throw new Error(result.error || 'Delete operation failed');
+      }
+    } catch (error: any) {
       console.error('Error deleting property:', error);
-      alert('Failed to delete property. Please try again.');
+      const errorMessage = error.message || 'Failed to delete property. Please try again.';
+      
+      // Special handling for different error types
+      if (errorMessage.includes('Static properties cannot be deleted')) {
+        alert('This property is part of the static dashboard and cannot be deleted. Static properties are hardcoded for demonstration purposes.');
+      } else if (errorMessage.includes('Database table not configured')) {
+        alert('The database is not configured for property deletion. Static properties on this dashboard cannot be deleted.');
+      } else if (errorMessage.includes('is_deleted') || errorMessage.includes('schema')) {
+        alert('Database schema issue. Please ensure the properties table has been properly migrated.');
+      } else if (errorMessage.includes('static')) {
+        alert('This is a static property and cannot be deleted.');
+      } else {
+        alert(`Failed to delete property: ${errorMessage}`);
+      }
     }
   };
 

@@ -1,50 +1,6 @@
 // Static deals that appear on the dashboard
 export const staticDeals = [
   {
-    id: 1,
-    title: "853 S 32nd Street",
-    address: "853 S 32nd Street",
-    city: "San Diego",
-    state: "CA",
-    zipCode: "92113",
-    location: "San Diego, CA 92113",
-    type: "Opportunity Zone",
-    propertyType: "Multifamily",
-    strategy: "BRRRR",
-    investmentStrategy: "BRRRR",
-    units: 4,
-    isMultiFamily: true,
-    price: 1295000,
-    downPayment: 647500,
-    downPaymentPercent: 50,
-    currentCapRate: 3.39,
-    capRate: 3.39,
-    proFormaCapRate: 5.63,
-    monthlyRent: 5905,
-    proFormaCashFlow: 1938,
-    monthlyCashFlow: 1938,
-    rentUpside: 2495,
-    status: "active",
-    daysOnMarket: 2,
-    confidence: "high",
-    images: ["/api/placeholder/400/300"],
-    bedrooms: 4,
-    bathrooms: 4,
-    sqft: 7325,
-    yearBuilt: 1950,
-    features: ["Promise Zone", "Transit Priority", "ADU Potential"],
-    description: "4-unit mixed configuration property in an Opportunity Zone with significant value-add potential.",
-    riskLevel: "medium",
-    timeframe: "6-12 months",
-    cashRequired: 647500,
-    totalROI: 42.3,
-    isDraft: false,
-    listingUrl: "https://www.zillow.com/homedetails/853-S-32nd-St-San-Diego-CA-92113/17029949_zpid/",
-    listingSource: "Zillow",
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
     id: 2,
     title: "4223 Menlo Ave",
     address: "4223 Menlo Ave",
@@ -513,6 +469,326 @@ export const staticDeals = [
     capRate: 0,
     monthlyCashFlow: 0,
     isDraft: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: 15,
+    title: "Napa 3-Unit House Hack - Live in Wine Country Paradise!",
+    address: "850 Caymus St",
+    city: "Napa",
+    state: "CA",
+    zipCode: "94559",
+    location: "Napa, CA 94559",
+    type: "House Hack",
+    propertyType: "Multi-Family",
+    strategy: "House Hack - Live Free in Wine Country",
+    investmentStrategy: "House Hack",
+    units: 3,
+    isMultiFamily: true,
+    price: 825000,
+    downPayment: 28875,
+    downPaymentPercent: 3.5,
+    currentCapRate: 6.1,
+    capRate: 6.1,
+    proFormaCapRate: 9.8,
+    monthlyRent: 5600,
+    projectedRent: 8100,
+    proFormaCashFlow: 1260,
+    monthlyCashFlow: -1240,
+    rentUpside: 2500,
+    status: "active",
+    daysOnMarket: 0,
+    confidence: "very high",
+    images: ["/api/placeholder/400/300"],
+    bedrooms: 5,
+    bathrooms: 3,
+    sqft: 2800,
+    yearBuilt: 1880,
+    features: [
+      "Two Buildings on One Lot",
+      "Warehouse with ADU Potential", 
+      "5 Blocks from Downtown Napa",
+      "3BR Main House + 2 Studios",
+      "FHA Eligible - 3.5% Down",
+      "Wine Country Premium Location",
+      "Multiple Income Streams",
+      "Walk to Restaurants & Wine Tasting",
+      "Event Hosting Potential",
+      "$2,500/mo Warehouse ADU Opportunity"
+    ],
+    description: "Incredible house hack in downtown Napa! Two buildings on one lot with warehouse bonus. Live in a studio while collecting $5,600/month from the main house and other studio. Just 5 blocks from downtown Napa. After warehouse ADU conversion, you'll GET PAID $1,260/month to live in wine country!",
+    riskLevel: "low",
+    timeframe: "immediate",
+    cashRequired: 45375,
+    totalROI: 190.0,  // 1900% expressed as decimal (matches other properties format)
+    isDraft: false,
+    listingUrl: "https://www.loopnet.com/Listing/850-Caymus-St-Napa-CA/37220526/",
+    listingSource: "LoopNet",
+    
+    // Financial Details
+    interestRate: 6.75,
+    loanTerm: 30,
+    monthlyPI: 5166,
+    monthlyMIP: 564,
+    closingCosts: 16500,
+    rehabCosts: 100000,
+    rehabDetails: {
+      "Warehouse to ADU Conversion": 100000,
+      "Move-in Ready": 0
+    },
+    propertyTaxes: 860,
+    insurance: 250,
+    hoa: 0,
+    hoaFees: 0,
+    utilities: 0,
+    maintenance: 200,
+    propertyManagement: 0,
+    vacancy: 280,
+    capitalExpenditures: 200,
+    
+    // Neighborhood & Location
+    neighborhoodClass: "A",
+    neighborhood: "Downtown Napa",
+    lotSize: "0.25 acres",
+    walkScore: 85,
+    
+    // Rental Analysis
+    currentRent: 5600,
+    cashOnCashReturn: -5.14,  // -51.4% expressed as decimal
+    
+    // Premium Newsletter Sections
+    strategicOverview: `This is a rare house hack opportunity in the heart of Napa Valley. With just $28,875 down using an FHA loan, you can control a property with three income-producing units plus a warehouse with massive potential. Live in one studio while renting the main house and other studio for $5,600/month, covering most of your housing costs. Your net cost is only $1,240/month - cheaper than renting! The real opportunity lies in the warehouse conversion - add an ADU for $100k and you'll actually GET PAID $1,260/month to live in downtown Napa. Located just 5 blocks from downtown with restaurants, wine tasting rooms, and Oxbow Market. The 5-year projection shows $550,000 total return on your $28,875 investment - a 1,900% ROI!`,
+    
+    valueAddDescription: `The warehouse conversion is the hidden goldmine. For $100k (financeable through HELOC after year 1), convert to a legal ADU renting for $2,500/month. Additional value-adds: Weekend Airbnb arbitrage ($300/night), wine country event hosting ($1,000+ per event), commercial warehouse rental to winemakers ($1,500/month), or wine storage business ($2,000/month). The two-building configuration provides incredible flexibility for various income strategies.`,
+    
+    locationAnalysis: {
+      neighborhood: "Downtown Napa",
+      walkScore: 85,
+      transitScore: 35,
+      bikeScore: 75,
+      proximityToDowntown: "5 blocks",
+      proximityToHighway: "2 miles to Highway 29",
+      nearbyEmployers: [
+        { name: "Wine Industry", distance: "Throughout valley", employees: "45,000+" },
+        { name: "Queen of the Valley Hospital", distance: "1.5 miles", employees: "2,000+" },
+        { name: "Napa Valley College", distance: "3 miles", employees: "500+" }
+      ],
+      publicTransit: {
+        busLines: ["Vine Transit Route 10", "Route 11"],
+        nearestStop: "0.3 miles",
+        commuteOptions: "San Francisco Ferry (Vallejo) 30 min drive"
+      },
+      schools: {
+        elementary: "Shearer Elementary - 7/10 rating",
+        middle: "Silverado Middle - 6/10 rating",
+        high: "Napa High - 7/10 rating",
+        district: "Napa Valley USD"
+      },
+      shopping: [
+        { name: "Oxbow Public Market", distance: "0.5 miles", type: "Gourmet food hall" },
+        { name: "First Street Napa", distance: "0.4 miles", type: "Shopping & dining" },
+        { name: "Whole Foods", distance: "1.2 miles", type: "Grocery" }
+      ],
+      amenities: [
+        "Downtown restaurants & cafes",
+        "Wine tasting rooms",
+        "Napa Valley Wine Train",
+        "Napa River Trail",
+        "Premium shopping & dining"
+      ],
+      demographics: {
+        population: 79246,
+        medianAge: 40.2,
+        medianIncome: 92000,
+        collegeEducated: 38,
+        ownerOccupied: 58
+      },
+      crimeRate: "Below state average",
+      futureDeveopment: "Limited due to agricultural preserve",
+      appreciationHistory: "5-7% annual average last 10 years",
+      marketTrends: "Limited housing supply, high demand, wine country premium"
+    },
+    
+    rentAnalysis: {
+      currentRents: {
+        "Main House (3BR/2BA)": 3200,
+        "Studio #1": 2400,
+        "Studio #2 (Owner Occupied)": 0,
+        "Warehouse": 0
+      },
+      marketRents: {
+        "Main House": 3200,
+        "Studio": 2400,
+        "Warehouse ADU": 2500,
+        "Airbnb Weekend": 300
+      },
+      rentalDemand: "Very High",
+      vacancyRate: 3,
+      rentGrowth: "4-5% annually",
+      rentGrowthRate: 4,
+      comparableRents: [
+        { address: "Similar 3BR Napa", rent: 3300, sqft: 1600 },
+        { address: "Studio Downtown", rent: 2200, sqft: 500 },
+        { address: "2BR Unit Nearby", rent: 2800, sqft: 900 }
+      ],
+      totalUnits: 3,
+      currentOccupancy: 100
+    },
+    
+    propertyMetrics: {
+      pricePerUnit: 275000,
+      pricePerSqFt: 295,
+      grossRentMultiplier: 12.3,
+      debtServiceCoverageRatio: 0.82,
+      breakEvenOccupancy: 92,
+      internalRateOfReturn: 38,
+      equityMultiple: 19.0,
+      paybackPeriod: 2.6
+    },
+    
+    financingScenarios: [
+      {
+        name: "FHA 3.5% Down (Best for House Hack)",
+        downPayment: 28875,
+        loanAmount: 796125,
+        rate: 6.75,
+        monthlyPayment: 5730,
+        cashFlow: -1240,
+        totalCashNeeded: 45375,
+        cashOnCashReturn: -32.8,
+        totalROI: 190.0,
+        note: "Live almost free in Napa Valley!"
+      },
+      {
+        name: "Conventional 5% Down",
+        downPayment: 41250,
+        loanAmount: 783750,
+        rate: 7.25,
+        monthlyPayment: 5544,
+        cashFlow: -1004,
+        totalCashNeeded: 57750,
+        cashOnCashReturn: -20.9,
+        totalROI: 175.0
+      },
+      {
+        name: "Conventional 20% Down",
+        downPayment: 165000,
+        loanAmount: 660000,
+        rate: 7.0,
+        monthlyPayment: 4391,
+        cashFlow: 169,
+        totalCashNeeded: 181500,
+        cashOnCashReturn: 1.1,
+        totalROI: 95.0,
+        note: "Positive cash flow from day 1"
+      }
+    ],
+    
+    thirtyYearProjections: {
+      assumptions: {
+        rentGrowthRate: 3,
+        expenseGrowthRate: 2.5,
+        appreciationRate: 5,
+        vacancyRate: 5,
+        managementFee: 0,
+        maintenanceRate: 5,
+        capExRate: 5
+      },
+      projections: [
+        { year: 1, annualCashFlow: -14880, cumulativeCashFlow: -14880, propertyValue: 866250, equity: 69125, loanBalance: 797125, totalROI: -32.8 },
+        { year: 2, annualCashFlow: 15120, cumulativeCashFlow: 255, propertyValue: 909563, equity: 212438, loanBalance: 697125, totalROI: 33.4, note: "Warehouse ADU complete" },
+        { year: 3, annualCashFlow: 15876, cumulativeCashFlow: 16131, propertyValue: 955041, equity: 259916, loanBalance: 695125, totalROI: 55.5 },
+        { year: 5, annualCashFlow: 17500, cumulativeCashFlow: 51631, propertyValue: 1052622, equity: 361497, loanBalance: 691125, totalROI: 113.8 },
+        { year: 10, annualCashFlow: 22750, cumulativeCashFlow: 165381, propertyValue: 1344589, equity: 668464, loanBalance: 676125, totalROI: 364.2 },
+        { year: 20, annualCashFlow: 36400, cumulativeCashFlow: 455381, propertyValue: 2194481, equity: 1568356, loanBalance: 626125, totalROI: 1584.2 },
+        { year: 30, annualCashFlow: 58240, cumulativeCashFlow: 925381, propertyValue: 3569906, equity: 3569906, loanBalance: 0, totalROI: 3204.9 }
+      ],
+      totalRentalIncome: 2016000,
+      totalCashFlow: 925381,
+      principalPaydown: 796125,
+      propertyAppreciation: 2744906,
+      totalReturn: 4466412,
+      averageAnnualReturn: 148880,
+      totalROI: 883.0,
+      equityAtYear30: 3569906
+    },
+    
+    marketAnalysis: {
+      comparables: [
+        { address: "Similar 3-unit Napa", price: 950000, sqft: 2600, pricePerSqFt: 365, soldDate: "2 months ago" },
+        { address: "Downtown duplex", price: 750000, sqft: 2000, pricePerSqFt: 375, soldDate: "1 month ago" },
+        { address: "4-plex nearby", price: 1100000, sqft: 3200, pricePerSqFt: 344, soldDate: "3 months ago" }
+      ],
+      medianPrice: 825000,
+      medianPricePerSqFt: 361,
+      priceGrowth: 7,
+      priceGrowthYoY: "7% Year over Year",
+      daysOnMarket: 25,
+      averageDaysOnMarket: 28,
+      inventoryLevel: "0.8 months supply",
+      inventoryTrend: "Declining",
+      buyerDemand: "Very High",
+      sellerMarket: true,
+      sellerConcessions: "Rare in this market",
+      marketTemperature: "Hot",
+      seasonality: "Peak season spring/summer",
+      economicFactors: [
+        "Wine tourism driving demand",
+        "Tech worker migration from Bay Area",
+        "Limited new construction",
+        "Agricultural preserve restricts development"
+      ],
+      forecast: "Continued appreciation 5-7% annually",
+      investmentGrade: "A"
+    },
+    
+    rehabAnalysis: {
+      immediate: {
+        scope: "Move-in ready",
+        items: [],
+        cost: 0,
+        timeline: "Immediate"
+      },
+      phase1: {
+        scope: "Warehouse Planning",
+        items: [
+          { item: "Architectural plans", cost: 8000 },
+          { item: "Permits & approvals", cost: 7000 }
+        ],
+        cost: 15000,
+        timeline: "6 months",
+        roi: "N/A - Planning phase"
+      },
+      phase2: {
+        scope: "Warehouse to ADU Conversion",
+        items: [
+          { item: "Framing & structure", cost: 25000 },
+          { item: "Plumbing & electrical", cost: 30000 },
+          { item: "Kitchen & bath", cost: 25000 },
+          { item: "Finishes & flooring", cost: 20000 }
+        ],
+        cost: 100000,
+        timeline: "4-6 months",
+        roi: "30% cash-on-cash return",
+        monthlyRentIncrease: 2500
+      },
+      phase3: {
+        scope: "Amenity Upgrades",
+        items: [
+          { item: "Landscape design", cost: 25000 },
+          { item: "Event space setup", cost: 15000 }
+        ],
+        cost: 40000,
+        timeline: "Year 3",
+        roi: "Event income $1000+/event"
+      },
+      totalBudget: 155000,
+      postRehabValue: 1100000,
+      valueAdd: 275000,
+      rehabROI: 177
+    },
+    
     createdAt: new Date(),
     updatedAt: new Date()
   }

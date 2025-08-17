@@ -42,9 +42,16 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
   };
 
   // Helper function to format percentage
-  const formatPercent = (value: number | undefined, decimals = 1) => {
-    if (!value && value !== 0) return 'N/A';
-    return `${value.toFixed(decimals)}%`;
+  const formatPercent = (value: number | string | undefined, decimals = 1) => {
+    if (value === undefined || value === null) return 'N/A';
+    
+    // Convert string to number if needed
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    
+    if (isNaN(numValue)) return 'N/A';
+    if (numValue === 0) return '0%';
+    
+    return `${numValue.toFixed(decimals)}%`;
   };
 
   // Get color class for metrics
@@ -526,14 +533,24 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                         Major Employers Nearby
                       </h3>
                       <div className="grid md:grid-cols-2 gap-3">
-                        {property.locationAnalysis.nearbyEmployers.map((employer: string, index: number) => (
-                          <div key={index} className="flex items-center gap-2 p-3 bg-muted/5 rounded-lg">
-                            <svg className="w-5 h-5 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            <span className="text-sm">{employer}</span>
-                          </div>
-                        ))}
+                        {property.locationAnalysis.nearbyEmployers.map((employer: string | any, index: number) => {
+                          const employerName = typeof employer === 'string' ? employer : employer.name;
+                          const employerDetails = typeof employer === 'object' ? employer : null;
+                          
+                          return (
+                            <div key={index} className="flex items-center gap-2 p-3 bg-muted/5 rounded-lg">
+                              <svg className="w-5 h-5 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                              </svg>
+                              <div className="text-sm">
+                                <div>{employerName}</div>
+                                {employerDetails && employerDetails.distance && (
+                                  <div className="text-xs text-muted">{employerDetails.distance} • {employerDetails.employees}</div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
