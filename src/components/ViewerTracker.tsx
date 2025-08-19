@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { trackPropertyView } from '@/lib/supabase/property-views';
 
 interface ViewerTrackerProps {
   dealId: number;
@@ -9,13 +11,21 @@ interface ViewerTrackerProps {
 
 // Simulate real-time viewer tracking - in production this would connect to a websocket/real-time service
 const ViewerTracker = ({ dealId, className = '' }: ViewerTrackerProps) => {
+  const { user } = useAuth();
   const [viewerCount, setViewerCount] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasTracked = useRef(false);
 
   useEffect(() => {
     // Initialize with a base viewer count based on deal ID for consistency
     const baseViewers = (dealId % 8) + 2; // 2-9 initial viewers based on deal ID
     setViewerCount(baseViewers);
+    
+    // Track property view for logged-in users
+    if (user && !hasTracked.current) {
+      hasTracked.current = true;
+      trackPropertyView(user.id, dealId).catch(console.error);
+    }
 
     // Simulate real-time updates
     let counter = 0;

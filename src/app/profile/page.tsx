@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import MyAnalyzedProperties from '@/components/MyAnalyzedProperties';
 import UsageDisplay from '@/components/UsageDisplay';
 import { getUserFavoriteProperties } from '@/lib/supabase/favorites';
+import { getUniqueMonthlyViews } from '@/lib/supabase/property-views';
+import { getUserSavedFilters, getActiveFiltersCount } from '@/lib/supabase/saved-filters';
 import FavoriteButton from '@/components/FavoriteButton';
 import DealModal from '@/app/dashboard/DealModal';
 import { getUserProfile } from '@/lib/supabase/profiles';
@@ -126,6 +128,10 @@ export default function ProfilePage() {
   // Saved properties from favorites
   const [savedProperties, setSavedProperties] = useState<SavedProperty[]>([]);
   // Removed unused variable: loadingSavedProperties
+  
+  // Tracking states
+  const [viewedThisMonth, setViewedThisMonth] = useState(0);
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
   // The curated deals data (same as in dashboard) - full data for modal
   const curatedDeals = useMemo(() => [
@@ -408,6 +414,37 @@ export default function ProfilePage() {
       if (usage) {
         setMonthlyUsage(usage.analysis_count);
       }
+      
+      // Fetch monthly views count
+      const { count: viewCount } = await getUniqueMonthlyViews(user.id);
+      setViewedThisMonth(viewCount);
+      
+      // Fetch active filters count
+      const { count: filtersCount } = await getActiveFiltersCount(user.id);
+      setActiveFiltersCount(filtersCount);
+      
+      // Fetch saved filters
+      const { data: filters } = await getUserSavedFilters(user.id);
+      if (filters) {
+        setSavedFilters(filters.map((f, index) => ({
+          id: index + 1,
+          name: f.name,
+          criteria: {
+            priceRange: { 
+              min: f.filters.priceMin || 0, 
+              max: f.filters.priceMax || 10000000 
+            },
+            propertyTypes: f.filters.propertyType || [],
+            locations: f.filters.location || [],
+            strategy: f.filters.strategy || [],
+            minROI: f.filters.capRateMin,
+            minCashFlow: f.filters.cashFlowMin
+          },
+          createdDate: f.created_at,
+          notifications: f.notifications,
+          isDraft: f.isDraft
+        })));
+      }
     } catch (error) {
       console.error('Error fetching profile data:', error);
     }
@@ -415,12 +452,12 @@ export default function ProfilePage() {
 
   const investmentStats: InvestmentStats = {
     totalSaved: savedProperties.length,
-    activeFilters: savedFilters.filter(f => f.notifications).length,
+    activeFilters: activeFiltersCount,
     analysesUsedThisMonth: monthlyUsage,
     analysesLimitThisMonth: subscriptionLimit === -1 ? 999 : subscriptionLimit, // Show 999 for unlimited
     avgROISaved: 32.4,
     bestDealROI: 67.2,
-    viewedThisMonth: 24
+    viewedThisMonth: viewedThisMonth
   };
 
   useEffect(() => {
@@ -1014,12 +1051,20 @@ export default function ProfilePage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold text-primary">Saved Properties</h2>
-              <select className="px-4 py-2 bg-card border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20">
-                <option value="recent">Recently Saved</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="alphabetical">Alphabetical</option>
-              </select>
+              <div className="flex gap-4">
+                <Link
+                  href="/saved-properties"
+                  className="px-4 py-2 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                >
+                  View All Saved
+                </Link>
+                <select className="px-4 py-2 bg-card border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20">
+                  <option value="recent">Recently Saved</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="alphabetical">Alphabetical</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
