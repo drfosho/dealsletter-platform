@@ -8,16 +8,6 @@ import { getUserFavoriteProperties } from '@/lib/supabase/favorites';
 import PropertyCard from '@/components/PropertyCard';
 import DealModal from '@/app/dashboard/DealModal';
 
-interface SavedProperty {
-  id: number;
-  title: string;
-  location: string;
-  price: number;
-  savedDate: string;
-  type: string;
-  status: 'active' | 'sold' | 'pending';
-  [key: string]: unknown;
-}
 
 interface Deal {
   id: number;
@@ -224,7 +214,7 @@ export default function SavedPropertiesPage() {
           }
           return null;
         })
-        .filter((prop): prop is Deal => prop !== null);
+        .filter((prop): prop is any => prop !== null);
       
       setSavedProperties(propertiesWithDetails);
     } catch (error) {
@@ -253,10 +243,10 @@ export default function SavedPropertiesPage() {
         case 'price':
           return b.price - a.price;
         case 'roi':
-          return (b.totalROI || 0) - (a.totalROI || 0);
+          return ((b.totalROI || 0) as number) - ((a.totalROI || 0) as number);
         case 'recent':
         default:
-          return new Date(b.savedDate || 0).getTime() - new Date(a.savedDate || 0).getTime();
+          return new Date((b.savedDate || '') as string).getTime() - new Date((a.savedDate || '') as string).getTime();
       }
     });
   }, [savedProperties, sortBy, filterBy]);

@@ -426,7 +426,7 @@ export default function ProfilePage() {
       // Fetch saved filters
       const { data: filters } = await getUserSavedFilters(user.id);
       if (filters) {
-        setSavedFilters(filters.map((f, index) => ({
+        setSavedFilters(filters.map((f: any, index: number) => ({
           id: index + 1,
           name: f.name,
           criteria: {

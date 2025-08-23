@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase/client';
 
 export interface SavedFilter {
   id: string;
@@ -101,7 +100,7 @@ export async function getActiveFiltersCount(userId: string) {
       return { count: 0, error };
     }
     
-    const activeCount = data.filter(f => f.notifications && !f.isDraft).length;
+    const activeCount = data.filter((f: SavedFilter) => f.notifications && !f.isDraft).length;
     
     return { count: activeCount, error: null };
   } catch (error) {

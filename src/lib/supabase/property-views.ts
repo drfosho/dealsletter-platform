@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase/client';
 
 export interface PropertyView {
   id: string;
