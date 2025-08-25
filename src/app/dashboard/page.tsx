@@ -45,6 +45,7 @@ interface Deal {
 
 export default function Dashboard() {
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [statusTab, setStatusTab] = useState<'active' | 'sold' | 'pending' | 'all'>('active');
   const [selectedLocation, setSelectedLocation] = useState<{
     city: string;
     state: string;
@@ -207,6 +208,14 @@ export default function Dashboard() {
   const filteredDeals = useMemo(() => {
     let filtered = deals;
 
+    // Filter by status tab
+    if (statusTab !== 'all') {
+      filtered = filtered.filter(deal => {
+        const dealStatus = deal.status || 'active';
+        return dealStatus === statusTab;
+      });
+    }
+
     // Filter by type
     if (selectedFilter !== 'all') {
       filtered = filtered.filter(deal => 
@@ -276,7 +285,7 @@ export default function Dashboard() {
     });
 
     return filtered;
-  }, [deals, selectedFilter, selectedLocation, isSearching, filters, sortBy]);
+  }, [deals, selectedFilter, selectedLocation, isSearching, filters, sortBy, statusTab]);
 
   // const handleDealClick = useCallback((deal: Deal) => {
   //   setSelectedDeal(deal);
@@ -322,6 +331,7 @@ export default function Dashboard() {
     setSelectedFilter('all');
     setSelectedLocation(null);
     setSortBy('date');
+    setStatusTab('active');
   }, []);
 
   const handleSearchStart = useCallback(() => {
@@ -345,6 +355,37 @@ export default function Dashboard() {
               totalProperties={deals.length} 
               onRefresh={fetchProperties}
             />
+
+        {/* Status Tabs */}
+        <div className="mb-6 border-b border-border/60">
+          <div className="flex gap-1">
+            {(['active', 'sold', 'pending', 'all'] as const).map(tab => {
+              const tabCounts = {
+                active: deals.filter(d => !d.status || d.status === 'active').length,
+                sold: deals.filter(d => d.status === 'sold').length,
+                pending: deals.filter(d => d.status === 'pending').length,
+                all: deals.length
+              };
+              
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setStatusTab(tab)}
+                  className={`px-4 py-3 text-sm font-medium transition-all relative ${
+                    statusTab === tab 
+                      ? 'text-accent border-b-2 border-accent' 
+                      : 'text-muted hover:text-primary'
+                  }`}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  <span className="ml-2 text-xs opacity-70">
+                    ({tabCounts[tab]})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Unsupported Location Notification */}
         {unsupportedLocation && (
@@ -484,14 +525,18 @@ export default function Dashboard() {
                 />
               </svg>
               <h3 className="text-lg font-semibold text-primary mb-2">
-                No properties available
+                No {statusTab !== 'all' ? statusTab : ''} properties available
               </h3>
               <p className="text-muted text-center max-w-md mb-6">
                 {selectedLocation ? (
                   <>
-                    We don&apos;t have any properties in <span className="font-medium">{selectedLocation.fullAddress}</span> yet. 
+                    We don&apos;t have any {statusTab !== 'all' ? statusTab : ''} properties in <span className="font-medium">{selectedLocation.fullAddress}</span> yet. 
                     We&apos;re actively expanding to new markets and this area is on our list!
                   </>
+                ) : statusTab === 'sold' ? (
+                  "No sold properties yet. Properties marked as sold in the admin panel will appear here."
+                ) : statusTab === 'pending' ? (
+                  "No pending properties. Properties marked as pending in the admin panel will appear here."
                 ) : (
                   "No properties match your current filters. Try adjusting your search criteria."
                 )}
@@ -552,7 +597,8 @@ export default function Dashboard() {
             <span>Loading properties...</span>
           ) : (
             <>
-              Showing {filteredDeals.length} of {deals.length} properties
+              Showing {filteredDeals.length} {statusTab !== 'all' ? statusTab : ''} 
+              {filteredDeals.length === 1 ? ' property' : ' properties'}
               {selectedLocation && ` in ${selectedLocation.fullAddress}`}
             </>
           )}
