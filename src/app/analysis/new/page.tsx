@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import DashboardSidebar from '@/components/DashboardSidebar';
+import ProRouteGuard from '@/components/ProRouteGuard';
 import WizardContainer from '@/components/analysis-wizard/WizardContainer';
 import Step1PropertySearch from '@/components/analysis-wizard/Step1PropertySearch';
 import Step2Strategy from '@/components/analysis-wizard/Step2Strategy';
@@ -180,7 +181,7 @@ export default function NewAnalysisPage() {
   };
 
   return (
-    <>
+    <ProRouteGuard feature="Property Analysis Calculator">
       <Navigation variant="dashboard" />
       <div className="flex">
         <DashboardSidebar />
@@ -205,6 +206,6 @@ export default function NewAnalysisPage() {
           </div>
         </main>
       </div>
-    </>
+    </ProRouteGuard>
   );
 }

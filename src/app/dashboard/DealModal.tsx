@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ProBadge } from '@/components/FeatureGate';
+import { useUser } from '@/hooks/useUser';
+import { getUserTier } from '@/lib/subscription';
 
 interface Deal {
   id: number;
@@ -65,6 +68,17 @@ interface DealModalProps {
 
 export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
   const [activeTab, setActiveTab] = useState('overview');
+  const { user } = useUser();
+  const [userTier, setUserTier] = useState<'free' | 'trial' | 'pro' | 'premium'>('free');
+
+  // Get user tier
+  useEffect(() => {
+    const fetchTier = async () => {
+      const tier = await getUserTier(user?.id);
+      setUserTier(tier);
+    };
+    fetchTier();
+  }, [user?.id]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -3483,19 +3497,28 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
 
           {/* Tab Navigation */}
           <div className="flex gap-1 md:gap-2 mt-4 md:mt-6 overflow-x-auto">
-            {['overview', 'financing', 'rehab', 'returns', 'pictures'].map((tab) => (
-              <button
-                key={tab}
-                className={`px-3 md:px-6 py-2 md:py-3 rounded-lg font-medium text-xs md:text-sm transition-colors min-h-[40px] md:min-h-[44px] flex items-center justify-center whitespace-nowrap ${
-                  activeTab === tab
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-muted hover:text-primary hover:bg-muted/10'
-                }`}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
+            {['overview', 'financing', 'rehab', 'returns', 'pictures'].map((tab) => {
+              const isPro = tab === 'financing' || tab === 'returns' || tab === 'rehab';
+              const isLocked = isPro && userTier === 'free';
+              
+              return (
+                <button
+                  key={tab}
+                  className={`px-3 md:px-6 py-2 md:py-3 rounded-lg font-medium text-xs md:text-sm transition-colors min-h-[40px] md:min-h-[44px] flex items-center justify-center whitespace-nowrap gap-1 ${
+                    activeTab === tab
+                      ? 'bg-accent/10 text-accent'
+                      : isLocked
+                      ? 'text-muted/50 hover:bg-muted/5 cursor-not-allowed'
+                      : 'text-muted hover:text-primary hover:bg-muted/10'
+                  }`}
+                  onClick={() => !isLocked && setActiveTab(tab)}
+                  disabled={isLocked}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {isLocked && <ProBadge />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
