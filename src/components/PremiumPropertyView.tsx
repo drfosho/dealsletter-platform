@@ -23,11 +23,11 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
   if (!isOpen || !property) return null;
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'strategic', label: 'Strategic Analysis', icon: '🎯' },
-    { id: 'location', label: 'Location & Market', icon: '📍' },
-    { id: 'financials', label: 'Financial Analysis', icon: '💰' },
-    { id: 'projections', label: '30-Year Returns', icon: '📈' }
+    { id: 'overview', label: 'Overview', mobileLabel: 'Overview', icon: '📊' },
+    { id: 'strategic', label: 'Strategic Analysis', mobileLabel: 'Strategy', icon: '🎯' },
+    { id: 'location', label: 'Location & Market', mobileLabel: 'Location', icon: '📍' },
+    { id: 'financials', label: 'Financial Analysis', mobileLabel: 'Financials', icon: '💰' },
+    { id: 'projections', label: '30-Year Returns', mobileLabel: 'Returns', icon: '📈' }
   ];
 
   // Helper function to format currency
@@ -74,13 +74,13 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 overflow-y-auto">
-      <div className="min-h-screen flex items-start justify-center p-4 md:p-8">
-        <div className="bg-card rounded-2xl border border-border/60 shadow-2xl max-w-7xl w-full my-8">
+      <div className="min-h-screen flex items-start justify-center p-0 sm:p-4 md:p-8">
+        <div className="bg-card rounded-none sm:rounded-2xl border-0 sm:border border-border/60 shadow-2xl max-w-7xl w-full my-0 sm:my-8">
         {/* Header with Image Gallery */}
         <div className="relative">
           {/* Image Gallery */}
           {property.images && property.images.length > 0 && (
-            <div className="relative h-64 bg-muted/20">
+            <div className="relative h-48 sm:h-64 md:h-80 bg-muted/20">
               <Image
                 src={property.images[activeImageIndex]}
                 alt={property.title}
@@ -93,17 +93,17 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                 <>
                   <button
                     onClick={() => setActiveImageIndex((prev) => (prev - 1 + property.images.length) % property.images.length)}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+                    className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
                   <button
                     onClick={() => setActiveImageIndex((prev) => (prev + 1) % property.images.length)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+                    className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
@@ -121,17 +121,17 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                   </div>
                 </>
               )}
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              {/* Gradient Overlay - lighter on mobile */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 md:from-black/80 via-black/10 md:via-black/20 to-transparent" />
             </div>
           )}
           
-          {/* Property Header Info */}
-          <div className={`relative ${property.images?.length > 0 ? '-mt-20' : ''} px-8 pb-6 pt-4`}>
+          {/* Property Header Info - No overlay on mobile */}
+          <div className={`relative ${property.images?.length > 0 ? 'md:-mt-20' : ''} px-4 sm:px-6 md:px-8 pb-4 md:pb-6 pt-4`}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h1 className="text-3xl font-bold text-primary mb-2">{property.title || property.address}</h1>
-                <p className="text-lg text-muted mb-4">{property.location}</p>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary mb-2">{property.title || property.address}</h1>
+                <p className="text-sm sm:text-base md:text-lg text-muted mb-3 md:mb-4">{property.location}</p>
                 
                 {/* Key Badges */}
                 <div className="flex flex-wrap gap-2">
@@ -198,21 +198,24 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
           </div>
         )}
 
-        {/* Premium Tabs */}
+        {/* Premium Tabs - Mobile Optimized */}
         <div className="border-t border-b border-border/60 bg-muted/5">
-          <div className="flex overflow-x-auto scrollbar-hide">
+          <div className="flex overflow-x-auto scrollbar-hide gap-1 px-2 sm:px-0 sm:gap-0">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-6 py-4 border-b-2 transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 border-b-2 transition-all whitespace-nowrap min-w-fit flex-shrink-0 ${
                   activeTab === tab.id 
                     ? 'border-accent text-accent bg-accent/5' 
                     : 'border-transparent text-muted hover:text-primary hover:bg-muted/10'
                 }`}
               >
-                <span className="text-lg">{tab.icon}</span>
-                <span className="font-medium">{tab.label}</span>
+                <span className="text-sm sm:text-lg">{tab.icon}</span>
+                <span className="font-medium text-xs sm:text-sm">
+                  <span className="sm:hidden">{tab.mobileLabel}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </span>
               </button>
             ))}
           </div>

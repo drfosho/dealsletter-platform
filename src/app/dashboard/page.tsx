@@ -347,18 +347,22 @@ export default function Dashboard() {
       <Navigation variant="dashboard" />
       
       <div className="flex">
-        <DashboardSidebar />
+        {/* Hide sidebar on mobile, show on desktop */}
+        <div className="hidden sm:block">
+          <DashboardSidebar />
+        </div>
         
-        <main className="flex-1">
-          <div className="px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main content - full width on mobile */}
+        <main className="flex-1 w-full">
+          <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
             <DashboardHeader 
               totalProperties={deals.length} 
               onRefresh={fetchProperties}
             />
 
-        {/* Status Tabs */}
-        <div className="mb-6 border-b border-border/60">
-          <div className="flex gap-1">
+        {/* Status Tabs - Mobile Optimized */}
+        <div className="mb-3 sm:mb-6">
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             {(['active', 'sold', 'pending', 'all'] as const).map(tab => {
               const tabCounts = {
                 active: deals.filter(d => !d.status || d.status === 'active').length,
@@ -371,14 +375,14 @@ export default function Dashboard() {
                 <button
                   key={tab}
                   onClick={() => setStatusTab(tab)}
-                  className={`px-4 py-3 text-sm font-medium transition-all relative ${
+                  className={`flex-1 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                     statusTab === tab 
-                      ? 'text-accent border-b-2 border-accent' 
+                      ? 'bg-white dark:bg-gray-900 text-accent shadow-sm' 
                       : 'text-muted hover:text-primary'
                   }`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  <span className="ml-2 text-xs opacity-70">
+                  <span className="capitalize">{tab}</span>
+                  <span className="ml-1 text-[10px] sm:text-xs opacity-70">
                     ({tabCounts[tab]})
                   </span>
                 </button>
@@ -395,75 +399,75 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Mobile view mode toggle */}
-        <div className="md:hidden mb-4 flex gap-2 bg-card border border-border/60 rounded-lg p-1">
-          <button
-            className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
-              viewMode === 'grid' 
-                ? 'bg-accent text-secondary font-medium' 
-                : 'text-muted hover:text-primary'
-            }`}
-            onClick={() => setViewMode('grid')}
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-            Grid
-          </button>
-          <button
-            className={`flex-1 px-4 py-3 min-h-[48px] flex items-center justify-center rounded-md transition-all ${
-              viewMode === 'map' 
-                ? 'bg-accent text-secondary font-medium' 
-                : 'text-muted hover:text-primary'
-            }`}
-            onClick={() => setViewMode('map')}
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            Map
-          </button>
+        {/* Mobile View Toggle */}
+        <div className="md:hidden mb-3">
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex">
+            <button
+              className={`flex-1 px-3 py-2.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                viewMode === 'grid' 
+                  ? 'bg-white dark:bg-gray-900 text-accent shadow-sm font-medium' 
+                  : 'text-muted'
+              }`}
+              onClick={() => setViewMode('grid')}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              <span className="text-xs font-medium">Grid</span>
+            </button>
+            <button
+              className={`flex-1 px-3 py-2.5 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                viewMode === 'map' 
+                  ? 'bg-white dark:bg-gray-900 text-accent shadow-sm font-medium' 
+                  : 'text-muted'
+              }`}
+              onClick={() => setViewMode('map')}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <span className="text-xs font-medium">Map</span>
+            </button>
+          </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-8">
+        {/* Controls - Mobile Optimized */}
+        <div className="space-y-3 mb-4 sm:mb-6">
           {/* Location Search */}
-          <div className="flex-1">
-            <LocationSearch
-              placeholder="Search by city or location..."
-              value={selectedLocation?.fullAddress || ''}
-              onLocationSelect={handleLocationSelect}
-              onClear={() => setSelectedLocation(null)}
-              onSearchStart={handleSearchStart}
-              onSearchEnd={handleSearchEnd}
-            />
-          </div>
+          <LocationSearch
+            placeholder="Search by city or location..."
+            value={selectedLocation?.fullAddress || ''}
+            onLocationSelect={handleLocationSelect}
+            onClear={() => setSelectedLocation(null)}
+            onSearchStart={handleSearchStart}
+            onSearchEnd={handleSearchEnd}
+          />
 
-          {/* Filters */}
+          {/* Mobile Filter Bar */}
           <div className="flex gap-2">
             <select 
-              className="px-4 py-3 bg-card border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 hidden sm:block"
+              className="flex-1 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none"
               value={selectedFilter}
               onChange={(e) => setSelectedFilter(e.target.value)}
             >
-              <option value="all">All Types</option>
-              <option value="brrrr">BRRRR</option>
-              <option value="flip">Fix & Flip</option>
-              <option value="hold">Buy & Hold</option>
-              <option value="multifamily">Multifamily</option>
-              <option value="house hack">House Hack</option>
-              <option value="mobile home">Mobile Home Park</option>
+              <option value="all">🏠 All Types</option>
+              <option value="brrrr">♻️ BRRRR</option>
+              <option value="flip">🔨 Fix & Flip</option>
+              <option value="hold">📦 Buy & Hold</option>
+              <option value="multifamily">🏢 Multifamily</option>
+              <option value="house hack">🏡 House Hack</option>
+              <option value="mobile home">🚐 Mobile Home</option>
             </select>
             
             <select 
-              className="px-4 py-3 bg-card border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20"
+              className="flex-1 px-3 py-2.5 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent/20 appearance-none"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
-              <option value="date">Newest First</option>
-              <option value="price">Price: High to Low</option>
-              <option value="roi">ROI: High to Low</option>
-              <option value="confidence">Confidence</option>
+              <option value="date">📅 Newest</option>
+              <option value="price">💰 Price ↓</option>
+              <option value="roi">📈 ROI ↓</option>
+              <option value="confidence">⭐ Rating</option>
             </select>
 
             {/* Desktop view mode toggle */}
@@ -507,10 +511,10 @@ export default function Dashboard() {
         />
 
 
-        {/* Content Area */}
-        <div className="transition-all duration-300">
+        {/* Content Area - Centered on mobile */}
+        <div className="transition-all duration-300 w-full">
           {filteredDeals.length === 0 && !isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="flex flex-col items-center justify-center py-8 sm:py-16 px-4 max-w-md mx-auto">
               <svg 
                 className="w-16 h-16 text-muted mb-4" 
                 fill="none" 
@@ -567,8 +571,8 @@ export default function Dashboard() {
               }}
             />
           ) : (
-          /* Deals Grid/List */
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
+          /* Deals Grid/List - Mobile optimized with centered content */
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 max-w-md sm:max-w-none mx-auto' : 'space-y-4 max-w-md sm:max-w-none mx-auto'}>
             {filteredDeals.map((deal) => (
               <PremiumPropertyCard
                 key={deal.id}
@@ -592,7 +596,7 @@ export default function Dashboard() {
         </div>
 
         {/* Results Summary */}
-        <div className="mt-8 text-center text-sm text-muted">
+        <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-muted pb-4">
           {isLoading ? (
             <span>Loading properties...</span>
           ) : (

@@ -100,8 +100,54 @@ export default function DashboardHeader({ totalProperties, onRefresh }: Dashboar
 
   return (
     <>
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="mb-6 sm:mb-8">
+        {/* Mobile Header */}
+        <div className="sm:hidden">
+          <h1 className="text-2xl font-bold text-primary mb-3">Properties</h1>
+          
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-card rounded-lg p-3 border border-border">
+              <div className="text-2xl font-bold text-primary">{totalProperties}</div>
+              <div className="text-xs text-muted">Available</div>
+            </div>
+            {analysisStats && (
+              <div className="bg-card rounded-lg p-3 border border-border">
+                <div className="text-2xl font-bold text-accent">{analysisStats.saved}</div>
+                <div className="text-xs text-muted">Analyzed</div>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Action Buttons */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                fetchSavedAnalyses();
+                setShowImportModal(true);
+              }}
+              className="px-3 py-2.5 bg-card border border-border text-primary rounded-lg font-medium text-sm flex items-center justify-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add from Analysis</span>
+            </button>
+            
+            <Link
+              href="/analysis/new"
+              className="px-3 py-2.5 bg-accent text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>Analyze</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Desktop Header */}
+        <div className="hidden sm:flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-primary mb-2">Investment Properties</h1>
             <p className="text-muted">Discover your next profitable real estate investment</p>
@@ -154,10 +200,10 @@ export default function DashboardHeader({ totalProperties, onRefresh }: Dashboar
         </div>
       </div>
 
-      {/* Import Modal */}
+      {/* Import Modal - Mobile Optimized */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 z-50">
+          <div className="bg-card rounded-t-xl sm:rounded-xl p-4 sm:p-6 w-full sm:max-w-2xl h-[85vh] sm:max-h-[80vh] overflow-hidden flex flex-col animate-slide-up sm:animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-primary">Add from Analyzed Properties</h3>

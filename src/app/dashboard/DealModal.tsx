@@ -646,7 +646,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-accent/10 rounded-lg p-4 border border-accent/20 text-center">
               <div className="text-2xl mb-2">🎯</div>
               <h4 className="font-semibold text-accent mb-1">Opportunity Zone</h4>
@@ -691,7 +691,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           <div>
             <h3 className="text-xl font-semibold text-primary mb-4">Property Metrics</h3>
             <div className="bg-card rounded-lg p-6 border border-border/60">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div>
                   <span className="text-sm text-muted">Units</span>
                   <p className="font-semibold text-primary">{sanDiegoDetails.propertyMetrics.units}</p>
@@ -1323,7 +1323,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-card rounded-lg p-4 border border-border/60 text-center">
               <div className="text-2xl mb-2">🏫</div>
               <h4 className="font-semibold text-primary mb-1">A+ Schools</h4>
@@ -2191,7 +2191,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20 text-center">
               <div className="text-2xl mb-2">💰</div>
               <h4 className="font-semibold text-green-600 mb-1">3.5% Down FHA</h4>
@@ -3524,7 +3524,26 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto overscroll-contain -webkit-overflow-scrolling-touch p-4 md:p-6 min-h-0">
-          {deal.id === 1 && renderSanDiegoDetails()}
+          {/* Hero Image for Overview Tab - Always show first if available */}
+          {activeTab === 'overview' && deal.images && deal.images.length > 0 && (
+            <div className="mb-4 md:mb-6">
+              <div className="relative w-full h-48 sm:h-64 md:h-80 rounded-lg overflow-hidden bg-muted/20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img 
+                  src={deal.images[0]} 
+                  alt={`${deal.title} - Main Image`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = '/api/placeholder/800/400';
+                  }}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* Property-specific content */}
+          <div className="space-y-6">
+            {deal.id === 1 && renderSanDiegoDetails()}
           {deal.id === 2 && renderOaklandFlipDetails()}
           {deal.id === 3 && renderTampaDetails()}
           {deal.id === 4 && renderLafayetteDetails()}
@@ -3536,6 +3555,7 @@ export default function DealModal({ deal, isOpen, onClose }: DealModalProps) {
           {deal.id === 10 && renderTampaMobileHomePark()}
           {deal.id === 11 && renderLosGatosFlip()}
           {deal.id === 12 && renderOaklandHUDFlip()}
+          </div>
           
           {/* Dynamic properties render */}
           {deal.id !== 1 && deal.id !== 2 && deal.id !== 3 && deal.id !== 4 && deal.id !== 5 && deal.id !== 6 && deal.id !== 7 && deal.id !== 8 && deal.id !== 9 && deal.id !== 10 && deal.id !== 11 && deal.id !== 12 && (

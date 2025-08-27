@@ -272,31 +272,31 @@ export default function PremiumPropertyCard({
               </div>
 
               {/* Metrics Grid */}
-              <div className="grid grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
                 <div>
-                  <div className="text-xs text-muted mb-1">Down Payment</div>
-                  <div className="font-semibold">{formatCurrency(deal.downPayment)}</div>
+                  <div className="text-[10px] sm:text-xs text-muted mb-1">Down Payment</div>
+                  <div className="font-semibold text-sm sm:text-base">{formatCurrency(deal.downPayment)}</div>
                 </div>
                 {deal.totalROI && (
                   <div>
-                    <div className="text-xs text-muted mb-1">Total ROI</div>
-                    <div className={`font-semibold ${getMetricColor(deal.totalROI)}`}>
+                    <div className="text-[10px] sm:text-xs text-muted mb-1">Total ROI</div>
+                    <div className={`font-semibold text-sm sm:text-base ${getMetricColor(deal.totalROI)}`}>
                       {deal.totalROI}%
                     </div>
                   </div>
                 )}
                 {deal.capRate && (
                   <div>
-                    <div className="text-xs text-muted mb-1">Cap Rate</div>
-                    <div className={`font-semibold ${getMetricColor(deal.capRate)}`}>
+                    <div className="text-[10px] sm:text-xs text-muted mb-1">Cap Rate</div>
+                    <div className={`font-semibold text-sm sm:text-base ${getMetricColor(deal.capRate)}`}>
                       {typeof deal.capRate === 'number' ? deal.capRate.toFixed(1) : deal.capRate}%
                     </div>
                   </div>
                 )}
                 {deal.units && Number(deal.units) > 1 && deal.monthlyRent ? (
                   <div>
-                    <div className="text-xs text-muted mb-1">Rent/Unit</div>
-                    <div className="font-semibold">
+                    <div className="text-[10px] sm:text-xs text-muted mb-1">Rent/Unit</div>
+                    <div className="font-semibold text-sm sm:text-base">
                       {formatCurrency(Math.round(deal.monthlyRent / Number(deal.units)))}/mo
                     </div>
                   </div>
@@ -421,52 +421,53 @@ export default function PremiumPropertyCard({
           </div>
           
           {/* Bottom Info Bar */}
-          <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
-            <div className="flex items-end justify-between">
-              <div className="text-white">
-                <h3 className="text-xl font-bold mb-1">{deal.address || deal.title}</h3>
-                <p className="text-sm opacity-90">{deal.location}</p>
+          <div className="absolute bottom-0 left-0 right-0 z-10 p-3 sm:p-4">
+            <div className="flex items-end justify-between gap-2">
+              <div className="text-white flex-1 min-w-0">
+                <h3 className="text-base sm:text-xl font-bold mb-1 line-clamp-1">{deal.address || deal.title}</h3>
+                <p className="text-xs sm:text-sm opacity-90 truncate">{deal.location}</p>
               </div>
-              <div className="text-right text-white">
-                <div className="text-2xl font-bold">{formatCurrency(deal.price)}</div>
-                <div className="text-xs opacity-80">{deal.daysOnMarket || 0} days ago</div>
+              <div className="text-right text-white flex-shrink-0">
+                <div className="text-lg sm:text-2xl font-bold">{formatCurrency(deal.price)}</div>
+                <div className="text-[10px] sm:text-xs opacity-80">{deal.daysOnMarket || 0} days ago</div>
               </div>
             </div>
           </div>
         </div>
         
         {/* Content Section */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Strategy and Risk Badges */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <span className="px-3 py-1 bg-accent/10 text-accent rounded-full text-xs font-medium">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+            <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-accent/10 text-accent rounded-full text-[10px] sm:text-xs font-medium">
               {deal.strategy}
             </span>
             {deal.riskLevel && (
-              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getRiskColor(deal.riskLevel)}`}>
-                {deal.riskLevel.toUpperCase()} RISK
+              <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium border ${getRiskColor(deal.riskLevel)}`}>
+                <span className="hidden sm:inline">{deal.riskLevel.toUpperCase()} RISK</span>
+                <span className="sm:hidden">{deal.riskLevel.toUpperCase()}</span>
               </span>
             )}
             {deal.bedrooms && (
-              <span className="px-3 py-1 bg-muted/10 text-muted rounded-full text-xs font-medium">
-                {deal.bedrooms} BR / {deal.bathrooms} BA
+              <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-muted/10 text-muted rounded-full text-[10px] sm:text-xs font-medium">
+                {deal.bedrooms}BR/{deal.bathrooms}BA
               </span>
             )}
             {deal.units && Number(deal.units) > 1 ? (
-              <span className="px-3 py-1 bg-blue-500/10 text-blue-700 rounded-full text-xs font-medium">
+              <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-blue-500/10 text-blue-700 rounded-full text-[10px] sm:text-xs font-medium">
                 {String(deal.units)} UNITS
               </span>
             ) : null}
           </div>
 
           {/* Key Metrics Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
             {/* Down Payment */}
-            <div className="p-3 bg-gradient-to-br from-blue-500/5 to-blue-600/5 rounded-lg border border-blue-500/10">
-              <div className="text-xs text-muted mb-1">Down Payment</div>
-              <div className="font-bold text-lg">{formatCurrency(deal.downPayment)}</div>
+            <div className="p-2.5 sm:p-3 bg-gradient-to-br from-blue-500/5 to-blue-600/5 rounded-lg border border-blue-500/10">
+              <div className="text-[10px] sm:text-xs text-muted mb-1">Down Payment</div>
+              <div className="font-bold text-sm sm:text-lg">{formatCurrency(deal.downPayment)}</div>
               {deal.downPaymentPercent && (
-                <div className="text-xs text-muted">{deal.downPaymentPercent}% down</div>
+                <div className="text-[10px] sm:text-xs text-muted">{deal.downPaymentPercent}% down</div>
               )}
             </div>
 
@@ -475,22 +476,22 @@ export default function PremiumPropertyCard({
               <>
                 {/* Estimated Profit */}
                 {deal.estimatedProfit && (
-                  <div className="p-3 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5 rounded-lg border border-emerald-500/10">
-                    <div className="text-xs text-muted mb-1">Est. Profit</div>
-                    <div className="font-bold text-lg text-emerald-600">
+                  <div className="p-2.5 sm:p-3 bg-gradient-to-br from-emerald-500/5 to-emerald-600/5 rounded-lg border border-emerald-500/10">
+                    <div className="text-[10px] sm:text-xs text-muted mb-1">Est. Profit</div>
+                    <div className="font-bold text-sm sm:text-lg text-emerald-600">
                       {formatCurrency(deal.estimatedProfit)}
                     </div>
-                    <div className="text-xs text-muted">after all costs</div>
+                    <div className="text-[10px] sm:text-xs text-muted">after all costs</div>
                   </div>
                 )}
                 {/* ARV */}
                 {deal.arv && (
-                  <div className="p-3 bg-gradient-to-br from-purple-500/5 to-purple-600/5 rounded-lg border border-purple-500/10">
-                    <div className="text-xs text-muted mb-1">After Repair Value</div>
-                    <div className="font-bold text-lg text-purple-600">
+                  <div className="p-2.5 sm:p-3 bg-gradient-to-br from-purple-500/5 to-purple-600/5 rounded-lg border border-purple-500/10">
+                    <div className="text-[10px] sm:text-xs text-muted mb-1">After Repair Value</div>
+                    <div className="font-bold text-sm sm:text-lg text-purple-600">
                       {formatCurrency(deal.arv)}
                     </div>
-                    <div className="text-xs text-muted">projected value</div>
+                    <div className="text-[10px] sm:text-xs text-muted">projected value</div>
                   </div>
                 )}
               </>
@@ -498,21 +499,21 @@ export default function PremiumPropertyCard({
             
             {/* Total ROI */}
             {deal.totalROI ? (
-              <div className="p-3 bg-gradient-to-br from-green-500/5 to-green-600/5 rounded-lg border border-green-500/10">
-                <div className="text-xs text-muted mb-1">
+              <div className="p-2.5 sm:p-3 bg-gradient-to-br from-green-500/5 to-green-600/5 rounded-lg border border-green-500/10">
+                <div className="text-[10px] sm:text-xs text-muted mb-1">
                   {deal.strategy?.toLowerCase().includes('flip') ? 'Project ROI' : 'Total ROI'}
                 </div>
-                <div className={`font-bold text-lg ${getMetricColor(deal.totalROI)}`}>
+                <div className={`font-bold text-sm sm:text-lg ${getMetricColor(deal.totalROI)}`}>
                   {deal.totalROI}%
                 </div>
-                <div className="text-xs text-muted">
+                <div className="text-[10px] sm:text-xs text-muted">
                   {deal.strategy?.toLowerCase().includes('flip') ? 'on investment' : '5-year return'}
                 </div>
               </div>
             ) : deal.roi ? (
-              <div className="p-3 bg-gradient-to-br from-green-500/5 to-green-600/5 rounded-lg border border-green-500/10">
-                <div className="text-xs text-muted mb-1">ROI</div>
-                <div className={`font-bold text-lg ${getMetricColor(deal.roi)}`}>
+              <div className="p-2.5 sm:p-3 bg-gradient-to-br from-green-500/5 to-green-600/5 rounded-lg border border-green-500/10">
+                <div className="text-[10px] sm:text-xs text-muted mb-1">ROI</div>
+                <div className={`font-bold text-sm sm:text-lg ${getMetricColor(deal.roi)}`}>
                   {deal.roi}%
                 </div>
               </div>
@@ -520,36 +521,36 @@ export default function PremiumPropertyCard({
 
             {/* Cap Rate */}
             {(deal.capRate || deal.proFormaCapRate) && (
-              <div className="p-3 bg-gradient-to-br from-purple-500/5 to-purple-600/5 rounded-lg border border-purple-500/10">
-                <div className="text-xs text-muted mb-1">
+              <div className="p-2.5 sm:p-3 bg-gradient-to-br from-purple-500/5 to-purple-600/5 rounded-lg border border-purple-500/10">
+                <div className="text-[10px] sm:text-xs text-muted mb-1">
                   {deal.proFormaCapRate ? 'Pro Forma Cap' : 'Cap Rate'}
                 </div>
-                <div className={`font-bold text-lg ${getMetricColor(deal.proFormaCapRate || deal.capRate)}`}>
+                <div className={`font-bold text-sm sm:text-lg ${getMetricColor(deal.proFormaCapRate || deal.capRate)}`}>
                   {deal.proFormaCapRate || deal.capRate}%
                 </div>
                 {deal.currentCapRate && (
-                  <div className="text-xs text-muted">Current: {deal.currentCapRate}%</div>
+                  <div className="text-[10px] sm:text-xs text-muted">Current: {deal.currentCapRate}%</div>
                 )}
               </div>
             )}
 
             {/* Cash Flow or Effective Mortgage */}
             {(deal.monthlyCashFlow !== undefined || deal.proFormaCashFlow) && (
-              <div className={`p-3 bg-gradient-to-br ${
+              <div className={`rounded-lg p-2.5 border ${
                 isHouseHack 
-                  ? 'from-blue-500/5 to-blue-600/5 border-blue-500/10' // Blue for house hacks
+                  ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
                   : (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
-                    ? 'from-emerald-500/5 to-emerald-600/5 border-emerald-500/10' 
-                    : 'from-red-500/5 to-red-600/5 border-red-500/10'
-              } rounded-lg border`}>
-                <div className="text-xs text-muted mb-1">
-                  {isHouseHack ? 'Effective Mortgage' : 'Monthly Cash Flow'}
+                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+              }`}>
+                <div className="text-[11px] text-muted mb-0.5">
+                  {isHouseHack ? 'Effective Mortgage' : 'Cash Flow'}
                 </div>
-                <div className={`font-bold text-lg ${
+                <div className={`text-base font-bold ${
                   isHouseHack 
                     ? getEffectiveMortgageColor(effectiveMortgage)
                     : (deal.monthlyCashFlow ?? parseFloat(String(deal.proFormaCashFlow ?? '0'))) >= 0 
-                      ? 'text-emerald-600' 
+                      ? 'text-blue-600' 
                       : 'text-red-600'
                 }`}>
                   {isHouseHack 
@@ -557,10 +558,9 @@ export default function PremiumPropertyCard({
                     : deal.proFormaCashFlow 
                       ? `$${deal.proFormaCashFlow}` 
                       : formatCurrency(deal.monthlyCashFlow || 0)}
+                  {!isHouseHack && '/mo'}
                 </div>
-                <div className="text-xs text-muted">
-                  {isHouseHack ? 'after rental income' : 'per month'}
-                </div>
+                {isHouseHack && <div className="text-[10px] text-muted">after rent</div>}
               </div>
             )}
 
@@ -604,15 +604,15 @@ export default function PremiumPropertyCard({
 
           {/* Features Preview */}
           {deal.features && deal.features.length > 0 && (
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <div className="flex flex-wrap gap-1">
                 {deal.features.slice(0, 3).map((feature, index) => (
-                  <span key={index} className="text-xs text-muted">
+                  <span key={index} className="text-[10px] sm:text-xs text-muted">
                     • {feature}
                   </span>
                 ))}
                 {deal.features.length > 3 && (
-                  <span className="text-xs text-accent">
+                  <span className="text-[10px] sm:text-xs text-accent">
                     +{deal.features.length - 3} more
                   </span>
                 )}
@@ -621,9 +621,14 @@ export default function PremiumPropertyCard({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-border/60">
-            <div className="flex items-center gap-3">
-              {!isPreview && !isEditing && <SavePropertyButton propertyId={deal.id} />}
+          <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-border/60">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {!isPreview && !isEditing && (
+                <SavePropertyButton 
+                  propertyId={deal.id} 
+                  className="text-[10px] sm:text-xs px-2 sm:px-4 py-1.5 sm:py-2 min-h-[32px] sm:min-h-[40px]"
+                />
+              )}
               {!isPreview && <ViewerTracker dealId={deal.id} />}
             </div>
             <button
@@ -631,10 +636,11 @@ export default function PremiumPropertyCard({
                 e.stopPropagation();
                 handleViewDetails();
               }}
-              className="text-sm text-accent hover:text-accent/80 font-medium flex items-center gap-1"
+              className="text-xs sm:text-sm text-accent hover:text-accent/80 font-medium flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-accent/5 hover:bg-accent/10 rounded-lg transition-colors min-h-[32px] sm:min-h-[40px]"
             >
-              View Full Analysis
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="sm:hidden">Analysis</span>
+              <span className="hidden sm:inline">View Full Analysis</span>
+              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
