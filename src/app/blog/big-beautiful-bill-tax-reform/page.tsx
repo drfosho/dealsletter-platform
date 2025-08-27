@@ -2,51 +2,13 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import Logo from '@/components/Logo'
+import BlogNavigation from '@/components/BlogNavigation'
 
 export default function BigBeautifulBillArticle() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full px-6 py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="relative">
-                <Logo 
-                  width={400}
-                  height={100}
-                  className="h-16 md:h-20 w-auto"
-                  priority
-                />
-                <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-              </div>
-            </Link>
-          </div>
-          
-          <div className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
-              Home
-            </Link>
-            <Link href="/blog" className="px-6 py-3 text-primary transition-colors font-medium">
-              Blog
-            </Link>
-            <Link href="/contact" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
-              Contact
-            </Link>
-            <Link href="/faq" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
-              FAQ
-            </Link>
-            <Link href="/auth/login" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
-              Log In
-            </Link>
-            <Link href="/auth/signup" className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium">
-              Start Analyzing Deals
-            </Link>
-          </div>
-        </div>
-      </nav>
-
+      <BlogNavigation />
       {/* Article Content */}
       <div className="pt-32 px-6 pb-20">
         <div className="max-w-4xl mx-auto">
