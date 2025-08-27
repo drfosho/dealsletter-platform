@@ -18,6 +18,16 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    id: '9',
+    title: 'San Francisco Office Market: Signs of Life in a Struggling Sector',
+    excerpt: 'SF office vacancy at 31.6% but finally stabilizing. AI firms have leased 5M+ SF with positive absorption for 3 quarters. Trophy assets thrive at $73-103 PSF while Class B/C face 40%+ vacancy. The bifurcated recovery is real.',
+    date: 'Mid-2025',
+    readTime: '12 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/SF BLOG HEADER.png',
+    slug: 'sf-office-market-2025'
+  },
+  {
     id: '8',
     title: 'San Diego Real Estate 2025: The Market Is Finally Taking a Breath',
     excerpt: 'The San Diego market is in a rare "calm but competitive" phase. Prices down 2.8-4.4% YoY, inventory up 29%, but affordability remains brutal at $266K income needed. House hacking 2-4 units is the smartest entry strategy for 2025.',
@@ -344,6 +354,13 @@ export default function BlogPage() {
                     <Image
                       src="/logos/san diego blog header.png"
                       alt="San Diego Real Estate Market 2025"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'sf-office-market-2025' ? (
+                    <Image
+                      src="/logos/SF BLOG HEADER.png"
+                      alt="San Francisco Office Market 2025"
                       fill
                       className="object-cover"
                     />
