@@ -18,6 +18,16 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    id: '8',
+    title: 'San Diego Real Estate 2025: The Market Is Finally Taking a Breath',
+    excerpt: 'The San Diego market is in a rare "calm but competitive" phase. Prices down 2.8-4.4% YoY, inventory up 29%, but affordability remains brutal at $266K income needed. House hacking 2-4 units is the smartest entry strategy for 2025.',
+    date: 'December 2024',
+    readTime: '10 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/san diego blog header.png',
+    slug: 'san-diego-market-2025'
+  },
+  {
     id: '6',
     title: 'Buying, investing, or just curious? Here is a no BS breakdown for the LA real estate market',
     excerpt: 'Median home price at $876K, inventory climbing, and nearly half of homes selling below asking. The LA market has shifted from panic-buying to buyer leverage. Here&apos;s your complete neighborhood breakdown and investment playbook.',
@@ -237,14 +247,14 @@ export default function BlogPage() {
                 <div className="md:w-1/2">
                   <div className="relative aspect-[5/3] bg-muted/10">
                     <Image
-                      src="/logos/la real estate article.png"
-                      alt="LA Real Estate Market Analysis 2025"
+                      src={blogPosts[0].imageUrl}
+                      alt={blogPosts[0].title}
                       fill
                       className="object-cover rounded-l-xl md:rounded-l-none"
                     />
                     <div className="absolute top-4 left-4 z-10">
                       <span className="px-3 py-1 bg-accent/90 text-white rounded-full text-xs font-medium backdrop-blur-sm">
-                        Market Analysis
+                        {blogPosts[0].category}
                       </span>
                     </div>
                   </div>
@@ -327,6 +337,13 @@ export default function BlogPage() {
                     <Image
                       src="/logos/ARTICLE 1 (1).png"
                       alt="Housing Market Analysis 2025"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'san-diego-market-2025' ? (
+                    <Image
+                      src="/logos/san diego blog header.png"
+                      alt="San Diego Real Estate Market 2025"
                       fill
                       className="object-cover"
                     />
