@@ -1,6 +1,40 @@
 import { createClient } from '@/lib/supabase/server';
 import { staticDeals } from './staticDeals';
 
+// Store status overrides for static deals in localStorage (persists across page reloads)
+// This is a client-side solution for demo purposes
+const getStaticDealStatusOverrides = (): Map<string, string> => {
+  const overrides = new Map<string, string>();
+  
+  // Only use localStorage in browser environment
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('staticDealStatusOverrides');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        Object.entries(parsed).forEach(([id, status]) => {
+          overrides.set(id, status as string);
+        });
+      }
+    } catch (error) {
+      console.error('Error loading status overrides from localStorage:', error);
+    }
+  }
+  
+  return overrides;
+};
+
+const saveStaticDealStatusOverrides = (overrides: Map<string, string>) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const obj = Object.fromEntries(overrides);
+      localStorage.setItem('staticDealStatusOverrides', JSON.stringify(obj));
+    } catch (error) {
+      console.error('Error saving status overrides to localStorage:', error);
+    }
+  }
+};
+
 // Get published properties from Supabase
 export async function getPublishedProperties() {
   try {
@@ -16,20 +50,35 @@ export async function getPublishedProperties() {
 
     if (error) {
       console.error('Error fetching properties from Supabase:', error);
-      // Fallback to static deals if database fails
-      return staticDeals;
+      // Apply status overrides to static deals
+      const overrides = getStaticDealStatusOverrides();
+      const dealsWithOverrides = staticDeals.map(deal => ({
+        ...deal,
+        status: overrides.get(String(deal.id)) || deal.status || 'active'
+      }));
+      return dealsWithOverrides;
     }
 
-    // Combine database properties with static deals
-    // Filter out any static deals that might already be in the database
+    // Apply status overrides to static deals
+    const overrides = getStaticDealStatusOverrides();
     const dbPropertyIds = new Set(dbProperties?.map(p => p.id) || []);
-    const uniqueStaticDeals = staticDeals.filter(deal => !dbPropertyIds.has(deal.id));
+    const uniqueStaticDeals = staticDeals
+      .filter(deal => !dbPropertyIds.has(deal.id))
+      .map(deal => ({
+        ...deal,
+        status: overrides.get(String(deal.id)) || deal.status || 'active'
+      }));
     
     return [...(dbProperties || []), ...uniqueStaticDeals];
   } catch (error) {
     console.error('Error in getPublishedProperties:', error);
-    // Fallback to static deals
-    return staticDeals;
+    // Apply status overrides to static deals
+    const overrides = getStaticDealStatusOverrides();
+    const dealsWithOverrides = staticDeals.map(deal => ({
+      ...deal,
+      status: overrides.get(String(deal.id)) || deal.status || 'active'
+    }));
+    return dealsWithOverrides;
   }
 }
 
@@ -47,17 +96,35 @@ export async function getAllProperties() {
 
     if (error) {
       console.error('Error fetching all properties from Supabase:', error);
-      return staticDeals;
+      // Apply status overrides to static deals
+      const overrides = getStaticDealStatusOverrides();
+      const dealsWithOverrides = staticDeals.map(deal => ({
+        ...deal,
+        status: overrides.get(String(deal.id)) || deal.status || 'active'
+      }));
+      return dealsWithOverrides;
     }
 
-    // Combine with static deals
+    // Apply status overrides to static deals
+    const overrides = getStaticDealStatusOverrides();
     const dbPropertyIds = new Set(dbProperties?.map(p => p.id) || []);
-    const uniqueStaticDeals = staticDeals.filter(deal => !dbPropertyIds.has(deal.id));
+    const uniqueStaticDeals = staticDeals
+      .filter(deal => !dbPropertyIds.has(deal.id))
+      .map(deal => ({
+        ...deal,
+        status: overrides.get(String(deal.id)) || deal.status || 'active'
+      }));
     
     return [...(dbProperties || []), ...uniqueStaticDeals];
   } catch (error) {
     console.error('Error in getAllProperties:', error);
-    return staticDeals;
+    // Apply status overrides to static deals
+    const overrides = getStaticDealStatusOverrides();
+    const dealsWithOverrides = staticDeals.map(deal => ({
+      ...deal,
+      status: overrides.get(String(deal.id)) || deal.status || 'active'
+    }));
+    return dealsWithOverrides;
   }
 }
 
@@ -260,8 +327,34 @@ export async function createProperty(property: Record<string, unknown>) {
 }
 
 // Update a property
-export async function updateProperty(id: string, updates: Record<string, unknown>) {
+export async function updateProperty(id: string | number, updates: Record<string, unknown>) {
   try {
+    // Convert ID to string for consistency
+    const propertyId = String(id);
+    
+    // Check if this is a static deal
+    const isStaticDeal = staticDeals.some(deal => String(deal.id) === propertyId);
+    if (isStaticDeal) {
+      console.log(`Property ${propertyId} is a static deal. Storing status override.`);
+      
+      // Store the status override for static deals
+      if ('status' in updates) {
+        const overrides = getStaticDealStatusOverrides();
+        overrides.set(propertyId, updates.status as string);
+        saveStaticDealStatusOverrides(overrides);
+        console.log(`Stored status override for static deal ${propertyId}: ${updates.status}`);
+      }
+      
+      // Return the updated static deal
+      const staticDeal = staticDeals.find(deal => String(deal.id) === propertyId);
+      return { 
+        ...staticDeal,
+        ...updates,
+        status: updates.status || staticDeal?.status || 'active',
+        _warning: 'Static deal - status changes are stored locally'
+      };
+    }
+    
     const supabase = await createClient();
     
     // Map common field names that might be different
@@ -357,7 +450,7 @@ export async function updateProperty(id: string, updates: Record<string, unknown
     const { data, error } = await supabase
       .from('properties')
       .update(filteredUpdates)
-      .eq('id', id)
+      .eq('id', propertyId)
       .select()
       .single();
 

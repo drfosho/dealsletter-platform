@@ -114,6 +114,8 @@ export default function AdminPropertiesPage() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "sold" | "pending" | "hidden"
   >("all");
+  const [selectedProperties, setSelectedProperties] = useState<Set<string | number>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
 
   // Fetch properties
   const fetchProperties = async () => {
@@ -178,6 +180,130 @@ export default function AdminPropertiesPage() {
     } catch (error) {
       console.error("Error updating property status:", error);
       alert(`Failed to update property status. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Handle bulk status change
+  const handleBulkStatusChange = async (newStatus: "active" | "sold" | "pending" | "hidden") => {
+    if (selectedProperties.size === 0) {
+      alert("Please select properties to update");
+      return;
+    }
+
+    const confirmMsg = `Are you sure you want to mark ${selectedProperties.size} properties as ${newStatus}?`;
+    if (!confirm(confirmMsg)) return;
+
+    console.log(`Starting bulk update to ${newStatus} for properties:`, Array.from(selectedProperties));
+
+    let successCount = 0;
+    let failCount = 0;
+    const failedProperties: { id: string | number; reason: string }[] = [];
+
+    for (const propertyId of selectedProperties) {
+      try {
+        const property = properties.find((p) => p.id === propertyId);
+        
+        if (!property) {
+          console.error(`Property not found in local state: ${propertyId}`);
+          failedProperties.push({ id: propertyId, reason: "Property not found" });
+          failCount++;
+          continue;
+        }
+
+        console.log(`Updating property ${propertyId}:`, {
+          title: property.title,
+          currentStatus: property.status,
+          newStatus: newStatus
+        });
+
+        const updatedProperty = { ...property, status: newStatus };
+        
+        const response = await fetch("/api/admin/properties", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedProperty),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`Successfully updated property ${propertyId}:`, result);
+          successCount++;
+        } else {
+          const errorText = await response.text();
+          console.error(`Failed to update property ${propertyId}. Status: ${response.status}, Error: ${errorText}`);
+          
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.error || errorMessage;
+          } catch {
+            errorMessage = errorText || errorMessage;
+          }
+          
+          failedProperties.push({ id: propertyId, reason: errorMessage });
+          failCount++;
+        }
+      } catch (error) {
+        console.error(`Error updating property ${propertyId}:`, error);
+        failedProperties.push({ 
+          id: propertyId, 
+          reason: error instanceof Error ? error.message : "Unknown error" 
+        });
+        failCount++;
+      }
+    }
+
+    await fetchProperties();
+    setSelectedProperties(new Set());
+    setSelectAll(false);
+
+    // Provide detailed feedback
+    if (failCount === 0) {
+      alert(`✅ Successfully updated ${successCount} properties to ${newStatus}`);
+    } else {
+      let errorDetails = `Updated ${successCount} properties, ${failCount} failed.\n\nFailed properties:\n`;
+      failedProperties.forEach(({ id, reason }) => {
+        const prop = properties.find(p => p.id === id);
+        errorDetails += `- ${prop?.title || id}: ${reason}\n`;
+      });
+      
+      console.error("Bulk update failures:", failedProperties);
+      alert(errorDetails);
+    }
+  };
+
+  // Handle select/deselect property
+  const handleSelectProperty = (propertyId: string | number, event?: React.MouseEvent) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    console.log(`Selecting/Deselecting property: ${propertyId}`);
+    
+    const newSelected = new Set(selectedProperties);
+    if (newSelected.has(propertyId)) {
+      newSelected.delete(propertyId);
+      console.log(`Property ${propertyId} deselected. Total selected: ${newSelected.size}`);
+    } else {
+      newSelected.add(propertyId);
+      console.log(`Property ${propertyId} selected. Total selected: ${newSelected.size}`);
+    }
+    setSelectedProperties(newSelected);
+    setSelectAll(newSelected.size === filteredProperties.length);
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    console.log(`Select all clicked. Current state: ${selectAll}`);
+    
+    if (selectAll) {
+      setSelectedProperties(new Set());
+      setSelectAll(false);
+      console.log('All properties deselected');
+    } else {
+      const allIds = new Set(filteredProperties.map(p => p.id));
+      setSelectedProperties(allIds);
+      setSelectAll(true);
+      console.log(`All ${allIds.size} properties selected`);
     }
   };
 
@@ -742,13 +868,62 @@ export default function AdminPropertiesPage() {
             </div>
           )}
 
+          {/* Bulk Operations Bar */}
+          {selectedProperties.size > 0 && (
+            <div className="mb-4 p-4 bg-accent/10 border-2 border-accent/30 rounded-lg shadow-lg animate-fade-in">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="text-base font-semibold text-primary flex items-center gap-2">
+                  <span className="bg-accent text-white px-2 py-1 rounded-full text-sm">
+                    {selectedProperties.size}
+                  </span>
+                  <span>properties selected</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleBulkStatusChange("active")}
+                    className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                  >
+                    Mark as Active
+                  </button>
+                  <button
+                    onClick={() => handleBulkStatusChange("pending")}
+                    className="px-3 py-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm font-medium"
+                  >
+                    Mark as Pending
+                  </button>
+                  <button
+                    onClick={() => handleBulkStatusChange("sold")}
+                    className="px-3 py-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                  >
+                    Mark as Sold
+                  </button>
+                  <button
+                    onClick={() => handleBulkStatusChange("hidden")}
+                    className="px-3 py-1.5 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm font-medium"
+                  >
+                    Mark as Hidden
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedProperties(new Set());
+                      setSelectAll(false);
+                    }}
+                    className="px-3 py-1.5 border border-border/60 text-muted hover:text-primary rounded-lg transition-colors text-sm font-medium"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Status Filter */}
           <div className="mb-6">
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-blue-600 dark:text-blue-400">💡</span>
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  <strong>Tip:</strong> Click the colored status badge on each property card to quickly change its status between Active, Pending, Sold, or Hidden.
+                  <strong>Tip:</strong> Select multiple properties using checkboxes to perform bulk status updates. In list view, use the table header checkbox to select all.
                 </p>
               </div>
             </div>
@@ -829,16 +1004,176 @@ export default function AdminPropertiesPage() {
                   : `No ${statusFilter} properties found. Try changing the filter.`}
               </p>
             </div>
+          ) : viewMode === "list" ? (
+            // List View - Table Format
+            <div className="bg-card rounded-lg border border-border/60 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/10 border-b border-border/60">
+                    <tr>
+                      <th className="p-3 text-left">
+                        <label className="flex items-center cursor-pointer min-w-[44px] min-h-[44px] -m-2 p-2 rounded hover:bg-muted/20 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectAll}
+                            onChange={handleSelectAll}
+                            className="w-5 h-5 rounded border-2 border-primary/60 text-accent focus:ring-2 focus:ring-accent/20 cursor-pointer"
+                          />
+                        </label>
+                      </th>
+                      <th className="p-3 text-left text-sm font-semibold">Property</th>
+                      <th className="p-3 text-left text-sm font-semibold">Location</th>
+                      <th className="p-3 text-left text-sm font-semibold">Price</th>
+                      <th className="p-3 text-left text-sm font-semibold">Status</th>
+                      <th className="p-3 text-left text-sm font-semibold">Type</th>
+                      <th className="p-3 text-left text-sm font-semibold">ROI</th>
+                      <th className="p-3 text-left text-sm font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProperties.map((property, index) => (
+                      <tr 
+                        key={property.id} 
+                        className={`border-b border-border/40 hover:bg-muted/10 transition-all cursor-pointer ${
+                          selectedProperties.has(property.id) 
+                            ? 'bg-accent/10 shadow-sm border-l-4 border-l-accent' 
+                            : 'hover:border-l-4 hover:border-l-transparent'
+                        }`}
+                        onClick={() => handleSelectProperty(property.id)}
+                      >
+                        <td className="p-3">
+                          <label className="flex items-center cursor-pointer min-w-[44px] min-h-[44px] -m-2 p-2 rounded hover:bg-muted/20 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={selectedProperties.has(property.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleSelectProperty(property.id);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-5 h-5 rounded border-2 border-primary/60 text-accent focus:ring-2 focus:ring-accent/20 cursor-pointer checked:bg-accent checked:border-accent"
+                            />
+                          </label>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-medium text-primary">{property.title}</div>
+                          <div className="text-xs text-muted">{property.address}</div>
+                        </td>
+                        <td className="p-3 text-sm text-muted">
+                          {property.city}, {property.state}
+                        </td>
+                        <td className="p-3 text-sm font-semibold">
+                          ${property.price?.toLocaleString()}
+                        </td>
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={property.status || "active"}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(
+                                property.id,
+                                e.target.value as "active" | "sold" | "pending" | "hidden"
+                              );
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`px-2 py-1 text-xs font-semibold rounded-lg border cursor-pointer ${
+                              property.status === "sold"
+                                ? "bg-red-500 text-white border-red-600"
+                                : property.status === "pending"
+                                ? "bg-yellow-500 text-white border-yellow-600"
+                                : property.status === "hidden"
+                                ? "bg-gray-500 text-white border-gray-600"
+                                : "bg-green-500 text-white border-green-600"
+                            }`}
+                          >
+                            <option value="active">Active</option>
+                            <option value="pending">Pending</option>
+                            <option value="sold">Sold</option>
+                            <option value="hidden">Hidden</option>
+                          </select>
+                        </td>
+                        <td className="p-3 text-sm text-muted">
+                          {property.propertyType}
+                        </td>
+                        <td className="p-3 text-sm font-semibold text-green-600">
+                          {property.totalROI?.toFixed(1)}%
+                        </td>
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditClick(property.id);
+                              }}
+                              className="p-1.5 hover:bg-muted/20 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(property.id);
+                              }}
+                              className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (property.strategicOverview || property.thirtyYearProjections || property.locationAnalysis) {
+                                  setComprehensiveProperty(property);
+                                  setShowComprehensiveView(true);
+                                } else {
+                                  setSelectedDeal(property);
+                                  setIsModalOpen(true);
+                                }
+                              }}
+                              className="p-1.5 hover:bg-muted/20 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           ) : (
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
-                  : "space-y-4"
-              }
-            >
+            // Grid View
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredProperties.map((property) => (
-                <div key={property.id} className="relative">
+                <div key={property.id} className={`relative rounded-lg transition-all ${
+                  selectedProperties.has(property.id) ? 'ring-2 ring-accent shadow-lg' : ''
+                }`}>
+                  {/* Checkbox for Grid View */}
+                  <div className="absolute top-2 left-2 z-20">
+                    <label className="flex items-center justify-center bg-white/95 dark:bg-background/95 backdrop-blur-sm rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer min-w-[44px] min-h-[44px] p-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedProperties.has(property.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleSelectProperty(property.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded border-2 border-primary/60 text-accent focus:ring-2 focus:ring-accent/20 cursor-pointer checked:bg-accent checked:border-accent"
+                      />
+                    </label>
+                  </div>
+                  
                   {/* Status Badge */}
                   <div className="absolute top-4 right-4 z-10">
                     <select
@@ -846,11 +1181,7 @@ export default function AdminPropertiesPage() {
                       onChange={(e) =>
                         handleStatusChange(
                           property.id,
-                          e.target.value as
-                            | "active"
-                            | "sold"
-                            | "pending"
-                            | "hidden",
+                          e.target.value as "active" | "sold" | "pending" | "hidden"
                         )
                       }
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer transition-all hover:shadow-lg ${

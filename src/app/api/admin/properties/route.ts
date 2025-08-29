@@ -75,7 +75,13 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     
-    if (!body.id) {
+    console.log('PUT /api/admin/properties - Request body:', {
+      id: body.id,
+      status: body.status,
+      title: body.title
+    });
+    
+    if (!body.id && body.id !== 0) {
       return NextResponse.json(
         { error: 'Property ID required' },
         { status: 400 }
@@ -92,10 +98,19 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Check if this was a static deal (has warning)
+    if (updatedProperty._warning) {
+      console.log('Warning:', updatedProperty._warning);
+      // Remove the warning from the response but still return success
+      const { _warning, ...cleanProperty } = updatedProperty;
+      return NextResponse.json(cleanProperty);
+    }
+
     return NextResponse.json(updatedProperty);
-  } catch {
+  } catch (error) {
+    console.error('Error in PUT /api/admin/properties:', error);
     return NextResponse.json(
-      { error: 'Failed to update property' },
+      { error: error instanceof Error ? error.message : 'Failed to update property' },
       { status: 400 }
     );
   }
