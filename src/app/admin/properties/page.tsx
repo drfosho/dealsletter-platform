@@ -142,9 +142,18 @@ export default function AdminPropertiesPage() {
   ) => {
     try {
       const property = properties.find((p) => p.id === propertyId);
-      if (!property) return;
+      if (!property) {
+        console.error("Property not found:", propertyId);
+        return;
+      }
 
       const updatedProperty = { ...property, status: newStatus };
+      
+      console.log("Updating property status:", {
+        id: propertyId,
+        newStatus: newStatus,
+        property: updatedProperty
+      });
 
       const response = await fetch("/api/admin/properties", {
         method: "PUT",
@@ -152,13 +161,23 @@ export default function AdminPropertiesPage() {
         body: JSON.stringify(updatedProperty),
       });
 
-      if (!response.ok) throw new Error("Failed to update property status");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API response error:", errorText);
+        console.error("Response status:", response.status);
+        throw new Error(`Failed to update property status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Update successful:", result);
 
       await fetchProperties();
-      alert(`Property status updated to ${newStatus}`);
+      // Show success message briefly
+      const successMsg = `Property status updated to ${newStatus}`;
+      console.log(successMsg);
     } catch (error) {
       console.error("Error updating property status:", error);
-      alert("Failed to update property status. Please try again.");
+      alert(`Failed to update property status. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -725,6 +744,15 @@ export default function AdminPropertiesPage() {
 
           {/* Status Filter */}
           <div className="mb-6">
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-blue-600 dark:text-blue-400">💡</span>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Tip:</strong> Click the colored status badge on each property card to quickly change its status between Active, Pending, Sold, or Hidden.
+                </p>
+              </div>
+            </div>
+            
             <div className="flex flex-wrap gap-2 mb-4">
               {(["all", "active", "sold", "pending", "hidden"] as const).map(
                 (status) => (
@@ -825,12 +853,20 @@ export default function AdminPropertiesPage() {
                             | "hidden",
                         )
                       }
-                      className="px-3 py-1 text-xs font-medium rounded-lg border bg-white/90 backdrop-blur-sm"
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer transition-all hover:shadow-lg ${
+                        property.status === "sold"
+                          ? "bg-red-500 text-white border-red-600"
+                          : property.status === "pending"
+                          ? "bg-yellow-500 text-white border-yellow-600"
+                          : property.status === "hidden"
+                          ? "bg-gray-500 text-white border-gray-600"
+                          : "bg-green-500 text-white border-green-600"
+                      }`}
                     >
-                      <option value="active">Active</option>
-                      <option value="sold">Sold</option>
-                      <option value="pending">Pending</option>
-                      <option value="hidden">Hidden</option>
+                      <option value="active">✓ Active</option>
+                      <option value="pending">⏳ Pending</option>
+                      <option value="sold">🏷️ Sold</option>
+                      <option value="hidden">👁️ Hidden</option>
                     </select>
                   </div>
 

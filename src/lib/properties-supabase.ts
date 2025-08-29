@@ -264,12 +264,99 @@ export async function updateProperty(id: string, updates: Record<string, unknown
   try {
     const supabase = await createClient();
     
+    // Map common field names that might be different
+    const mappedUpdates: Record<string, unknown> = {
+      ...updates,
+      id: id, // Ensure ID is preserved
+    };
+    
+    // Convert camelCase to snake_case for database columns
+    if ('capRate' in mappedUpdates) {
+      mappedUpdates.cap_rate = mappedUpdates.capRate;
+    }
+    if ('cashFlow' in mappedUpdates) {
+      mappedUpdates.cash_flow = mappedUpdates.cashFlow;
+    }
+    if ('totalROI' in mappedUpdates) {
+      mappedUpdates.total_roi = mappedUpdates.totalROI;
+    }
+    if ('monthlyCashFlow' in mappedUpdates) {
+      mappedUpdates.monthly_cash_flow = mappedUpdates.monthlyCashFlow;
+    }
+    if ('downPayment' in mappedUpdates) {
+      mappedUpdates.down_payment = mappedUpdates.downPayment;
+    }
+    if ('downPaymentPercent' in mappedUpdates) {
+      mappedUpdates.down_payment_percent = mappedUpdates.downPaymentPercent;
+    }
+    if ('propertyType' in mappedUpdates) {
+      mappedUpdates.property_type = mappedUpdates.propertyType;
+    }
+    if ('sqft' in mappedUpdates) {
+      mappedUpdates.square_feet = mappedUpdates.sqft;
+    }
+    if ('yearBuilt' in mappedUpdates) {
+      mappedUpdates.year_built = mappedUpdates.yearBuilt;
+    }
+    if ('monthlyRent' in mappedUpdates) {
+      mappedUpdates.monthly_rent = mappedUpdates.monthlyRent;
+    }
+    if ('investmentStrategy' in mappedUpdates) {
+      mappedUpdates.investment_strategy = mappedUpdates.investmentStrategy;
+    }
+    if ('riskLevel' in mappedUpdates) {
+      mappedUpdates.risk_level = mappedUpdates.riskLevel;
+    }
+    if ('daysOnMarket' in mappedUpdates) {
+      mappedUpdates.days_on_market = mappedUpdates.daysOnMarket;
+    }
+    
+    // Remove all camelCase duplicates to avoid conflicts
+    const camelCaseFields = [
+      'zipCode', 'listingUrl', 'listingSource', 'downPayment', 'downPaymentPercent',
+      'monthlyCashFlow', 'totalROI', 'cashOnCashReturn', 'rehabCosts', 'capRate',
+      'currentCapRate', 'proFormaCapRate', 'investmentStrategy', 'riskLevel',
+      'daysOnMarket', 'valueAddDescription', 'rentAnalysis', 'marketAnalysis',
+      'rehabAnalysis', 'propertyMetrics', 'propertyType', 'sqft', 'squareFeet',
+      'yearBuilt', 'monthlyRent', 'estimatedRehab', 'totalInvestment',
+      'expectedProfit', 'interestRate', 'loanTerm', 'monthlyPI', 'closingCosts',
+      'propertyTaxes', 'hoaFees', 'hoa', 'propertyManagement', 'vacancyRate',
+      'capitalExpenditures', 'executiveSummary', 'investmentThesis',
+      'riskAssessment', 'valueAddOpportunities', 'exitStrategy',
+      'recommendedActions', 'rehabDetails', 'currentRent', 'projectedRent',
+      'rentUpside', 'cashRequired', 'neighborhoodClass', 'walkScore',
+      'crimeRate', 'proFormaCashFlow', 'createdAt', 'updatedAt', 'isDraft', 'isDeleted'
+    ];
+    
+    // Delete all camelCase fields to prevent database conflicts
+    camelCaseFields.forEach(field => {
+      delete mappedUpdates[field];
+    });
+    
+    // Filter to only include allowed columns
+    const filteredUpdates: Record<string, unknown> = {
+      updated_at: new Date().toISOString()
+    };
+    
+    // Only include fields that exist in ALLOWED_COLUMNS
+    Object.keys(mappedUpdates).forEach(key => {
+      if (ALLOWED_COLUMNS.includes(key)) {
+        filteredUpdates[key] = mappedUpdates[key];
+      } else if (key !== 'id') {
+        console.log(`Skipping unknown field in update: ${key}`);
+        // Store unknown fields in property_data JSONB column
+        if (!filteredUpdates.property_data) {
+          filteredUpdates.property_data = {};
+        }
+        (filteredUpdates.property_data as any)[key] = mappedUpdates[key];
+      }
+    });
+    
+    console.log('Updating property with filtered fields:', Object.keys(filteredUpdates));
+    
     const { data, error } = await supabase
       .from('properties')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
+      .update(filteredUpdates)
       .eq('id', id)
       .select()
       .single();

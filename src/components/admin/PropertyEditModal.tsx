@@ -250,6 +250,20 @@ export default function PropertyEditModal({ isOpen, property, onSave, onClose }:
                 </div>
                 
                 <div>
+                  <label className="block text-sm font-medium mb-2">Property Status</label>
+                  <select
+                    value={editedProperty.status || 'active'}
+                    onChange={(e) => handleFieldChange('status', e.target.value)}
+                    className="w-full px-4 py-2 bg-background border border-border/60 rounded-lg"
+                  >
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="sold">Sold</option>
+                    <option value="hidden">Hidden</option>
+                  </select>
+                </div>
+                
+                <div>
                   <label className="block text-sm font-medium mb-2">Bedrooms</label>
                   <input
                     type="number"
