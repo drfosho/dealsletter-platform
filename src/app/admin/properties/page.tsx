@@ -1031,7 +1031,7 @@ export default function AdminPropertiesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProperties.map((property, index) => (
+                    {filteredProperties.map((property, _index) => (
                       <tr 
                         key={property.id} 
                         className={`border-b border-border/40 hover:bg-muted/10 transition-all cursor-pointer ${
