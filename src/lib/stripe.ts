@@ -129,9 +129,5 @@ export function hasFeature(tierName: string, feature: string): boolean {
   return tier.features.includes(feature)
 }
 
-// Helper function to get analysis limit for a tier
-export function getAnalysisLimit(tierName: string): number {
-  const tier = SUBSCRIPTION_TIERS[tierName.toUpperCase() as keyof typeof SUBSCRIPTION_TIERS]
-  if (!tier) return 0
-  return tier.analysisLimit
-}
+// Note: getAnalysisLimit has been moved to subscription-utils.ts for client-side use
+// This file should only be imported in server-side code (API routes)
