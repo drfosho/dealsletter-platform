@@ -177,7 +177,10 @@ export default function Dashboard() {
               rentAnalysis: prop.rentAnalysis,
               propertyMetrics: prop.propertyMetrics,
               financingScenarios: prop.financingScenarios,
-              thirtyYearProjections: prop.thirtyYearProjections
+              thirtyYearProjections: prop.thirtyYearProjections,
+              financialAnalysis: prop.financialAnalysis,
+              marketAnalysis: prop.marketAnalysis,
+              investmentSummary: prop.investmentSummary
             };
           });
           console.log('Dashboard: Formatted properties:', formattedProperties.length);

@@ -662,6 +662,151 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
                 </div>
               )}
 
+              {/* Financial Analysis - For BRRRR and other detailed properties */}
+              {property.financialAnalysis && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                    <span className="text-2xl">📊</span>
+                    Detailed Financial Analysis
+                  </h3>
+                  
+                  {/* Purchase & Rehab Scenario */}
+                  <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    {property.financialAnalysis.purchaseScenario && (
+                      <div className="bg-card rounded-xl border border-border/60 p-6">
+                        <h4 className="font-semibold mb-4">Purchase Details</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Purchase Price</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.purchaseScenario.purchasePrice)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Down Payment</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.purchaseScenario.downPayment)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Loan Amount</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.purchaseScenario.loanAmount)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {property.financialAnalysis.rehabScenario && (
+                      <div className="bg-card rounded-xl border border-border/60 p-6">
+                        <h4 className="font-semibold mb-4">Renovation Budget</h4>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Total Rehab Cost</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.rehabScenario.totalRehabCost)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Timeline</span>
+                            <span className="font-medium">{property.financialAnalysis.rehabScenario.timeline}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Refinance Details */}
+                  {property.financialAnalysis.refinanceScenario && (
+                    <div className="bg-gradient-to-br from-accent/5 to-accent/10 rounded-xl border border-accent/20 p-6 mb-6">
+                      <h4 className="font-semibold mb-4">Refinance Strategy</h4>
+                      <div className="grid md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">After Repair Value</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.refinanceScenario.afterRepairValue)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">New Loan (75% LTV)</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.refinanceScenario.newLoanAmount)}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Cash Out</span>
+                            <span className="font-bold text-green-600">{formatCurrency(property.financialAnalysis.refinanceScenario.cashOut)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Cash Left in Deal</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.refinanceScenario.cashLeftInDeal)}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Capital Recovery</span>
+                            <span className="font-bold text-blue-600">{property.financialAnalysis.refinanceScenario.percentRecovered}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted">Monthly Payment</span>
+                            <span className="font-medium">{formatCurrency(property.financialAnalysis.refinanceScenario.monthlyPayment)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Market Analysis */}
+              {property.marketAnalysis && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                    <span className="text-2xl">📈</span>
+                    Market Analysis
+                  </h3>
+                  
+                  {/* Comparable Sales */}
+                  {property.marketAnalysis.comparables && property.marketAnalysis.comparables.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-4">Recent Comparable Sales</h4>
+                      <div className="space-y-3">
+                        {property.marketAnalysis.comparables.slice(0, 3).map((comp: any, index: number) => (
+                          <div key={index} className="bg-card rounded-lg border border-border/60 p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-medium">{comp.address}</div>
+                                <div className="text-sm text-muted mt-1">
+                                  {comp.sqft} sq ft • ${comp.pricePerSqFt}/sf • {comp.condition}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold">{formatCurrency(comp.price)}</div>
+                                <div className="text-xs text-muted">{comp.soldDate}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Market Metrics */}
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {property.marketAnalysis.medianARV && (
+                      <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-lg p-4 border border-green-500/20">
+                        <div className="text-sm text-muted mb-1">Median ARV</div>
+                        <div className="text-xl font-bold">{formatCurrency(property.marketAnalysis.medianARV)}</div>
+                      </div>
+                    )}
+                    {property.marketAnalysis.discountToARV && (
+                      <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-lg p-4 border border-blue-500/20">
+                        <div className="text-sm text-muted mb-1">Discount to ARV</div>
+                        <div className="text-xl font-bold">{property.marketAnalysis.discountToARV}%</div>
+                      </div>
+                    )}
+                    {property.marketAnalysis.section8Rents && (
+                      <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-lg p-4 border border-purple-500/20">
+                        <div className="text-sm text-muted mb-1">Section 8 Rent</div>
+                        <div className="text-xl font-bold">{formatCurrency(property.marketAnalysis.section8Rents.fourBedroom)}/mo</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Financing Scenarios */}
               {property.financingScenarios && property.financingScenarios.length > 0 && (
                 <div>
