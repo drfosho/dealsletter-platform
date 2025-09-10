@@ -3064,5 +3064,223 @@ export const staticDeals = [
     
     createdAt: new Date(),
     updatedAt: new Date()
+  },
+  {
+    id: 19,
+    title: "Kansas City BRRRR - Historic Northeast Cash Flow Machine",
+    address: "3505 Garner Ave",
+    city: "Kansas City",
+    state: "MO",
+    zipCode: "64124",
+    location: "Kansas City, MO 64124",
+    neighborhood: "Historic Northeast",
+    type: "Victorian BRRRR",
+    propertyType: "Single Family",
+    strategy: "BRRRR",
+    investmentStrategy: "BRRRR",
+    price: 110000,
+    arv: 210000,
+    
+    // Financial Metrics - Initial Purchase
+    downPayment: 11000,
+    downPaymentPercent: 10,
+    loanAmount: 99000,
+    interestRate: 10.45,
+    loanType: "Hard Money",
+    monthlyPI: 862, // Interest-only
+    pointsFees: 1980,
+    
+    // Renovation & Costs
+    rehabCosts: 28000,
+    rehabDetails: {
+      "Kitchen refresh": 6000,
+      "Bathroom updates": 4000,
+      "Flooring repairs/refinish": 3500,
+      "Interior paint": 2500,
+      "Exterior paint/curb appeal": 3000,
+      "Electrical/outlets update": 2000,
+      "Landscaping/cleanup": 2000,
+      "Minor repairs": 2000,
+      "Staging/photos": 1000,
+      "Contingency": 2000
+    },
+    holdingCosts: 5448,
+    totalProjectCost: 138000,
+    
+    // Refinance Strategy
+    refinanceDetails: {
+      newLoanAmount: 157500,
+      ltv: 75,
+      refinanceRate: 7.5,
+      term: 30,
+      monthlyPayment: 1101,
+      cashOut: 30500,
+      cashLeftInDeal: 15928,
+      recoveryRate: 65.7
+    },
+    
+    // Post-Refinance Metrics
+    monthlyRent: 1650,
+    potentialRent: 1850, // Section 8
+    monthlyExpenses: 1766,
+    monthlyCashFlow: -116,
+    cashFlow: -1392,
+    cashOnCashReturn: -8.7,
+    
+    // Alternative Scenarios
+    alternativeStrategies: {
+      higherRent: {
+        rent: 1750,
+        cashFlow: 16,
+        annual: 192
+      },
+      lowerLTV: {
+        ltv: 70,
+        loanAmount: 147000,
+        payment: 1028,
+        cashFlow: 11
+      },
+      section8: {
+        rent: 1900,
+        cashFlow: 134,
+        annual: 1608
+      }
+    },
+    
+    // Property Details
+    bedrooms: 4,
+    bathrooms: 2,
+    sqft: 1796,
+    pricePerSqft: 61,
+    yearBuilt: 1890,
+    propertyCondition: "Recently renovated interior, needs cosmetic updates",
+    
+    // Key Metrics
+    capRate: 10.8, // Based on ARV
+    forcedAppreciation: 100000,
+    totalCashRequired: 46428,
+    
+    // 5-Year Projections
+    fiveYearProjections: {
+      forcedAppreciation: 72000,
+      marketAppreciation: 35000,
+      mortgagePaydown: 22000,
+      totalEquityCreated: 129000,
+      cashFlow: -7000,
+      netWealthCreated: 106072,
+      roiOnCash: 666
+    },
+    
+    // Features
+    features: [
+      "Victorian Architecture",
+      "Recently Renovated Interior",
+      "4 Bedrooms",
+      "Historic Neighborhood",
+      "High ARV Potential",
+      "Section 8 Eligible",
+      "Corner Lot",
+      "Original Hardwood Floors"
+    ],
+    
+    // Location Analysis
+    locationAnalysis: {
+      walkScore: 65,
+      transitScore: 35,
+      bikeScore: 50,
+      neighborhood: "Historic Northeast - Improving area with investment activity",
+      nearbyAmenities: [
+        "Downtown Kansas City - 10 minutes",
+        "Cliff Drive Scenic Byway",
+        "Kessler Park",
+        "Historic Northeast District",
+        "Major employment centers nearby"
+      ],
+      marketTrends: [
+        "Neighborhood gentrification in progress",
+        "Strong investor activity",
+        "Rising property values",
+        "Limited inventory driving appreciation"
+      ]
+    },
+    
+    // Investment Summary
+    description: "Classic BRRRR opportunity with $100K forced appreciation potential. Recently renovated Victorian needs only cosmetic updates to achieve $210K ARV. 65% capital recovery on refinance.",
+    
+    executiveSummary: "Textbook BRRRR deal in KC's Historic Northeast. Purchase at $61/SF, add $28K in cosmetic updates, refinance at $210K ARV. Recover 65% of capital while creating $100K+ in immediate equity. Slight negative cash flow initially but massive wealth creation.",
+    
+    strategicOverview: {
+      investmentThesis: "Buy deep discount, force appreciation through cosmetic renovation, refinance to recover capital, build long-term wealth through equity growth. Classic BRRRR execution in improving neighborhood.",
+      competitiveAdvantages: [
+        "$100K forced appreciation opportunity",
+        "65% capital recovery on refinance",
+        "Recent interior renovation reduces risk",
+        "Multiple exit strategies available",
+        "Section 8 potential for positive cash flow",
+        "Historic neighborhood with upside"
+      ],
+      exitStrategy: [
+        "Hold for long-term appreciation",
+        "Flip immediately for $50K profit",
+        "Seller finance at premium",
+        "Package with other properties"
+      ]
+    },
+    
+    // Risk Assessment
+    riskLevel: "medium",
+    risks: [
+      "Slight negative initial cash flow",
+      "1890 build may have hidden issues",
+      "Historic Northeast location",
+      "Must hit ARV target precisely",
+      "Renovation budget overruns possible"
+    ],
+    mitigants: [
+      "Recent renovations reduce risk",
+      "Conservative rehab budget with contingency",
+      "Multiple strategies to achieve positive cash flow",
+      "Massive equity cushion provides safety",
+      "Strong comparable sales support ARV"
+    ],
+    
+    // Due Diligence Items
+    dueDiligence: [
+      "Full inspection including foundation/structure",
+      "Verify recent renovation permits",
+      "Confirm ARV with multiple comps",
+      "Get contractor bids for renovation",
+      "Research Section 8 rental rates",
+      "Check for any historic district restrictions"
+    ],
+    
+    // BRRRR Execution Timeline
+    brrrrTimeline: {
+      month1: "Close with hard money, begin renovation",
+      month2: "Complete interior updates",
+      month3: "Finish exterior, list for appraisal",
+      month4: "Complete refinance, place tenant",
+      totalTime: "4 months to stabilization"
+    },
+    
+    confidence: "high",
+    status: "active",
+    daysOnMarket: 0,
+    timeframe: "4 months",
+    cashRequired: 46428,
+    totalROI: 666,
+    roi: 666,
+    
+    isDraft: false,
+    isFeatured: true,
+    listingUrl: "https://www.realtor.com/realestateandhomes-detail/3505-Garner-Ave_Kansas-City_MO_64124_M81492-45661",
+    listingSource: "Realtor.com",
+    
+    images: [
+      "/api/placeholder/400/300"
+    ],
+    
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 ];
