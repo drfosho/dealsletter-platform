@@ -2820,5 +2820,249 @@ export const staticDeals = [
     
     createdAt: new Date(),
     updatedAt: new Date()
+  },
+  {
+    id: 18,
+    title: "Walnut Grove Cottages - 13-Unit Cash Cow",
+    address: "13991 River Rd",
+    city: "Walnut Grove",
+    state: "CA",
+    zipCode: "95690",
+    location: "Walnut Grove, CA 95690",
+    neighborhood: "Sacramento River Delta",
+    type: "Multifamily Investment",
+    propertyType: "Multifamily",
+    strategy: "Buy & Hold",
+    investmentStrategy: "Buy & Hold",
+    units: 13,
+    isMultiFamily: true,
+    price: 1350000,
+    pricePerUnit: 103846,
+    
+    // Financial Metrics
+    downPayment: 337500,
+    downPaymentPercent: 25,
+    loanAmount: 1012500,
+    interestRate: 7.25,
+    loanTerm: 30,
+    monthlyPI: 6909,
+    
+    // Income & Expenses
+    monthlyRent: 17555,
+    grossAnnualIncome: 210660,
+    vacancy: 6320,
+    effectiveGrossIncome: 204340,
+    propertyTaxes: 15930,
+    operatingExpenses: 61968,
+    totalExpenses: 77898,
+    expenseRatio: 37,
+    netOperatingIncome: 126442,
+    noi: 126442,
+    
+    // Key Metrics
+    capRate: 9.37,
+    currentCapRate: 9.37,
+    proFormaCapRate: 12.56,
+    monthlyCashFlow: 3628,
+    cashFlow: 43534,
+    proFormaCashFlow: 6825,
+    cashOnCashReturn: 12.9,
+    roi: 24.3,
+    totalROI: 24.3,
+    
+    // Property Details
+    bedrooms: 13, // Total across all units
+    bathrooms: 13,
+    sqft: 11000, // Estimated total
+    yearBuilt: 1991,
+    lotSize: "1.52 acres",
+    propertyCondition: "Well-maintained",
+    
+    // Unit Mix
+    unitMix: {
+      "2BR Cottages": {
+        quantity: 8,
+        currentRent: 1475,
+        marketRent: 1675,
+        totalCurrent: 11800,
+        totalMarket: 13400
+      },
+      "1BR Cottages": {
+        quantity: 2,
+        currentRent: 1264,
+        marketRent: 1464,
+        totalCurrent: 2528,
+        totalMarket: 2928
+      },
+      "Studio Cottages": {
+        quantity: 2,
+        currentRent: 1225,
+        marketRent: 1425,
+        totalCurrent: 2450,
+        totalMarket: 2850
+      },
+      "4BR Cottage": {
+        quantity: 1,
+        currentRent: 1863,
+        marketRent: 2063,
+        totalCurrent: 1863,
+        totalMarket: 2063
+      }
+    },
+    
+    // Value-Add Strategy
+    valueAddStrategy: {
+      immediate: [
+        "Implement RUBS (Ratio Utility Billing System) - adds $14,271/year",
+        "Push rents to market - $200-300/unit upside",
+        "Add covered parking/storage units",
+        "Pet-friendly policy with deposits"
+      ],
+      longTerm: [
+        "Add 2 more units on the 1.52 acres",
+        "Construction cost: $150K/unit",
+        "Additional income: $36,000/year",
+        "Instant equity creation: $100K+"
+      ]
+    },
+    
+    // Features
+    features: [
+      "Individual Detached Cottages",
+      "No Shared Walls",
+      "Private Yards",
+      "Steps from Sacramento River",
+      "1.52 Acres",
+      "Development Potential",
+      "Below Replacement Cost",
+      "Seller Financing Available"
+    ],
+    
+    // Location Analysis
+    locationAnalysis: {
+      walkScore: 45,
+      transitScore: 0,
+      bikeScore: 55,
+      neighborhood: "Small-town charm with big-city access",
+      nearbyAmenities: [
+        "Sacramento River waterfront",
+        "Historic downtown Walnut Grove",
+        "30 minutes to Sacramento",
+        "Agricultural employment base",
+        "Low crime, family-friendly area"
+      ],
+      marketTrends: [
+        "Limited housing supply in area",
+        "Sacramento spillover demand",
+        "Cottage premium vs apartments",
+        "Strong agricultural worker demand"
+      ]
+    },
+    
+    // Investment Summary
+    description: "13 detached single-story cottages on 1.52 acres with 9.37% cap rate. Individual cottages at apartment pricing with immediate RUBS value-add opportunity. Turnkey property with clear path to 12.56% pro forma cap.",
+    
+    executiveSummary: "Exceptional 13-unit cottage property offering individual homes at multifamily pricing. Current 9.37% cap rate jumps to 12.56% with RUBS implementation. At $103K/unit for detached cottages, this represents institutional returns at a fraction of replacement cost. Seller financing potentially available.",
+    
+    strategicOverview: {
+      investmentThesis: "Individual cottages command 15-20% premium over apartments while maintaining lower turnover. RUBS implementation adds instant $14K annual income. Below-market rents offer $200-300/unit upside. Development potential for 2 additional units on 1.52 acres.",
+      competitiveAdvantages: [
+        "9.37% cap rate in California",
+        "Detached cottages vs shared walls",
+        "RUBS doubles cash flow immediately",
+        "$300K below replacement cost",
+        "Development rights included",
+        "Seller financing option at 6%"
+      ],
+      exitStrategy: [
+        "Stabilize at market rents: $2.5M value",
+        "Add 2 units: $2.8M value",
+        "Sell to institutional buyer at 7.5% cap"
+      ]
+    },
+    
+    // Financing Scenarios
+    financingScenarios: [
+      {
+        name: "Traditional Bank Financing",
+        downPayment: 337500,
+        loanAmount: 1012500,
+        rate: 7.25,
+        monthlyPayment: 6909,
+        cashFlow: 3628,
+        cashOnCash: 12.9
+      },
+      {
+        name: "Seller Financing",
+        downPayment: 270000,
+        loanAmount: 1080000,
+        rate: 6.0,
+        monthlyPayment: 6479,
+        cashFlow: 4058,
+        cashOnCash: 18.1
+      }
+    ],
+    
+    // Pro Forma Projections
+    proFormaProjections: {
+      year1: {
+        noi: 175000,
+        cashFlow: 87000,
+        cashOnCash: 25.8
+      },
+      year3: {
+        noi: 200000,
+        value: 2500000,
+        equity: 1150000
+      },
+      year5: {
+        noi: 210000,
+        value: 2800000,
+        equity: 1450000,
+        totalReturn: 430
+      }
+    },
+    
+    // Risk Assessment
+    riskLevel: "low",
+    risks: [
+      "Rural location may limit liquidity",
+      "Older vintage property (1991)",
+      "Small market dynamics",
+      "Distance management challenges"
+    ],
+    mitigants: [
+      "9.37% cap provides margin of safety",
+      "Individual cottages reduce turnover",
+      "RUBS implementation is proven",
+      "Professional property management available"
+    ],
+    
+    // Action Items
+    dueDiligence: [
+      "Verify current rent roll and occupancy",
+      "Inspect all 13 cottages thoroughly",
+      "Review utility billing history",
+      "Confirm development potential with county",
+      "Negotiate seller financing terms"
+    ],
+    
+    confidence: "very high",
+    status: "active",
+    daysOnMarket: 0,
+    timeframe: "Immediate",
+    cashRequired: 337500,
+    
+    isDraft: false,
+    isFeatured: true,
+    listingUrl: "https://www.loopnet.com/Listing/13991-River-Rd-Walnut-Grove-CA/37585444/",
+    listingSource: "LoopNet",
+    
+    images: [
+      "/api/placeholder/400/300"
+    ],
+    
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 ];
