@@ -3590,6 +3590,152 @@ export const staticDeals = [
       analysis: "Despite negative cash flow initially, the BRRRR strategy creates massive wealth through forced appreciation and equity growth. The 1,283% ROI represents 12.8X return on the $15,928 left in the deal. With Section 8 or strategic rent increases, cash flow turns positive after year 15."
     },
     
+    // Detailed Financial Analysis
+    financialAnalysis: {
+      purchaseScenario: {
+        purchasePrice: 110000,
+        downPayment: 11000,
+        loanAmount: 99000,
+        closingCosts: 1980,
+        totalCashToClose: 12980
+      },
+      rehabScenario: {
+        totalRehabCost: 28000,
+        timeline: "3-4 months",
+        majorItems: [
+          { item: "Kitchen refresh", cost: 6000 },
+          { item: "Bathroom updates", cost: 4000 },
+          { item: "Flooring/refinish", cost: 3500 },
+          { item: "Paint interior/exterior", cost: 5500 },
+          { item: "Electrical updates", cost: 2000 },
+          { item: "Landscaping", cost: 2000 },
+          { item: "Contingency", cost: 2000 }
+        ]
+      },
+      holdingCosts: {
+        hardMoneyPayments: 3448,
+        insurance: 600,
+        utilities: 600,
+        propertyTaxes: 800,
+        total: 5448
+      },
+      refinanceScenario: {
+        afterRepairValue: 210000,
+        newLoanAmount: 157500,
+        ltvRatio: 75,
+        interestRate: 7.5,
+        loanTerm: 30,
+        monthlyPayment: 1101,
+        cashOut: 30500,
+        totalInvested: 46428,
+        cashRecovered: 30500,
+        cashLeftInDeal: 15928,
+        percentRecovered: 65.7
+      },
+      monthlyOperatingExpenses: {
+        mortgage: 1101,
+        propertyTaxes: 200,
+        insurance: 150,
+        management: 132,
+        maintenance: 100,
+        vacancy: 83,
+        total: 1766
+      },
+      cashFlowAnalysis: {
+        monthlyRent: 1650,
+        monthlyExpenses: 1766,
+        monthlyCashFlow: -116,
+        annualCashFlow: -1392,
+        cashOnCashReturn: -8.7
+      },
+      alternativeScenarios: [
+        {
+          name: "Market Rent",
+          rent: 1750,
+          cashFlow: 16,
+          annual: 192,
+          cashOnCash: 1.2
+        },
+        {
+          name: "Section 8",
+          rent: 1900,
+          cashFlow: 134,
+          annual: 1608,
+          cashOnCash: 10.1
+        },
+        {
+          name: "Premium Finish",
+          rent: 1950,
+          cashFlow: 184,
+          annual: 2208,
+          cashOnCash: 13.9
+        }
+      ],
+      returnMetrics: {
+        totalCashInvested: 46428,
+        cashRecovered: 30500,
+        netCashInvested: 15928,
+        forcedAppreciation: 100000,
+        instantEquity: 52500,
+        year1TotalReturn: 50106,
+        year5TotalReturn: 55252,
+        year30TotalReturn: 595877
+      }
+    },
+    
+    // Market Analysis
+    marketAnalysis: {
+      comparables: [
+        { address: "3420 Garner Ave", price: 195000, sqft: 1650, pricePerSqFt: 118, soldDate: "2 months ago", condition: "Renovated" },
+        { address: "3612 Independence Ave", price: 215000, sqft: 1850, pricePerSqFt: 116, soldDate: "1 month ago", condition: "Updated" },
+        { address: "3245 Benton Blvd", price: 205000, sqft: 1750, pricePerSqFt: 117, soldDate: "3 weeks ago", condition: "Remodeled" }
+      ],
+      medianARV: 210000,
+      medianPricePerSqFt: 117,
+      purchasePricePerSqFt: 61,
+      discountToARV: 47.6,
+      neighborhoodTrends: [
+        "Historic Northeast seeing increased investment",
+        "Proximity to downtown driving appreciation",
+        "Strong rental demand from workforce",
+        "Limited inventory supporting values"
+      ],
+      rentalComps: [
+        { address: "3510 Tracy Ave", beds: 4, baths: 2, rent: 1650, condition: "Good" },
+        { address: "3425 Garner Ave", beds: 4, baths: 2, rent: 1700, condition: "Updated" },
+        { address: "3320 Independence", beds: 3, baths: 2, rent: 1550, condition: "Average" }
+      ],
+      section8Rents: {
+        fourBedroom: 1900,
+        paymentStandard: 1850,
+        fairMarketRent: 1780
+      }
+    },
+    
+    // Investment Returns Summary
+    investmentSummary: {
+      strategy: "BRRRR - Buy, Rehab, Rent, Refinance, Repeat",
+      totalProjectCost: 138000,
+      afterRepairValue: 210000,
+      instantEquity: 72000,
+      percentOfARV: 65.7,
+      cashLeftInDeal: 15928,
+      leverageRatio: "13:1 (control $210K asset with $16K)",
+      breakeven: "Year 15 with standard rent, immediate with Section 8",
+      exitStrategies: [
+        "Hold for appreciation - $846K value in 30 years",
+        "Flip immediately - $50K+ profit potential",
+        "Seller finance - Create note at 8-9%",
+        "1031 exchange into larger property"
+      ],
+      keyMetrics: {
+        capRate: 10.8,
+        grossRentMultiplier: 127,
+        rentToValue: 0.79,
+        debtServiceCoverage: 0.93
+      }
+    },
+    
     confidence: "high",
     status: "active",
     daysOnMarket: 0,
