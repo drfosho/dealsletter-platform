@@ -2822,7 +2822,7 @@ export const staticDeals = [
     updatedAt: new Date()
   },
   {
-    id: 18,
+    id: 20,
     title: "Walnut Grove Cottages - 13-Unit Cash Cow",
     address: "13991 River Rd",
     city: "Walnut Grove",
