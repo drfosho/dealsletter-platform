@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Zap, Star, Crown } from 'lucide-react';
+import { Check, X, Zap } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { loadStripe } from '@stripe/stripe-js';
 
@@ -55,7 +55,9 @@ export default function PricingComparison() {
           envTier = 'PREMIUM';
           break;
         default:
-          envTier = tier.toUpperCase();
+          // This should never happen but TypeScript needs it
+          priceId = undefined;
+          envTier = 'FREE';
       }
 
       console.log('[PricingComparison] Price ID for', tier, ':', priceId);
