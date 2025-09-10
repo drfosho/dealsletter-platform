@@ -2964,22 +2964,7 @@ export const staticDeals = [
     
     executiveSummary: "Exceptional 13-unit cottage property offering individual homes at multifamily pricing. Current 9.37% cap rate jumps to 12.56% with RUBS implementation. At $103K/unit for detached cottages, this represents institutional returns at a fraction of replacement cost. Seller financing potentially available.",
     
-    strategicOverview: {
-      investmentThesis: "Individual cottages command 15-20% premium over apartments while maintaining lower turnover. RUBS implementation adds instant $14K annual income. Below-market rents offer $200-300/unit upside. Development potential for 2 additional units on 1.52 acres.",
-      competitiveAdvantages: [
-        "9.37% cap rate in California",
-        "Detached cottages vs shared walls",
-        "RUBS doubles cash flow immediately",
-        "$300K below replacement cost",
-        "Development rights included",
-        "Seller financing option at 6%"
-      ],
-      exitStrategy: [
-        "Stabilize at market rents: $2.5M value",
-        "Add 2 units: $2.8M value",
-        "Sell to institutional buyer at 7.5% cap"
-      ]
-    },
+    strategicOverview: `Individual cottages command 15-20% premium over apartments while maintaining lower turnover. RUBS implementation adds instant $14K annual income. Below-market rents offer $200-300/unit upside. Development potential for 2 additional units on 1.52 acres. Key advantages: 9.37% cap rate in California, detached cottages vs shared walls, RUBS doubles cash flow immediately, $300K below replacement cost, development rights included, seller financing option at 6%. Exit strategies include stabilizing at market rents for $2.5M value, adding 2 units for $2.8M value, or selling to institutional buyer at 7.5% cap.`,
     
     // Financing Scenarios
     financingScenarios: [
@@ -3209,23 +3194,7 @@ export const staticDeals = [
     
     executiveSummary: "Textbook BRRRR deal in KC's Historic Northeast. Purchase at $61/SF, add $28K in cosmetic updates, refinance at $210K ARV. Recover 65% of capital while creating $100K+ in immediate equity. Slight negative cash flow initially but massive wealth creation.",
     
-    strategicOverview: {
-      investmentThesis: "Buy deep discount, force appreciation through cosmetic renovation, refinance to recover capital, build long-term wealth through equity growth. Classic BRRRR execution in improving neighborhood.",
-      competitiveAdvantages: [
-        "$100K forced appreciation opportunity",
-        "65% capital recovery on refinance",
-        "Recent interior renovation reduces risk",
-        "Multiple exit strategies available",
-        "Section 8 potential for positive cash flow",
-        "Historic neighborhood with upside"
-      ],
-      exitStrategy: [
-        "Hold for long-term appreciation",
-        "Flip immediately for $50K profit",
-        "Seller finance at premium",
-        "Package with other properties"
-      ]
-    },
+    strategicOverview: `Buy deep discount, force appreciation through cosmetic renovation, refinance to recover capital, build long-term wealth through equity growth. Classic BRRRR execution in improving neighborhood. Key advantages: $100K forced appreciation opportunity, 65% capital recovery on refinance, recent interior renovation reduces risk, multiple exit strategies available, Section 8 potential for positive cash flow, historic neighborhood with upside. Exit options include holding for long-term appreciation, flipping immediately for $50K profit, seller financing at premium, or packaging with other properties.`,
     
     // Risk Assessment
     riskLevel: "medium",
