@@ -111,7 +111,21 @@ export function calculateRehabCosts(
   const highCostStates = ['CA', 'NY', 'MA', 'HI', 'DC', 'WA', 'OR', 'CT', 'NJ']
   const locationMultiplier = state && highCostStates.includes(state) ? 1.2 : 1.0
 
-  const costRange = REHAB_COST_PER_SQFT[level]
+  // Ensure level is a valid key in REHAB_COST_PER_SQFT
+  const costRange = REHAB_COST_PER_SQFT[level as keyof typeof REHAB_COST_PER_SQFT]
+  
+  // Handle undefined costRange (shouldn't happen but let's be safe)
+  if (!costRange) {
+    console.warn(`Invalid rehab level: ${level}. Using 'none' as fallback.`)
+    return {
+      lowEstimate: 0,
+      highEstimate: 0,
+      averageEstimate: 0,
+      level: RehabLevel.NONE,
+      costPerSqft: 0
+    }
+  }
+  
   const adjustedMin = costRange.min * locationMultiplier
   const adjustedMax = costRange.max * locationMultiplier
   const adjustedDefault = costRange.default * locationMultiplier

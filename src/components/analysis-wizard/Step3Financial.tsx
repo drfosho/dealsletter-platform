@@ -246,7 +246,8 @@ export default function Step3Financial({
     
     // Calculate and set rehab costs if we have the necessary data
     if (squareFootage > 0 && renovationLevel && showRenovationCosts) {
-      const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, renovationLevel);
+      const mappedLevel = mapRenovationLevelToRehabLevel(renovationLevel);
+      const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, mappedLevel);
       
       console.log('[Step3Financial] Calculated renovation costs:', {
         squareFootage,
@@ -1164,7 +1165,8 @@ export default function Step3Financial({
                   />
                   {(() => {
                     const propertyData = data.propertyData as any;
-                    const renovationLevel = data.strategyDetails?.renovationLevel as RehabLevel;
+                    const renovationLevelString = data.strategyDetails?.renovationLevel;
+                    const renovationLevel = renovationLevelString ? mapRenovationLevelToRehabLevel(renovationLevelString) : null;
                     const squareFootage = propertyData?.property?.squareFootage;
                     
                     if (squareFootage && renovationLevel) {
