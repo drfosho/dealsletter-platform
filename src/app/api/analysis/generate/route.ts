@@ -618,6 +618,30 @@ async function generatePropertyAnalysis(propertyData: PropertyData, request: Pro
 
 IMPORTANT: Tailor your analysis based on the investment strategy:
 
+FOR BRRRR PROPERTIES:
+Your analysis must include:
+1. Executive Summary (Focus on capital recovery through refinance)
+2. Investment Recommendation (Buy/Hold/Pass based on refinance potential)
+3. BRRRR Phase Analysis:
+   - Phase 1: Acquisition & Renovation costs and timeline
+   - Phase 2: Refinance strategy and cash returned
+   - Phase 3: Long-term rental income and returns
+4. Key Financial Metrics (Use EXACT values from BRRRR STRATEGY ANALYSIS):
+   - Total Cash Invested: $[exact value]
+   - Cash Returned at Refinance: $[exact value]
+   - Cash Left in Deal: $[exact value]
+   - Monthly Cash Flow (post-refinance): $[exact value]
+   - Cash-on-Cash Return: [exact percentage or "INFINITE"]%
+   - 5-Year Total ROI: [exact percentage]%
+5. Risk Assessment (Focus on ARV accuracy, refinance approval, renovation delays)
+6. Market Analysis (Focus on rental demand and refinance appraisal risk)
+7. Capital Recovery Strategy (How much capital is returned for next deal)
+8. 3-5 Key Opportunities (Value-add improvements, market appreciation)
+9. 3-5 Key Risks (Refinance denial, ARV shortfall, renovation overruns)
+10. Action Items & Next Steps
+
+CRITICAL for BRRRR: Emphasize the three distinct phases and the capital recovery aspect. Show how the refinance allows investors to recycle capital into the next deal.
+
 FOR FIX & FLIP PROPERTIES:
 Your analysis must include:
 1. Executive Summary (2-3 sentences focusing on profit potential)
@@ -811,7 +835,154 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
   
   let calculatedMetrics: FinancialData;
   
-  if (isFlipStrategy) {
+  // Check if this is a BRRRR strategy
+  const isBRRRRStrategy = request.strategy === 'brrrr';
+  
+  if (isBRRRRStrategy) {
+    // BRRRR specific calculations - Buy, Rehab, Rent, Refinance, Repeat
+    console.log('[BRRRR] Starting BRRRR-specific calculations');
+    
+    // Phase 1: Acquisition & Renovation
+    const rehabCosts = request.rehabCosts || 0;
+    const closingCosts = effectivePurchasePrice * 0.03; // 3% closing costs
+    
+    // Initial financing (typically hard money for BRRRR)
+    const isHardMoney = request.loanTerms?.loanType === 'hardMoney';
+    const initialRate = request.loanTerms?.interestRate || (isHardMoney ? 10.45 : 7);
+    
+    // Renovation period (typically 3-6 months)
+    const renovationMonths = parseInt((request as any).strategyDetails?.timeline) || 6;
+    
+    // Calculate holding costs during renovation (no rental income during this phase)
+    const monthlyPropertyTaxes = Math.round((effectivePurchasePrice * 0.012) / 12);
+    const monthlyInsurance = Math.round((effectivePurchasePrice * 0.0035) / 12);
+    const monthlyUtilities = 200; // During renovation
+    const monthlyMaintenance = 150;
+    
+    // Initial loan payment (interest-only for hard money)
+    const monthlyInterestRate = initialRate / 100 / 12;
+    let monthlyLoanPayment = 0;
+    
+    if (isHardMoney) {
+      // Interest-only on purchase loan
+      monthlyLoanPayment = Math.round(loanAmount * monthlyInterestRate);
+      // Add interest on rehab loan if financed
+      if (rehabCosts > 0) {
+        monthlyLoanPayment += Math.round(rehabCosts * monthlyInterestRate);
+      }
+    } else {
+      monthlyLoanPayment = calculateMonthlyPayment(loanAmount, initialRate, 1, 'conventional');
+    }
+    
+    const monthlyHoldingCosts = monthlyLoanPayment + monthlyPropertyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
+    const totalRenovationHoldingCosts = monthlyHoldingCosts * renovationMonths;
+    
+    // Phase 2: After Repair Value and Refinance
+    const estimatedARV = request.arv || (comparables as any)?.value || effectivePurchasePrice * 1.3;
+    
+    // Refinance parameters (default 75% LTV)
+    const refinanceLTV = parseInt((request as any).strategyDetails?.exitStrategy || '75') / 100;
+    const refinanceAmount = estimatedARV * refinanceLTV;
+    
+    // Calculate cash returned from refinance
+    const initialLoanPayoff = loanAmount + (isHardMoney ? rehabCosts : 0); // Pay off initial loan + rehab if financed
+    const cashReturned = refinanceAmount - initialLoanPayoff;
+    
+    // Total cash invested
+    const totalCashInvested = downPayment + (isHardMoney ? 0 : rehabCosts) + closingCosts + pointsCost + totalRenovationHoldingCosts;
+    
+    // Cash left in deal after refinance
+    const cashLeftInDeal = totalCashInvested - cashReturned;
+    
+    // Phase 3: Rental Income (post-refinance)
+    const monthlyRent = request.monthlyRent || (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
+    
+    // New loan payment after refinance (conventional 30-year)
+    const refinanceRate = 7; // Typical conventional rate
+    const refinancePayment = calculateMonthlyPayment(refinanceAmount, refinanceRate, 30, 'conventional');
+    
+    // Operating expenses as rental
+    const operatingExpenses = monthlyPropertyTaxes + monthlyInsurance + 
+                             Math.round(monthlyRent * 0.1) + // Maintenance
+                             Math.round(monthlyRent * 0.08) + // Property management
+                             Math.round(monthlyRent * 0.05); // Vacancy
+    
+    const monthlyRentalCashFlow = monthlyRent - refinancePayment - operatingExpenses;
+    const annualRentalCashFlow = monthlyRentalCashFlow * 12;
+    
+    // Calculate returns
+    const cashOnCashReturn = cashLeftInDeal > 0 ? (annualRentalCashFlow / cashLeftInDeal) * 100 : 
+                             cashLeftInDeal === 0 ? Infinity : 0; // Infinite return if all cash returned
+    
+    // Cap rate based on ARV
+    const annualNOI = (monthlyRent * 12) - (operatingExpenses * 12);
+    const capRate = estimatedARV > 0 ? (annualNOI / estimatedARV) * 100 : 0;
+    
+    // Total ROI includes appreciation, cash flow, and loan paydown
+    const fiveYearCashFlow = annualRentalCashFlow * 5;
+    const estimatedAppreciation = estimatedARV * 0.03 * 5; // 3% annual appreciation
+    const totalReturn = fiveYearCashFlow + estimatedAppreciation + cashReturned;
+    const totalROI = totalCashInvested > 0 ? (totalReturn / totalCashInvested) * 100 : 0;
+    
+    context += `\n\nBRRRR STRATEGY ANALYSIS:
+    
+PHASE 1 - ACQUISITION & RENOVATION:
+- Purchase Price: $${effectivePurchasePrice.toLocaleString()}
+- Down Payment: $${downPayment.toLocaleString()} (${((downPayment/effectivePurchasePrice) * 100).toFixed(1)}%)
+- Initial Loan: $${loanAmount.toLocaleString()} @ ${initialRate}% (${isHardMoney ? 'Hard Money' : 'Conventional'})
+- Renovation Budget: $${rehabCosts.toLocaleString()}
+- Renovation Timeline: ${renovationMonths} months
+- Monthly Holding Costs: $${monthlyHoldingCosts.toLocaleString()}
+- Total Holding Costs: $${totalRenovationHoldingCosts.toLocaleString()}
+
+PHASE 2 - REFINANCE:
+- After Repair Value (ARV): $${estimatedARV.toLocaleString()}
+- Refinance LTV: ${(refinanceLTV * 100).toFixed(0)}%
+- Refinance Amount: $${refinanceAmount.toLocaleString()}
+- Initial Loan Payoff: $${initialLoanPayoff.toLocaleString()}
+- CASH RETURNED: $${cashReturned.toLocaleString()} ${cashReturned > totalCashInvested ? '(MORE THAN INVESTED!)' : ''}
+
+CAPITAL ANALYSIS:
+- Total Cash Invested: $${totalCashInvested.toLocaleString()}
+- Cash Returned at Refinance: $${cashReturned.toLocaleString()}
+- Cash Left in Deal: $${cashLeftInDeal.toLocaleString()} ${cashLeftInDeal <= 0 ? '(ALL CASH RETURNED!)' : ''}
+- Capital Recovery: ${totalCashInvested > 0 ? ((cashReturned / totalCashInvested) * 100).toFixed(1) : '0'}%
+
+PHASE 3 - RENTAL INCOME:
+- Monthly Rent: $${monthlyRent.toLocaleString()}
+- New Loan Payment (30yr @ ${refinanceRate}%): $${refinancePayment.toLocaleString()}
+- Operating Expenses: $${operatingExpenses.toLocaleString()}
+- Monthly Cash Flow: $${monthlyRentalCashFlow.toLocaleString()} ${monthlyRentalCashFlow < 0 ? '(NEGATIVE)' : '(POSITIVE)'}
+- Annual Cash Flow: $${annualRentalCashFlow.toLocaleString()}
+
+KEY METRICS:
+- Cash-on-Cash Return: ${cashLeftInDeal === 0 ? 'INFINITE (No cash left in deal!)' : cashOnCashReturn.toFixed(2) + '%'}
+- Cap Rate (on ARV): ${capRate.toFixed(2)}%
+- Annual NOI: $${annualNOI.toLocaleString()}
+- 5-Year Total ROI: ${totalROI.toFixed(2)}%
+
+BRRRR ADVANTAGE:
+${cashReturned >= totalCashInvested * 0.8 ? 
+  '✓ Excellent BRRRR candidate - recovering 80%+ of investment!' : 
+  cashReturned >= totalCashInvested * 0.6 ?
+  '✓ Good BRRRR candidate - recovering 60-80% of investment' :
+  '⚠ Marginal BRRRR candidate - recovering less than 60% of investment'}
+
+Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition/renovation, refinance cash-out, and long-term rental returns.`;
+
+    calculatedMetrics = {
+      totalInvestment: totalCashInvested,
+      cashFlow: monthlyRentalCashFlow,
+      capRate: capRate,
+      cocReturn: cashOnCashReturn,
+      roi: totalROI,
+      annualNOI: annualNOI,
+      totalProfit: cashReturned + fiveYearCashFlow,
+      holdingCosts: totalRenovationHoldingCosts,
+      monthlyRent: monthlyRent
+    };
+    
+  } else if (isFlipStrategy) {
     // Fix & Flip specific calculations
     // Use provided ARV if available, otherwise use comparables or estimate
     const estimatedARV = request.arv || (comparables as any)?.value || effectivePurchasePrice * 1.3;
