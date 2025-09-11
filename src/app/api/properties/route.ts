@@ -3,12 +3,18 @@ import { NextRequest } from 'next/server';
 
 // Import the properties from the admin API (in real app, this would be from a database)
 // For now, we'll use a shared module
-import { getPublishedProperties, createProperty } from '@/lib/properties';
+import { getPublishedProperties, getAllProperties, createProperty } from '@/lib/properties';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get only published properties for public dashboard
-    const properties = await getPublishedProperties();
+    const searchParams = request.nextUrl.searchParams;
+    const includeAll = searchParams.get('includeAll') === 'true';
+    
+    // If includeAll is true, get all properties (for dashboard tabs)
+    // Otherwise get only active properties (default behavior)
+    const properties = includeAll 
+      ? await getAllProperties() 
+      : await getPublishedProperties();
     
     return NextResponse.json(properties);
   } catch {

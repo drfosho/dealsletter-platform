@@ -89,7 +89,8 @@ export default function Dashboard() {
       try {
         setIsLoading(true);
         console.log('Dashboard: Fetching properties from /api/properties');
-        const response = await fetch('/api/properties', {
+        // Fetch all properties including sold/pending/hidden for tab filtering
+        const response = await fetch('/api/properties?includeAll=true', {
           cache: 'no-store',
           headers: {
             'Cache-Control': 'no-cache'
