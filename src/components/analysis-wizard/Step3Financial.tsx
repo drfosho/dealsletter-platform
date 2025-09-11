@@ -135,23 +135,39 @@ export default function Step3Financial({
       hasChanges = true;
     }
     
-    // Auto-calculate ARV for fix & flip strategy
-    if (data.strategy === 'flip' && newEffectivePrice > 0 && (!financial.arv || financial.arv === 0)) {
+    // Auto-calculate ARV for strategies that need it
+    // Use AVM value from comparables as base ARV, adjusted for renovation level
+    const needsARV = ['flip', 'brrrr'].includes(data.strategy);
+    const comparablesAVM = newComparablesValue || newEffectivePrice;
+    
+    if (needsARV && comparablesAVM > 0 && (!financial.arv || financial.arv === 0)) {
       setIsCalculatingARV(true);
       
       // Simulate API call delay for better UX
       setTimeout(() => {
         const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-        let arvMultiplier = 1.25;
+        let arvMultiplier = 1.0;
         
-        if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
-        else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
-        else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
-        else if (renovationLevel === 'gut') arvMultiplier = 1.45;
+        // For BRRRR, ARV should be close to market value after rehab
+        // For Flip, ARV includes profit margin
+        if (data.strategy === 'brrrr') {
+          // BRRRR uses more conservative ARV (market value after rehab)
+          if (renovationLevel === 'cosmetic') arvMultiplier = 1.05;
+          else if (renovationLevel === 'moderate') arvMultiplier = 1.10;
+          else if (renovationLevel === 'extensive') arvMultiplier = 1.15;
+          else if (renovationLevel === 'gut') arvMultiplier = 1.20;
+        } else if (data.strategy === 'flip') {
+          // Flip includes profit margin in ARV
+          if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
+          else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
+          else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
+          else if (renovationLevel === 'gut') arvMultiplier = 1.45;
+        }
         
-        const calculatedARV = Math.round(newEffectivePrice * arvMultiplier);
+        const calculatedARV = Math.round(comparablesAVM * arvMultiplier);
         console.log('[Step3Financial] Auto-calculating ARV:', {
-          currentValue: newEffectivePrice,
+          currentValue: comparablesAVM,
+          strategy: data.strategy,
           renovationLevel,
           multiplier: arvMultiplier,
           calculatedARV
@@ -226,7 +242,7 @@ export default function Step3Financial({
   // Calculate rehab costs based on property size and renovation level
   useEffect(() => {
     const propertyData = data.propertyData as any;
-    const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
+    const renovationLevelString = data.strategyDetails?.renovationLevel;
     
     // Try multiple locations for square footage
     const squareFootage = propertyData?.property?.squareFootage || 
@@ -238,20 +254,21 @@ export default function Step3Financial({
     console.log('[Step3Financial] Renovation cost calculation check:', {
       showRenovationCosts,
       squareFootage,
-      renovationLevel,
+      renovationLevelString,
       strategy: data.strategy,
       currentRenovationCosts: financial.renovationCosts,
       propertyDataStructure: propertyData ? Object.keys(propertyData) : 'null'
     });
     
     // Calculate and set rehab costs if we have the necessary data
-    if (squareFootage > 0 && renovationLevel && showRenovationCosts) {
-      const mappedLevel = mapRenovationLevelToRehabLevel(renovationLevel);
+    if (squareFootage > 0 && renovationLevelString && showRenovationCosts) {
+      const mappedLevel = mapRenovationLevelToRehabLevel(renovationLevelString);
       const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, mappedLevel);
       
       console.log('[Step3Financial] Calculated renovation costs:', {
         squareFootage,
-        renovationLevel,
+        renovationLevelString,
+        mappedLevel,
         lowEstimate,
         highEstimate,
         averageEstimate,
