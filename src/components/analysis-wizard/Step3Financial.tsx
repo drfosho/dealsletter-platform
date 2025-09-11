@@ -87,6 +87,32 @@ export default function Step3Financial({
     }
   }, [data.financial.purchasePrice, data.financial.monthlyRent]); // eslint-disable-line react-hooks/exhaustive-deps
   
+  // Initialize units based on property type
+  useEffect(() => {
+    if (financial.units === undefined && data.propertyData) {
+      const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+      let defaultUnits = 1;
+      
+      // First check if units are explicitly provided in the data
+      if ((data.propertyData as any)?.property?.units) {
+        defaultUnits = (data.propertyData as any).property.units;
+      } 
+      // Infer from property type name
+      else if (propertyType.toLowerCase().includes('duplex')) {
+        defaultUnits = 2;
+      } else if (propertyType.toLowerCase().includes('triplex')) {
+        defaultUnits = 3;
+      } else if (propertyType.toLowerCase().includes('fourplex')) {
+        defaultUnits = 4;
+      }
+      
+      // Only set units if it's different from default
+      if (defaultUnits !== 1) {
+        handleFieldChange('units', defaultUnits);
+      }
+    }
+  }, [data.propertyData]); // eslint-disable-line react-hooks/exhaustive-deps
+  
   // Auto-populate fields only when property data changes and values are missing
   useEffect(() => {
     // Skip if we already have purchase price from props
@@ -576,8 +602,7 @@ export default function Step3Financial({
               return 1;
             };
             
-            // Use financial.units if set, otherwise use extracted value
-            const unitCount = financial.units !== undefined ? financial.units : extractUnits();
+            const unitCount = financial.units || extractUnits();
             
             if (isMultiFamily || unitCount > 1) {
               return (
@@ -587,18 +612,23 @@ export default function Step3Financial({
                     <label className="block text-xs font-medium text-muted mb-1">Number of Units</label>
                     <input
                       type="number"
-                      value={unitCount}
+                      value={financial.units ?? ''}
                       onChange={(e) => {
-                        const units = parseInt(e.target.value) || 1;
-                        handleFieldChange('units', units);
-                        // Update total rent when units change
-                        if (financial.rentPerUnit) {
-                          handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                        const value = e.target.value;
+                        if (value === '') {
+                          handleFieldChange('units', undefined);
+                        } else {
+                          const units = parseInt(value) || 1;
+                          handleFieldChange('units', units);
+                          // Update total rent when units change
+                          if (financial.rentPerUnit) {
+                            handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                          }
                         }
                       }}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                       min="1"
-                      placeholder="Number of units"
+                      placeholder={extractUnits().toString()}
                     />
                   </div>
                   
@@ -996,25 +1026,18 @@ export default function Step3Financial({
           </label>
           <input
             type="number"
-            value={financial.units !== undefined ? financial.units : (() => {
-              const propertyType = (data.propertyData as any)?.property?.propertyType || '';
-              // First check if units are explicitly provided in the data
-              if ((data.propertyData as any)?.property?.units) {
-                return (data.propertyData as any).property.units;
-              }
-              // Infer from property type name
-              if (propertyType.toLowerCase().includes('duplex')) return 2;
-              if (propertyType.toLowerCase().includes('triplex')) return 3;
-              if (propertyType.toLowerCase().includes('fourplex')) return 4;
-              // Default to 1 for single family homes
-              return 1;
-            })()}
+            value={financial.units ?? ''}
             onChange={(e) => {
-              const units = parseInt(e.target.value) || 1;
-              handleFieldChange('units', units);
-              // Update rent calculations if we have rent per unit
-              if (financial.rentPerUnit) {
-                handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+              const value = e.target.value;
+              if (value === '') {
+                handleFieldChange('units', undefined);
+              } else {
+                const units = parseInt(value) || 1;
+                handleFieldChange('units', units);
+                // Update rent calculations if we have rent per unit
+                if (financial.rentPerUnit) {
+                  handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                }
               }
             }}
             className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
