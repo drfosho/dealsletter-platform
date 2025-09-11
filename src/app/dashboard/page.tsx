@@ -102,7 +102,24 @@ export default function Dashboard() {
           console.log('Dashboard: Fetched properties:', data.length);
           console.log('Dashboard: Raw properties data:', data);
           console.log('Dashboard: First property:', data[0]);
-          const formattedProperties = data.map((prop: Deal & Record<string, unknown>, index: number) => {
+          // Fetch photos for properties that don't have them
+          const formattedProperties = await Promise.all(data.map(async (prop: Deal & Record<string, unknown>, index: number) => {
+            let propertyImages = prop.images;
+            
+            // If no images or only placeholder, fetch proper photos
+            if (!propertyImages || propertyImages.length === 0 || 
+                (propertyImages.length === 1 && propertyImages[0] === "/api/placeholder/400/300")) {
+              try {
+                const fullAddress = `${prop.address}, ${prop.city}, ${prop.state} ${prop.zipCode}`;
+                const photoResponse = await fetch(`/api/property-photos?address=${encodeURIComponent(fullAddress)}&propertyType=${encodeURIComponent(prop.propertyType || 'Single Family')}&count=5`);
+                if (photoResponse.ok) {
+                  const { photos } = await photoResponse.json();
+                  propertyImages = photos;
+                }
+              } catch (error) {
+                console.error('Error fetching photos for property:', prop.title, error);
+              }
+            }
             const { id: _id, ...restProp } = prop;
             return {
               // Keep all other fields first
@@ -168,7 +185,7 @@ export default function Dashboard() {
               renovationCosts: prop.renovationCosts,
               
               // Images
-              images: prop.images || ["/api/placeholder/400/300"],
+              images: propertyImages || prop.images || ["/api/placeholder/400/300"],
               
               // Comprehensive analysis data (from admin imports)
               strategicOverview: prop.strategicOverview,
@@ -183,7 +200,7 @@ export default function Dashboard() {
               marketAnalysis: prop.marketAnalysis,
               investmentSummary: prop.investmentSummary
             };
-          });
+          }));
           console.log('Dashboard: Formatted properties:', formattedProperties.length);
           console.log('Dashboard: First formatted property:', formattedProperties[0]);
           setDynamicProperties(formattedProperties);

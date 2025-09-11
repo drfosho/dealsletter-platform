@@ -8,7 +8,7 @@ import {
   SearchResults
 } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
-import PropertyImageService from './property-images';
+import PropertyPhotoService from './property-photos';
 
 // In-memory cache for development (consider Redis for production)
 const propertyCache = new Map<string, CachedPropertyData>();
@@ -300,11 +300,16 @@ class RentCastService {
       console.log('[RentCast] Attempting to fetch property images for:', fullAddress);
       console.log('[RentCast] Google Maps API Key available:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
       
-      // Get primary image (best available)
-      data.primaryImageUrl = PropertyImageService.getPropertyImage(fullAddress, data.propertyType);
+      // Get photos using the enhanced photo service
+      const photos = await PropertyPhotoService.getPropertyPhotos(
+        fullAddress,
+        data.propertyType,
+        data.images, // Pass any existing RentCast photos
+        5
+      );
       
-      // Get multiple images including different angles
-      data.images = PropertyImageService.getPropertyImages(fullAddress, 5, data.propertyType);
+      data.images = photos;
+      data.primaryImageUrl = photos[0] || PropertyPhotoService.getDefaultPlaceholder();
       
       console.log('[RentCast] Property images added:', {
         address: fullAddress,
@@ -413,8 +418,14 @@ class RentCastService {
       // Add images to each property
       for (const property of results) {
         const fullAddress = `${property.addressLine1}, ${property.city}, ${property.state} ${property.zipCode}`;
-        property.primaryImageUrl = PropertyImageService.getPropertyImage(fullAddress, property.propertyType);
-        property.images = PropertyImageService.getPropertyImages(fullAddress, 3, property.propertyType);
+        const photos = await PropertyPhotoService.getPropertyPhotos(
+          fullAddress,
+          property.propertyType,
+          property.images,
+          3
+        );
+        property.images = photos;
+        property.primaryImageUrl = photos[0] || PropertyPhotoService.getDefaultPlaceholder();
       }
       
       const searchResults: SearchResults<RentCastPropertyDetails> = {
