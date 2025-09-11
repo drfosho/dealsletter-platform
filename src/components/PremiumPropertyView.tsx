@@ -130,8 +130,11 @@ export default function PremiumPropertyView({ isOpen, property, onClose }: Premi
           <div className={`relative ${property.images?.length > 0 ? 'md:-mt-20' : ''} px-4 sm:px-6 md:px-8 pb-4 md:pb-6 pt-4`}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary mb-2">{property.title || property.address}</h1>
-                <p className="text-sm sm:text-base md:text-lg text-muted mb-3 md:mb-4">{property.location}</p>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary mb-2">{property.title}</h1>
+                {property.address && (
+                  <p className="text-base sm:text-lg md:text-xl text-muted mb-1">{property.address}</p>
+                )}
+                <p className="text-sm sm:text-base text-muted mb-3 md:mb-4">{property.location}</p>
                 
                 {/* Key Badges */}
                 <div className="flex flex-wrap gap-2">
