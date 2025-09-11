@@ -560,24 +560,24 @@ export default function Step3Financial({
             const isMultiFamily = propertyType.toLowerCase().includes('multi') || 
                                   propertyType.toLowerCase().includes('duplex') || 
                                   propertyType.toLowerCase().includes('triplex') ||
-                                  propertyType.toLowerCase().includes('fourplex') ||
-                                  bedroomCount >= 4;
+                                  propertyType.toLowerCase().includes('fourplex');
             
             // Extract unit count from property data or infer from property type
             const extractUnits = () => {
+              // First check if units are explicitly provided in the data
               if ((data.propertyData as any)?.property?.units) {
                 return (data.propertyData as any).property.units;
               }
+              // Infer from property type name
               if (propertyType.toLowerCase().includes('duplex')) return 2;
               if (propertyType.toLowerCase().includes('triplex')) return 3;
               if (propertyType.toLowerCase().includes('fourplex')) return 4;
-              if (propertyType.toLowerCase().includes('multi') && bedroomCount >= 4) {
-                return Math.floor(bedroomCount / 2); // Estimate based on bedrooms
-              }
+              // Default to 1 for single family homes
               return 1;
             };
             
-            const unitCount = financial.units || extractUnits();
+            // Use financial.units if set, otherwise use extracted value
+            const unitCount = financial.units !== undefined ? financial.units : extractUnits();
             
             if (isMultiFamily || unitCount > 1) {
               return (
@@ -587,7 +587,7 @@ export default function Step3Financial({
                     <label className="block text-xs font-medium text-muted mb-1">Number of Units</label>
                     <input
                       type="number"
-                      value={financial.units || unitCount}
+                      value={unitCount}
                       onChange={(e) => {
                         const units = parseInt(e.target.value) || 1;
                         handleFieldChange('units', units);
@@ -996,14 +996,17 @@ export default function Step3Financial({
           </label>
           <input
             type="number"
-            value={financial.units || (() => {
+            value={financial.units !== undefined ? financial.units : (() => {
               const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+              // First check if units are explicitly provided in the data
               if ((data.propertyData as any)?.property?.units) {
                 return (data.propertyData as any).property.units;
               }
+              // Infer from property type name
               if (propertyType.toLowerCase().includes('duplex')) return 2;
               if (propertyType.toLowerCase().includes('triplex')) return 3;
               if (propertyType.toLowerCase().includes('fourplex')) return 4;
+              // Default to 1 for single family homes
               return 1;
             })()}
             onChange={(e) => {
