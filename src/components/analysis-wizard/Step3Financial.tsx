@@ -217,7 +217,9 @@ export default function Step3Financial({
   const [_errors, setErrors] = useState<Record<string, string>>({});
   const [currentRates, _setCurrentRates] = useState({ min: 6.5, avg: 7.0, max: 7.5 });
   const [loanType, setLoanType] = useState<'conventional' | 'hardMoney'>(
-    data.strategy === 'flip' ? 'hardMoney' : 'conventional'
+    (data.strategy === 'flip' || data.strategy === 'brrrr') ? 
+      (data.strategyDetails?.initialFinancing === 'conventional' ? 'conventional' : 'hardMoney') : 
+      'conventional'
   );
 
   // Debug log on component mount
@@ -371,7 +373,7 @@ export default function Step3Financial({
 
   // Handle loan type changes
   useEffect(() => {
-    if (loanType === 'hardMoney' && data.strategy === 'flip') {
+    if (loanType === 'hardMoney' && (data.strategy === 'flip' || data.strategy === 'brrrr')) {
       // Auto-calculate closing costs if not set (3% for hard money)
       const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.03) : 0);
       
@@ -501,8 +503,8 @@ export default function Step3Financial({
         </p>
       </div>
 
-      {/* Loan Type Selection for Fix & Flip */}
-      {data.strategy === 'flip' && (
+      {/* Loan Type Selection for Fix & Flip and BRRRR */}
+      {(data.strategy === 'flip' || data.strategy === 'brrrr') && (
         <div className="bg-card rounded-xl border border-border p-6 mb-6">
           <h3 className="font-semibold text-primary mb-4">Financing Type</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -902,12 +904,14 @@ export default function Step3Financial({
           })()}
         </div>
 
-        {/* ARV for Fix & Flip */}
-        {data.strategy === 'flip' && (
+        {/* ARV for Fix & Flip and BRRRR */}
+        {(data.strategy === 'flip' || data.strategy === 'brrrr') && (
           <div>
             <label className="block text-sm font-medium text-primary mb-2">
               ARV (After Repair Value)
-              <span className="text-xs text-muted ml-2">Required for flip calculations</span>
+              <span className="text-xs text-muted ml-2">
+                {data.strategy === 'flip' ? 'Required for flip calculations' : 'Required for refinance calculations'}
+              </span>
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
@@ -1405,6 +1409,69 @@ export default function Step3Financial({
           )}
         </div>
       </div>
+
+      {/* BRRRR Refinance Section */}
+      {data.strategy === 'brrrr' && financial.arv && (
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border border-purple-500/20 p-6 mt-6">
+          <h3 className="font-semibold text-primary mb-4">
+            Refinance Strategy
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-sm font-medium text-primary mb-3">After Stabilization</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">After Repair Value (ARV):</span>
+                  <span className="font-semibold text-primary">${financial.arv?.toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Target LTV:</span>
+                  <span className="font-semibold text-primary">{data.strategyDetails?.exitStrategy || '75'}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Max Refinance Amount:</span>
+                  <span className="font-bold text-accent">
+                    ${Math.round((financial.arv || 0) * (parseInt(data.strategyDetails?.exitStrategy || '75') / 100)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-primary mb-3">Cash Out Potential</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Total Investment:</span>
+                  <span className="font-semibold text-primary">${calculateTotalInvestment()?.toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Initial Loan Payoff:</span>
+                  <span className="font-semibold text-primary">
+                    ${Math.round(financial.purchasePrice * (1 - financial.downPaymentPercent / 100) + (financial.renovationCosts || 0)).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-border pt-2">
+                  <span className="text-sm font-medium text-primary">Estimated Cash Out:</span>
+                  <span className="font-bold text-green-600">
+                    ${(() => {
+                      const refinanceAmount = (financial.arv || 0) * (parseInt(data.strategyDetails?.exitStrategy || '75') / 100);
+                      const loanPayoff = financial.purchasePrice * (1 - financial.downPaymentPercent / 100) + (financial.renovationCosts || 0);
+                      const cashOut = refinanceAmount - loanPayoff;
+                      return cashOut > 0 ? Math.round(cashOut).toLocaleString() : '0';
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+            <p className="text-xs text-muted">
+              <strong>BRRRR Strategy:</strong> After renovation and stabilization (typically {data.strategyDetails?.timeline || '12'} months), 
+              refinance at {data.strategyDetails?.exitStrategy || '75'}% of ARV to recover most or all of your initial investment 
+              while keeping the property as a long-term rental.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between mt-8">
