@@ -620,28 +620,36 @@ async function generatePropertyAnalysis(propertyData: PropertyData, request: Pro
 IMPORTANT: Tailor your analysis based on the investment strategy:
 
 FOR BRRRR PROPERTIES:
+
+CRITICAL INSTRUCTION: You MUST use the EXACT numerical values provided in the "BRRRR STRATEGY ANALYSIS" section below. DO NOT recalculate or modify these numbers. Copy them EXACTLY as shown.
+
 Your analysis must include:
 1. Executive Summary (Focus on capital recovery through refinance)
 2. Investment Recommendation (Buy/Hold/Pass based on refinance potential)
-3. BRRRR Phase Analysis:
-   - Phase 1: Acquisition & Renovation costs and timeline
-   - Phase 2: Refinance strategy and cash returned
-   - Phase 3: Long-term rental income and returns
-4. Key Financial Metrics (Use EXACT values from BRRRR STRATEGY ANALYSIS):
-   - Total Cash Invested: $[exact value]
-   - Cash Returned at Refinance: $[exact value]
-   - Cash Left in Deal: $[exact value]
-   - Monthly Cash Flow (post-refinance): $[exact value]
-   - Cash-on-Cash Return: [exact percentage or "INFINITE"]%
-   - 5-Year Total ROI: [exact percentage]%
+3. BRRRR Phase Analysis - USE EXACT VALUES FROM CALCULATIONS:
+   - Phase 1: Total Cash Invested (COPY EXACT VALUE from calculations)
+   - Phase 2: Cash Returned at Refinance (COPY EXACT VALUE)
+   - Phase 3: Monthly Cash Flow post-refinance (COPY EXACT VALUE)
+4. Key Financial Metrics (COPY these EXACTLY from BRRRR STRATEGY ANALYSIS section):
+   - Total Cash Invested: USE EXACT VALUE PROVIDED
+   - Cash Returned at Refinance: USE EXACT VALUE PROVIDED
+   - Cash Left in Deal: USE EXACT VALUE PROVIDED
+   - Monthly Cash Flow: USE EXACT VALUE PROVIDED
+   - Cash-on-Cash Return: USE EXACT VALUE PROVIDED (may be "INFINITE")
+   - 5-Year Total ROI: USE EXACT VALUE PROVIDED
 5. Risk Assessment (Focus on ARV accuracy, refinance approval, renovation delays)
 6. Market Analysis (Focus on rental demand and refinance appraisal risk)
-7. Capital Recovery Strategy (How much capital is returned for next deal)
-8. 3-5 Key Opportunities (Value-add improvements, market appreciation)
-9. 3-5 Key Risks (Refinance denial, ARV shortfall, renovation overruns)
-10. Action Items & Next Steps
+7. Capital Recovery Strategy (State the EXACT capital recovery percentage provided)
+8. 3-5 Key Opportunities
+9. 3-5 Key Risks
+10. Action Items
 
-CRITICAL for BRRRR: Emphasize the three distinct phases and the capital recovery aspect. Show how the refinance allows investors to recycle capital into the next deal.
+MANDATORY: When you see values in the BRRRR STRATEGY ANALYSIS section like:
+- "Total Cash Invested: $50,000" → You MUST write "$50,000" not any other number
+- "Cash-on-Cash Return: INFINITE" → You MUST write "INFINITE" not calculate a percentage
+- "Monthly Cash Flow: $500" → You MUST write "$500" not any other amount
+
+DO NOT perform your own calculations. USE THE PROVIDED VALUES EXACTLY.
 
 FOR FIX & FLIP PROPERTIES:
 Your analysis must include:
@@ -935,12 +943,17 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       totalInvestment: phase1.totalCashInvested,
       cashFlow: phase3.monthlyCashFlow,
       capRate: phase3.capRate,
-      cocReturn: phase3.cashOnCashReturn === Infinity ? 999 : phase3.cashOnCashReturn, // Use 999 to represent infinite
+      cocReturn: phase3.cashOnCashReturn, // Keep Infinity as is, handle in display
       roi: summary.totalROI,
       annualNOI: phase3.annualNOI,
       totalProfit: phase2.cashReturned + (phase3.annualCashFlow * 5),
       holdingCosts: phase1.totalHoldingCosts,
-      monthlyRent: phase3.monthlyRent
+      monthlyRent: phase3.monthlyRent,
+      // Add BRRRR-specific metrics
+      cashReturned: phase2.cashReturned,
+      cashLeftInDeal: phase2.cashLeftInDeal,
+      capitalRecoveryPercent: phase2.capitalRecoveryPercent,
+      isInfiniteReturn: summary.isInfiniteReturn
     };
     
   } else if (isFlipStrategy) {
@@ -1338,6 +1351,11 @@ interface FinancialData {
   totalProfit?: number;
   holdingCosts?: number;
   monthlyRent?: number;
+  // BRRRR-specific metrics
+  cashReturned?: number;
+  cashLeftInDeal?: number;
+  capitalRecoveryPercent?: number;
+  isInfiniteReturn?: boolean;
 }
 
 function extractFinancialData(text: string): FinancialData {
@@ -1466,6 +1484,59 @@ function extractFinancialData(text: string): FinancialData {
     if (cocMatch && !data.cocReturn) {
       data.cocReturn = parseFloat(cocMatch[1]);
       console.log('[extractFinancialData] Extracted CoC return from calculations:', data.cocReturn);
+    }
+  }
+  
+  // Try to extract from BRRRR ANALYSIS section
+  const brrrrSection = text.match(/(?:BRRRR|Phase\s*Analysis|BRRRR\s*STRATEGY)([\s\S]+?)(?:\n\n|Investment|$)/i);
+  if (brrrrSection) {
+    console.log('[extractFinancialData] Found BRRRR ANALYSIS section, extracting...');
+    const brrrrText = brrrrSection[1];
+    
+    // Extract total cash invested
+    const investedMatch = brrrrText.match(/Total Cash Invested:\s*\$?([\d,]+)/i);
+    if (investedMatch && !data.totalInvestment) {
+      data.totalInvestment = parseFloat(investedMatch[1].replace(/,/g, ''));
+      console.log('[extractFinancialData] Extracted total cash invested from BRRRR:', data.totalInvestment);
+    }
+    
+    // Extract cash returned at refinance
+    const cashReturnedMatch = brrrrText.match(/Cash (?:Returned|Out|Back)(?:\s+at\s+Refinance)?:\s*\$?([\d,]+)/i);
+    if (cashReturnedMatch) {
+      const cashReturned = parseFloat(cashReturnedMatch[1].replace(/,/g, ''));
+      console.log('[extractFinancialData] Extracted cash returned from BRRRR:', cashReturned);
+      
+      // For BRRRR, if cash returned equals or exceeds investment, it's infinite return
+      if (data.totalInvestment && cashReturned >= data.totalInvestment) {
+        data.cocReturn = Infinity;
+        console.log('[extractFinancialData] Setting infinite return for BRRRR');
+      }
+    }
+    
+    // Extract monthly cash flow post-refinance
+    const postRefinanceCashFlow = brrrrText.match(/(?:Monthly Cash Flow|Cash Flow Post.?Refinance):\s*\$?([\d,.-]+)/i);
+    if (postRefinanceCashFlow && !data.cashFlow) {
+      data.cashFlow = parseFloat(postRefinanceCashFlow[1].replace(/,/g, ''));
+      console.log('[extractFinancialData] Extracted post-refinance cash flow:', data.cashFlow);
+    }
+    
+    // Extract cash-on-cash return (might be INFINITE)
+    const cocMatch = brrrrText.match(/Cash.?on.?Cash Return:\s*(INFINITE|[\d.]+%?)/i);
+    if (cocMatch && !data.cocReturn) {
+      if (cocMatch[1].toUpperCase() === 'INFINITE') {
+        data.cocReturn = Infinity;
+        console.log('[extractFinancialData] Extracted infinite CoC return from BRRRR');
+      } else {
+        data.cocReturn = parseFloat(cocMatch[1].replace('%', ''));
+        console.log('[extractFinancialData] Extracted CoC return from BRRRR:', data.cocReturn);
+      }
+    }
+    
+    // Extract 5-year ROI
+    const roiMatch = brrrrText.match(/(?:5.?Year\s+)?Total ROI:\s*([\d.]+)%/i);
+    if (roiMatch && !data.roi) {
+      data.roi = parseFloat(roiMatch[1]);
+      console.log('[extractFinancialData] Extracted 5-year ROI from BRRRR:', data.roi);
     }
   }
   
