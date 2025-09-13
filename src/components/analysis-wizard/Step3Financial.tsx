@@ -584,7 +584,6 @@ export default function Step3Financial({
           {/* Multi-family property detection */}
           {(() => {
             const propertyType = (data.propertyData as any)?.property?.propertyType || '';
-            const bedroomCount = (data.propertyData as any)?.property?.bedrooms || 0;
             const isMultiFamily = propertyType.toLowerCase().includes('multi') || 
                                   propertyType.toLowerCase().includes('duplex') || 
                                   propertyType.toLowerCase().includes('triplex') ||
@@ -618,7 +617,7 @@ export default function Step3Financial({
                       onChange={(e) => {
                         const value = e.target.value;
                         if (value === '') {
-                          handleFieldChange('units', undefined);
+                          handleFieldChange('units', 1);
                         } else {
                           const units = parseInt(value) || 1;
                           handleFieldChange('units', units);
@@ -1034,7 +1033,7 @@ export default function Step3Financial({
             onChange={(e) => {
               const value = e.target.value;
               if (value === '') {
-                handleFieldChange('units', undefined);
+                handleFieldChange('units', 1);
               } else {
                 const units = parseInt(value) || 1;
                 handleFieldChange('units', units);

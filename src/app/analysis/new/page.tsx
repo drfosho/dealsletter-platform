@@ -20,6 +20,8 @@ export interface WizardData {
     timeline?: string;
     exitStrategy?: string;
     renovationLevel?: string;
+    initialFinancing?: string;
+    [key: string]: string | undefined;
   };
   financial: {
     purchasePrice: number;

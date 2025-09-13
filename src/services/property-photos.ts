@@ -56,7 +56,6 @@ const PROPERTY_TYPE_PHOTOS = {
 
 // Cache for fetched photos
 const photoCache = new Map<string, PhotoSource[]>();
-const PHOTO_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export class PropertyPhotoService {
   // Get a deterministic stock photo based on property address (for consistency)
@@ -218,7 +217,6 @@ export class PropertyPhotoService {
 
   // Clean old cache entries
   private static cleanCache() {
-    const now = Date.now();
     const oldEntries: string[] = [];
     
     photoCache.forEach((value, key) => {

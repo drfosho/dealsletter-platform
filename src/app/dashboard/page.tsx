@@ -111,7 +111,8 @@ export default function Dashboard() {
                 (propertyImages.length === 1 && propertyImages[0] === "/api/placeholder/400/300")) {
               try {
                 const fullAddress = `${prop.address}, ${prop.city}, ${prop.state} ${prop.zipCode}`;
-                const photoResponse = await fetch(`/api/property-photos?address=${encodeURIComponent(fullAddress)}&propertyType=${encodeURIComponent(prop.propertyType || 'Single Family')}&count=5`);
+                const propertyType = typeof prop.propertyType === 'string' ? prop.propertyType : 'Single Family';
+                const photoResponse = await fetch(`/api/property-photos?address=${encodeURIComponent(fullAddress)}&propertyType=${encodeURIComponent(propertyType)}&count=5`);
                 if (photoResponse.ok) {
                   const { photos } = await photoResponse.json();
                   propertyImages = photos;

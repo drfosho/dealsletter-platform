@@ -184,11 +184,12 @@ export interface PropertyAnalysisRequest {
 
 // Cache Types
 export interface CachedPropertyData {
-  data: RentCastPropertyDetails;
+  data?: RentCastPropertyDetails;
   rentEstimate?: RentCastRentalEstimate;
   saleComps?: RentCastSaleComps;
   marketData?: RentCastMarketData;
   listing?: any;
+  searchResults?: SearchResults<RentCastPropertyDetails>;
   timestamp: number;
   ttl: number; // Time to live in milliseconds
 }
