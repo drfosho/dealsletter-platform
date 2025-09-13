@@ -45,12 +45,11 @@ export async function POST(request: NextRequest) {
         console.log(`[Test Webhook] Creating subscription for user ${userId}`);
         
         // Create test subscription
-        // First check if metadata column exists
-        const subscriptionData: any = {
+        // Build subscription data dynamically to avoid column errors
+        const baseSubscriptionData: any = {
           user_id: userId,
           stripe_customer_id: `test_cus_${Date.now()}`,
           stripe_subscription_id: body.subscriptionId || `test_sub_${Date.now()}`,
-          stripe_price_id: `test_price_${body.tier || 'starter'}`,
           status: 'active',
           tier: body.tier || 'starter',
           current_period_start: timestamp,
@@ -60,11 +59,17 @@ export async function POST(request: NextRequest) {
           updated_at: timestamp
         };
 
-        // Try with metadata first, fallback to without if it fails
+        // Try to include stripe_price_id if the column exists
+        const subscriptionDataWithPrice = {
+          ...baseSubscriptionData,
+          stripe_price_id: `test_price_${body.tier || 'starter'}`
+        };
+
+        // Try with all columns first, then progressively remove problematic ones
         let { data: subscription, error } = await supabase
           .from('subscriptions')
           .upsert({
-            ...subscriptionData,
+            ...subscriptionDataWithPrice,
             metadata: { test: true, created_via: 'test_webhook' }
           }, {
             onConflict: 'user_id'
@@ -72,12 +77,30 @@ export async function POST(request: NextRequest) {
           .select()
           .single();
 
+        // If stripe_price_id column doesn't exist, try without it
+        if (error && error.message.includes('stripe_price_id')) {
+          console.log('[Test Webhook] stripe_price_id column not found, creating without it');
+          const result = await supabase
+            .from('subscriptions')
+            .upsert({
+              ...baseSubscriptionData,
+              metadata: { test: true, created_via: 'test_webhook' }
+            }, {
+              onConflict: 'user_id'
+            })
+            .select()
+            .single();
+          
+          subscription = result.data;
+          error = result.error;
+        }
+
         // If metadata column doesn't exist, try without it
         if (error && error.message.includes('metadata')) {
           console.log('[Test Webhook] Metadata column not found, creating without it');
           const result = await supabase
             .from('subscriptions')
-            .upsert(subscriptionData, {
+            .upsert(baseSubscriptionData, {
               onConflict: 'user_id'
             })
             .select()
@@ -117,29 +140,51 @@ export async function POST(request: NextRequest) {
         console.log(`[Test Webhook] Updating subscription for user ${userId}`);
         
         // Update existing subscription
-        const updateData: any = {
+        const baseUpdateData: any = {
           tier: body.tier || 'pro',
           status: 'active',
           updated_at: timestamp
         };
 
-        // Try with metadata first, fallback to without if it fails
+        const updateDataWithPrice: any = {
+          ...baseUpdateData,
+          stripe_price_id: `test_price_${body.tier || 'pro'}`
+        };
+
+        // Try with all fields first, then remove problematic ones
         let { data: subscription, error } = await supabase
           .from('subscriptions')
           .update({
-            ...updateData,
+            ...updateDataWithPrice,
             metadata: { test: true, updated_via: 'test_webhook' }
           })
           .eq('user_id', userId)
           .select()
           .single();
 
+        // If stripe_price_id column doesn't exist, try without it
+        if (error && error.message.includes('stripe_price_id')) {
+          console.log('[Test Webhook] stripe_price_id column not found, updating without it');
+          const result = await supabase
+            .from('subscriptions')
+            .update({
+              ...baseUpdateData,
+              metadata: { test: true, updated_via: 'test_webhook' }
+            })
+            .eq('user_id', userId)
+            .select()
+            .single();
+          
+          subscription = result.data;
+          error = result.error;
+        }
+
         // If metadata column doesn't exist, try without it
         if (error && error.message.includes('metadata')) {
           console.log('[Test Webhook] Metadata column not found, updating without it');
           const result = await supabase
             .from('subscriptions')
-            .update(updateData)
+            .update(baseUpdateData)
             .eq('user_id', userId)
             .select()
             .single();

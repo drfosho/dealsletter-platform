@@ -18,8 +18,38 @@ export default function PricingComparison() {
 
     if (plan === 'pro') {
       setIsLoading(true);
-      // Redirect to Stripe checkout
-      router.push('/api/stripe/create-checkout-session');
+      try {
+        // Make POST request to create checkout session
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            tierName: 'pro',
+            billingPeriod: 'monthly',
+            email: user.email,
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (data.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = data.url;
+        } else {
+          console.error('No checkout URL received:', data);
+          alert('Unable to start checkout process. Please try again.');
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error creating checkout session:', error);
+        alert('An error occurred. Please try again.');
+        setIsLoading(false);
+      }
+    } else {
+      // Free plan - just redirect to dashboard
+      router.push('/dashboard');
     }
   };
 

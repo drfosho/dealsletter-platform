@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
+import { getOrCreatePrice } from '@/lib/stripe-helpers'
 
 export async function POST(request: NextRequest) {
   console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG START ======')
@@ -137,26 +138,30 @@ export async function POST(request: NextRequest) {
     }
 
     if (!priceId) {
-      console.error('[Checkout] ERROR: Price ID is missing after mapping attempt')
-      console.error('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
-      console.error('[Checkout] Available env vars with STRIPE_PRICE:', 
-        Object.keys(process.env)
-          .filter(k => k.includes('STRIPE_PRICE'))
-          .map(k => `${k}=${process.env[k]?.substring(0, 15)}...`)
-      )
-      return NextResponse.json(
-        { 
-          error: 'Price ID is required',
-          debug: { 
-            priceId, 
-            tierName,
-            billingPeriod, 
-            email,
-            availableEnvVars: Object.keys(process.env).filter(k => k.includes('STRIPE_PRICE'))
-          }
-        },
-        { status: 400 }
-      )
+      console.log('[Checkout] No price ID from environment, attempting to get/create dynamically...')
+      
+      // Try to dynamically create or find the price
+      priceId = await getOrCreatePrice(tierName || 'pro', billingPeriod as 'monthly' | 'yearly');
+      
+      if (!priceId) {
+        console.error('[Checkout] ERROR: Could not get or create price')
+        console.error('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
+        return NextResponse.json(
+          { 
+            error: 'Could not determine or create price. Please ensure STRIPE_SECRET_KEY is set in environment variables.',
+            debug: { 
+              tierName,
+              billingPeriod, 
+              email,
+              stripeKeyExists: !!process.env.STRIPE_SECRET_KEY,
+              stripeKeyPrefix: process.env.STRIPE_SECRET_KEY?.substring(0, 7)
+            }
+          },
+          { status: 400 }
+        )
+      }
+      
+      console.log('[Checkout] Successfully got/created price:', priceId)
     }
 
     console.log('[Checkout] Price ID:', priceId)
