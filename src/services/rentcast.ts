@@ -3,10 +3,12 @@ import {
   RentCastRentalEstimate, 
   RentCastSaleComps,
   RentCastMarketData,
-  CachedPropertyData 
+  CachedPropertyData,
+  EnhancedSearchParams,
+  SearchResults
 } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
-import PropertyImageService from './property-images';
+import PropertyPhotoService from './property-photos';
 
 // In-memory cache for development (consider Redis for production)
 const propertyCache = new Map<string, CachedPropertyData>();
@@ -298,11 +300,16 @@ class RentCastService {
       console.log('[RentCast] Attempting to fetch property images for:', fullAddress);
       console.log('[RentCast] Google Maps API Key available:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
       
-      // Get primary image (best available)
-      data.primaryImageUrl = PropertyImageService.getPropertyImage(fullAddress, data.propertyType);
+      // Get photos using the enhanced photo service
+      const photos = await PropertyPhotoService.getPropertyPhotos(
+        fullAddress,
+        data.propertyType,
+        data.images, // Pass any existing RentCast photos
+        5
+      );
       
-      // Get multiple images including different angles
-      data.images = PropertyImageService.getPropertyImages(fullAddress, 5, data.propertyType);
+      data.images = photos;
+      data.primaryImageUrl = photos[0] || PropertyPhotoService.getDefaultPlaceholder();
       
       console.log('[RentCast] Property images added:', {
         address: fullAddress,
@@ -323,8 +330,135 @@ class RentCastService {
     }
   }
 
-  // Get rental estimate
-  async getRentalEstimate(address: string): Promise<RentCastRentalEstimate> {
+  // Build query string from enhanced search params
+  private buildSearchQuery(params: EnhancedSearchParams): string {
+    const queryParams = new URLSearchParams();
+    
+    // Location parameters
+    if (params.city) queryParams.append('city', params.city);
+    if (params.state) queryParams.append('state', params.state);
+    if (params.zipCode) queryParams.append('zipCode', params.zipCode);
+    if (params.county) queryParams.append('county', params.county);
+    if (params.radius) queryParams.append('radius', params.radius.toString());
+    
+    // Property characteristics
+    if (params.minBeds !== undefined) queryParams.append('minBeds', params.minBeds.toString());
+    if (params.maxBeds !== undefined) queryParams.append('maxBeds', params.maxBeds.toString());
+    if (params.minBaths !== undefined) queryParams.append('minBaths', params.minBaths.toString());
+    if (params.maxBaths !== undefined) queryParams.append('maxBaths', params.maxBaths.toString());
+    if (params.minSqft !== undefined) queryParams.append('minSqft', params.minSqft.toString());
+    if (params.maxSqft !== undefined) queryParams.append('maxSqft', params.maxSqft.toString());
+    if (params.minLotSize !== undefined) queryParams.append('minLotSize', params.minLotSize.toString());
+    if (params.maxLotSize !== undefined) queryParams.append('maxLotSize', params.maxLotSize.toString());
+    if (params.minYearBuilt !== undefined) queryParams.append('minYearBuilt', params.minYearBuilt.toString());
+    if (params.maxYearBuilt !== undefined) queryParams.append('maxYearBuilt', params.maxYearBuilt.toString());
+    
+    // Price ranges
+    if (params.minPrice !== undefined) queryParams.append('minPrice', params.minPrice.toString());
+    if (params.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
+    if (params.minRent !== undefined) queryParams.append('minRent', params.minRent.toString());
+    if (params.maxRent !== undefined) queryParams.append('maxRent', params.maxRent.toString());
+    
+    // Property types
+    if (params.propertyTypes && params.propertyTypes.length > 0) {
+      queryParams.append('propertyTypes', params.propertyTypes.join(','));
+    }
+    
+    // Additional filters
+    if (params.hasGarage !== undefined) queryParams.append('hasGarage', params.hasGarage.toString());
+    if (params.hasPool !== undefined) queryParams.append('hasPool', params.hasPool.toString());
+    if (params.hasBasement !== undefined) queryParams.append('hasBasement', params.hasBasement.toString());
+    if (params.isWaterfront !== undefined) queryParams.append('isWaterfront', params.isWaterfront.toString());
+    
+    // Pagination
+    if (params.limit !== undefined) queryParams.append('limit', params.limit.toString());
+    if (params.offset !== undefined) queryParams.append('offset', params.offset.toString());
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+    
+    return queryParams.toString();
+  }
+
+  // Enhanced property search with filters
+  async searchProperties(params: EnhancedSearchParams): Promise<SearchResults<RentCastPropertyDetails>> {
+    console.log('[RentCast] Enhanced property search with params:', params);
+    
+    const queryString = this.buildSearchQuery(params);
+    const cacheKey = `search:${queryString}`;
+    const cached = this.getFromCache(cacheKey);
+    
+    if (cached?.searchResults) {
+      console.log('[RentCast] Using cached search results');
+      return cached.searchResults as SearchResults<RentCastPropertyDetails>;
+    }
+    
+    try {
+      console.log('[RentCast] Fetching properties with enhanced search:', `/properties?${queryString}`);
+      
+      // Make the API request
+      const response = await this.makeRequest<any>(
+        `/properties?${queryString}`
+      );
+      
+      // Handle response format - RentCast may return array directly or wrapped in object
+      let results: RentCastPropertyDetails[];
+      let totalCount: number;
+      
+      if (Array.isArray(response)) {
+        results = response.map(item => this.normalizePropertyData(item));
+        totalCount = results.length; // If no pagination info, use array length
+      } else if (response.results && Array.isArray(response.results)) {
+        results = response.results.map((item: any) => this.normalizePropertyData(item));
+        totalCount = response.totalCount || response.total || results.length;
+      } else {
+        results = [];
+        totalCount = 0;
+      }
+      
+      // Add images to each property
+      for (const property of results) {
+        const fullAddress = `${property.addressLine1}, ${property.city}, ${property.state} ${property.zipCode}`;
+        const photos = await PropertyPhotoService.getPropertyPhotos(
+          fullAddress,
+          property.propertyType,
+          property.images,
+          3
+        );
+        property.images = photos;
+        property.primaryImageUrl = photos[0] || PropertyPhotoService.getDefaultPlaceholder();
+      }
+      
+      const searchResults: SearchResults<RentCastPropertyDetails> = {
+        results,
+        totalCount,
+        returnedCount: results.length,
+        offset: params.offset || 0,
+        limit: params.limit || results.length,
+        hasMore: totalCount > (params.offset || 0) + results.length
+      };
+      
+      console.log('[RentCast] Search results:', {
+        totalFound: totalCount,
+        returned: results.length,
+        hasMore: searchResults.hasMore
+      });
+      
+      // Cache the results
+      this.setCache(cacheKey, {
+        searchResults,
+        timestamp: Date.now(),
+        ttl: CACHE_TTL
+      } as any);
+      
+      return searchResults;
+    } catch (error) {
+      logError('RentCast Enhanced Search', error);
+      throw error;
+    }
+  }
+
+  // Get rental estimate with automatic attribute lookup
+  async getRentalEstimate(address: string, autoLookupAttributes: boolean = true): Promise<RentCastRentalEstimate> {
     console.log('[RentCast] Getting rental estimate for:', address);
     const cacheKey = `rent:${address}`;
     const cached = this.getFromCache(cacheKey);
@@ -336,10 +470,16 @@ class RentCastService {
 
     try {
       const encodedAddress = encodeURIComponent(address);
-      console.log('[RentCast] Fetching rental estimate from API:', `/avm/rent/long-term?address=${encodedAddress}`);
-      const data = await this.makeRequest<RentCastRentalEstimate>(
-        `/avm/rent/long-term?address=${encodedAddress}`
-      );
+      let endpoint = `/avm/rent/long-term?address=${encodedAddress}`;
+      
+      // Add automatic attribute lookup parameter if enabled (new feature)
+      if (autoLookupAttributes) {
+        endpoint += '&propertyAttributes=auto';
+        console.log('[RentCast] Using automatic attribute lookup for AVM');
+      }
+      
+      console.log('[RentCast] Fetching rental estimate from API:', endpoint);
+      const data = await this.makeRequest<RentCastRentalEstimate>(endpoint);
       
       console.log('[RentCast] Rental estimate response structure:', {
         hasData: !!data,
@@ -399,8 +539,8 @@ class RentCastService {
     }
   }
 
-  // Get sale comparables
-  async getSaleComparables(address: string, _radius: number = 0.5): Promise<RentCastSaleComps> {
+  // Get sale comparables with automatic attribute lookup
+  async getSaleComparables(address: string, radius: number = 0.5, autoLookupAttributes: boolean = true): Promise<RentCastSaleComps> {
     console.log('[RentCast] Getting sale comparables for:', address);
     const cacheKey = `comps:${address}`;
     const cached = this.getFromCache(cacheKey);
@@ -412,10 +552,21 @@ class RentCastService {
 
     try {
       const encodedAddress = encodeURIComponent(address);
-      console.log('[RentCast] Fetching sale comparables from API:', `/avm/value?address=${encodedAddress}`);
-      const data = await this.makeRequest<RentCastSaleComps>(
-        `/avm/value?address=${encodedAddress}`
-      );
+      let endpoint = `/avm/value?address=${encodedAddress}`;
+      
+      // Add radius parameter if specified
+      if (radius && radius !== 0.5) {
+        endpoint += `&radius=${radius}`;
+      }
+      
+      // Add automatic attribute lookup parameter if enabled (new feature)
+      if (autoLookupAttributes) {
+        endpoint += '&propertyAttributes=auto';
+        console.log('[RentCast] Using automatic attribute lookup for AVM');
+      }
+      
+      console.log('[RentCast] Fetching sale comparables from API:', endpoint);
+      const data = await this.makeRequest<RentCastSaleComps>(endpoint);
       
       console.log('[RentCast] Sale comparables response structure:', {
         hasData: !!data,
@@ -481,14 +632,14 @@ class RentCastService {
         };
       }
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel with automatic attribute lookup enabled
       const [property, rental, comparables, listing] = await Promise.all([
         this.getPropertyDetails(address),
-        this.getRentalEstimate(address).catch(err => {
+        this.getRentalEstimate(address, true).catch(err => {
           console.warn('[RentCast] Rental estimate failed:', err);
           return undefined;
         }),
-        this.getSaleComparables(address).catch(err => {
+        this.getSaleComparables(address, 0.5, true).catch(err => {
           console.warn('[RentCast] Sale comparables failed:', err);
           return undefined;
         }),
@@ -567,6 +718,134 @@ class RentCastService {
       ...updates,
       timestamp: Date.now(),
     } as CachedPropertyData);
+  }
+
+  // Search for rental properties with enhanced filters
+  async searchRentals(params: EnhancedSearchParams): Promise<SearchResults<any>> {
+    console.log('[RentCast] Enhanced rental search with params:', params);
+    
+    const queryString = this.buildSearchQuery(params);
+    const cacheKey = `rentals:${queryString}`;
+    const cached = this.getFromCache(cacheKey);
+    
+    if (cached?.searchResults) {
+      console.log('[RentCast] Using cached rental search results');
+      return cached.searchResults as SearchResults<any>;
+    }
+    
+    try {
+      console.log('[RentCast] Fetching rentals with enhanced search:', `/listings/rental?${queryString}`);
+      
+      const response = await this.makeRequest<any>(
+        `/listings/rental?${queryString}`
+      );
+      
+      // Handle response format
+      let results: any[];
+      let totalCount: number;
+      
+      if (Array.isArray(response)) {
+        results = response;
+        totalCount = results.length;
+      } else if (response.results && Array.isArray(response.results)) {
+        results = response.results;
+        totalCount = response.totalCount || response.total || results.length;
+      } else {
+        results = [];
+        totalCount = 0;
+      }
+      
+      const searchResults: SearchResults<any> = {
+        results,
+        totalCount,
+        returnedCount: results.length,
+        offset: params.offset || 0,
+        limit: params.limit || results.length,
+        hasMore: totalCount > (params.offset || 0) + results.length
+      };
+      
+      console.log('[RentCast] Rental search results:', {
+        totalFound: totalCount,
+        returned: results.length,
+        hasMore: searchResults.hasMore
+      });
+      
+      // Cache the results
+      this.setCache(cacheKey, {
+        searchResults,
+        timestamp: Date.now(),
+        ttl: CACHE_TTL
+      } as any);
+      
+      return searchResults;
+    } catch (error) {
+      logError('RentCast Rental Search', error);
+      throw error;
+    }
+  }
+
+  // Search for sale listings with enhanced filters
+  async searchSales(params: EnhancedSearchParams): Promise<SearchResults<any>> {
+    console.log('[RentCast] Enhanced sale search with params:', params);
+    
+    const queryString = this.buildSearchQuery(params);
+    const cacheKey = `sales:${queryString}`;
+    const cached = this.getFromCache(cacheKey);
+    
+    if (cached?.searchResults) {
+      console.log('[RentCast] Using cached sale search results');
+      return cached.searchResults as SearchResults<any>;
+    }
+    
+    try {
+      console.log('[RentCast] Fetching sales with enhanced search:', `/listings/sale?${queryString}`);
+      
+      const response = await this.makeRequest<any>(
+        `/listings/sale?${queryString}`
+      );
+      
+      // Handle response format
+      let results: any[];
+      let totalCount: number;
+      
+      if (Array.isArray(response)) {
+        results = response;
+        totalCount = results.length;
+      } else if (response.results && Array.isArray(response.results)) {
+        results = response.results;
+        totalCount = response.totalCount || response.total || results.length;
+      } else {
+        results = [];
+        totalCount = 0;
+      }
+      
+      const searchResults: SearchResults<any> = {
+        results,
+        totalCount,
+        returnedCount: results.length,
+        offset: params.offset || 0,
+        limit: params.limit || results.length,
+        hasMore: totalCount > (params.offset || 0) + results.length
+      };
+      
+      console.log('[RentCast] Sale search results:', {
+        totalFound: totalCount,
+        returned: results.length,
+        hasMore: searchResults.hasMore
+      });
+      
+      // Cache the results
+      this.setCache(cacheKey, {
+        searchResults,
+        timestamp: Date.now(),
+        ttl: CACHE_TTL
+      } as any);
+      
+      return searchResults;
+    } catch (error) {
+      logError('RentCast Sale Search', error);
+      throw error;
+    }
   }
 
   // Clear cache for a specific address or all

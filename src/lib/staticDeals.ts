@@ -2820,5 +2820,940 @@ export const staticDeals = [
     
     createdAt: new Date(),
     updatedAt: new Date()
+  },
+  {
+    id: 20,
+    title: "Walnut Grove Cottages - 13-Unit Cash Cow",
+    address: "13991 River Rd",
+    city: "Walnut Grove",
+    state: "CA",
+    zipCode: "95690",
+    location: "Walnut Grove, CA 95690",
+    neighborhood: "Sacramento River Delta",
+    type: "Multifamily Investment",
+    propertyType: "Multifamily",
+    strategy: "Buy & Hold",
+    investmentStrategy: "Buy & Hold",
+    units: 13,
+    isMultiFamily: true,
+    price: 1350000,
+    pricePerUnit: 103846,
+    
+    // Financial Metrics
+    downPayment: 337500,
+    downPaymentPercent: 25,
+    loanAmount: 1012500,
+    interestRate: 7.25,
+    loanTerm: 30,
+    monthlyPI: 6909,
+    
+    // Income & Expenses
+    monthlyRent: 17555,
+    grossAnnualIncome: 210660,
+    vacancy: 6320,
+    effectiveGrossIncome: 204340,
+    propertyTaxes: 15930,
+    operatingExpenses: 61968,
+    totalExpenses: 77898,
+    expenseRatio: 37,
+    netOperatingIncome: 126442,
+    noi: 126442,
+    
+    // Key Metrics
+    capRate: 9.37,
+    currentCapRate: 9.37,
+    proFormaCapRate: 12.56,
+    monthlyCashFlow: 3628,
+    cashFlow: 43534,
+    proFormaCashFlow: 6825,
+    cashOnCashReturn: 12.9,
+    roi: 24.3,
+    totalROI: 24.3,
+    
+    // Property Details
+    bedrooms: 13, // Total across all units
+    bathrooms: 13,
+    sqft: 11000, // Estimated total
+    yearBuilt: 1991,
+    lotSize: "1.52 acres",
+    propertyCondition: "Well-maintained",
+    
+    // Unit Mix
+    unitMix: {
+      "2BR Cottages": {
+        quantity: 8,
+        currentRent: 1475,
+        marketRent: 1675,
+        totalCurrent: 11800,
+        totalMarket: 13400
+      },
+      "1BR Cottages": {
+        quantity: 2,
+        currentRent: 1264,
+        marketRent: 1464,
+        totalCurrent: 2528,
+        totalMarket: 2928
+      },
+      "Studio Cottages": {
+        quantity: 2,
+        currentRent: 1225,
+        marketRent: 1425,
+        totalCurrent: 2450,
+        totalMarket: 2850
+      },
+      "4BR Cottage": {
+        quantity: 1,
+        currentRent: 1863,
+        marketRent: 2063,
+        totalCurrent: 1863,
+        totalMarket: 2063
+      }
+    },
+    
+    // Value-Add Strategy
+    valueAddStrategy: {
+      immediate: [
+        "Implement RUBS (Ratio Utility Billing System) - adds $14,271/year",
+        "Push rents to market - $200-300/unit upside",
+        "Add covered parking/storage units",
+        "Pet-friendly policy with deposits"
+      ],
+      longTerm: [
+        "Add 2 more units on the 1.52 acres",
+        "Construction cost: $150K/unit",
+        "Additional income: $36,000/year",
+        "Instant equity creation: $100K+"
+      ]
+    },
+    
+    // Features
+    features: [
+      "Individual Detached Cottages",
+      "No Shared Walls",
+      "Private Yards",
+      "Steps from Sacramento River",
+      "1.52 Acres",
+      "Development Potential",
+      "Below Replacement Cost",
+      "Seller Financing Available"
+    ],
+    
+    // Location Analysis
+    locationAnalysis: {
+      walkScore: 45,
+      transitScore: 0,
+      bikeScore: 55,
+      neighborhood: "Small-town charm with big-city access",
+      nearbyAmenities: [
+        "Sacramento River waterfront",
+        "Historic downtown Walnut Grove",
+        "30 minutes to Sacramento",
+        "Agricultural employment base",
+        "Low crime, family-friendly area"
+      ],
+      marketTrends: [
+        "Limited housing supply in area",
+        "Sacramento spillover demand",
+        "Cottage premium vs apartments",
+        "Strong agricultural worker demand"
+      ]
+    },
+    
+    // Investment Summary
+    description: "13 detached single-story cottages on 1.52 acres with 9.37% cap rate. Individual cottages at apartment pricing with immediate RUBS value-add opportunity. Turnkey property with clear path to 12.56% pro forma cap.",
+    
+    executiveSummary: "Exceptional 13-unit cottage property offering individual homes at multifamily pricing. Current 9.37% cap rate jumps to 12.56% with RUBS implementation. At $103K/unit for detached cottages, this represents institutional returns at a fraction of replacement cost. Seller financing potentially available.",
+    
+    strategicOverview: `Individual cottages command 15-20% premium over apartments while maintaining lower turnover. RUBS implementation adds instant $14K annual income. Below-market rents offer $200-300/unit upside. Development potential for 2 additional units on 1.52 acres. Key advantages: 9.37% cap rate in California, detached cottages vs shared walls, RUBS doubles cash flow immediately, $300K below replacement cost, development rights included, seller financing option at 6%. Exit strategies include stabilizing at market rents for $2.5M value, adding 2 units for $2.8M value, or selling to institutional buyer at 7.5% cap.`,
+    
+    // Financing Scenarios
+    financingScenarios: [
+      {
+        name: "Traditional Bank Financing",
+        downPayment: 337500,
+        loanAmount: 1012500,
+        rate: 7.25,
+        monthlyPayment: 6909,
+        cashFlow: 3628,
+        cashOnCash: 12.9
+      },
+      {
+        name: "Seller Financing",
+        downPayment: 270000,
+        loanAmount: 1080000,
+        rate: 6.0,
+        monthlyPayment: 6479,
+        cashFlow: 4058,
+        cashOnCash: 18.1
+      }
+    ],
+    
+    // Pro Forma Projections
+    proFormaProjections: {
+      year1: {
+        noi: 175000,
+        cashFlow: 87000,
+        cashOnCash: 25.8
+      },
+      year3: {
+        noi: 200000,
+        value: 2500000,
+        equity: 1150000
+      },
+      year5: {
+        noi: 210000,
+        value: 2800000,
+        equity: 1450000,
+        totalReturn: 430
+      }
+    },
+    
+    // Risk Assessment
+    riskLevel: "low",
+    risks: [
+      "Rural location may limit liquidity",
+      "Older vintage property (1991)",
+      "Small market dynamics",
+      "Distance management challenges"
+    ],
+    mitigants: [
+      "9.37% cap provides margin of safety",
+      "Individual cottages reduce turnover",
+      "RUBS implementation is proven",
+      "Professional property management available"
+    ],
+    
+    // Action Items
+    dueDiligence: [
+      "Verify current rent roll and occupancy",
+      "Inspect all 13 cottages thoroughly",
+      "Review utility billing history",
+      "Confirm development potential with county",
+      "Negotiate seller financing terms"
+    ],
+    
+    // 30-Year Financial Projections
+    thirtyYearProjections: {
+      assumptions: {
+        rentGrowthRate: 3,
+        expenseGrowthRate: 2.5,
+        appreciationRate: 4,
+        vacancyRate: 3,
+        managementFee: 8,
+        maintenanceRate: 8,
+        capExRate: 5
+      },
+      projections: [
+        { 
+          year: 1,
+          grossRent: 210660,
+          vacancy: 6320,
+          effectiveRent: 204340,
+          expenses: 77898,
+          netOperatingIncome: 126442,
+          debtService: 82908,
+          cashFlow: 43534,
+          cumulativeCashFlow: 43534,
+          propertyValue: 1404000,
+          loanBalance: 1001250,
+          equity: 402750,
+          principalPaydown: 11250,
+          totalReturn: 109784,
+          totalROI: 32.5,
+          note: "Base year - current operations"
+        },
+        { 
+          year: 2,
+          grossRent: 231000,
+          vacancy: 6930,
+          effectiveRent: 224070,
+          expenses: 79895,
+          netOperatingIncome: 144175,
+          debtService: 82908,
+          cashFlow: 61267,
+          cumulativeCashFlow: 104801,
+          propertyValue: 1460160,
+          loanBalance: 989435,
+          equity: 470725,
+          principalPaydown: 11815,
+          totalReturn: 237042,
+          totalROI: 70.2,
+          note: "RUBS implemented, rents to market"
+        },
+        { 
+          year: 3,
+          grossRent: 238000,
+          vacancy: 7140,
+          effectiveRent: 230860,
+          expenses: 81893,
+          netOperatingIncome: 148967,
+          debtService: 82908,
+          cashFlow: 66059,
+          cumulativeCashFlow: 170860,
+          propertyValue: 1518566,
+          loanBalance: 977100,
+          equity: 541466,
+          principalPaydown: 12335,
+          totalReturn: 345792,
+          totalROI: 102.5
+        },
+        { 
+          year: 5,
+          grossRent: 253000,
+          vacancy: 7590,
+          effectiveRent: 245410,
+          expenses: 86112,
+          netOperatingIncome: 159298,
+          debtService: 82908,
+          cashFlow: 76390,
+          cumulativeCashFlow: 320130,
+          propertyValue: 1642032,
+          loanBalance: 950785,
+          equity: 691247,
+          principalPaydown: 13580,
+          totalReturn: 554957,
+          totalROI: 164.5
+        },
+        { 
+          year: 10,
+          grossRent: 293000,
+          vacancy: 8790,
+          effectiveRent: 284210,
+          expenses: 97436,
+          netOperatingIncome: 186774,
+          debtService: 82908,
+          cashFlow: 103866,
+          cumulativeCashFlow: 720456,
+          propertyValue: 1998670,
+          loanBalance: 882340,
+          equity: 1116330,
+          principalPaydown: 17895,
+          totalReturn: 1256126,
+          totalROI: 372.3
+        },
+        { 
+          year: 15,
+          grossRent: 339000,
+          vacancy: 10170,
+          effectiveRent: 328830,
+          expenses: 110250,
+          netOperatingIncome: 218580,
+          debtService: 82908,
+          cashFlow: 135672,
+          cumulativeCashFlow: 1310598,
+          propertyValue: 2432854,
+          loanBalance: 799875,
+          equity: 1632979,
+          principalPaydown: 22610,
+          totalReturn: 2408202,
+          totalROI: 713.8
+        },
+        { 
+          year: 20,
+          grossRent: 393000,
+          vacancy: 11790,
+          effectiveRent: 381210,
+          expenses: 124736,
+          netOperatingIncome: 256474,
+          debtService: 82908,
+          cashFlow: 173566,
+          cumulativeCashFlow: 2084464,
+          propertyValue: 2961566,
+          loanBalance: 699365,
+          equity: 2262201,
+          principalPaydown: 28520,
+          totalReturn: 3897130,
+          totalROI: 1154.7
+        },
+        { 
+          year: 25,
+          grossRent: 455000,
+          vacancy: 13650,
+          effectiveRent: 441350,
+          expenses: 141168,
+          netOperatingIncome: 300182,
+          debtService: 82908,
+          cashFlow: 217274,
+          cumulativeCashFlow: 3137954,
+          propertyValue: 3605204,
+          loanBalance: 576245,
+          equity: 3028959,
+          principalPaydown: 35985,
+          totalReturn: 5628898,
+          totalROI: 1667.4
+        },
+        { 
+          year: 30,
+          grossRent: 527000,
+          vacancy: 15810,
+          effectiveRent: 511190,
+          expenses: 159785,
+          netOperatingIncome: 351405,
+          debtService: 82908,
+          cashFlow: 268497,
+          cumulativeCashFlow: 4470704,
+          propertyValue: 4389541,
+          loanBalance: 0,
+          equity: 4389541,
+          principalPaydown: 82908,
+          totalReturn: 7197745,
+          totalROI: 2132.6
+        }
+      ],
+      totalRentalIncome: 8952900,
+      totalCashFlow: 4470704,
+      principalPaydown: 1012500,
+      propertyAppreciation: 3039541,
+      totalReturn: 7197745,
+      averageAnnualReturn: 239925,
+      totalROI: 2132.6,
+      equityAtYear30: 4389541,
+      analysis: "With RUBS implementation and rent increases to market, this property generates exceptional returns. The 2,132% ROI over 30 years represents a 21X return on initial investment."
+    },
+    
+    confidence: "very high",
+    status: "active",
+    daysOnMarket: 0,
+    timeframe: "Immediate",
+    cashRequired: 337500,
+    
+    isDraft: false,
+    isFeatured: true,
+    listingUrl: "https://www.loopnet.com/Listing/13991-River-Rd-Walnut-Grove-CA/37585444/",
+    listingSource: "LoopNet",
+    
+    images: [
+      "/api/placeholder/400/300"
+    ],
+    
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: 19,
+    title: "Kansas City BRRRR - Historic Northeast Cash Flow Machine",
+    address: "3505 Garner Ave",
+    city: "Kansas City",
+    state: "MO",
+    zipCode: "64124",
+    location: "Kansas City, MO 64124",
+    neighborhood: "Historic Northeast",
+    type: "Victorian BRRRR",
+    propertyType: "Single Family",
+    strategy: "BRRRR",
+    investmentStrategy: "BRRRR",
+    price: 110000,
+    arv: 210000,
+    
+    // Financial Metrics - Initial Purchase
+    downPayment: 11000,
+    downPaymentPercent: 10,
+    loanAmount: 99000,
+    interestRate: 10.45,
+    loanType: "Hard Money",
+    monthlyPI: 862, // Interest-only
+    pointsFees: 1980,
+    
+    // Renovation & Costs
+    rehabCosts: 28000,
+    rehabDetails: {
+      "Kitchen refresh": 6000,
+      "Bathroom updates": 4000,
+      "Flooring repairs/refinish": 3500,
+      "Interior paint": 2500,
+      "Exterior paint/curb appeal": 3000,
+      "Electrical/outlets update": 2000,
+      "Landscaping/cleanup": 2000,
+      "Minor repairs": 2000,
+      "Staging/photos": 1000,
+      "Contingency": 2000
+    },
+    holdingCosts: 5448,
+    totalProjectCost: 138000,
+    
+    // Refinance Strategy
+    refinanceDetails: {
+      newLoanAmount: 157500,
+      ltv: 75,
+      refinanceRate: 7.5,
+      term: 30,
+      monthlyPayment: 1101,
+      cashOut: 30500,
+      cashLeftInDeal: 15928,
+      recoveryRate: 65.7
+    },
+    
+    // Post-Refinance Metrics
+    monthlyRent: 1650,
+    potentialRent: 1850, // Section 8
+    monthlyExpenses: 1766,
+    monthlyCashFlow: -116,
+    cashFlow: -1392,
+    cashOnCashReturn: -8.7,
+    
+    // Alternative Scenarios
+    alternativeStrategies: {
+      higherRent: {
+        rent: 1750,
+        cashFlow: 16,
+        annual: 192
+      },
+      lowerLTV: {
+        ltv: 70,
+        loanAmount: 147000,
+        payment: 1028,
+        cashFlow: 11
+      },
+      section8: {
+        rent: 1900,
+        cashFlow: 134,
+        annual: 1608
+      }
+    },
+    
+    // Property Details
+    bedrooms: 4,
+    bathrooms: 2,
+    sqft: 1796,
+    pricePerSqft: 61,
+    yearBuilt: 1890,
+    propertyCondition: "Recently renovated interior, needs cosmetic updates",
+    
+    // Key Metrics
+    capRate: 10.8, // Based on ARV
+    forcedAppreciation: 100000,
+    totalCashRequired: 46428,
+    
+    // 5-Year Projections
+    fiveYearProjections: {
+      forcedAppreciation: 72000,
+      marketAppreciation: 35000,
+      mortgagePaydown: 22000,
+      totalEquityCreated: 129000,
+      cashFlow: -7000,
+      netWealthCreated: 106072,
+      roiOnCash: 666
+    },
+    
+    // Features
+    features: [
+      "Victorian Architecture",
+      "Recently Renovated Interior",
+      "4 Bedrooms",
+      "Historic Neighborhood",
+      "High ARV Potential",
+      "Section 8 Eligible",
+      "Corner Lot",
+      "Original Hardwood Floors"
+    ],
+    
+    // Location Analysis
+    locationAnalysis: {
+      walkScore: 65,
+      transitScore: 35,
+      bikeScore: 50,
+      neighborhood: "Historic Northeast - Improving area with investment activity",
+      nearbyAmenities: [
+        "Downtown Kansas City - 10 minutes",
+        "Cliff Drive Scenic Byway",
+        "Kessler Park",
+        "Historic Northeast District",
+        "Major employment centers nearby"
+      ],
+      marketTrends: [
+        "Neighborhood gentrification in progress",
+        "Strong investor activity",
+        "Rising property values",
+        "Limited inventory driving appreciation"
+      ]
+    },
+    
+    // Investment Summary
+    description: "Classic BRRRR opportunity with $100K forced appreciation potential. Recently renovated Victorian needs only cosmetic updates to achieve $210K ARV. 65% capital recovery on refinance.",
+    
+    executiveSummary: "Textbook BRRRR deal in KC's Historic Northeast. Purchase at $61/SF, add $28K in cosmetic updates, refinance at $210K ARV. Recover 65% of capital while creating $100K+ in immediate equity. Slight negative cash flow initially but massive wealth creation.",
+    
+    strategicOverview: `Buy deep discount, force appreciation through cosmetic renovation, refinance to recover capital, build long-term wealth through equity growth. Classic BRRRR execution in improving neighborhood. Key advantages: $100K forced appreciation opportunity, 65% capital recovery on refinance, recent interior renovation reduces risk, multiple exit strategies available, Section 8 potential for positive cash flow, historic neighborhood with upside. Exit options include holding for long-term appreciation, flipping immediately for $50K profit, seller financing at premium, or packaging with other properties.`,
+    
+    // Risk Assessment
+    riskLevel: "medium",
+    risks: [
+      "Slight negative initial cash flow",
+      "1890 build may have hidden issues",
+      "Historic Northeast location",
+      "Must hit ARV target precisely",
+      "Renovation budget overruns possible"
+    ],
+    mitigants: [
+      "Recent renovations reduce risk",
+      "Conservative rehab budget with contingency",
+      "Multiple strategies to achieve positive cash flow",
+      "Massive equity cushion provides safety",
+      "Strong comparable sales support ARV"
+    ],
+    
+    // Due Diligence Items
+    dueDiligence: [
+      "Full inspection including foundation/structure",
+      "Verify recent renovation permits",
+      "Confirm ARV with multiple comps",
+      "Get contractor bids for renovation",
+      "Research Section 8 rental rates",
+      "Check for any historic district restrictions"
+    ],
+    
+    // BRRRR Execution Timeline
+    brrrrTimeline: {
+      month1: "Close with hard money, begin renovation",
+      month2: "Complete interior updates",
+      month3: "Finish exterior, list for appraisal",
+      month4: "Complete refinance, place tenant",
+      totalTime: "4 months to stabilization"
+    },
+    
+    // 30-Year Financial Projections (Post-Refinance)
+    thirtyYearProjections: {
+      assumptions: {
+        rentGrowthRate: 3.5,
+        expenseGrowthRate: 3,
+        appreciationRate: 4.5,
+        vacancyRate: 5,
+        managementFee: 8,
+        maintenanceRate: 10,
+        capExRate: 5
+      },
+      projections: [
+        { 
+          year: 1,
+          grossRent: 19800,
+          vacancy: 990,
+          effectiveRent: 18810,
+          expenses: 21192,
+          netOperatingIncome: -2382,
+          debtService: 13212,
+          cashFlow: -15594,
+          cumulativeCashFlow: -15594,
+          propertyValue: 219450,
+          loanBalance: 155625,
+          equity: 63825,
+          principalPaydown: 1875,
+          totalReturn: 50106,
+          totalROI: 107.9,
+          note: "Post-refinance, standard rent"
+        },
+        { 
+          year: 2,
+          grossRent: 21600,
+          vacancy: 1080,
+          effectiveRent: 20520,
+          expenses: 21828,
+          netOperatingIncome: -1308,
+          debtService: 13212,
+          cashFlow: -14520,
+          cumulativeCashFlow: -30114,
+          propertyValue: 229315,
+          loanBalance: 153688,
+          equity: 75627,
+          principalPaydown: 1937,
+          totalReturn: 47050,
+          totalROI: 101.3,
+          note: "Section 8 rent achieved"
+        },
+        { 
+          year: 3,
+          grossRent: 22356,
+          vacancy: 1118,
+          effectiveRent: 21238,
+          expenses: 22483,
+          netOperatingIncome: -1245,
+          debtService: 13212,
+          cashFlow: -14457,
+          cumulativeCashFlow: -44571,
+          propertyValue: 239634,
+          loanBalance: 151686,
+          equity: 87948,
+          principalPaydown: 2002,
+          totalReturn: 46322,
+          totalROI: 99.8
+        },
+        { 
+          year: 5,
+          grossRent: 23892,
+          vacancy: 1195,
+          effectiveRent: 22697,
+          expenses: 23833,
+          netOperatingIncome: -1136,
+          debtService: 13212,
+          cashFlow: -14348,
+          cumulativeCashFlow: -73228,
+          propertyValue: 261568,
+          loanBalance: 147460,
+          equity: 114108,
+          principalPaydown: 2140,
+          totalReturn: 55252,
+          totalROI: 119.0
+        },
+        { 
+          year: 10,
+          grossRent: 28356,
+          vacancy: 1418,
+          effectiveRent: 26938,
+          expenses: 26940,
+          netOperatingIncome: -2,
+          debtService: 13212,
+          cashFlow: -13214,
+          cumulativeCashFlow: -138892,
+          propertyValue: 330775,
+          loanBalance: 137250,
+          equity: 193525,
+          principalPaydown: 2640,
+          totalReturn: 76859,
+          totalROI: 165.6
+        },
+        { 
+          year: 15,
+          grossRent: 33648,
+          vacancy: 1682,
+          effectiveRent: 31966,
+          expenses: 30487,
+          netOperatingIncome: 1479,
+          debtService: 13212,
+          cashFlow: -11733,
+          cumulativeCashFlow: -194625,
+          propertyValue: 418394,
+          loanBalance: 124785,
+          equity: 293609,
+          principalPaydown: 3256,
+          totalReturn: 135232,
+          totalROI: 291.3
+        },
+        { 
+          year: 20,
+          grossRent: 39936,
+          vacancy: 1997,
+          effectiveRent: 37939,
+          expenses: 34501,
+          netOperatingIncome: 3438,
+          debtService: 13212,
+          cashFlow: -9774,
+          cumulativeCashFlow: -241665,
+          propertyValue: 529135,
+          loanBalance: 109515,
+          equity: 419620,
+          principalPaydown: 4015,
+          totalReturn: 226970,
+          totalROI: 488.9
+        },
+        { 
+          year: 25,
+          grossRent: 47412,
+          vacancy: 2371,
+          effectiveRent: 45041,
+          expenses: 39048,
+          netOperatingIncome: 5993,
+          debtService: 13212,
+          cashFlow: -7219,
+          cumulativeCashFlow: -277360,
+          propertyValue: 669349,
+          loanBalance: 90685,
+          equity: 578664,
+          principalPaydown: 4950,
+          totalReturn: 356254,
+          totalROI: 767.3
+        },
+        { 
+          year: 30,
+          grossRent: 56268,
+          vacancy: 2813,
+          effectiveRent: 53455,
+          expenses: 44195,
+          netOperatingIncome: 9260,
+          debtService: 13212,
+          cashFlow: -3952,
+          cumulativeCashFlow: -297172,
+          propertyValue: 846621,
+          loanBalance: 0,
+          equity: 846621,
+          principalPaydown: 13212,
+          totalReturn: 595877,
+          totalROI: 1283.5
+        }
+      ],
+      totalRentalIncome: 1053432,
+      totalCashFlow: -297172,
+      principalPaydown: 157500,
+      propertyAppreciation: 636621,
+      totalReturn: 595877,
+      averageAnnualReturn: 19863,
+      totalROI: 1283.5,
+      equityAtYear30: 846621,
+      analysis: "Despite negative cash flow initially, the BRRRR strategy creates massive wealth through forced appreciation and equity growth. The 1,283% ROI represents 12.8X return on the $15,928 left in the deal. With Section 8 or strategic rent increases, cash flow turns positive after year 15."
+    },
+    
+    // Detailed Financial Analysis
+    financialAnalysis: {
+      purchaseScenario: {
+        purchasePrice: 110000,
+        downPayment: 11000,
+        loanAmount: 99000,
+        closingCosts: 1980,
+        totalCashToClose: 12980
+      },
+      rehabScenario: {
+        totalRehabCost: 28000,
+        timeline: "3-4 months",
+        majorItems: [
+          { item: "Kitchen refresh", cost: 6000 },
+          { item: "Bathroom updates", cost: 4000 },
+          { item: "Flooring/refinish", cost: 3500 },
+          { item: "Paint interior/exterior", cost: 5500 },
+          { item: "Electrical updates", cost: 2000 },
+          { item: "Landscaping", cost: 2000 },
+          { item: "Contingency", cost: 2000 }
+        ]
+      },
+      holdingCosts: {
+        hardMoneyPayments: 3448,
+        insurance: 600,
+        utilities: 600,
+        propertyTaxes: 800,
+        total: 5448
+      },
+      refinanceScenario: {
+        afterRepairValue: 210000,
+        newLoanAmount: 157500,
+        ltvRatio: 75,
+        interestRate: 7.5,
+        loanTerm: 30,
+        monthlyPayment: 1101,
+        cashOut: 30500,
+        totalInvested: 46428,
+        cashRecovered: 30500,
+        cashLeftInDeal: 15928,
+        percentRecovered: 65.7
+      },
+      monthlyOperatingExpenses: {
+        mortgage: 1101,
+        propertyTaxes: 200,
+        insurance: 150,
+        management: 132,
+        maintenance: 100,
+        vacancy: 83,
+        total: 1766
+      },
+      cashFlowAnalysis: {
+        monthlyRent: 1650,
+        monthlyExpenses: 1766,
+        monthlyCashFlow: -116,
+        annualCashFlow: -1392,
+        cashOnCashReturn: -8.7
+      },
+      alternativeScenarios: [
+        {
+          name: "Market Rent",
+          rent: 1750,
+          cashFlow: 16,
+          annual: 192,
+          cashOnCash: 1.2
+        },
+        {
+          name: "Section 8",
+          rent: 1900,
+          cashFlow: 134,
+          annual: 1608,
+          cashOnCash: 10.1
+        },
+        {
+          name: "Premium Finish",
+          rent: 1950,
+          cashFlow: 184,
+          annual: 2208,
+          cashOnCash: 13.9
+        }
+      ],
+      returnMetrics: {
+        totalCashInvested: 46428,
+        cashRecovered: 30500,
+        netCashInvested: 15928,
+        forcedAppreciation: 100000,
+        instantEquity: 52500,
+        year1TotalReturn: 50106,
+        year5TotalReturn: 55252,
+        year30TotalReturn: 595877
+      }
+    },
+    
+    // Market Analysis
+    marketAnalysis: {
+      comparables: [
+        { address: "3420 Garner Ave", price: 195000, sqft: 1650, pricePerSqFt: 118, soldDate: "2 months ago", condition: "Renovated" },
+        { address: "3612 Independence Ave", price: 215000, sqft: 1850, pricePerSqFt: 116, soldDate: "1 month ago", condition: "Updated" },
+        { address: "3245 Benton Blvd", price: 205000, sqft: 1750, pricePerSqFt: 117, soldDate: "3 weeks ago", condition: "Remodeled" }
+      ],
+      medianARV: 210000,
+      medianPricePerSqFt: 117,
+      purchasePricePerSqFt: 61,
+      discountToARV: 47.6,
+      neighborhoodTrends: [
+        "Historic Northeast seeing increased investment",
+        "Proximity to downtown driving appreciation",
+        "Strong rental demand from workforce",
+        "Limited inventory supporting values"
+      ],
+      rentalComps: [
+        { address: "3510 Tracy Ave", beds: 4, baths: 2, rent: 1650, condition: "Good" },
+        { address: "3425 Garner Ave", beds: 4, baths: 2, rent: 1700, condition: "Updated" },
+        { address: "3320 Independence", beds: 3, baths: 2, rent: 1550, condition: "Average" }
+      ],
+      section8Rents: {
+        fourBedroom: 1900,
+        paymentStandard: 1850,
+        fairMarketRent: 1780
+      }
+    },
+    
+    // Investment Returns Summary
+    investmentSummary: {
+      strategy: "BRRRR - Buy, Rehab, Rent, Refinance, Repeat",
+      totalProjectCost: 138000,
+      afterRepairValue: 210000,
+      instantEquity: 72000,
+      percentOfARV: 65.7,
+      cashLeftInDeal: 15928,
+      leverageRatio: "13:1 (control $210K asset with $16K)",
+      breakeven: "Year 15 with standard rent, immediate with Section 8",
+      exitStrategies: [
+        "Hold for appreciation - $846K value in 30 years",
+        "Flip immediately - $50K+ profit potential",
+        "Seller finance - Create note at 8-9%",
+        "1031 exchange into larger property"
+      ],
+      keyMetrics: {
+        capRate: 10.8,
+        grossRentMultiplier: 127,
+        rentToValue: 0.79,
+        debtServiceCoverage: 0.93
+      }
+    },
+    
+    confidence: "high",
+    status: "active",
+    daysOnMarket: 0,
+    timeframe: "4 months",
+    cashRequired: 46428,
+    totalROI: 666,
+    roi: 666,
+    
+    isDraft: false,
+    isFeatured: true,
+    listingUrl: "https://www.realtor.com/realestateandhomes-detail/3505-Garner-Ave_Kansas-City_MO_64124_M81492-45661",
+    listingSource: "Realtor.com",
+    
+    images: [
+      "/api/placeholder/400/300"
+    ],
+    
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 ];

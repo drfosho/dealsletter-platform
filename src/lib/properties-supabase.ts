@@ -1,13 +1,30 @@
 import { createClient } from '@/lib/supabase/server';
 import { staticDeals } from './staticDeals';
+import fs from 'fs';
+import path from 'path';
 
-// Store status overrides for static deals in localStorage (persists across page reloads)
-// This is a client-side solution for demo purposes
+// Store status overrides for static deals
+// Uses file storage on server, localStorage on client
+const OVERRIDES_FILE = path.join(process.cwd(), 'src/lib/static-deal-overrides.json');
+
 const getStaticDealStatusOverrides = (): Map<string, string> => {
   const overrides = new Map<string, string>();
   
-  // Only use localStorage in browser environment
-  if (typeof window !== 'undefined') {
+  // Server-side: read from file
+  if (typeof window === 'undefined') {
+    try {
+      if (fs.existsSync(OVERRIDES_FILE)) {
+        const fileContent = fs.readFileSync(OVERRIDES_FILE, 'utf-8');
+        const parsed = JSON.parse(fileContent || '{}');
+        Object.entries(parsed).forEach(([id, status]) => {
+          overrides.set(id, status as string);
+        });
+      }
+    } catch (error) {
+      console.error('Error reading status overrides from file:', error);
+    }
+  } else {
+    // Client-side: use localStorage
     try {
       const stored = localStorage.getItem('staticDealStatusOverrides');
       if (stored) {
@@ -25,10 +42,21 @@ const getStaticDealStatusOverrides = (): Map<string, string> => {
 };
 
 const saveStaticDealStatusOverrides = (overrides: Map<string, string>) => {
-  if (typeof window !== 'undefined') {
+  const obj = Object.fromEntries(overrides);
+  
+  // Server-side: write to file
+  if (typeof window === 'undefined') {
     try {
-      const obj = Object.fromEntries(overrides);
+      fs.writeFileSync(OVERRIDES_FILE, JSON.stringify(obj, null, 2));
+      console.log('Saved status overrides to file:', obj);
+    } catch (error) {
+      console.error('Error saving status overrides to file:', error);
+    }
+  } else {
+    // Client-side: use localStorage
+    try {
       localStorage.setItem('staticDealStatusOverrides', JSON.stringify(obj));
+      console.log('Saved status overrides to localStorage:', obj);
     } catch (error) {
       console.error('Error saving status overrides to localStorage:', error);
     }
@@ -40,26 +68,29 @@ export async function getPublishedProperties() {
   try {
     const supabase = await createClient();
     
-    // Get all non-draft, non-deleted properties
+    // Get all non-draft, non-deleted properties with active status
     const { data: dbProperties, error } = await supabase
       .from('properties')
       .select('*')
       .eq('is_draft', false)
       .eq('is_deleted', false)
+      .eq('status', 'active')
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching properties from Supabase:', error);
-      // Apply status overrides to static deals
+      // Apply status overrides to static deals and filter for active only
       const overrides = getStaticDealStatusOverrides();
-      const dealsWithOverrides = staticDeals.map(deal => ({
-        ...deal,
-        status: overrides.get(String(deal.id)) || deal.status || 'active'
-      }));
+      const dealsWithOverrides = staticDeals
+        .map(deal => ({
+          ...deal,
+          status: overrides.get(String(deal.id)) || deal.status || 'active'
+        }))
+        .filter(deal => deal.status === 'active');
       return dealsWithOverrides;
     }
 
-    // Apply status overrides to static deals
+    // Apply status overrides to static deals and filter for active only
     const overrides = getStaticDealStatusOverrides();
     const dbPropertyIds = new Set(dbProperties?.map(p => p.id) || []);
     const uniqueStaticDeals = staticDeals
@@ -67,17 +98,24 @@ export async function getPublishedProperties() {
       .map(deal => ({
         ...deal,
         status: overrides.get(String(deal.id)) || deal.status || 'active'
-      }));
+      }))
+      .filter(deal => deal.status === 'active');
     
-    return [...(dbProperties || []), ...uniqueStaticDeals];
+    // Only return properties with active status (treat null/undefined as active for backwards compatibility)
+    const activeDbProperties = (dbProperties || []).filter(p => 
+      p.status === 'active' || (!p.status && p.status !== 'sold' && p.status !== 'pending' && p.status !== 'hidden')
+    );
+    return [...activeDbProperties, ...uniqueStaticDeals];
   } catch (error) {
     console.error('Error in getPublishedProperties:', error);
-    // Apply status overrides to static deals
+    // Apply status overrides to static deals and filter for active only
     const overrides = getStaticDealStatusOverrides();
-    const dealsWithOverrides = staticDeals.map(deal => ({
-      ...deal,
-      status: overrides.get(String(deal.id)) || deal.status || 'active'
-    }));
+    const dealsWithOverrides = staticDeals
+      .map(deal => ({
+        ...deal,
+        status: overrides.get(String(deal.id)) || deal.status || 'active'
+      }))
+      .filter(deal => deal.status === 'active');
     return dealsWithOverrides;
   }
 }

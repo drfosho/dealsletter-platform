@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getAnalysisLimit } from '@/lib/stripe'
+import { getAnalysisLimit } from '@/lib/subscription-utils'
 
 interface SubscriptionData {
   tier: string

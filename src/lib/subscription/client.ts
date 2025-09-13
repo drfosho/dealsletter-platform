@@ -4,7 +4,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 
-export type SubscriptionTier = 'free' | 'starter' | 'pro' | 'premium';
+export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'premium';
 export type SubscriptionStatus = 
   | 'active' 
   | 'canceled' 

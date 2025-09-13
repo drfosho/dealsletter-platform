@@ -87,6 +87,32 @@ export default function Step3Financial({
     }
   }, [data.financial.purchasePrice, data.financial.monthlyRent]); // eslint-disable-line react-hooks/exhaustive-deps
   
+  // Initialize units based on property type
+  useEffect(() => {
+    if (financial.units === undefined && data.propertyData) {
+      const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+      let defaultUnits = 1;
+      
+      // First check if units are explicitly provided in the data
+      if ((data.propertyData as any)?.property?.units) {
+        defaultUnits = (data.propertyData as any).property.units;
+      } 
+      // Infer from property type name
+      else if (propertyType.toLowerCase().includes('duplex')) {
+        defaultUnits = 2;
+      } else if (propertyType.toLowerCase().includes('triplex')) {
+        defaultUnits = 3;
+      } else if (propertyType.toLowerCase().includes('fourplex')) {
+        defaultUnits = 4;
+      }
+      
+      // Only set units if it's different from default
+      if (defaultUnits !== 1) {
+        handleFieldChange('units', defaultUnits);
+      }
+    }
+  }, [data.propertyData]); // eslint-disable-line react-hooks/exhaustive-deps
+  
   // Auto-populate fields only when property data changes and values are missing
   useEffect(() => {
     // Skip if we already have purchase price from props
@@ -135,23 +161,39 @@ export default function Step3Financial({
       hasChanges = true;
     }
     
-    // Auto-calculate ARV for fix & flip strategy
-    if (data.strategy === 'flip' && newEffectivePrice > 0 && (!financial.arv || financial.arv === 0)) {
+    // Auto-calculate ARV for strategies that need it
+    // Use AVM value from comparables as base ARV, adjusted for renovation level
+    const needsARV = ['flip', 'brrrr'].includes(data.strategy);
+    const comparablesAVM = newComparablesValue || newEffectivePrice;
+    
+    if (needsARV && comparablesAVM > 0 && (!financial.arv || financial.arv === 0)) {
       setIsCalculatingARV(true);
       
       // Simulate API call delay for better UX
       setTimeout(() => {
         const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-        let arvMultiplier = 1.25;
+        let arvMultiplier = 1.0;
         
-        if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
-        else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
-        else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
-        else if (renovationLevel === 'gut') arvMultiplier = 1.45;
+        // For BRRRR, ARV should be close to market value after rehab
+        // For Flip, ARV includes profit margin
+        if (data.strategy === 'brrrr') {
+          // BRRRR uses more conservative ARV (market value after rehab)
+          if (renovationLevel === 'cosmetic') arvMultiplier = 1.05;
+          else if (renovationLevel === 'moderate') arvMultiplier = 1.10;
+          else if (renovationLevel === 'extensive') arvMultiplier = 1.15;
+          else if (renovationLevel === 'gut') arvMultiplier = 1.20;
+        } else if (data.strategy === 'flip') {
+          // Flip includes profit margin in ARV
+          if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
+          else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
+          else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
+          else if (renovationLevel === 'gut') arvMultiplier = 1.45;
+        }
         
-        const calculatedARV = Math.round(newEffectivePrice * arvMultiplier);
+        const calculatedARV = Math.round(comparablesAVM * arvMultiplier);
         console.log('[Step3Financial] Auto-calculating ARV:', {
-          currentValue: newEffectivePrice,
+          currentValue: comparablesAVM,
+          strategy: data.strategy,
           renovationLevel,
           multiplier: arvMultiplier,
           calculatedARV
@@ -175,7 +217,9 @@ export default function Step3Financial({
   const [_errors, setErrors] = useState<Record<string, string>>({});
   const [currentRates, _setCurrentRates] = useState({ min: 6.5, avg: 7.0, max: 7.5 });
   const [loanType, setLoanType] = useState<'conventional' | 'hardMoney'>(
-    data.strategy === 'flip' ? 'hardMoney' : 'conventional'
+    (data.strategy === 'flip' || data.strategy === 'brrrr') ? 
+      (data.strategyDetails?.initialFinancing === 'conventional' ? 'conventional' : 'hardMoney') : 
+      'conventional'
   );
 
   // Debug log on component mount
@@ -226,7 +270,7 @@ export default function Step3Financial({
   // Calculate rehab costs based on property size and renovation level
   useEffect(() => {
     const propertyData = data.propertyData as any;
-    const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
+    const renovationLevelString = data.strategyDetails?.renovationLevel;
     
     // Try multiple locations for square footage
     const squareFootage = propertyData?.property?.squareFootage || 
@@ -238,19 +282,21 @@ export default function Step3Financial({
     console.log('[Step3Financial] Renovation cost calculation check:', {
       showRenovationCosts,
       squareFootage,
-      renovationLevel,
+      renovationLevelString,
       strategy: data.strategy,
       currentRenovationCosts: financial.renovationCosts,
       propertyDataStructure: propertyData ? Object.keys(propertyData) : 'null'
     });
     
     // Calculate and set rehab costs if we have the necessary data
-    if (squareFootage > 0 && renovationLevel && showRenovationCosts) {
-      const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, renovationLevel);
+    if (squareFootage > 0 && renovationLevelString && showRenovationCosts) {
+      const mappedLevel = mapRenovationLevelToRehabLevel(renovationLevelString);
+      const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, mappedLevel);
       
       console.log('[Step3Financial] Calculated renovation costs:', {
         squareFootage,
-        renovationLevel,
+        renovationLevelString,
+        mappedLevel,
         lowEstimate,
         highEstimate,
         averageEstimate,
@@ -327,7 +373,7 @@ export default function Step3Financial({
 
   // Handle loan type changes
   useEffect(() => {
-    if (loanType === 'hardMoney' && data.strategy === 'flip') {
+    if (loanType === 'hardMoney' && (data.strategy === 'flip' || data.strategy === 'brrrr')) {
       // Auto-calculate closing costs if not set (3% for hard money)
       const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.03) : 0);
       
@@ -457,8 +503,8 @@ export default function Step3Financial({
         </p>
       </div>
 
-      {/* Loan Type Selection for Fix & Flip */}
-      {data.strategy === 'flip' && (
+      {/* Loan Type Selection for Fix & Flip and BRRRR */}
+      {(data.strategy === 'flip' || data.strategy === 'brrrr') && (
         <div className="bg-card rounded-xl border border-border p-6 mb-6">
           <h3 className="font-semibold text-primary mb-4">Financing Type</h3>
           <div className="grid grid-cols-2 gap-4">
@@ -542,20 +588,19 @@ export default function Step3Financial({
             const isMultiFamily = propertyType.toLowerCase().includes('multi') || 
                                   propertyType.toLowerCase().includes('duplex') || 
                                   propertyType.toLowerCase().includes('triplex') ||
-                                  propertyType.toLowerCase().includes('fourplex') ||
-                                  bedroomCount >= 4;
+                                  propertyType.toLowerCase().includes('fourplex');
             
             // Extract unit count from property data or infer from property type
             const extractUnits = () => {
+              // First check if units are explicitly provided in the data
               if ((data.propertyData as any)?.property?.units) {
                 return (data.propertyData as any).property.units;
               }
+              // Infer from property type name
               if (propertyType.toLowerCase().includes('duplex')) return 2;
               if (propertyType.toLowerCase().includes('triplex')) return 3;
               if (propertyType.toLowerCase().includes('fourplex')) return 4;
-              if (propertyType.toLowerCase().includes('multi') && bedroomCount >= 4) {
-                return Math.floor(bedroomCount / 2); // Estimate based on bedrooms
-              }
+              // Default to 1 for single family homes
               return 1;
             };
             
@@ -569,18 +614,23 @@ export default function Step3Financial({
                     <label className="block text-xs font-medium text-muted mb-1">Number of Units</label>
                     <input
                       type="number"
-                      value={financial.units || unitCount}
+                      value={financial.units ?? ''}
                       onChange={(e) => {
-                        const units = parseInt(e.target.value) || 1;
-                        handleFieldChange('units', units);
-                        // Update total rent when units change
-                        if (financial.rentPerUnit) {
-                          handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                        const value = e.target.value;
+                        if (value === '') {
+                          handleFieldChange('units', undefined);
+                        } else {
+                          const units = parseInt(value) || 1;
+                          handleFieldChange('units', units);
+                          // Update total rent when units change
+                          if (financial.rentPerUnit) {
+                            handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                          }
                         }
                       }}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                       min="1"
-                      placeholder="Number of units"
+                      placeholder={extractUnits().toString()}
                     />
                   </div>
                   
@@ -854,12 +904,14 @@ export default function Step3Financial({
           })()}
         </div>
 
-        {/* ARV for Fix & Flip */}
-        {data.strategy === 'flip' && (
+        {/* ARV for Fix & Flip and BRRRR */}
+        {(data.strategy === 'flip' || data.strategy === 'brrrr') && (
           <div>
             <label className="block text-sm font-medium text-primary mb-2">
               ARV (After Repair Value)
-              <span className="text-xs text-muted ml-2">Required for flip calculations</span>
+              <span className="text-xs text-muted ml-2">
+                {data.strategy === 'flip' ? 'Required for flip calculations' : 'Required for refinance calculations'}
+              </span>
             </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
@@ -978,22 +1030,18 @@ export default function Step3Financial({
           </label>
           <input
             type="number"
-            value={financial.units || (() => {
-              const propertyType = (data.propertyData as any)?.property?.propertyType || '';
-              if ((data.propertyData as any)?.property?.units) {
-                return (data.propertyData as any).property.units;
-              }
-              if (propertyType.toLowerCase().includes('duplex')) return 2;
-              if (propertyType.toLowerCase().includes('triplex')) return 3;
-              if (propertyType.toLowerCase().includes('fourplex')) return 4;
-              return 1;
-            })()}
+            value={financial.units ?? ''}
             onChange={(e) => {
-              const units = parseInt(e.target.value) || 1;
-              handleFieldChange('units', units);
-              // Update rent calculations if we have rent per unit
-              if (financial.rentPerUnit) {
-                handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+              const value = e.target.value;
+              if (value === '') {
+                handleFieldChange('units', undefined);
+              } else {
+                const units = parseInt(value) || 1;
+                handleFieldChange('units', units);
+                // Update rent calculations if we have rent per unit
+                if (financial.rentPerUnit) {
+                  handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                }
               }
             }}
             className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1164,7 +1212,8 @@ export default function Step3Financial({
                   />
                   {(() => {
                     const propertyData = data.propertyData as any;
-                    const renovationLevel = data.strategyDetails?.renovationLevel as RehabLevel;
+                    const renovationLevelString = data.strategyDetails?.renovationLevel;
+                    const renovationLevel = renovationLevelString ? mapRenovationLevelToRehabLevel(renovationLevelString) : null;
                     const squareFootage = propertyData?.property?.squareFootage;
                     
                     if (squareFootage && renovationLevel) {
@@ -1360,6 +1409,69 @@ export default function Step3Financial({
           )}
         </div>
       </div>
+
+      {/* BRRRR Refinance Section */}
+      {data.strategy === 'brrrr' && financial.arv && (
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border border-purple-500/20 p-6 mt-6">
+          <h3 className="font-semibold text-primary mb-4">
+            Refinance Strategy
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-sm font-medium text-primary mb-3">After Stabilization</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">After Repair Value (ARV):</span>
+                  <span className="font-semibold text-primary">${financial.arv?.toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Target LTV:</span>
+                  <span className="font-semibold text-primary">{data.strategyDetails?.exitStrategy || '75'}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Max Refinance Amount:</span>
+                  <span className="font-bold text-accent">
+                    ${Math.round((financial.arv || 0) * (parseInt(data.strategyDetails?.exitStrategy || '75') / 100)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-primary mb-3">Cash Out Potential</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Total Investment:</span>
+                  <span className="font-semibold text-primary">${calculateTotalInvestment()?.toLocaleString() || '0'}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted">Initial Loan Payoff:</span>
+                  <span className="font-semibold text-primary">
+                    ${Math.round(financial.purchasePrice * (1 - financial.downPaymentPercent / 100) + (financial.renovationCosts || 0)).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t border-border pt-2">
+                  <span className="text-sm font-medium text-primary">Estimated Cash Out:</span>
+                  <span className="font-bold text-green-600">
+                    ${(() => {
+                      const refinanceAmount = (financial.arv || 0) * (parseInt(data.strategyDetails?.exitStrategy || '75') / 100);
+                      const loanPayoff = financial.purchasePrice * (1 - financial.downPaymentPercent / 100) + (financial.renovationCosts || 0);
+                      const cashOut = refinanceAmount - loanPayoff;
+                      return cashOut > 0 ? Math.round(cashOut).toLocaleString() : '0';
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+            <p className="text-xs text-muted">
+              <strong>BRRRR Strategy:</strong> After renovation and stabilization (typically {data.strategyDetails?.timeline || '12'} months), 
+              refinance at {data.strategyDetails?.exitStrategy || '75'}% of ARV to recover most or all of your initial investment 
+              while keeping the property as a long-term rental.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between mt-8">

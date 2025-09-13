@@ -109,6 +109,59 @@ export interface PropertySearchRequest {
   includeMarketData?: boolean;
 }
 
+// Enhanced Search Parameters for API v1
+export interface EnhancedSearchParams {
+  // Location parameters
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  county?: string;
+  radius?: number; // Search radius in miles
+  
+  // Property characteristics
+  minBeds?: number;
+  maxBeds?: number;
+  minBaths?: number;
+  maxBaths?: number;
+  minSqft?: number;
+  maxSqft?: number;
+  minLotSize?: number;
+  maxLotSize?: number;
+  minYearBuilt?: number;
+  maxYearBuilt?: number;
+  
+  // Price ranges
+  minPrice?: number;
+  maxPrice?: number;
+  minRent?: number;
+  maxRent?: number;
+  
+  // Property types
+  propertyTypes?: string[]; // e.g., ['Single Family', 'Condo', 'Townhouse']
+  
+  // Additional filters
+  hasGarage?: boolean;
+  hasPool?: boolean;
+  hasBasement?: boolean;
+  isWaterfront?: boolean;
+  
+  // Pagination
+  limit?: number;
+  offset?: number;
+  sortBy?: 'price' | 'sqft' | 'beds' | 'baths' | 'yearBuilt' | 'distance';
+  sortOrder?: 'asc' | 'desc';
+}
+
+// Search Results with pagination info
+export interface SearchResults<T> {
+  results: T[];
+  totalCount: number;
+  returnedCount: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
 export interface PropertyAnalysisRequest {
   address: string;
   strategy: 'rental' | 'flip' | 'brrrr' | 'airbnb';

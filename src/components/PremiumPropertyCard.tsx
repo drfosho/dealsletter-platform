@@ -235,8 +235,11 @@ export default function PremiumPropertyCard({
             <div className="flex-1">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-primary mb-1">{deal.address || deal.title}</h3>
-                  <p className="text-sm text-muted">{deal.location}</p>
+                  <h3 className="text-lg font-semibold text-primary mb-1">{deal.title}</h3>
+                  {deal.address && (
+                    <p className="text-sm text-muted mb-0.5">{deal.address}</p>
+                  )}
+                  <p className="text-xs text-muted">{deal.location}</p>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-primary">
@@ -424,8 +427,11 @@ export default function PremiumPropertyCard({
           <div className="absolute bottom-0 left-0 right-0 z-10 p-3 sm:p-4">
             <div className="flex items-end justify-between gap-2">
               <div className="text-white flex-1 min-w-0">
-                <h3 className="text-base sm:text-xl font-bold mb-1 line-clamp-1">{deal.address || deal.title}</h3>
-                <p className="text-xs sm:text-sm opacity-90 truncate">{deal.location}</p>
+                <h3 className="text-base sm:text-xl font-bold mb-1 line-clamp-2">{deal.title}</h3>
+                {deal.address && (
+                  <p className="text-xs sm:text-sm opacity-90 truncate">{deal.address}</p>
+                )}
+                <p className="text-xs opacity-80 truncate">{deal.location}</p>
               </div>
               <div className="text-right text-white flex-shrink-0">
                 <div className="text-lg sm:text-2xl font-bold">{formatCurrency(deal.price)}</div>

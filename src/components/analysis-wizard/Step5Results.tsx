@@ -190,6 +190,41 @@ export default function Step5Results({ data }: Step5ResultsProps) {
               </p>
             </div>
           </>
+        ) : data.strategy === 'brrrr' ? (
+          // BRRRR Strategy Metrics
+          <>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">💵 Monthly Cash Flow</p>
+              <p className="text-2xl font-bold text-primary">
+                ${financial_metrics?.monthly_cash_flow?.toLocaleString() || '0'}
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">💰 Cash Returned</p>
+              <p className="text-2xl font-bold text-primary">
+                ${(financial_metrics as any)?.cash_returned?.toLocaleString() || 
+                   (financial_metrics as any)?.cashReturned?.toLocaleString() || '0'}
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">🔄 Cash-on-Cash</p>
+              <p className="text-2xl font-bold text-primary">
+                {financial_metrics?.cash_on_cash_return === Infinity || 
+                 financial_metrics?.cash_on_cash_return === 999 ||
+                 financial_metrics?.cash_on_cash_return > 500 ? (
+                  <span className="text-green-600">INFINITE</span>
+                ) : (
+                  `${financial_metrics?.cash_on_cash_return?.toFixed(1) || '0'}%`
+                )}
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <p className="text-sm text-muted mb-1">📈 5-Year ROI</p>
+              <p className="text-2xl font-bold text-green-600">
+                {financial_metrics?.roi?.toFixed(1) || '0'}%
+              </p>
+            </div>
+          </>
         ) : (
           // Rental Strategy Metrics
           <>

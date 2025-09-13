@@ -233,34 +233,67 @@ export default function Step2Strategy({
           )}
 
           {selectedStrategy === 'brrrr' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-primary mb-2">
-                  Refinance Timeline
-                </label>
-                <select 
-                  value={strategyDetails.timeline || '12'}
-                  onChange={(e) => handleDetailsChange('timeline', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="6">6 months (seasoning)</option>
-                  <option value="12">12 months</option>
-                  <option value="24">24 months</option>
-                </select>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Renovation Level
+                  </label>
+                  <select 
+                    value={strategyDetails.renovationLevel || 'moderate'}
+                    onChange={(e) => handleDetailsChange('renovationLevel', e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="cosmetic">Cosmetic ($15-25/sqft)</option>
+                    <option value="moderate">Moderate ($25-50/sqft)</option>
+                    <option value="extensive">Extensive ($50-100/sqft)</option>
+                    <option value="gut">Gut Rehab ($100+/sqft)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Refinance Timeline
+                  </label>
+                  <select 
+                    value={strategyDetails.timeline || '12'}
+                    onChange={(e) => handleDetailsChange('timeline', e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="6">6 months (seasoning)</option>
+                    <option value="12">12 months</option>
+                    <option value="24">24 months</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-primary mb-2">
-                  Target ARV %
-                </label>
-                <select 
-                  value={strategyDetails.exitStrategy || '70'}
-                  onChange={(e) => handleDetailsChange('exitStrategy', e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="70">70% ARV</option>
-                  <option value="75">75% ARV</option>
-                  <option value="80">80% ARV</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Initial Financing
+                  </label>
+                  <select 
+                    value={strategyDetails.initialFinancing || 'hardMoney'}
+                    onChange={(e) => handleDetailsChange('initialFinancing', e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="hardMoney">Hard Money (Default)</option>
+                    <option value="conventional">Conventional Loan</option>
+                    <option value="cash">Cash Purchase</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Refinance LTV
+                  </label>
+                  <select 
+                    value={strategyDetails.exitStrategy || '75'}
+                    onChange={(e) => handleDetailsChange('exitStrategy', e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="70">70% of ARV</option>
+                    <option value="75">75% of ARV (Default)</option>
+                    <option value="80">80% of ARV</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}

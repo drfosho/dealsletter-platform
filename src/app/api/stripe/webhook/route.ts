@@ -6,6 +6,20 @@ import Stripe from 'stripe';
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
 
+// Map Stripe tier names to our database tier names
+function mapTierName(stripeTier: string): string {
+  const tierMap: Record<string, string> = {
+    'STARTER': 'starter',
+    'PRO': 'professional',  // Map PRO to professional
+    'PROFESSIONAL': 'professional',
+    'PREMIUM': 'premium',
+    'FREE': 'free'
+  };
+  
+  const upperTier = stripeTier.toUpperCase();
+  return tierMap[upperTier] || 'free';  // Default to free if not found
+}
+
 async function getRawBody(request: NextRequest): Promise<Buffer> {
   const chunks = [];
   const reader = request.body?.getReader();
@@ -120,7 +134,8 @@ export async function POST(request: NextRequest) {
               
               // Create subscription record
               const priceId = subscription.items.data[0].price.id;
-              const tierName = subscription.metadata.tierName || 'starter';
+              const stripeTierName = subscription.metadata.tierName || 'STARTER';
+              const tierName = mapTierName(stripeTierName);
               
               await supabase
                 .from('subscriptions')
@@ -130,7 +145,7 @@ export async function POST(request: NextRequest) {
                   stripe_subscription_id: subscription.id,
                   stripe_price_id: priceId,
                   status: subscription.status as any,
-                  tier: tierName.toLowerCase() as any,
+                  tier: tierName as any,
                   current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
                   current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
                   cancel_at_period_end: subscription.cancel_at_period_end,
@@ -161,7 +176,8 @@ export async function POST(request: NextRequest) {
         } else {
           // Create subscription record with existing user ID
           const priceId = subscription.items.data[0].price.id;
-          const tierName = subscription.metadata.tierName || 'starter';
+          const stripeTierName = subscription.metadata.tierName || 'STARTER';
+              const tierName = mapTierName(stripeTierName);
           
           await supabase
             .from('subscriptions')
@@ -171,7 +187,7 @@ export async function POST(request: NextRequest) {
               stripe_subscription_id: subscription.id,
               stripe_price_id: priceId,
               status: subscription.status as any,
-              tier: tierName.toLowerCase() as any,
+              tier: tierName as any,
               current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
               current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end,
@@ -231,7 +247,8 @@ export async function POST(request: NextRequest) {
           if (userId) {
             // Get the price ID and tier
             const priceId = subscription.items.data[0].price.id;
-            const tierName = subscription.metadata.tierName || 'starter';
+            const stripeTierName = subscription.metadata.tierName || 'STARTER';
+              const tierName = mapTierName(stripeTierName);
             
             // Create or update subscription record
             await supabase
@@ -242,7 +259,7 @@ export async function POST(request: NextRequest) {
                 stripe_subscription_id: subscription.id,
                 stripe_price_id: priceId,
                 status: subscription.status as any,
-                tier: tierName.toLowerCase() as any,
+                tier: tierName as any,
                 current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
                 current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
                 cancel_at_period_end: subscription.cancel_at_period_end,
@@ -281,7 +298,8 @@ export async function POST(request: NextRequest) {
 
         if (userId) {
           const priceId = subscription.items.data[0].price.id;
-          const tierName = subscription.metadata.tierName || 'starter';
+          const stripeTierName = subscription.metadata.tierName || 'STARTER';
+              const tierName = mapTierName(stripeTierName);
           
           // Update subscription details
           await supabase
@@ -289,7 +307,7 @@ export async function POST(request: NextRequest) {
             .update({
               stripe_price_id: priceId,
               status: subscription.status as any,
-              tier: tierName.toLowerCase() as any,
+              tier: tierName as any,
               current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
               current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end,
