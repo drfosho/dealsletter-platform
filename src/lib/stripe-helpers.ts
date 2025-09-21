@@ -3,6 +3,33 @@ import Stripe from 'stripe';
 
 // Product configurations
 const PRODUCTS = {
+  starter: {
+    name: 'Dealsletter Starter',
+    description: 'Perfect for beginners analyzing their first deals',
+    metadata: {
+      tier: 'starter',
+      analyses_limit: '10',
+      popular: 'false'
+    },
+    prices: {
+      monthly: {
+        unit_amount: 900, // $9.00
+        currency: 'usd',
+        recurring: {
+          interval: 'month' as const,
+          trial_period_days: 7
+        }
+      },
+      yearly: {
+        unit_amount: 9000, // $90.00 (10 months for price of 12)
+        currency: 'usd',
+        recurring: {
+          interval: 'year' as const,
+          trial_period_days: 7
+        }
+      }
+    }
+  },
   pro: {
     name: 'Dealsletter Pro',
     description: 'Full access to analysis tools and unlimited property evaluations',
@@ -22,6 +49,33 @@ const PRODUCTS = {
       },
       yearly: {
         unit_amount: 29000, // $290.00 (10 months for price of 12)
+        currency: 'usd',
+        recurring: {
+          interval: 'year' as const,
+          trial_period_days: 7
+        }
+      }
+    }
+  },
+  premium: {
+    name: 'Dealsletter Premium',
+    description: 'Enterprise features with priority support and API access',
+    metadata: {
+      tier: 'premium',
+      analyses_limit: 'unlimited',
+      popular: 'false'
+    },
+    prices: {
+      monthly: {
+        unit_amount: 4900, // $49.00
+        currency: 'usd',
+        recurring: {
+          interval: 'month' as const,
+          trial_period_days: 7
+        }
+      },
+      yearly: {
+        unit_amount: 49000, // $490.00 (10 months for price of 12)
         currency: 'usd',
         recurring: {
           interval: 'year' as const,

@@ -28,7 +28,7 @@ export const stripe = new Proxy({} as Stripe, {
       
       try {
         stripeInstance = new Stripe(key, {
-          apiVersion: '2025-07-30.basil',
+          apiVersion: '2024-11-20.acacia',
         })
         console.log('[Stripe Init] ✅ Stripe client initialized successfully')
       } catch (error: any) {

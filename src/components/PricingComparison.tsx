@@ -6,8 +6,11 @@ import { Check, X, Zap } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { loadStripe } from '@stripe/stripe-js';
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// Initialize Stripe with proper error handling
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripePublishableKey
+  ? loadStripe(stripePublishableKey)
+  : null;
 
 type PlanTier = 'free' | 'starter' | 'professional' | 'premium';
 type BillingPeriod = 'monthly' | 'yearly';
@@ -35,45 +38,33 @@ export default function PricingComparison() {
 
     try {
       console.log('[PricingComparison] Starting checkout for:', tier, billingPeriod);
-      
-      // Get the correct price ID based on tier
-      // Note: In Next.js, env vars must be accessed directly, not dynamically
-      let priceId: string | undefined;
+
+      // Map tier names to backend format
       let envTier: string;
-      
+
       switch(tier) {
         case 'starter':
-          priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER;
           envTier = 'STARTER';
           break;
         case 'professional':
-          priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO;  // Map Professional to PRO env var
-          envTier = 'PRO';
+          envTier = 'PRO';  // Map Professional to PRO for backend
           break;
         case 'premium':
-          priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM;
           envTier = 'PREMIUM';
           break;
         default:
-          // This should never happen but TypeScript needs it
-          priceId = undefined;
           envTier = 'FREE';
       }
 
-      console.log('[PricingComparison] Price ID for', tier, ':', priceId);
+      console.log('[PricingComparison] Sending tier to backend:', envTier, 'billing:', billingPeriod);
 
-      if (!priceId) {
-        throw new Error(`Price ID not found for ${tier} plan`);
-      }
-
-      // Create checkout session
+      // Create checkout session - let backend handle price ID resolution
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId,
           tierName: envTier,
           email: user?.email,
           billingPeriod
@@ -90,6 +81,10 @@ export default function PricingComparison() {
       console.log('[PricingComparison] Session created:', sessionId);
 
       // Redirect to Stripe Checkout
+      if (!stripePromise) {
+        throw new Error('Stripe is not configured. Please check your environment variables.');
+      }
+
       const stripe = await stripePromise;
       if (!stripe) {
         throw new Error('Stripe failed to load');
