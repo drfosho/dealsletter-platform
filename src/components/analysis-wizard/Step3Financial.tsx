@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
 import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
 
@@ -62,10 +62,10 @@ export default function Step3Financial({
   });
   
   // Use the financial data passed from previous steps
-  const initialFinancial = {
+  const initialFinancial = useMemo(() => ({
     ...data.financial
-  };
-  
+  }), [data.financial]);
+
   const [financial, setFinancial] = useState(initialFinancial);
   const [isCalculatingARV, setIsCalculatingARV] = useState(false);
   

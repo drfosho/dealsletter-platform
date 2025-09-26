@@ -141,7 +141,7 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
       units,
       rentPerUnit
     };
-  }, [analysis, isFlipStrategy, purchasePrice, downPayment, monthlyRent]);
+  }, [analysis, isFlipStrategy, purchasePrice, downPayment, monthlyRent, units, rentPerUnit]);
 
   function calculateFirstYearPrincipal(
     loanAmount: number, 

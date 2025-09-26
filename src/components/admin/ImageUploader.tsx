@@ -307,6 +307,7 @@ export default function ImageUploader({
           {images.map((image, index) => (
             <div key={index} className="relative group">
               <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={image}
                   alt={`Property image ${index + 1}`}

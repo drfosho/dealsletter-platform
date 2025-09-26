@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Navigation from '@/components/Navigation';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import LoadingSpinner from '@/components/property-search/LoadingSpinner';
@@ -209,16 +210,20 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                     
                     if (imageUrl) {
                       return (
-                        <img 
-                          src={imageUrl} 
-                          alt={analysis.address}
-                          className="w-24 h-24 object-cover rounded-lg shadow-md"
-                          onError={(e) => {
-                            const img = e.target as HTMLImageElement;
-                            // Use the no image placeholder
-                            img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"%3E%3Crect width="200" height="200" fill="%23f3f4f6"/%3E%3Cg transform="translate(100,100)"%3E%3Crect x="-40" y="-40" width="80" height="80" fill="none" stroke="%239ca3af" stroke-width="2" rx="4"/%3E%3Cpath d="M-30,-20 L-10,0 L0,-10 L10,0 L30,-20" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="-10" cy="-15" r="4" fill="none" stroke="%239ca3af" stroke-width="2"/%3E%3Ctext y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="%236b7280"%3ENo Image%3C/text%3E%3C/g%3E%3C/svg%3E';
-                          }}
-                        />
+                        <div className="relative w-24 h-24">
+                          <Image
+                            src={imageUrl}
+                            alt={analysis.address}
+                            fill
+                            className="object-cover rounded-lg shadow-md"
+                            sizes="96px"
+                            onError={(e) => {
+                              const img = e.target as HTMLImageElement;
+                              // Use the no image placeholder
+                              img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"%3E%3Crect width="200" height="200" fill="%23f3f4f6"/%3E%3Cg transform="translate(100,100)"%3E%3Crect x="-40" y="-40" width="80" height="80" fill="none" stroke="%239ca3af" stroke-width="2" rx="4"/%3E%3Cpath d="M-30,-20 L-10,0 L0,-10 L10,0 L30,-20" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="-10" cy="-15" r="4" fill="none" stroke="%239ca3af" stroke-width="2"/%3E%3Ctext y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="%236b7280"%3ENo Image%3C/text%3E%3C/g%3E%3C/svg%3E';
+                            }}
+                          />
+                        </div>
                       );
                     }
                     

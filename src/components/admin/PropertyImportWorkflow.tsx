@@ -767,6 +767,7 @@ export default function PropertyImportWorkflow() {
                       <div className="grid grid-cols-4 gap-4">
                         {editedData.images.slice(0, 8).map((image, idx) => (
                           <div key={idx} className="relative aspect-square">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={image}
                               alt={`Property ${idx + 1}`}

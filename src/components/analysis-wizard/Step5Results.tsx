@@ -105,8 +105,9 @@ export default function Step5Results({ data }: Step5ResultsProps) {
             if (imageUrl && !imageUrl.includes('No Image Available')) {
               return (
                 <div className="flex-shrink-0">
-                  <img 
-                    src={imageUrl} 
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageUrl}
                     alt={data.address}
                     className="w-32 h-32 object-cover rounded-lg"
                     onError={(e) => {

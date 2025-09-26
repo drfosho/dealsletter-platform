@@ -330,8 +330,9 @@ export default function EnhancedPropertyScraper() {
                   <div className="grid grid-cols-4 gap-2">
                     {result.data.images.slice(0, 4).map((img, idx) => (
                       <div key={idx} className="aspect-video bg-gray-200 rounded overflow-hidden">
-                        <img 
-                          src={img} 
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img}
                           alt={`Property ${idx + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {

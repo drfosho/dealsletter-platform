@@ -44,7 +44,7 @@ const ViewerTracker = ({ dealId, className = '' }: ViewerTrackerProps) => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [dealId]);
+  }, [dealId, user]);
 
   return (
     <div className={`flex items-center gap-1 px-2 py-1 bg-black/60 backdrop-blur-sm text-white text-xs rounded-md ${className}`}>
