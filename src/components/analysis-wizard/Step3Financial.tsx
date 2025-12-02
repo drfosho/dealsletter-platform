@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
 import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
 
@@ -217,10 +217,11 @@ export default function Step3Financial({
   const [_errors, setErrors] = useState<Record<string, string>>({});
   const [currentRates, _setCurrentRates] = useState({ min: 6.5, avg: 7.0, max: 7.5 });
   const [loanType, setLoanType] = useState<'conventional' | 'hardMoney'>(
-    (data.strategy === 'flip' || data.strategy === 'brrrr') ? 
-      (data.strategyDetails?.initialFinancing === 'conventional' ? 'conventional' : 'hardMoney') : 
+    (data.strategy === 'flip' || data.strategy === 'brrrr') ?
+      (data.strategyDetails?.initialFinancing === 'conventional' ? 'conventional' : 'hardMoney') :
       'conventional'
   );
+  const previousLoanType = useRef(loanType);
 
   // Debug log on component mount
   useEffect(() => {
@@ -371,12 +372,20 @@ export default function Step3Financial({
     return () => clearTimeout(timer);
   }, [data.strategy, data.propertyData?.comparables, data.strategyDetails?.renovationLevel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle loan type changes
+  // Handle loan type changes - only apply defaults when user explicitly changes loan type
   useEffect(() => {
+    // Skip if loan type hasn't actually changed
+    if (loanType === previousLoanType.current) {
+      return;
+    }
+
+    // Track that this is a user-initiated change
+    previousLoanType.current = loanType;
+
     if (loanType === 'hardMoney' && (data.strategy === 'flip' || data.strategy === 'brrrr')) {
       // Auto-calculate closing costs if not set (3% for hard money)
       const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.03) : 0);
-      
+
       const newFinancial = {
         ...financial,
         interestRate: hardMoneyDefaults.interestRate,
@@ -391,7 +400,7 @@ export default function Step3Financial({
     } else if (loanType === 'conventional') {
       // Auto-calculate closing costs if not set (2-3% for conventional)
       const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.025) : 0);
-      
+
       const newFinancial = {
         ...financial,
         closingCosts: closingCosts,
@@ -1099,13 +1108,25 @@ export default function Step3Financial({
             </label>
             <div className="flex items-center gap-3">
               <input
-                type="number"
-                value={financial.interestRate}
-                onChange={(e) => handleFieldChange('interestRate', e.target.value)}
+                type="text"
+                inputMode="decimal"
+                value={financial.interestRate ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty string, numbers, and decimals
+                  if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+                    const numValue = value === '' ? 0 : parseFloat(value);
+                    if (!isNaN(numValue) && numValue <= 20) {
+                      handleFieldChange('interestRate', numValue);
+                    } else if (value === '' || value === '.') {
+                      // Allow typing just a decimal point
+                      const newFinancial = { ...financial, interestRate: value === '' ? 0 : financial.interestRate };
+                      setFinancial(newFinancial);
+                    }
+                  }
+                }}
                 className="flex-1 px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                min="0"
-                max="20"
-                step="0.125"
+                placeholder="7.0"
               />
               <span className="text-muted">%</span>
             </div>
