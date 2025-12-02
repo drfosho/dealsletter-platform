@@ -1295,50 +1295,152 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
 
 function extractSectionByHeader(text: string, headers: string[]): string {
   for (const header of headers) {
-    const regex = new RegExp(`(?:^|\\n)(?:\\d+\\.\\s*)?${header}[:\\s]+(.+?)(?=\\n\\d+\\.|\\n[A-Z][A-Z\\s]+:|$)`, 'is');
-    const match = text.match(regex);
-    if (match) {
-      return match[1].trim();
+    // Try multiple regex patterns to match various Claude output formats
+    const patterns = [
+      // Pattern 1: Numbered sections like "1. Executive Summary:" or "## 1. Executive Summary"
+      new RegExp(`(?:^|\\n)(?:#{1,3}\\s*)?(?:\\d+\\.\\s*)?${header}[:\\s]*\\n?([\\s\\S]+?)(?=\\n(?:#{1,3}\\s*)?\\d+\\.|\\n#{1,3}\\s|\\n[A-Z][A-Z\\s]{3,}:|$)`, 'i'),
+      // Pattern 2: Markdown headers like "## Executive Summary"
+      new RegExp(`(?:^|\\n)#{1,3}\\s*${header}\\s*\\n([\\s\\S]+?)(?=\\n#{1,3}\\s|\\n\\d+\\.|$)`, 'i'),
+      // Pattern 3: Bold headers like "**Executive Summary**" or "**Executive Summary:**"
+      new RegExp(`(?:^|\\n)\\*\\*${header}\\*\\*:?\\s*\\n?([\\s\\S]+?)(?=\\n\\*\\*|\\n#{1,3}\\s|\\n\\d+\\.|$)`, 'i'),
+      // Pattern 4: Simple colon-delimited headers
+      new RegExp(`(?:^|\\n)${header}:\\s*\\n?([^\\n]+(?:\\n(?![A-Z][A-Z\\s]{3,}:|\\d+\\.|#{1,3}\\s|\\*\\*)[^\\n]+)*)`, 'i')
+    ];
+
+    for (const regex of patterns) {
+      const match = text.match(regex);
+      if (match && match[1]) {
+        // Clean up the extracted text
+        let result = match[1].trim();
+        // Remove leading/trailing markdown formatting
+        result = result.replace(/^\s*[-*]\s*/, '');
+        result = result.replace(/\n\s*\n\s*\n/g, '\n\n'); // Normalize multiple newlines
+        // Limit to first meaningful paragraph for summary
+        if (headers.includes('executive summary') || headers.includes('summary')) {
+          const paragraphs = result.split(/\n\n+/);
+          if (paragraphs[0] && paragraphs[0].length > 50) {
+            return paragraphs[0].trim();
+          }
+        }
+        return result;
+      }
     }
   }
   return '';
 }
 
 function extractRecommendation(text: string): string {
-  const match = text.match(/recommendation[:\s]+(.*?)(?:\n\d\.|$)/is);
-  return match ? match[1].trim() : '';
+  // Try multiple patterns to find the recommendation
+  const patterns = [
+    /(?:investment\s+)?recommendation[:\s]*\n?([^\n]+(?:\n(?!#{1,3}|\d+\.|key\s+risks?|opportunities)[^\n]+)*)/i,
+    /\*\*(?:investment\s+)?recommendation\*\*[:\s]*\n?([^\n]+(?:\n(?!\*\*)[^\n]+)*)/i,
+    /#{1,3}\s*(?:investment\s+)?recommendation[:\s]*\n([^\n]+(?:\n(?!#{1,3})[^\n]+)*)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      let result = match[1].trim();
+      // Clean up markdown formatting
+      result = result.replace(/\*\*/g, '');
+      result = result.replace(/^[-•*]\s*/, '');
+      // Get first meaningful sentence/paragraph
+      const firstParagraph = result.split(/\n\n+/)[0];
+      if (firstParagraph && firstParagraph.length > 20) {
+        return firstParagraph.trim();
+      }
+      return result;
+    }
+  }
+
+  // Fallback: look for buy/hold/pass keywords
+  const buyMatch = text.match(/\b(buy|proceed|invest|recommended|strong\s+buy)\b[^.]*\./i);
+  const passMatch = text.match(/\b(pass|avoid|not\s+recommended|skip)\b[^.]*\./i);
+
+  if (buyMatch) return buyMatch[0].trim();
+  if (passMatch) return passMatch[0].trim();
+
+  return '';
 }
 
 function extractRisks(text: string): string[] {
   const risks: string[] = [];
-  const riskSection = text.match(/risk.*?:(.*?)(?:\n\d\.|$)/is);
-  
+
+  // Try multiple patterns to find the risks section
+  const patterns = [
+    /(?:key\s+)?risks?(?:\s+assessment)?[:\s]*\n([\s\S]+?)(?=\n(?:#{1,3}|\\d+\.|opportunities|action|market|$))/i,
+    /\*\*(?:key\s+)?risks?\*\*[:\s]*\n([\s\S]+?)(?=\n\*\*|$)/i,
+    /#{1,3}\s*(?:key\s+)?risks?[:\s]*\n([\s\S]+?)(?=\n#{1,3}|$)/i
+  ];
+
+  let riskSection = null;
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      riskSection = match[1];
+      break;
+    }
+  }
+
   if (riskSection) {
-    const lines = riskSection[1].split('\n');
+    const lines = riskSection.split('\n');
     for (const line of lines) {
-      if (line.match(/^[-•*]\s*/) && line.length > 10) {
-        risks.push(line.replace(/^[-•*]\s*/, '').trim());
+      const trimmedLine = line.trim();
+      // Match bullet points, numbered items, or lines starting with dash/asterisk
+      if (trimmedLine.match(/^[-•*]\s*/) || trimmedLine.match(/^\d+\.\s*/)) {
+        const cleanedLine = trimmedLine
+          .replace(/^[-•*]\s*/, '')
+          .replace(/^\d+\.\s*/, '')
+          .replace(/\*\*/g, '') // Remove bold markdown
+          .trim();
+        if (cleanedLine.length > 10) {
+          risks.push(cleanedLine);
+        }
       }
     }
   }
-  
-  return risks;
+
+  return risks.slice(0, 5); // Limit to 5 risks
 }
 
 function extractOpportunities(text: string): string[] {
   const opportunities: string[] = [];
-  const oppSection = text.match(/opportunit.*?:(.*?)(?:\n\d\.|$)/is);
-  
+
+  // Try multiple patterns to find the opportunities section
+  const patterns = [
+    /(?:key\s+)?opportunities?[:\s]*\n([\s\S]+?)(?=\n(?:#{1,3}|\\d+\.|risks?|action|market|$))/i,
+    /\*\*(?:key\s+)?opportunities?\*\*[:\s]*\n([\s\S]+?)(?=\n\*\*|$)/i,
+    /#{1,3}\s*(?:key\s+)?opportunities?[:\s]*\n([\s\S]+?)(?=\n#{1,3}|$)/i
+  ];
+
+  let oppSection = null;
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      oppSection = match[1];
+      break;
+    }
+  }
+
   if (oppSection) {
-    const lines = oppSection[1].split('\n');
+    const lines = oppSection.split('\n');
     for (const line of lines) {
-      if (line.match(/^[-•*]\s*/) && line.length > 10) {
-        opportunities.push(line.replace(/^[-•*]\s*/, '').trim());
+      const trimmedLine = line.trim();
+      // Match bullet points, numbered items, or lines starting with dash/asterisk
+      if (trimmedLine.match(/^[-•*]\s*/) || trimmedLine.match(/^\d+\.\s*/)) {
+        const cleanedLine = trimmedLine
+          .replace(/^[-•*]\s*/, '')
+          .replace(/^\d+\.\s*/, '')
+          .replace(/\*\*/g, '') // Remove bold markdown
+          .trim();
+        if (cleanedLine.length > 10) {
+          opportunities.push(cleanedLine);
+        }
       }
     }
   }
-  
-  return opportunities;
+
+  return opportunities.slice(0, 5); // Limit to 5 opportunities
 }
 
 interface FinancialData {
