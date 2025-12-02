@@ -22,12 +22,12 @@ export default function VerifySuccess() {
   useEffect(() => {
     // Redirect when countdown reaches 0
     if (countdown <= 0) {
-      router.push('/dashboard')
+      router.push('/analysis')
     }
   }, [countdown, router])
 
   const handleGoNow = () => {
-    router.push('/dashboard')
+    router.push('/analysis')
   }
 
   if (loading) {
@@ -65,7 +65,7 @@ export default function VerifySuccess() {
               onClick={handleGoNow}
               className="w-full px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors"
             >
-              Go to Dashboard Now
+              Start Analyzing Properties
             </button>
 
             <p className="text-sm text-muted">
@@ -76,9 +76,9 @@ export default function VerifySuccess() {
           <div className="mt-8 pt-6 border-t border-border/60">
             <h3 className="font-semibold text-primary mb-3">What&apos;s Next?</h3>
             <div className="text-sm text-muted space-y-2">
-              <p>🏠 Start analyzing real estate deals</p>
-              <p>📊 Access your personalized dashboard</p>
-              <p>🔍 Search for investment opportunities</p>
+              <p>🏠 Analyze any property in seconds</p>
+              <p>📊 Get AI-powered investment insights</p>
+              <p>🔍 Compare investment opportunities</p>
             </div>
           </div>
 

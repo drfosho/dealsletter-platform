@@ -42,8 +42,8 @@ function AuthCallbackContent() {
               // Email verification flow - go to success page
               router.push('/auth/verify-success')
             } else {
-              // Regular login - go directly to dashboard
-              router.push('/dashboard')
+              // Regular login - go directly to analysis
+              router.push('/analysis')
             }
             return
           }
@@ -69,8 +69,8 @@ function AuthCallbackContent() {
             // Email verification flow - go to success page
             router.push('/auth/verify-success')
           } else {
-            // Regular login - go directly to dashboard
-            router.push('/dashboard')
+            // Regular login - go directly to analysis
+            router.push('/analysis')
           }
         } else {
           // No session, redirect to login

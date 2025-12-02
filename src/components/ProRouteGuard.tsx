@@ -82,7 +82,7 @@ export default function ProRouteGuard({
           isOpen={showUpgradeModal}
           onClose={() => {
             setShowUpgradeModal(false);
-            router.push('/dashboard');
+            router.push('/analysis');
           }}
           feature={feature}
         />

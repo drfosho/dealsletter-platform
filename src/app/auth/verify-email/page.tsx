@@ -27,7 +27,7 @@ function VerifyEmailContent() {
 
     // Check if user is already verified
     if (user?.email_confirmed_at) {
-      router.push('/dashboard')
+      router.push('/analysis')
     }
   }, [user, searchParams, router])
 
@@ -38,7 +38,7 @@ function VerifyEmailContent() {
 
       const { data } = await supabase.auth.getUser()
       if (data?.user?.email_confirmed_at) {
-        router.push('/dashboard')
+        router.push('/analysis')
       }
     }
 
@@ -78,7 +78,7 @@ function VerifyEmailContent() {
     try {
       const { data } = await supabase.auth.getUser()
       if (data?.user?.email_confirmed_at) {
-        router.push('/dashboard')
+        router.push('/analysis')
       } else {
         // Show a brief message that verification is still pending
         setTimeout(() => setCheckingVerification(false), 1000)

@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create checkout session configuration
-    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&tier=${tierName}`
+    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/analysis?success=true&tier=${tierName}`
     const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`
     
     console.log('[Checkout] URLs:')

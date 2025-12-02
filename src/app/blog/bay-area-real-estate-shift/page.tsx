@@ -432,11 +432,11 @@ export default function BayAreaRealEstateShiftArticle() {
                   >
                     Start Free Analysis
                   </Link>
-                  <Link 
-                    href="/dashboard" 
+                  <Link
+                    href="/analysis"
                     className="px-8 py-4 bg-accent text-secondary rounded-lg hover:bg-accent/90 transition-all font-medium text-center text-lg"
                   >
-                    Browse Properties
+                    Start Analyzing Properties
                   </Link>
                 </div>
 
