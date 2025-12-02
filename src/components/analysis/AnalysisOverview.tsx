@@ -1,6 +1,12 @@
 'use client';
 
 import type { Analysis } from '@/types';
+import {
+  formatSummary,
+  formatRecommendation,
+  getRecommendationType,
+  getRecommendationColors
+} from '@/utils/format-text';
 
 interface AnalysisOverviewProps {
   analysis: Analysis;
@@ -26,38 +32,41 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
 
   const getRiskLevel = () => {
     const roi = analysis.ai_analysis?.financial_metrics?.roi || 0;
-    
+
     if (analysis.strategy === 'flip') {
       // Fix & Flip risk assessment based on ROI and timeline
-      const timeline = (analysis as any).strategy_details?.timeline || 
+      const timeline = (analysis as any).strategy_details?.timeline ||
                       (analysis as any).strategyDetails?.timeline || 6;
-      if (roi < 15 || timeline > 12) return { level: 'High', color: 'text-red-600' };
-      if (roi < 25 || timeline > 9) return { level: 'Medium', color: 'text-yellow-600' };
-      return { level: 'Low', color: 'text-green-600' };
+      if (roi < 15 || timeline > 12) return { level: 'High', color: 'text-red-600', bg: 'bg-red-100' };
+      if (roi < 25 || timeline > 9) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+      return { level: 'Low', color: 'text-green-600', bg: 'bg-green-100' };
     } else {
       // Rental property risk assessment based on ROI and cash flow
       const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
-      if (roi < 10 || cashFlow < 0) return { level: 'High', color: 'text-red-600' };
-      if (roi < 15 || cashFlow < 200) return { level: 'Medium', color: 'text-yellow-600' };
-      return { level: 'Low', color: 'text-green-600' };
+      if (roi < 10 || cashFlow < 0) return { level: 'High', color: 'text-red-600', bg: 'bg-red-100' };
+      if (roi < 15 || cashFlow < 200) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+      return { level: 'Low', color: 'text-green-600', bg: 'bg-green-100' };
     }
   };
 
   const risk = getRiskLevel();
+  const recommendation = (analysis.ai_analysis as any)?.recommendation;
+  const recommendationType = getRecommendationType(recommendation);
+  const recommendationColors = getRecommendationColors(recommendationType);
 
   return (
     <div className="bg-card rounded-xl border border-border p-6">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-lg font-semibold text-primary mb-2">Investment Overview</h3>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-4 text-sm flex-wrap">
             <span className="flex items-center gap-1">
               <span className="text-xl">{getStrategyIcon(analysis.strategy)}</span>
               <span className="font-medium">{strategyLabels[analysis.strategy] || analysis.strategy}</span>
             </span>
-            <span className="text-muted">•</span>
-            <span className="flex items-center gap-1">
-              Risk Level: <span className={`font-medium ${risk.color}`}>{risk.level}</span>
+            <span className="text-muted hidden sm:inline">•</span>
+            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${risk.bg} ${risk.color}`}>
+              {risk.level} Risk
             </span>
           </div>
         </div>
@@ -69,7 +78,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       {analysis.ai_analysis?.summary && (
         <div className="mb-6">
           <p className="text-primary leading-relaxed">
-            {analysis.ai_analysis.summary}
+            {formatSummary(analysis.ai_analysis.summary)}
           </p>
         </div>
       )}
@@ -100,8 +109,11 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
             </svg>
             <h4 className="font-semibold text-primary">Investment Score</h4>
           </div>
-          <p className="text-sm text-muted">
-            {getInvestmentScore(analysis)}/100
+          <p className="text-sm font-medium">
+            <span className={`text-lg ${getScoreColor(getInvestmentScore(analysis))}`}>
+              {getInvestmentScore(analysis)}
+            </span>
+            <span className="text-muted">/100</span>
           </p>
         </div>
 
@@ -118,64 +130,26 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
         </div>
       </div>
 
-      {analysis.ai_analysis && (analysis.ai_analysis as any).recommendation && (
-        <div className={`mt-6 p-4 rounded-lg border ${
-          (analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
-          (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
-          (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
-          (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended')
-            ? 'bg-red-50 border-red-200' 
-            : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
-              (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
-              (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful')
-            ? 'bg-yellow-50 border-yellow-200'
-            : 'bg-green-50 border-green-200'
-        }`}>
+      {recommendation && (
+        <div className={`mt-6 p-4 rounded-lg border ${recommendationColors.bg} ${recommendationColors.border}`}>
           <div className="flex items-start gap-3">
-            {(analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
-             (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
-             (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
-             (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended') ? (
-              <svg className="w-5 h-5 text-red-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            {recommendationType === 'negative' ? (
+              <svg className={`w-6 h-6 ${recommendationColors.icon} mt-0.5 flex-shrink-0`} fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
-            ) : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful') ? (
-              <svg className="w-5 h-5 text-yellow-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            ) : recommendationType === 'neutral' ? (
+              <svg className={`w-6 h-6 ${recommendationColors.icon} mt-0.5 flex-shrink-0`} fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             ) : (
-              <svg className="w-5 h-5 text-green-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <svg className={`w-6 h-6 ${recommendationColors.icon} mt-0.5 flex-shrink-0`} fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
             )}
-            <div>
-              <h4 className={`font-semibold mb-1 ${
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended')
-                  ? 'text-red-900' 
-                  : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
-                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
-                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful')
-                  ? 'text-yellow-900'
-                  : 'text-green-900'
-              }`}>AI Recommendation</h4>
-              <p className={`text-sm ${
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('pass') || 
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('avoid') || 
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes("don't") ||
-                (analysis.ai_analysis as any).recommendation.toLowerCase().includes('not recommended')
-                  ? 'text-red-800' 
-                  : (analysis.ai_analysis as any).recommendation.toLowerCase().includes('maybe') || 
-                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('cautious') ||
-                    (analysis.ai_analysis as any).recommendation.toLowerCase().includes('careful')
-                  ? 'text-yellow-800'
-                  : 'text-green-800'
-              }`}>
-                {(analysis.ai_analysis as any).recommendation}
+            <div className="flex-1">
+              <h4 className={`font-semibold mb-1 ${recommendationColors.title}`}>AI Recommendation</h4>
+              <p className={`text-sm leading-relaxed ${recommendationColors.text}`}>
+                {formatRecommendation(recommendation)}
               </p>
             </div>
           </div>
@@ -184,18 +158,24 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
     </div>
   );
 
+  function getScoreColor(score: number): string {
+    if (score >= 75) return 'text-green-600';
+    if (score >= 50) return 'text-yellow-600';
+    return 'text-red-600';
+  }
+
   function getInvestmentScore(analysis: AnalysisOverviewProps['analysis']): number {
     const roi = analysis.ai_analysis?.financial_metrics?.roi || 0;
-    
+
     let score = 50; // Base score
 
     if (analysis.strategy === 'flip') {
       // Fix & Flip scoring based on ROI and profit margin
-      const netProfit = analysis.ai_analysis?.financial_metrics?.net_profit || 
+      const netProfit = analysis.ai_analysis?.financial_metrics?.net_profit ||
                        analysis.ai_analysis?.financial_metrics?.total_profit || 0;
-      const timeline = (analysis as any).strategy_details?.timeline || 
+      const timeline = (analysis as any).strategy_details?.timeline ||
                       (analysis as any).strategyDetails?.timeline || 6;
-      
+
       // ROI contribution (0-35 points for flips)
       if (roi > 30) score += 35;
       else if (roi > 25) score += 30;
@@ -203,14 +183,14 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       else if (roi > 15) score += 20;
       else if (roi > 10) score += 15;
       else if (roi > 5) score += 10;
-      
+
       // Profit contribution (0-10 points)
       if (netProfit > 100000) score += 10;
       else if (netProfit > 75000) score += 8;
       else if (netProfit > 50000) score += 6;
       else if (netProfit > 25000) score += 4;
       else if (netProfit > 10000) score += 2;
-      
+
       // Timeline bonus (0-5 points)
       if (timeline <= 6) score += 5;
       else if (timeline <= 9) score += 3;
@@ -219,7 +199,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       // Rental property scoring
       const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
       const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
-      
+
       // ROI contribution (0-25 points)
       if (roi > 20) score += 25;
       else if (roi > 15) score += 20;
@@ -249,7 +229,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
     switch (strategy) {
       case 'flip': {
         // Use timeline from strategy details if available
-        const timeline = (analysis as any).strategy_details?.timeline || 
+        const timeline = (analysis as any).strategy_details?.timeline ||
                         (analysis as any).strategyDetails?.timeline;
         return timeline ? `${timeline} months` : '6-12 months';
       }
