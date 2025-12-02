@@ -856,7 +856,7 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
       purchasePrice: effectivePurchasePrice,
       downPaymentPercent: (downPayment / effectivePurchasePrice) * 100,
       renovationCosts: request.rehabCosts || 0,
-      monthlyRent: request.monthlyRent || (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0,
+      monthlyRent: request.monthlyRent || (rentalEstimate as any)?.rentEstimate || 0,
       arv: request.arv || (comparables as any)?.value || undefined,
       refinanceLTV: parseInt((request as any).strategyDetails?.exitStrategy || '75') / 100,
       initialLoanType: request.loanTerms?.loanType as 'hardMoney' | 'conventional' | undefined,
@@ -1132,7 +1132,7 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
     
   } else {
     // Rental property calculations - use user-specified rent if available
-    const monthlyRent = request.monthlyRent || (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
+    const monthlyRent = request.monthlyRent || (rentalEstimate as any)?.rentEstimate || 0;
     const units = request.units || 1;
     const rentPerUnit = request.rentPerUnit || (units > 1 ? monthlyRent / units : monthlyRent);
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;

@@ -491,9 +491,22 @@ class RentCastService {
         price: (data as any)?.price,
         fullData: JSON.stringify(data, null, 2)
       });
-      
-      this.updateCache(cacheKey, { rentEstimate: data });
-      return data;
+
+      // Normalize the response to ensure consistent field names
+      // RentCast API returns 'rent' but our types expect 'rentEstimate'
+      const normalizedData: RentCastRentalEstimate = {
+        rentEstimate: (data as any)?.rent || (data as any)?.rentEstimate || (data as any)?.price || 0,
+        rentRangeLow: (data as any)?.rentRangeLow || 0,
+        rentRangeHigh: (data as any)?.rentRangeHigh || 0,
+        confidenceScore: (data as any)?.confidenceScore || 0,
+        lastUpdated: (data as any)?.lastUpdated || new Date().toISOString(),
+        comparables: (data as any)?.comparables
+      };
+
+      console.log('[RentCast] Normalized rental estimate:', normalizedData);
+
+      this.updateCache(cacheKey, { rentEstimate: normalizedData });
+      return normalizedData;
     } catch (error) {
       console.error('[RentCast] Error getting rental estimate:', error);
       logError('RentCast Get Rental Estimate', error);
