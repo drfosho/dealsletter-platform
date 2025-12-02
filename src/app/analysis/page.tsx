@@ -1,13 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import DashboardSidebar from '@/components/DashboardSidebar';
 import Link from 'next/link';
 
 export default function AnalysisPage() {
-  const _router = useRouter();
   const [recentAnalyses, setRecentAnalyses] = useState<Array<{
     id: string;
     address: string;
@@ -54,11 +51,9 @@ export default function AnalysisPage() {
 
 
   return (
-    <>
-      <Navigation variant="dashboard" />
-      <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 p-4 lg:p-6">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-6 py-8">
           <div className="max-w-7xl mx-auto">
             {/* Header with usage stats */}
             <div className="mb-8">
@@ -226,8 +221,7 @@ export default function AnalysisPage() {
               </div>
             )}
           </div>
-        </main>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import DashboardSidebar from '@/components/DashboardSidebar';
 import ProRouteGuard from '@/components/ProRouteGuard';
 import WizardContainer from '@/components/analysis-wizard/WizardContainer';
 import Step1PropertySearch from '@/components/analysis-wizard/Step1PropertySearch';
@@ -184,28 +183,25 @@ export default function NewAnalysisPage() {
 
   return (
     <ProRouteGuard feature="Property Analysis Calculator">
-      <Navigation variant="dashboard" />
-      <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold text-primary">Property Analysis</h1>
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 text-sm text-muted hover:text-primary border border-border rounded-lg hover:border-primary/50 transition-colors"
-              >
-                {currentStep === 1 ? 'Clear Data' : 'Start Over'}
-              </button>
-            </div>
-            <WizardContainer
-              currentStep={currentStep}
-              totalSteps={5}
-              onStepClick={(step) => step < currentStep && setCurrentStep(step)}
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-5xl mx-auto px-6 py-8">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-primary">Property Analysis</h1>
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 text-sm text-muted hover:text-primary border border-border rounded-lg hover:border-primary/50 transition-colors"
             >
-              {renderStep()}
-            </WizardContainer>
+              {currentStep === 1 ? 'Clear Data' : 'Start Over'}
+            </button>
           </div>
+          <WizardContainer
+            currentStep={currentStep}
+            totalSteps={5}
+            onStepClick={(step) => step < currentStep && setCurrentStep(step)}
+          >
+            {renderStep()}
+          </WizardContainer>
         </main>
       </div>
     </ProRouteGuard>

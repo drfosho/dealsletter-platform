@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Navigation from '@/components/Navigation';
-import DashboardSidebar from '@/components/DashboardSidebar';
 import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import FinancialMetrics from '@/components/analysis/FinancialMetrics';
 import EditableFinancialMetrics from '@/components/analysis/EditableFinancialMetrics';
@@ -119,52 +118,43 @@ export default function AnalysisResultsPage({ params }: PageParams) {
 
   if (loading) {
     return (
-      <>
-        <Navigation variant="dashboard" />
-        <div className="flex">
-          <DashboardSidebar />
-          <main className="flex-1 p-4 lg:p-6">
-            <LoadingSpinner text="Loading analysis..." />
-          </main>
-        </div>
-      </>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <LoadingSpinner text="Loading analysis..." />
+        </main>
+      </div>
     );
   }
 
   if (error || !analysis) {
     return (
-      <>
-        <Navigation variant="dashboard" />
-        <div className="flex">
-          <DashboardSidebar />
-          <main className="flex-1 p-4 lg:p-6">
-            <div className="max-w-4xl mx-auto text-center py-12">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-semibold text-primary mb-2">{error || 'Analysis not found'}</h2>
-              <button
-                onClick={() => router.push('/analysis')}
-                className="mt-4 px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90"
-              >
-                Back to Analysis Dashboard
-              </button>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <div className="max-w-4xl mx-auto text-center py-12">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </div>
-          </main>
-        </div>
-      </>
+            <h2 className="text-xl font-semibold text-primary mb-2">{error || 'Analysis not found'}</h2>
+            <button
+              onClick={() => router.push('/analysis')}
+              className="mt-4 px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90"
+            >
+              Back to Analysis
+            </button>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <>
-      <Navigation variant="dashboard" />
-      <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-6 py-8">
             {/* Header */}
             <div className="mb-6">
               <button
@@ -517,9 +507,6 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 </div>
               )}
             </div>
-          </div>
-        </main>
-      </div>
 
       {/* Share Modal */}
       {showShareModal && (
@@ -536,6 +523,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
           onClose={() => setShowComparisonModal(false)}
         />
       )}
-    </>
+      </main>
+    </div>
   );
 }

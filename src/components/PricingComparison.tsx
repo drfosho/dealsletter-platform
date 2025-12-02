@@ -12,7 +12,7 @@ const stripePromise = stripePublishableKey
   ? loadStripe(stripePublishableKey)
   : null;
 
-type PlanTier = 'free' | 'starter' | 'professional' | 'premium';
+type PlanTier = 'free' | 'pro';
 type BillingPeriod = 'monthly' | 'yearly';
 
 export default function PricingComparison() {
@@ -28,7 +28,7 @@ export default function PricingComparison() {
       if (!user) {
         router.push('/auth/signup');
       } else {
-        router.push('/dashboard');
+        router.push('/analysis');
       }
       return;
     }
@@ -39,25 +39,6 @@ export default function PricingComparison() {
     try {
       console.log('[PricingComparison] Starting checkout for:', tier, billingPeriod);
 
-      // Map tier names to backend format
-      let envTier: string;
-
-      switch(tier) {
-        case 'starter':
-          envTier = 'STARTER';
-          break;
-        case 'professional':
-          envTier = 'PRO';  // Map Professional to PRO for backend
-          break;
-        case 'premium':
-          envTier = 'PREMIUM';
-          break;
-        default:
-          envTier = 'FREE';
-      }
-
-      console.log('[PricingComparison] Sending tier to backend:', envTier, 'billing:', billingPeriod);
-
       // Create checkout session - let backend handle price ID resolution
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
@@ -65,7 +46,7 @@ export default function PricingComparison() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tierName: envTier,
+          tierName: 'PRO',
           email: user?.email,
           billingPeriod
         }),
@@ -97,9 +78,10 @@ export default function PricingComparison() {
       if (stripeError) {
         throw stripeError;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
       console.error('[PricingComparison] Checkout error:', err);
-      setError(err.message || 'Something went wrong. Please try again.');
+      setError(errorMessage);
       setIsLoading(null);
     }
   };
@@ -120,7 +102,7 @@ export default function PricingComparison() {
     {
       tier: 'free' as PlanTier,
       name: 'Free',
-      description: 'Browse deals and explore the platform',
+      description: 'Get started with property analysis',
       price: 0,
       yearlyPrice: 0,
       icon: '🆓',
@@ -128,103 +110,51 @@ export default function PricingComparison() {
       borderColor: 'border-gray-500',
       bgGradient: 'from-gray-500/5 to-gray-500/10',
       features: [
-        'View all curated deals on dashboard',
-        'Deal comparison tool',
-        'Save up to 4 properties',
-        'Basic market insights',
+        '20 property analyses per month',
+        'Full financial metrics & projections',
+        'AI-powered investment insights',
+        'Analysis history & comparison',
+        'PDF export',
       ],
       notIncluded: [
-        'Property analysis calculator',
-        'Deal alerts & custom filters',
-        'PDF exports',
+        'Unlimited analyses',
         'Priority support',
       ],
-      buttonText: user ? 'Current Plan' : 'Get Started Free',
-      trialDays: 0,
+      buttonText: user ? 'Start Analyzing' : 'Get Started Free',
     },
     {
-      tier: 'starter' as PlanTier,
-      name: 'Starter',
-      icon: '⭐',
-      description: 'Perfect for individual investors',
-      price: 29,
-      yearlyPrice: Math.floor(29 * 12 * 0.8), // 20% discount
-      color: 'bg-blue-500',
-      borderColor: 'border-blue-500',
-      bgGradient: 'from-blue-500/5 to-blue-500/10',
-      features: [
-        'Everything in Free (unlimited saves)',
-        '12 personal property analyses/month',
-        'Deal alerts & custom filters',
-        'PDF exports',
-        'Priority email support',
-      ],
-      notIncluded: [
-        'Advanced filtering options',
-        'Deal history & analytics',
-        'Early access to deals',
-      ],
-      buttonText: 'Start 14-Day Free Trial',
-      trialDays: 14,
-    },
-    {
-      tier: 'professional' as PlanTier,
-      name: 'Professional',
+      tier: 'pro' as PlanTier,
+      name: 'Pro',
       icon: '🚀',
-      description: 'For active real estate investors',
-      price: 69,
-      yearlyPrice: Math.floor(69 * 12 * 0.8), // 20% discount
+      description: 'Unlimited analyses for serious investors',
+      price: 20,
+      yearlyPrice: Math.floor(20 * 12 * 0.8), // 20% discount = $192/year
       color: 'bg-accent',
       borderColor: 'border-accent',
       bgGradient: 'from-accent/5 to-accent/10',
       popular: true,
       features: [
-        'Everything in Starter',
-        '25 personal property analyses/month',
-        'Advanced filtering options',
-        'Deal history & analytics',
-        'Export to spreadsheet formats',
-      ],
-      notIncluded: [
-        'Unlimited analyses',
-        'Early access to best deals',
-      ],
-      buttonText: 'Start 14-Day Free Trial',
-      trialDays: 14,
-    },
-    {
-      tier: 'premium' as PlanTier,
-      name: 'Premium',
-      icon: '💎',
-      description: 'For power users and firms',
-      price: 159,
-      yearlyPrice: Math.floor(159 * 12 * 0.8), // 20% discount
-      color: 'bg-purple-500',
-      borderColor: 'border-purple-500',
-      bgGradient: 'from-purple-500/5 to-purple-500/10',
-      features: [
-        'Everything in Professional',
-        'Unlimited analyses (fair usage cap)',
-        'Early access to best deals (24hr head start)',
-        'Access to upcoming features',
-        'API access (coming soon)',
-        'Property lead notification tool (coming soon)',
+        'Unlimited property analyses',
+        'Full financial metrics & projections',
+        'AI-powered investment insights',
+        'Analysis history & comparison',
+        'PDF & spreadsheet export',
+        'Priority email support',
       ],
       notIncluded: [],
-      buttonText: 'Start 14-Day Free Trial',
-      trialDays: 14,
+      buttonText: 'Upgrade to Pro',
     },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Header */}
       <div className="text-center mb-12">
         <h2 className="text-4xl font-bold text-primary mb-4">
           Simple, Transparent Pricing
         </h2>
         <p className="text-xl text-muted max-w-2xl mx-auto mb-8">
-          Start free and upgrade as you grow. No hidden fees, cancel anytime.
+          Analyze any property in seconds. Start free with 20 analyses per month, or go unlimited with Pro.
         </p>
 
         {/* Billing Toggle */}
@@ -257,13 +187,13 @@ export default function PricingComparison() {
       )}
 
       {/* Pricing Cards */}
-      <div className="grid md:grid-cols-4 gap-6 mb-16">
+      <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
         {plans.map((plan) => (
           <div
             key={plan.tier}
             className={`relative bg-card border-2 ${
               plan.popular ? plan.borderColor : 'border-border/60'
-            } rounded-2xl p-6 ${
+            } rounded-2xl p-8 ${
               plan.popular ? `bg-gradient-to-br ${plan.bgGradient}` : ''
             }`}
           >
@@ -272,7 +202,7 @@ export default function PricingComparison() {
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                 <span className={`${plan.color} text-white px-4 py-1 rounded-full text-sm font-semibold flex items-center gap-1`}>
                   <Zap className="w-4 h-4" />
-                  MOST POPULAR
+                  RECOMMENDED
                 </span>
               </div>
             )}
@@ -280,41 +210,39 @@ export default function PricingComparison() {
             <div className="mb-6">
               {/* Plan Icon and Name */}
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl">{plan.icon}</span>
-                <h3 className="text-xl font-bold text-primary">{plan.name}</h3>
+                <span className="text-3xl">{plan.icon}</span>
+                <h3 className="text-2xl font-bold text-primary">{plan.name}</h3>
               </div>
 
               {/* Price */}
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-3xl font-bold">
+                <span className="text-4xl font-bold">
                   ${plan.tier === 'free' ? '0' : (
-                    billingPeriod === 'monthly' 
-                      ? plan.price 
-                      : Math.floor(plan.yearlyPrice)
+                    billingPeriod === 'monthly'
+                      ? plan.price
+                      : Math.floor(plan.yearlyPrice / 12)
                   )}
                 </span>
                 <span className="text-muted">
-                  /{billingPeriod === 'monthly' ? 'month' : 'year'}
+                  /month
                 </span>
               </div>
               {billingPeriod === 'yearly' && plan.tier !== 'free' && (
-                <p className="text-xs text-green-500 mb-3">
-                  Save ${Math.floor(plan.price * 12 - plan.yearlyPrice)}/year
+                <p className="text-sm text-green-500 mb-3">
+                  ${plan.yearlyPrice}/year (save ${plan.price * 12 - plan.yearlyPrice})
                 </p>
               )}
-              <p className="text-muted text-sm">{plan.description}</p>
+              <p className="text-muted">{plan.description}</p>
             </div>
 
             {/* CTA Button */}
             <button
               onClick={() => handleGetStarted(plan.tier)}
               disabled={isLoading === plan.tier}
-              className={`w-full py-2.5 px-4 font-semibold rounded-lg transition-colors mb-6 text-sm ${
-                plan.tier === 'free' 
-                  ? 'border border-gray-300 text-primary hover:bg-gray-50'
-                  : plan.popular
-                  ? `${plan.color} text-white hover:opacity-90`
-                  : `border-2 ${plan.borderColor} text-primary hover:${plan.bgGradient} hover:bg-gradient-to-br`
+              className={`w-full py-3 px-4 font-semibold rounded-lg transition-colors mb-6 ${
+                plan.tier === 'free'
+                  ? 'border-2 border-gray-300 text-primary hover:bg-gray-50'
+                  : `${plan.color} text-white hover:opacity-90`
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isLoading === plan.tier ? (
@@ -325,202 +253,108 @@ export default function PricingComparison() {
             </button>
 
             {/* Features */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {plan.features.map((feature, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                  <span className="text-primary text-xs">{feature}</span>
+                <div key={index} className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-primary">{feature}</span>
                 </div>
               ))}
               {plan.notIncluded.map((feature, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <X className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-muted line-through text-xs">{feature}</span>
+                <div key={index} className="flex items-start gap-3">
+                  <X className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <span className="text-muted line-through">{feature}</span>
                 </div>
               ))}
             </div>
-
-            {/* Trial Badge - Only for paid plans */}
-            {plan.trialDays > 0 && (
-              <div className="mt-4 p-2 bg-accent/10 border border-accent/20 rounded-lg">
-                <p className="text-xs text-center">
-                  <span className="font-semibold">14-Day Free Trial</span>
-                  <br />
-                  <span className="text-muted text-xs">Cancel anytime</span>
-                </p>
-              </div>
-            )}
           </div>
         ))}
       </div>
 
       {/* Feature Comparison Table */}
-      <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
+      <div className="bg-card border border-border/60 rounded-2xl overflow-hidden max-w-3xl mx-auto">
         <div className="bg-muted/5 px-8 py-6 border-b border-border/60">
-          <h3 className="text-xl font-bold text-primary">Detailed Feature Comparison</h3>
+          <h3 className="text-xl font-bold text-primary">Feature Comparison</h3>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border/60">
                 <th className="text-left px-6 py-4 text-sm font-semibold text-primary">Features</th>
-                <th className="text-center px-4 py-4 text-sm font-semibold text-primary">
+                <th className="text-center px-6 py-4 text-sm font-semibold text-primary">
                   🆓 Free
                 </th>
-                <th className="text-center px-4 py-4 text-sm font-semibold text-primary">
-                  ⭐ Starter
-                </th>
-                <th className="text-center px-4 py-4 text-sm font-semibold text-primary">
-                  🚀 Professional
-                </th>
-                <th className="text-center px-4 py-4 text-sm font-semibold text-primary">
-                  💎 Premium
+                <th className="text-center px-6 py-4 text-sm font-semibold text-primary">
+                  🚀 Pro
                 </th>
               </tr>
             </thead>
             <tbody>
-              {/* Core Features */}
-              <tr className="bg-muted/5">
-                <td colSpan={5} className="px-6 py-3 text-sm font-semibold text-accent">
-                  Core Features
-                </td>
-              </tr>
-              <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">View curated deals</td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-              </tr>
-              <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Deal comparison tool</td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-              </tr>
-              <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Saved properties</td>
-                <td className="text-center px-4 py-3 text-sm text-muted">Up to 4</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">Unlimited</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">Unlimited</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">Unlimited</td>
-              </tr>
-              <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Basic market insights</td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-              </tr>
-
               {/* Analysis Features */}
               <tr className="bg-muted/5">
-                <td colSpan={5} className="px-6 py-3 text-sm font-semibold text-accent">
-                  Analysis & Tools
+                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-accent">
+                  Property Analysis
                 </td>
               </tr>
               <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Property analyses per month</td>
-                <td className="text-center px-4 py-3 text-sm text-muted">-</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">12</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">25</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">Unlimited*</td>
+                <td className="px-6 py-3 text-sm text-primary">Monthly analyses</td>
+                <td className="text-center px-6 py-3 text-sm font-semibold">20</td>
+                <td className="text-center px-6 py-3 text-sm font-semibold">Unlimited*</td>
               </tr>
               <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Deal alerts & custom filters</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
+                <td className="px-6 py-3 text-sm text-primary">Financial metrics & projections</td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
               </tr>
               <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Advanced filtering options</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
+                <td className="px-6 py-3 text-sm text-primary">AI-powered investment insights</td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
               </tr>
               <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Deal history & analytics</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
+                <td className="px-6 py-3 text-sm text-primary">Analysis history & comparison</td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
               </tr>
 
-              {/* Export & Reports */}
+              {/* Export Features */}
               <tr className="bg-muted/5">
-                <td colSpan={5} className="px-6 py-3 text-sm font-semibold text-accent">
+                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-accent">
                   Export & Reports
                 </td>
               </tr>
               <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">PDF exports</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
+                <td className="px-6 py-3 text-sm text-primary">PDF export</td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
               </tr>
               <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Export to spreadsheet</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
+                <td className="px-6 py-3 text-sm text-primary">Spreadsheet export</td>
+                <td className="text-center px-6 py-3"><X className="w-5 h-5 text-gray-400 mx-auto" /></td>
+                <td className="text-center px-6 py-3"><Check className="w-5 h-5 text-green-500 mx-auto" /></td>
               </tr>
 
-              {/* Access & Support */}
+              {/* Support */}
               <tr className="bg-muted/5">
-                <td colSpan={5} className="px-6 py-3 text-sm font-semibold text-accent">
-                  Access & Support
+                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-accent">
+                  Support
                 </td>
               </tr>
               <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Early access to deals (24hr)</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-              </tr>
-              <tr className="border-b border-border/40">
                 <td className="px-6 py-3 text-sm text-primary">Support level</td>
-                <td className="text-center px-4 py-3 text-sm text-muted">Basic</td>
-                <td className="text-center px-4 py-3 text-sm text-muted">Priority Email</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">Priority Email</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">Priority Email</td>
-              </tr>
-              <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Access to upcoming features</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><Check className="w-4 h-4 text-green-500 mx-auto" /></td>
-              </tr>
-              <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">API access</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3 text-sm text-muted">Coming Soon</td>
-              </tr>
-              <tr className="border-b border-border/40">
-                <td className="px-6 py-3 text-sm text-primary">Property lead notification tool</td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3"><X className="w-4 h-4 text-gray-400 mx-auto" /></td>
-                <td className="text-center px-4 py-3 text-sm text-muted">Coming Soon</td>
+                <td className="text-center px-6 py-3 text-sm text-muted">Email</td>
+                <td className="text-center px-6 py-3 text-sm font-semibold">Priority Email</td>
               </tr>
             </tbody>
           </table>
         </div>
-        
+
         <div className="px-8 py-4 bg-muted/5 border-t border-border/60">
           <p className="text-xs text-muted">
-            * Premium plan includes unlimited property analyses for normal business use. 
-            Fair usage policy applies to prevent system abuse. Users consistently 
-            exceeding 100+ analyses monthly may be contacted for usage review.
+            * Pro plan includes unlimited property analyses for normal business use.
+            Fair usage policy applies to prevent system abuse. Users consistently
+            exceeding 500+ analyses monthly may be contacted for usage review.
           </p>
         </div>
       </div>
@@ -532,25 +366,25 @@ export default function PricingComparison() {
           <div>
             <h4 className="font-semibold text-primary mb-2">Can I change plans anytime?</h4>
             <p className="text-muted text-sm">
-              Yes! You can upgrade or downgrade your plan at any time. Changes take effect at the next billing cycle.
+              Yes! You can upgrade to Pro at any time. Downgrades take effect at the next billing cycle.
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-primary mb-2">What happens after the 14-day trial?</h4>
+            <h4 className="font-semibold text-primary mb-2">What happens when I reach my free limit?</h4>
             <p className="text-muted text-sm">
-              After your trial ends, you'll be charged the plan price. Cancel before the trial ends to avoid charges.
+              You&apos;ll see a prompt to upgrade to Pro for unlimited analyses. Your limit resets at the start of each month.
             </p>
           </div>
           <div>
             <h4 className="font-semibold text-primary mb-2">What counts as a property analysis?</h4>
             <p className="text-muted text-sm">
-              Each time you run our analysis calculator on a property, it counts as one analysis against your monthly limit.
+              Each time you run our AI-powered analysis on a property address, it counts as one analysis.
             </p>
           </div>
           <div>
             <h4 className="font-semibold text-primary mb-2">How does the fair usage policy work?</h4>
             <p className="text-muted text-sm">
-              Premium plans have unlimited analyses for normal business use. The fair usage cap prevents automated bulk processing that could affect service quality for other users. Users exceeding fair usage will be contacted for enterprise pricing.
+              Pro plan includes unlimited analyses for normal business use. This prevents automated bulk processing that could affect service quality.
             </p>
           </div>
         </div>
