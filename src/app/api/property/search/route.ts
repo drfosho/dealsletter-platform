@@ -134,28 +134,53 @@ export async function POST(request: NextRequest) {
         await Promise.all(promises);
       }
       
-      // Log final results for debugging with FULL data structure
-      console.log('[API] CRITICAL - Raw data structure inspection:');
-      console.log('Property data:', JSON.stringify(results.property, null, 2));
-      console.log('Comparables data:', JSON.stringify(results.comparables, null, 2));
-      console.log('Rental data:', JSON.stringify(results.rental, null, 2));
-      console.log('Listing data:', JSON.stringify(results.listing, null, 2));
-      
-      // Try to extract values from different possible paths
+      // CRITICAL DEBUG - Log all data for troubleshooting
+      console.log('\n=== PROPERTY SEARCH API - CRITICAL DEBUG ===');
+      console.log('Address searched:', address);
+
+      // Log each data source separately
+      console.log('\n--- PROPERTY DATA ---');
+      console.log(JSON.stringify(results.property, null, 2));
+
+      console.log('\n--- COMPARABLES/AVM DATA ---');
+      console.log(JSON.stringify(results.comparables, null, 2));
+
+      console.log('\n--- LISTING DATA ---');
+      console.log(JSON.stringify(results.listing, null, 2));
+
+      console.log('\n--- RENTAL DATA ---');
+      console.log(JSON.stringify(results.rental, null, 2));
+
+      // Extract and validate price values
       const comparablesData = results.comparables as any;
       const rentalData = results.rental as any;
-      
-      console.log('[API] Final property search results:', {
-        hasProperty: !!results.property,
-        hasListing: !!results.listing,
-        listingPrice: (results.listing as any)?.price || (results.listing as any)?.listPrice,
-        hasComparables: !!results.comparables,
-        comparablesValue: comparablesData?.value || comparablesData?.price || comparablesData?.averagePrice,
-        comparablesFullData: comparablesData,
-        hasRental: !!results.rental,
-        rentEstimate: rentalData?.rentEstimate || rentalData?.rent || rentalData?.price,
-        rentalFullData: rentalData
+      const listingData = results.listing as any;
+      const propertyData = results.property as any;
+
+      // Calculate the effective price based on available data
+      const listingPrice = listingData?.price || listingData?.listPrice || listingData?.askingPrice || 0;
+      const avmValue = comparablesData?.value || comparablesData?.price || 0;
+      const lastSalePrice = propertyData?.lastSalePrice || 0;
+      const effectivePrice = listingPrice || avmValue || lastSalePrice;
+
+      console.log('\n--- PRICE EXTRACTION SUMMARY ---');
+      console.log({
+        listingPrice,
+        avmValue,
+        lastSalePrice,
+        effectivePrice,
+        listingStatus: listingData?.status || listingData?.listingStatus || 'Unknown',
+        rentEstimate: rentalData?.rentEstimate || rentalData?.rent || 0,
+        comparablesCount: comparablesData?.comparables?.length || 0
       });
+
+      // VALIDATION CHECK - Warn if no price data found
+      if (effectivePrice === 0) {
+        console.error('\n!!! CRITICAL ERROR: No price data found for property !!!');
+        console.error('This is likely a RentCast API issue or the property is not in their database');
+      }
+
+      console.log('=== END CRITICAL DEBUG ===\n');
 
       return NextResponse.json(results);
 

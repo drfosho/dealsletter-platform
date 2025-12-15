@@ -611,84 +611,67 @@ async function generatePropertyAnalysis(propertyData: PropertyData, request: Pro
     
     // Generate analysis using Claude
     console.log('[generatePropertyAnalysis] Calling Claude API...');
+    // Optimized system prompt - strategy-specific to reduce token usage
+    const systemPrompts: Record<string, string> = {
+      brrrr: `You are a real estate investment analyst. Analyze BRRRR investments.
+
+CRITICAL: Use EXACT numerical values from "BRRRR STRATEGY ANALYSIS" section. DO NOT recalculate.
+
+Output format:
+1. Executive Summary (2-3 sentences on capital recovery)
+2. Recommendation (Buy/Hold/Pass)
+3. BRRRR Phases (use EXACT values):
+   - Phase 1: Total Cash Invested
+   - Phase 2: Cash Returned at Refinance
+   - Phase 3: Monthly Cash Flow
+4. Key Metrics (COPY EXACTLY): Total Investment, Cash Returned, Cash Left, Cash Flow, CoC Return, 5yr ROI
+5. Risk Assessment (ARV accuracy, refinance approval, delays)
+6. 3-5 Opportunities
+7. 3-5 Risks
+8. Action Items
+
+Use provided values verbatim. If CoC Return shows "INFINITE", write "INFINITE".`,
+
+      flip: `You are a real estate investment analyst. Analyze Fix & Flip investments.
+
+CRITICAL: Use EXACT values from "FIX & FLIP ANALYSIS" section.
+
+Output format:
+1. Executive Summary (2-3 sentences on profit potential)
+2. Recommendation (Buy/Hold/Pass)
+3. Key Metrics: ARV, Total Investment, Net Profit, ROI%, Profit Margin%, Holding Period
+4. Risk Assessment (renovation, timing, ARV accuracy)
+5. Market Analysis (buyer demand, comparable sales)
+6. Renovation Strategy
+7. 3-5 Opportunities
+8. 3-5 Risks
+9. Exit Strategy & Actions
+
+DO NOT include cash flow, cap rates, or rental metrics for flips.`,
+
+      rental: `You are a real estate investment analyst. Analyze rental property investments.
+
+CRITICAL: Use EXACT values from "CASH FLOW ANALYSIS" section.
+
+Output format:
+1. Executive Summary (2-3 sentences)
+2. Recommendation (Buy/Hold/Pass)
+3. Key Metrics: Monthly Cash Flow, Cap Rate%, CoC Return%, Total ROI%, Annual NOI
+4. Risk Assessment (Low/Medium/High)
+5. Market Analysis
+6. Strategy Details
+7. 3-5 Opportunities
+8. 3-5 Risks
+9. Action Items
+
+Format monetary values with commas but preserve exact amounts.`
+    };
+
     const claudeRequest = {
       model: "claude-sonnet-4-5-20250929", // Using Claude Sonnet 4.5
-      max_tokens: 4000,
+      max_tokens: 3000, // Reduced from 4000 - analysis doesn't need that much
       temperature: 0.3,
-      system: `You are a professional real estate investment analyst. Create a comprehensive, data-driven analysis for real estate investments. 
-
-IMPORTANT: Tailor your analysis based on the investment strategy:
-
-FOR BRRRR PROPERTIES:
-
-CRITICAL INSTRUCTION: You MUST use the EXACT numerical values provided in the "BRRRR STRATEGY ANALYSIS" section below. DO NOT recalculate or modify these numbers. Copy them EXACTLY as shown.
-
-Your analysis must include:
-1. Executive Summary (Focus on capital recovery through refinance)
-2. Investment Recommendation (Buy/Hold/Pass based on refinance potential)
-3. BRRRR Phase Analysis - USE EXACT VALUES FROM CALCULATIONS:
-   - Phase 1: Total Cash Invested (COPY EXACT VALUE from calculations)
-   - Phase 2: Cash Returned at Refinance (COPY EXACT VALUE)
-   - Phase 3: Monthly Cash Flow post-refinance (COPY EXACT VALUE)
-4. Key Financial Metrics (COPY these EXACTLY from BRRRR STRATEGY ANALYSIS section):
-   - Total Cash Invested: USE EXACT VALUE PROVIDED
-   - Cash Returned at Refinance: USE EXACT VALUE PROVIDED
-   - Cash Left in Deal: USE EXACT VALUE PROVIDED
-   - Monthly Cash Flow: USE EXACT VALUE PROVIDED
-   - Cash-on-Cash Return: USE EXACT VALUE PROVIDED (may be "INFINITE")
-   - 5-Year Total ROI: USE EXACT VALUE PROVIDED
-5. Risk Assessment (Focus on ARV accuracy, refinance approval, renovation delays)
-6. Market Analysis (Focus on rental demand and refinance appraisal risk)
-7. Capital Recovery Strategy (State the EXACT capital recovery percentage provided)
-8. 3-5 Key Opportunities
-9. 3-5 Key Risks
-10. Action Items
-
-MANDATORY: When you see values in the BRRRR STRATEGY ANALYSIS section like:
-- "Total Cash Invested: $50,000" → You MUST write "$50,000" not any other number
-- "Cash-on-Cash Return: INFINITE" → You MUST write "INFINITE" not calculate a percentage
-- "Monthly Cash Flow: $500" → You MUST write "$500" not any other amount
-
-DO NOT perform your own calculations. USE THE PROVIDED VALUES EXACTLY.
-
-FOR FIX & FLIP PROPERTIES:
-Your analysis must include:
-1. Executive Summary (2-3 sentences focusing on profit potential)
-2. Investment Recommendation (Buy/Hold/Pass based on profit margin and ARV)
-3. Key Financial Metrics (Use EXACT values from FIX & FLIP ANALYSIS):
-   - After Repair Value (ARV): $[exact value]
-   - Total Investment: $[exact value]
-   - Net Profit: $[exact value]
-   - Return on Investment: [exact percentage]%
-   - Profit Margin: [exact percentage]%
-   - Holding Period: [months]
-4. Risk Assessment (Focus on renovation risks, market timing, ARV accuracy)
-5. Market Analysis (Focus on buyer demand and comparable sales)
-6. Renovation Strategy (Timeline, scope, budget allocation)
-7. 3-5 Key Opportunities (Value-add improvements, market trends)
-8. 3-5 Key Risks (Construction delays, budget overruns, market shifts)
-9. Exit Strategy & Action Items
-
-DO NOT include monthly cash flow, cap rates, or rental income for fix & flip properties.
-
-FOR RENTAL PROPERTIES:
-Your analysis must include:
-1. Executive Summary (2-3 sentences)
-2. Investment Recommendation (Buy/Hold/Pass with clear reasoning)
-3. Key Financial Metrics (Use EXACT values from CASH FLOW ANALYSIS):
-   - Monthly Cash Flow: $[exact value]
-   - Cap Rate: [exact percentage]%
-   - Cash-on-Cash Return: [exact percentage]%
-   - Total ROI: [calculated percentage]%
-   - Annual NOI: $[calculated value]
-4. Risk Assessment (Low/Medium/High with specific factors)
-5. Market Analysis
-6. Investment Strategy Details
-7. 3-5 Key Opportunities
-8. 3-5 Key Risks
-9. Action Items for investor
-
-CRITICAL: Use the EXACT numerical values from the calculations section provided. Do not recalculate or modify these numbers. Format monetary values with proper commas but preserve the exact amounts.`,
+      system: systemPrompts[request.strategy] || systemPrompts.rental,
       messages: [
         {
           role: "user" as const,

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
 import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
+import { calculateARVFromComparables, extractComparableProperties, formatARVDetails, type ARVCalculationResult } from '@/utils/arv-calculator';
 
 // Map UI renovation levels to RehabLevel enum
 function mapRenovationLevelToRehabLevel(renovationLevel?: string): RehabLevel {
@@ -68,6 +69,7 @@ export default function Step3Financial({
 
   const [financial, setFinancial] = useState(initialFinancial);
   const [isCalculatingARV, setIsCalculatingARV] = useState(false);
+  const [arvCalculationResult, setArvCalculationResult] = useState<ARVCalculationResult | null>(null);
   
   // Sync financial state with props when they change
   useEffect(() => {
@@ -162,49 +164,54 @@ export default function Step3Financial({
     }
     
     // Auto-calculate ARV for strategies that need it
-    // Use AVM value from comparables as base ARV, adjusted for renovation level
+    // Use comparable sales data for more accurate ARV calculation
     const needsARV = ['flip', 'brrrr'].includes(data.strategy);
     const comparablesAVM = newComparablesValue || newEffectivePrice;
-    
+
     if (needsARV && comparablesAVM > 0 && (!financial.arv || financial.arv === 0)) {
       setIsCalculatingARV(true);
-      
-      // Simulate API call delay for better UX
+
+      // Calculate ARV using comparable sales data
       setTimeout(() => {
-        const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-        let arvMultiplier = 1.0;
-        
-        // For BRRRR, ARV should be close to market value after rehab
-        // For Flip, ARV includes profit margin
-        if (data.strategy === 'brrrr') {
-          // BRRRR uses more conservative ARV (market value after rehab)
-          if (renovationLevel === 'cosmetic') arvMultiplier = 1.05;
-          else if (renovationLevel === 'moderate') arvMultiplier = 1.10;
-          else if (renovationLevel === 'extensive') arvMultiplier = 1.15;
-          else if (renovationLevel === 'gut') arvMultiplier = 1.20;
-        } else if (data.strategy === 'flip') {
-          // Flip includes profit margin in ARV
-          if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
-          else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
-          else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
-          else if (renovationLevel === 'gut') arvMultiplier = 1.45;
-        }
-        
-        const calculatedARV = Math.round(comparablesAVM * arvMultiplier);
-        console.log('[Step3Financial] Auto-calculating ARV:', {
-          currentValue: comparablesAVM,
-          strategy: data.strategy,
+        const renovationLevel = (data.strategyDetails?.renovationLevel || 'moderate') as 'cosmetic' | 'moderate' | 'extensive' | 'gut';
+        const squareFootage = (data.propertyData as any)?.property?.squareFootage ||
+                              (data.propertyData as any)?.listing?.squareFootage || 0;
+
+        // Extract comparable properties
+        const comparables = extractComparableProperties(data.propertyData || {});
+
+        console.log('[Step3Financial] Calculating ARV with comparables:', {
+          comparablesCount: comparables.length,
           renovationLevel,
-          multiplier: arvMultiplier,
-          calculatedARV
+          squareFootage,
+          strategy: data.strategy,
+          avmValue: comparablesAVM
         });
-        
-        updatedFinancial.arv = calculatedARV;
-        setFinancial({ ...financial, arv: calculatedARV });
-        updateData({ financial: { ...financial, arv: calculatedARV } });
+
+        // Calculate ARV using the improved calculator
+        const arvResult = calculateARVFromComparables({
+          subjectPropertySqFt: squareFootage,
+          purchasePrice: newEffectivePrice,
+          comparables: comparables,
+          avmValue: comparablesAVM,
+          renovationLevel,
+          strategy: data.strategy as 'flip' | 'brrrr'
+        });
+
+        console.log('[Step3Financial] ARV calculation result:', {
+          arv: arvResult.arv,
+          method: arvResult.method,
+          confidence: arvResult.confidence,
+          details: arvResult.details
+        });
+
+        setArvCalculationResult(arvResult);
+        updatedFinancial.arv = arvResult.arv;
+        setFinancial({ ...financial, arv: arvResult.arv });
+        updateData({ financial: { ...financial, arv: arvResult.arv } });
         setIsCalculatingARV(false);
       }, 800);
-      
+
       return; // Don't apply other changes yet
     }
     
@@ -222,6 +229,43 @@ export default function Step3Financial({
       'conventional'
   );
   const previousLoanType = useRef(loanType);
+  const hasInitializedHardMoney = useRef(false);
+
+  // Initialize hard money defaults on first mount for flip/brrrr strategies
+  useEffect(() => {
+    // Only run once on mount
+    if (hasInitializedHardMoney.current) return;
+
+    const isHardMoneyStrategy = (data.strategy === 'flip' || data.strategy === 'brrrr');
+    const shouldUseHardMoney = isHardMoneyStrategy && data.strategyDetails?.initialFinancing !== 'conventional';
+
+    if (shouldUseHardMoney) {
+      console.log('[Step3Financial] Initializing hard money defaults on mount:', {
+        strategy: data.strategy,
+        currentInterestRate: financial.interestRate,
+        hardMoneyRate: hardMoneyDefaults.interestRate,
+        currentLoanTerm: financial.loanTerm,
+        hardMoneyTerm: hardMoneyDefaults.loanTerm
+      });
+
+      // Calculate closing costs if not set (3% for hard money)
+      const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.03) : 0);
+
+      const newFinancial = {
+        ...financial,
+        interestRate: hardMoneyDefaults.interestRate,
+        loanTerm: hardMoneyDefaults.loanTerm,
+        downPaymentPercent: hardMoneyDefaults.downPaymentPercent,
+        points: hardMoneyDefaults.points,
+        closingCosts: closingCosts,
+        loanType: 'hardMoney' as const
+      };
+
+      setFinancial(newFinancial);
+      updateData({ financial: newFinancial });
+      hasInitializedHardMoney.current = true;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debug log on component mount
   useEffect(() => {
@@ -317,57 +361,54 @@ export default function Step3Financial({
     }
   }, [data.propertyData, data.strategyDetails?.renovationLevel, showRenovationCosts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-populate ARV for flip strategy from RentCast AVM data
+  // Auto-populate ARV for flip/brrrr strategy using improved calculator
   useEffect(() => {
     // Add a small delay to ensure all data is properly loaded
     const timer = setTimeout(() => {
+      const needsARV = ['flip', 'brrrr'].includes(data.strategy);
+      if (!needsARV) return;
+
       console.log('[Step3Financial] ARV Auto-populate Check:', {
         strategy: data.strategy,
         currentARV: financial.arv,
-        propertyData: data.propertyData,
-        comparables: data.propertyData?.comparables,
+        hasPropertyData: !!data.propertyData,
         renovationLevel: data.strategyDetails?.renovationLevel
       });
 
-      if (data.strategy === 'flip') {
-        const comparables = data.propertyData?.comparables as any;
-        const currentValue = comparables?.value || 0;
-        
-        console.log('[Step3Financial] Current property value from comparables:', currentValue);
-        
-        if (currentValue > 0 && (!financial.arv || financial.arv === 0)) {
-          // For flip strategy, estimate ARV as current value + percentage based on renovation level
-          const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-          let arvMultiplier = 1.25; // Default 25% increase for moderate
-          
-          if (renovationLevel === 'cosmetic') {
-            arvMultiplier = 1.15; // 15% for cosmetic
-          } else if (renovationLevel === 'moderate') {
-            arvMultiplier = 1.25; // 25% for moderate
-          } else if (renovationLevel === 'extensive') {
-            arvMultiplier = 1.35; // 35% for extensive
-          } else if (renovationLevel === 'gut') {
-            arvMultiplier = 1.45; // 45% for gut rehab
-          }
-          
-          const estimatedARV = Math.round(currentValue * arvMultiplier);
-          
-          console.log('[Step3Financial] Calculated ARV:', {
-            currentValue,
-            renovationLevel,
-            arvMultiplier,
-            estimatedARV
-          });
-          
-          const newFinancial = {
-            ...financial,
-            arv: estimatedARV
-          };
-          setFinancial(newFinancial);
-          updateData({ financial: newFinancial });
-        }
+      const comparablesData = data.propertyData?.comparables as any;
+      const currentValue = comparablesData?.value || 0;
+      const squareFootage = (data.propertyData as any)?.property?.squareFootage ||
+                            (data.propertyData as any)?.listing?.squareFootage || 0;
+
+      if (currentValue > 0 && (!financial.arv || financial.arv === 0)) {
+        const renovationLevel = (data.strategyDetails?.renovationLevel || 'moderate') as 'cosmetic' | 'moderate' | 'extensive' | 'gut';
+        const comparables = extractComparableProperties(data.propertyData || {});
+
+        // Use improved ARV calculator
+        const arvResult = calculateARVFromComparables({
+          subjectPropertySqFt: squareFootage,
+          purchasePrice: currentValue,
+          comparables: comparables,
+          avmValue: currentValue,
+          renovationLevel,
+          strategy: data.strategy as 'flip' | 'brrrr'
+        });
+
+        console.log('[Step3Financial] ARV calculated:', {
+          arv: arvResult.arv,
+          method: arvResult.method,
+          confidence: arvResult.confidence
+        });
+
+        setArvCalculationResult(arvResult);
+        const newFinancial = {
+          ...financial,
+          arv: arvResult.arv
+        };
+        setFinancial(newFinancial);
+        updateData({ financial: newFinancial });
       }
-    }, 100); // 100ms delay to ensure data is loaded
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [data.strategy, data.propertyData?.comparables, data.strategyDetails?.renovationLevel]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -941,7 +982,7 @@ export default function Step3Financial({
               )}
             </div>
             
-            {/* Always show ARV calculation section */}
+            {/* ARV calculation section with confidence indicator */}
             <div className="space-y-2 mt-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted">
@@ -952,59 +993,90 @@ export default function Step3Financial({
                   onClick={(e) => {
                     e.preventDefault();
                     console.log('[Step3Financial] ARV Button clicked');
-                    
+
                     const purchasePrice = financial.purchasePrice || 0;
-                    
-                    if (purchasePrice === 0) {
+                    const avmValue = (data.propertyData as any)?.comparables?.value || purchasePrice;
+                    const squareFootage = (data.propertyData as any)?.property?.squareFootage || 0;
+
+                    if (purchasePrice === 0 && avmValue === 0) {
                       alert('Please enter a purchase price first.');
                       return;
                     }
-                    
-                    const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-                    let arvMultiplier = 1.25;
-                    
-                    if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
-                    else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
-                    else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
-                    else if (renovationLevel === 'gut') arvMultiplier = 1.45;
-                    
-                    const calculatedARV = Math.round(purchasePrice * arvMultiplier);
-                    console.log('[Step3Financial] Calculated ARV:', {
-                      purchasePrice,
-                      renovationLevel,
-                      multiplier: arvMultiplier,
-                      calculatedARV
-                    });
-                    
+
                     // Set calculating state
                     setIsCalculatingARV(true);
-                    
-                    // Simulate calculation delay for better UX
+
+                    // Use improved ARV calculator
                     setTimeout(() => {
-                      handleFieldChange('arv', calculatedARV);
+                      const renovationLevel = (data.strategyDetails?.renovationLevel || 'moderate') as 'cosmetic' | 'moderate' | 'extensive' | 'gut';
+                      const comparables = extractComparableProperties(data.propertyData || {});
+
+                      const arvResult = calculateARVFromComparables({
+                        subjectPropertySqFt: squareFootage,
+                        purchasePrice: purchasePrice || avmValue,
+                        comparables: comparables,
+                        avmValue: avmValue,
+                        renovationLevel,
+                        strategy: data.strategy as 'flip' | 'brrrr'
+                      });
+
+                      setArvCalculationResult(arvResult);
+                      handleFieldChange('arv', arvResult.arv);
                       setIsCalculatingARV(false);
                     }, 500);
                   }}
-                    className="text-xs text-primary hover:underline font-medium"
-                  >
-                    {financial.arv ? 'Recalculate' : 'Calculate'} ARV
-                  </button>
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  {financial.arv ? 'Recalculate' : 'Calculate'} ARV
+                </button>
+              </div>
+
+              {/* ARV calculation method and confidence display */}
+              {arvCalculationResult && financial.arv && (
+                <div className={`p-2 rounded-lg border ${
+                  arvCalculationResult.confidence === 'high' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' :
+                  arvCalculationResult.confidence === 'medium' ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800' :
+                  'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'
+                }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-medium ${
+                      arvCalculationResult.confidence === 'high' ? 'text-green-700 dark:text-green-300' :
+                      arvCalculationResult.confidence === 'medium' ? 'text-yellow-700 dark:text-yellow-300' :
+                      'text-orange-700 dark:text-orange-300'
+                    }`}>
+                      {arvCalculationResult.method === 'comparables' ? '📊 Based on Comparable Sales' : '📈 Estimated from Market Data'}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      arvCalculationResult.confidence === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' :
+                      arvCalculationResult.confidence === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200' :
+                      'bg-orange-100 text-orange-700 dark:bg-orange-800 dark:text-orange-200'
+                    }`}>
+                      {arvCalculationResult.confidence} confidence
+                    </span>
+                  </div>
+                  <p className={`text-xs ${
+                    arvCalculationResult.confidence === 'high' ? 'text-green-600 dark:text-green-400' :
+                    arvCalculationResult.confidence === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-orange-600 dark:text-orange-400'
+                  }`}>
+                    {formatARVDetails(arvCalculationResult)}
+                  </p>
                 </div>
-                {(() => {
-                  const renovationLevel = data.strategyDetails?.renovationLevel;
-                  
-                  let expectedIncrease = '20%';
-                  if (renovationLevel === 'cosmetic') expectedIncrease = '15%';
-                  else if (renovationLevel === 'moderate') expectedIncrease = '25%';
-                  else if (renovationLevel === 'extensive') expectedIncrease = '35%';
-                  else if (renovationLevel === 'gut') expectedIncrease = '45%';
-                  
-                  return (
-                    <p className="text-xs text-muted">
-                      Based on {renovationLevel || 'moderate'} renovation, expecting {expectedIncrease} value increase
-                    </p>
-                  );
-                })()}
+              )}
+
+              {!arvCalculationResult && (
+                <p className="text-xs text-muted">
+                  {(() => {
+                    const renovationLevel = data.strategyDetails?.renovationLevel;
+                    let expectedIncrease = '15-18%';
+                    if (renovationLevel === 'cosmetic') expectedIncrease = '8-12%';
+                    else if (renovationLevel === 'moderate') expectedIncrease = '12-18%';
+                    else if (renovationLevel === 'extensive') expectedIncrease = '18-25%';
+                    else if (renovationLevel === 'gut') expectedIncrease = '25-32%';
+                    return `Based on ${renovationLevel || 'moderate'} renovation, expecting ${expectedIncrease} value increase`;
+                  })()}
+                </p>
+              )}
             </div>
             {financial.arv && financial.purchasePrice && financial.arv <= financial.purchasePrice && (
               <p className="text-xs text-red-500 mt-1">
