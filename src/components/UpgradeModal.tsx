@@ -41,12 +41,12 @@ export default function UpgradeModal({
     {
       icon: <FileText className="w-5 h-5" />,
       title: 'Export Reports',
-      description: 'Download detailed PDF reports and spreadsheets'
+      description: 'Download detailed PDF reports'
     },
     {
       icon: <Zap className="w-5 h-5" />,
-      title: 'Unlimited Analyses',
-      description: 'No limits on property analysis runs'
+      title: '30 Monthly Analyses',
+      description: 'Just $1.63 per analysis'
     }
   ];
 
@@ -106,12 +106,12 @@ export default function UpgradeModal({
           <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 mb-4">
             <div className="flex items-end justify-between mb-2">
               <div>
-                <span className="text-3xl font-bold text-primary">$29</span>
+                <span className="text-3xl font-bold text-primary">$49</span>
                 <span className="text-muted ml-1">/month</span>
               </div>
               <div className="text-right">
                 <div className="text-xs text-accent font-semibold uppercase tracking-wide">
-                  7-Day Free Trial
+                  30 Analyses/Month
                 </div>
               </div>
             </div>

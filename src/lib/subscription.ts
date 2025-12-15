@@ -28,21 +28,24 @@ export interface UserSubscription {
 }
 
 // Feature access definitions
+// NEW PRICING STRUCTURE (December 2024):
+// - FREE: 3 analyses/month, basic features
+// - PRO: 30 analyses/month @ $49/month, all features
 export const FEATURE_ACCESS = {
-  // Free tier access
+  // Free tier access - 3 analyses per month
   free: {
     viewDeals: true,
     basicComparison: true,
     archiveAccess: 30, // days
     marketInsights: true,
     newsletter: true,
-    propertyAnalysis: false,
-    exportData: false,
+    propertyAnalysis: true,  // Allow analysis (limited to 3/month)
+    exportData: true,        // PDF export included
     advancedCalculators: false,
-    unlimitedAnalyses: false,
+    analysisLimit: 3,        // 3 analyses per month
     prioritySupport: false,
   },
-  
+
   // Trial tier (same as pro but time-limited)
   trial: {
     viewDeals: true,
@@ -53,11 +56,11 @@ export const FEATURE_ACCESS = {
     propertyAnalysis: true,
     exportData: true,
     advancedCalculators: true,
-    unlimitedAnalyses: true,
+    analysisLimit: 30,       // Same as Pro
     prioritySupport: false,
   },
-  
-  // Pro tier
+
+  // Pro tier - 30 analyses per month @ $49/month
   pro: {
     viewDeals: true,
     basicComparison: true,
@@ -67,11 +70,12 @@ export const FEATURE_ACCESS = {
     propertyAnalysis: true,
     exportData: true,
     advancedCalculators: true,
-    unlimitedAnalyses: true,
+    analysisLimit: 30,       // 30 analyses per month
     prioritySupport: true,
+    analysisHistory: true,
   },
-  
-  // Premium tier (future expansion)
+
+  // Premium tier (legacy - grandfathered Pro users)
   premium: {
     viewDeals: true,
     basicComparison: true,
@@ -81,8 +85,9 @@ export const FEATURE_ACCESS = {
     propertyAnalysis: true,
     exportData: true,
     advancedCalculators: true,
-    unlimitedAnalyses: true,
+    analysisLimit: 30,       // Same 30 limit for grandfathered users
     prioritySupport: true,
+    analysisHistory: true,
   },
 };
 

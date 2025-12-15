@@ -41,35 +41,40 @@ export const stripe = new Proxy({} as Stripe, {
 })
 
 // Subscription tiers configuration
+// NEW PRICING STRUCTURE (December 2024):
+// - FREE: $0/month, 3 analyses/month
+// - PRO: $49/month, 30 analyses/month
 export const SUBSCRIPTION_TIERS = {
   FREE: {
     name: 'Free',
     priceId: null,
-    analysisLimit: 0,
-    features: [
-      'view_deals',
-      'basic_comparison',
-      'archive_access_30days',
-    ],
-  },
-  STARTER: {
-    name: 'Starter',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
-    analysisLimit: 12,
+    analysisLimit: 3,  // 3 analyses per month
     features: [
       'view_deals',
       'basic_comparison',
       'archive_access_30days',
       'personal_analysis',
-      'deal_alerts',
+      'pdf_exports',
+      'email_support',
+    ],
+  },
+  STARTER: {
+    name: 'Starter',
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    analysisLimit: 3,  // Legacy - maps to Free
+    features: [
+      'view_deals',
+      'basic_comparison',
+      'archive_access_30days',
+      'personal_analysis',
       'pdf_exports',
       'email_support',
     ],
   },
   PRO: {
     name: 'Pro',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
-    analysisLimit: 35,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,  // $49/month
+    analysisLimit: 30,  // 30 analyses per month
     features: [
       'view_deals',
       'basic_comparison',
@@ -82,12 +87,13 @@ export const SUBSCRIPTION_TIERS = {
       'early_access',
       'priority_support',
       'market_reports',
+      'analysis_history',
     ],
   },
   PREMIUM: {
     name: 'Premium',
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
-    analysisLimit: -1, // -1 represents unlimited
+    analysisLimit: 30,  // Legacy - grandfathered Pro users get same 30 limit
     features: [
       'view_deals',
       'basic_comparison',
@@ -100,11 +106,7 @@ export const SUBSCRIPTION_TIERS = {
       'early_access',
       'priority_support',
       'market_reports',
-      'weekly_sessions',
-      'custom_sourcing',
-      'phone_support',
-      'api_access',
-      'team_tools',
+      'analysis_history',
     ],
   },
 }

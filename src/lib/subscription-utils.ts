@@ -1,25 +1,29 @@
 // Client-safe subscription utilities (no server-side dependencies)
 
+// NEW PRICING STRUCTURE (December 2024):
+// - FREE: 3 analyses/month
+// - PRO: 30 analyses/month @ $49/month
+
 export const SUBSCRIPTION_TIERS = {
   FREE: {
     name: 'Free',
-    analysisLimit: 0,
+    analysisLimit: 3,  // 3 analyses per month
   },
   STARTER: {
-    name: 'Starter', 
-    analysisLimit: 12,
+    name: 'Starter',
+    analysisLimit: 3,  // Legacy - maps to Free
   },
   PROFESSIONAL: {
-    name: 'Professional',
-    analysisLimit: 25,
+    name: 'Pro',
+    analysisLimit: 30,  // 30 analyses per month
   },
   PRO: {
-    name: 'Professional',  // Map PRO to Professional
-    analysisLimit: 25,
+    name: 'Pro',
+    analysisLimit: 30,  // 30 analyses per month @ $49/month
   },
   PREMIUM: {
-    name: 'Premium',
-    analysisLimit: 999999,  // Unlimited (with fair usage)
+    name: 'Pro',
+    analysisLimit: 30,  // Legacy - maps to Pro (grandfathered users)
   },
 }
 

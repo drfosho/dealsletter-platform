@@ -22,11 +22,13 @@ export interface SubscriptionLimits {
   premium: number;
 }
 
-// New simplified 2-tier system: Free (20/month) and Pro (unlimited)
+// NEW PRICING STRUCTURE (December 2024):
+// - FREE: 3 analyses/month
+// - PRO: 30 analyses/month @ $49/month
 export const SUBSCRIPTION_LIMITS: SubscriptionLimits = {
-  basic: 20,  // Free tier: 20 analyses per month
-  pro: -1,    // Pro tier: Unlimited analyses (fair usage policy)
-  premium: -1 // Legacy - maps to Pro (unlimited)
+  basic: 3,   // Free tier: 3 analyses per month
+  pro: 30,    // Pro tier: 30 analyses per month @ $49/month
+  premium: 30 // Legacy - grandfathered Pro users get same 30 limit
 };
 
 /**
@@ -199,24 +201,23 @@ export function getRemainingAnalysesMessage(
   subscriptionTier: string,
   remaining: number
 ): string {
-  // Pro and premium users have unlimited
+  // Pro and premium users have 30 analyses per month
   if (subscriptionTier === 'pro' || subscriptionTier === 'premium') {
-    return 'Unlimited analyses available';
-  }
-
-  if (remaining === -1) {
-    return 'Unlimited analyses available';
+    if (remaining === 0) {
+      return 'Monthly limit reached. Contact us for enterprise pricing.';
+    }
+    return `${remaining} of 30 analyses remaining this month`;
   }
 
   if (remaining === 0) {
-    return 'Monthly limit reached. Upgrade to Pro for unlimited analyses';
+    return 'Monthly limit reached. Upgrade to Pro for 30 analyses/month';
   }
 
   if (remaining === 1) {
     return '1 analysis remaining this month';
   }
 
-  return `${remaining} of 20 analyses remaining this month`;
+  return `${remaining} of 3 analyses remaining this month`;
 }
 
 /**

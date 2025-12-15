@@ -261,9 +261,9 @@ export default function AccountPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <div>
-                    <div className="font-medium text-primary mb-1">Upgrade to Pro for unlimited analyses</div>
+                    <div className="font-medium text-primary mb-1">Upgrade to Pro for 30 analyses/month</div>
                     <p className="text-sm text-muted">
-                      Get unlimited property analyses, priority support, and spreadsheet exports for just $20/month.
+                      Get 30 property analyses per month, priority support, and detailed projections for just $49/month.
                     </p>
                   </div>
                 </div>
@@ -322,7 +322,7 @@ export default function AccountPage() {
                 </div>
                 {getUsagePercentage() >= 100 && (
                   <p className="text-sm text-red-600 mt-2">
-                    You&apos;ve reached your monthly limit. Upgrade to Pro for unlimited analyses.
+                    You&apos;ve reached your monthly limit. Upgrade to Pro for 30 analyses/month.
                   </p>
                 )}
               </div>

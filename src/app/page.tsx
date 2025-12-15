@@ -366,7 +366,7 @@ export default function Home() {
                 <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>20 free analyses/month</span>
+                <span>3 free analyses/month</span>
               </div>
               <div className="flex items-center space-x-2">
                 <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,7 +378,7 @@ export default function Home() {
                 <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span>Cancel anytime</span>
+                <span>Pro: 30 analyses @ $49/mo</span>
               </div>
             </div>
           </div>
@@ -623,7 +623,7 @@ export default function Home() {
             Ready to Analyze Your Next Investment?
           </h2>
           <p className="text-lg text-muted mb-10 max-w-2xl mx-auto">
-            Join thousands of investors making data-driven decisions. Start with 20 free analyses every month.
+            Join thousands of investors making data-driven decisions. Start with 3 free analyses, or get 30/month with Pro for just $49.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

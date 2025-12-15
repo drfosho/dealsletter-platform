@@ -347,7 +347,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                       {getTierDisplayName()}
                     </span>
                     <span className="text-xs text-muted">
-                      {subscriptionTier === 'pro' || subscriptionTier === 'premium' ? 'Unlimited' : `${remainingAnalyses}/20 analyses`}
+                      {subscriptionTier === 'pro' || subscriptionTier === 'premium' ? `${remainingAnalyses}/30 analyses` : `${remainingAnalyses}/3 analyses`}
                     </span>
                   </div>
                 </div>

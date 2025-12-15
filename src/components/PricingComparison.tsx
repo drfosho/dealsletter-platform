@@ -110,14 +110,14 @@ export default function PricingComparison() {
       borderColor: 'border-gray-500',
       bgGradient: 'from-gray-500/5 to-gray-500/10',
       features: [
-        '20 property analyses per month',
-        'Full financial metrics & projections',
-        'AI-powered investment insights',
-        'Analysis history & comparison',
+        '3 property analyses per month',
+        'Basic property insights',
+        'Access to blog content',
+        'Email support',
         'PDF export',
       ],
       notIncluded: [
-        'Unlimited analyses',
+        '30 analyses/month',
         'Priority support',
       ],
       buttonText: user ? 'Start Analyzing' : 'Get Started Free',
@@ -126,23 +126,26 @@ export default function PricingComparison() {
       tier: 'pro' as PlanTier,
       name: 'Pro',
       icon: '🚀',
-      description: 'Unlimited analyses for serious investors',
-      price: 20,
-      yearlyPrice: Math.floor(20 * 12 * 0.8), // 20% discount = $192/year
+      description: '30 analyses/month for serious investors',
+      price: 49,
+      yearlyPrice: Math.floor(49 * 12 * 0.8), // 20% discount = $470/year
       color: 'bg-accent',
       borderColor: 'border-accent',
       bgGradient: 'from-accent/5 to-accent/10',
       popular: true,
+      trialDays: 14,
       features: [
-        'Unlimited property analyses',
-        'Full financial metrics & projections',
+        '14-day free trial',
+        '30 property analyses per month',
+        'Detailed investment projections',
         'AI-powered investment insights',
         'Analysis history & comparison',
-        'PDF & spreadsheet export',
+        'PDF export functionality',
         'Priority email support',
       ],
       notIncluded: [],
-      buttonText: 'Upgrade to Pro',
+      buttonText: 'Start 14-Day Free Trial',
+      valueProposition: 'Just $1.63 per analysis',
     },
   ];
 
@@ -154,7 +157,7 @@ export default function PricingComparison() {
           Simple, Transparent Pricing
         </h2>
         <p className="text-xl text-muted max-w-2xl mx-auto mb-8">
-          Analyze any property in seconds. Start free with 20 analyses per month, or go unlimited with Pro.
+          Analyze any property in seconds. Start free with 3 analyses per month, or try Pro free for 14 days.
         </p>
 
         {/* Billing Toggle */}
@@ -233,6 +236,14 @@ export default function PricingComparison() {
                 </p>
               )}
               <p className="text-muted">{plan.description}</p>
+              {plan.tier === 'pro' && (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-full text-sm font-medium">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  14-day free trial
+                </div>
+              )}
             </div>
 
             {/* CTA Button */}
@@ -299,8 +310,8 @@ export default function PricingComparison() {
               </tr>
               <tr className="border-b border-border/40">
                 <td className="px-6 py-3 text-sm text-primary">Monthly analyses</td>
-                <td className="text-center px-6 py-3 text-sm font-semibold">20</td>
-                <td className="text-center px-6 py-3 text-sm font-semibold">Unlimited*</td>
+                <td className="text-center px-6 py-3 text-sm font-semibold">3</td>
+                <td className="text-center px-6 py-3 text-sm font-semibold">30</td>
               </tr>
               <tr className="border-b border-border/40">
                 <td className="px-6 py-3 text-sm text-primary">Financial metrics & projections</td>
@@ -352,9 +363,8 @@ export default function PricingComparison() {
 
         <div className="px-8 py-4 bg-muted/5 border-t border-border/60">
           <p className="text-xs text-muted">
-            * Pro plan includes unlimited property analyses for normal business use.
-            Fair usage policy applies to prevent system abuse. Users consistently
-            exceeding 500+ analyses monthly may be contacted for usage review.
+            Pro plan includes 30 property analyses per month - just $1.63 per analysis.
+            Need more? Contact us at support@dealsletter.io for enterprise pricing.
           </p>
         </div>
       </div>
@@ -364,27 +374,27 @@ export default function PricingComparison() {
         <h3 className="text-2xl font-bold text-primary mb-8">Frequently Asked Questions</h3>
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
           <div>
+            <h4 className="font-semibold text-primary mb-2">How does the 14-day free trial work?</h4>
+            <p className="text-muted text-sm">
+              Start your Pro trial with full access to all features. You won&apos;t be charged until day 15. Cancel anytime during the trial at no cost.
+            </p>
+          </div>
+          <div>
             <h4 className="font-semibold text-primary mb-2">Can I change plans anytime?</h4>
             <p className="text-muted text-sm">
               Yes! You can upgrade to Pro at any time. Downgrades take effect at the next billing cycle.
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-primary mb-2">What happens when I reach my free limit?</h4>
+            <h4 className="font-semibold text-primary mb-2">What happens when I reach my limit?</h4>
             <p className="text-muted text-sm">
-              You&apos;ll see a prompt to upgrade to Pro for unlimited analyses. Your limit resets at the start of each month.
+              Free users can upgrade to Pro for 30 analyses/month. Pro users who need more can contact us for enterprise pricing. Limits reset monthly.
             </p>
           </div>
           <div>
             <h4 className="font-semibold text-primary mb-2">What counts as a property analysis?</h4>
             <p className="text-muted text-sm">
               Each time you run our AI-powered analysis on a property address, it counts as one analysis.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-primary mb-2">How does the fair usage policy work?</h4>
-            <p className="text-muted text-sm">
-              Pro plan includes unlimited analyses for normal business use. This prevents automated bulk processing that could affect service quality.
             </p>
           </div>
         </div>
