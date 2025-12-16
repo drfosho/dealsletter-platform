@@ -4,6 +4,15 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
 import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
 import { calculateARVFromComparables, extractComparableProperties, formatARVDetails, type ARVCalculationResult } from '@/utils/arv-calculator';
+import {
+  parsePrice,
+  parsePercentage,
+  parseInteger,
+  calculateMonthlyMortgage,
+  calculateMonthlyRevenue,
+  calculateMonthlyExpenses,
+  validateInputs as validateFinancialInputs
+} from '@/utils/financial-calculations';
 
 // Map UI renovation levels to RehabLevel enum
 function mapRenovationLevelToRehabLevel(renovationLevel?: string): RehabLevel {
@@ -572,7 +581,21 @@ export default function Step3Financial({
   }, [financial, setCanProceed, data.strategy]);
 
   const handleFieldChange = (field: keyof typeof financial, value: string | number) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
+    // Use centralized parsePrice for consistent parsing across all monetary fields
+    // This handles commas, dollar signs, and prevents parsing errors
+    let numValue: number;
+
+    // Percentage fields need different handling
+    const percentageFields = ['downPaymentPercent', 'interestRate', 'points'];
+    if (percentageFields.includes(field)) {
+      numValue = parsePercentage(value);
+    } else if (field === 'units' || field === 'loanTerm') {
+      numValue = parseInteger(value);
+    } else {
+      // Monetary fields: purchasePrice, monthlyRent, rentPerUnit, arv, etc.
+      numValue = parsePrice(value);
+    }
+
     const newFinancial = { ...financial, [field]: numValue };
     setFinancial(newFinancial);
     updateData({ financial: newFinancial });
@@ -587,34 +610,33 @@ export default function Step3Financial({
     return financial.purchasePrice - downPayment;
   };
 
-  const calculateMonthlyPayment = () => {
+  const calculateMonthlyPaymentLocal = () => {
     const principal = calculateLoanAmount();
     if (!principal || !financial.interestRate || !financial.loanTerm) return 0;
-    const monthlyRate = financial.interestRate / 100 / 12;
-    const numPayments = financial.loanTerm * 12;
-    
-    // Hard money loans are typically interest-only
-    if (loanType === 'hardMoney') {
-      // Interest-only payment calculation
-      const interestOnlyPayment = principal * monthlyRate;
-      
-      // Add monthly portion of rehab costs if 100% funded
-      if (showRenovationCosts && financial.renovationCosts) {
-        const rehabMonthlyRate = monthlyRate; // Same rate for rehab funding
-        const rehabInterest = financial.renovationCosts * rehabMonthlyRate;
-        return interestOnlyPayment + rehabInterest;
-      }
-      
-      return interestOnlyPayment;
+
+    // Use centralized mortgage calculation utility for consistency
+    const payment = calculateMonthlyMortgage(
+      principal,
+      financial.interestRate,
+      financial.loanTerm,
+      loanType,
+      loanType === 'hardMoney' && showRenovationCosts ? financial.renovationCosts : 0
+    );
+
+    // Sanity check - flag if payment seems unreasonable
+    const paymentPercent = (payment / principal) * 100;
+    if (paymentPercent > 5) {
+      console.error('[Step3Financial] MORTGAGE CALCULATION ERROR:', {
+        principal,
+        interestRate: financial.interestRate,
+        loanTerm: financial.loanTerm,
+        loanType,
+        payment,
+        paymentPercent: paymentPercent.toFixed(2) + '%',
+        expected: '0.5% - 3% of principal'
+      });
     }
-    
-    // Traditional amortized loan calculation for conventional loans
-    if (monthlyRate === 0) return principal / numPayments;
-    
-    const payment = principal * 
-      (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
-      (Math.pow(1 + monthlyRate, numPayments) - 1);
-    
+
     return payment;
   };
 
@@ -1503,7 +1525,7 @@ export default function Step3Financial({
             <div>
               <p className="text-muted mb-1">Monthly Payment</p>
               <p className="text-xl font-bold text-primary">
-                ${Math.round(calculateMonthlyPayment())?.toLocaleString() || '0'}
+                ${Math.round(calculateMonthlyPaymentLocal())?.toLocaleString() || '0'}
               </p>
               {loanType === 'hardMoney' && (
                 <p className="text-xs text-muted mt-1">Interest-only</p>

@@ -8,6 +8,15 @@ import { logError } from '@/utils/error-utils';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAdminConfig } from '@/lib/admin-config';
 import { calculateBRRRR, type BRRRRInputs } from '@/utils/brrrr-calculator';
+import {
+  parsePrice,
+  parsePercentage,
+  parseInteger,
+  calculateMonthlyMortgage as calculateMortgagePayment,
+  calculateMonthlyRevenue,
+  validateInputs as validateFinancialInputs,
+  validateOutputs as validateFinancialOutputs
+} from '@/utils/financial-calculations';
 
 console.log('[Generate] Module loaded, Anthropic SDK available:', !!Anthropic);
 
@@ -181,6 +190,51 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid investment strategy' },
         { status: 400 }
       );
+    }
+
+    // Validate financial inputs using centralized validation
+    const parsedPurchasePrice = parsePrice(body.purchasePrice);
+    const parsedDownPayment = parsePrice(body.downPayment);
+    const parsedInterestRate = parsePercentage(body.loanTerms?.interestRate);
+    const parsedLoanTerm = parseInteger(body.loanTerms?.loanTerm);
+    const parsedUnits = parseInteger(body.units) || 1;
+    const parsedMonthlyRent = parsePrice(body.monthlyRent);
+
+    console.log('\n--- STEP 4.1: Financial Input Validation ---');
+    console.log('Parsed financial values:', {
+      purchasePrice: parsedPurchasePrice,
+      downPayment: parsedDownPayment,
+      downPaymentPercent: parsedPurchasePrice > 0 ? (parsedDownPayment / parsedPurchasePrice * 100).toFixed(1) + '%' : 'N/A',
+      interestRate: parsedInterestRate,
+      loanTerm: parsedLoanTerm,
+      units: parsedUnits,
+      monthlyRent: parsedMonthlyRent
+    });
+
+    // Validate using centralized utility
+    const validationResult = validateFinancialInputs({
+      purchasePrice: parsedPurchasePrice,
+      downPaymentPercent: parsedPurchasePrice > 0 ? (parsedDownPayment / parsedPurchasePrice) * 100 : 20,
+      interestRate: parsedInterestRate || 7,
+      loanTermYears: parsedLoanTerm || 30,
+      numberOfUnits: parsedUnits,
+      rentPerUnit: parsedMonthlyRent / Math.max(1, parsedUnits)
+    });
+
+    if (!validationResult.isValid) {
+      console.error('[Validation] Input validation failed:', validationResult.errors);
+      return NextResponse.json(
+        {
+          error: 'Invalid financial inputs',
+          details: validationResult.errors.join('; '),
+          warnings: validationResult.warnings
+        },
+        { status: 400 }
+      );
+    }
+
+    if (validationResult.warnings.length > 0) {
+      console.warn('[Validation] Input warnings:', validationResult.warnings);
     }
 
     console.log('\n--- STEP 5: Property Cache Check ---');
@@ -717,29 +771,25 @@ Format monetary values with commas but preserve exact amounts.`
 }
 
 function calculateMonthlyPayment(principal: number, interestRate: number, termYears: number, loanType?: string, rehabAmount?: number): number {
-  const monthlyRate = interestRate / 100 / 12;
-  const numPayments = termYears * 12;
-  
-  // Hard money loans are typically interest-only
-  if (loanType === 'hardMoney') {
-    // Interest-only payment on purchase loan
-    let payment = principal * monthlyRate;
-    
-    // Add interest on rehab loan if applicable
-    if (rehabAmount && rehabAmount > 0) {
-      payment += rehabAmount * monthlyRate;
-    }
-    
-    return Math.round(payment);
-  }
-  
-  // Traditional amortized loan calculation
-  if (monthlyRate === 0) return principal / numPayments;
-  
-  const payment = principal * 
-    (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
-    (Math.pow(1 + monthlyRate, numPayments) - 1);
-  
+  // Use centralized calculation utility for consistency
+  const payment = calculateMortgagePayment(
+    parsePrice(principal),
+    parsePercentage(interestRate),
+    parseInteger(termYears) || 30,
+    loanType as 'conventional' | 'hardMoney',
+    parsePrice(rehabAmount || 0)
+  );
+
+  // Log calculation for debugging
+  console.log('[calculateMonthlyPayment] Calculation:', {
+    principal: parsePrice(principal),
+    interestRate: parsePercentage(interestRate),
+    termYears: parseInteger(termYears),
+    loanType,
+    rehabAmount: parsePrice(rehabAmount || 0),
+    payment: Math.round(payment)
+  });
+
   return Math.round(payment);
 }
 
@@ -1128,9 +1178,53 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
     
   } else {
     // Rental property calculations - use user-specified rent if available
-    const monthlyRent = request.monthlyRent || (rentalEstimate as any)?.rentEstimate || 0;
-    const units = request.units || 1;
-    const rentPerUnit = request.rentPerUnit || (units > 1 ? monthlyRent / units : monthlyRent);
+    // CRITICAL: Properly handle multi-family properties by multiplying rent by units
+
+    // Get property type for multi-family detection
+    const propertyType = (property?.propertyType as string) || '';
+
+    // Get number of units (from request or property data)
+    const units = parseInteger(request.units) ||
+                  parseInteger((property as any)?.units) ||
+                  parseInteger((property as any)?.numberOfUnits) ||
+                  1;
+
+    // Get rent per unit from various sources
+    const rentPerUnitFromRequest = parsePrice(request.rentPerUnit);
+    const rentFromRentCast = parsePrice((rentalEstimate as any)?.rentEstimate || (rentalEstimate as any)?.rent || 0);
+
+    // Determine rent per unit
+    const rentPerUnit = rentPerUnitFromRequest > 0 ? rentPerUnitFromRequest : rentFromRentCast;
+
+    // Calculate total monthly rent using centralized utility
+    // This ensures proper multiplication for multi-family properties
+    let monthlyRent: number;
+
+    // If request.monthlyRent is provided and matches expected total, use it
+    const requestMonthlyRent = parsePrice(request.monthlyRent);
+    if (requestMonthlyRent > 0) {
+      // Verify it's the total (not per-unit)
+      if (units > 1 && requestMonthlyRent < rentPerUnit * 2) {
+        // Looks like per-unit rent was passed - multiply by units
+        console.log('[prepareAnalysisContext] monthlyRent appears to be per-unit, multiplying by units');
+        monthlyRent = calculateMonthlyRevenue(requestMonthlyRent, units, propertyType);
+      } else {
+        monthlyRent = requestMonthlyRent;
+      }
+    } else {
+      // Calculate from rent per unit
+      monthlyRent = calculateMonthlyRevenue(rentPerUnit, units, propertyType);
+    }
+
+    console.log('[prepareAnalysisContext] Rental revenue calculation:', {
+      propertyType,
+      units,
+      rentPerUnit,
+      requestMonthlyRent,
+      calculatedMonthlyRent: monthlyRent,
+      calculation: `$${rentPerUnit.toLocaleString()} × ${units} = $${monthlyRent.toLocaleString()}`
+    });
+
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
     
     // Calculate additional metrics for better analysis
