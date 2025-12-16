@@ -54,26 +54,44 @@ export function calculateARVFromComparables(input: ARVCalculationInput): ARVCalc
   // Try to calculate from comparables first
   if (comparables && comparables.length > 0 && subjectPropertySqFt > 0) {
     // Filter for valid comparables with prices
+    // Note: similarity field may not always be provided by RentCast
     const validComps = comparables.filter(comp =>
       comp.price && comp.price > 50000 &&
-      comp.squareFootage && comp.squareFootage > 0 &&
-      comp.similarity && comp.similarity > 0.5 // High similarity comps
+      comp.squareFootage && comp.squareFootage > 0
+      // Removed similarity filter - not always provided
     );
 
+    console.log('[ARV Calculator] Comparables filter:', {
+      totalComps: comparables.length,
+      validComps: validComps.length,
+      sampleComp: validComps[0] ? {
+        price: validComps[0].price,
+        sqft: validComps[0].squareFootage,
+        similarity: validComps[0].similarity
+      } : 'none'
+    });
+
     if (validComps.length >= 2) {
-      // Sort by similarity (highest first) and take top 5
+      // Sort by similarity (highest first) if available, otherwise by distance
       const topComps = [...validComps]
-        .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+        .sort((a, b) => {
+          // Prefer similarity if available
+          if (a.similarity !== undefined && b.similarity !== undefined) {
+            return (b.similarity || 0) - (a.similarity || 0);
+          }
+          // Otherwise sort by distance (closer is better)
+          return (a.distance || 999) - (b.distance || 999);
+        })
         .slice(0, 5);
 
       // Calculate weighted average price per square foot
-      // Weight by similarity score
       let totalWeight = 0;
       let weightedPricePerSqFt = 0;
 
       for (const comp of topComps) {
         const pricePerSqFt = comp.price! / comp.squareFootage!;
-        const weight = comp.similarity || 0.5;
+        // Use similarity as weight if available, otherwise use 1
+        const weight = comp.similarity !== undefined ? comp.similarity : 1;
         weightedPricePerSqFt += pricePerSqFt * weight;
         totalWeight += weight;
       }
@@ -85,7 +103,13 @@ export function calculateARVFromComparables(input: ARVCalculationInput): ARVCalc
         const baseARV = avgPricePerSqFt * subjectPropertySqFt;
 
         // Apply renovation premium to get ARV
-        const arv = Math.round(baseARV * (1 + renovationPremium));
+        let arv = Math.round(baseARV * (1 + renovationPremium));
+
+        // CRITICAL: ARV must be at least 10% higher than purchase price for flips
+        if (purchasePrice > 0 && arv < purchasePrice * 1.1) {
+          console.log('[ARV Calculator] WARNING: Calculated ARV too low, adjusting to minimum');
+          arv = Math.round(purchasePrice * (1.1 + renovationPremium));
+        }
 
         console.log('[ARV Calculator] Calculated from comparables:', {
           comparablesUsed: topComps.length,
@@ -93,6 +117,7 @@ export function calculateARVFromComparables(input: ARVCalculationInput): ARVCalc
           subjectPropertySqFt,
           baseARV,
           renovationPremium,
+          purchasePrice,
           arv
         });
 
@@ -112,12 +137,69 @@ export function calculateARVFromComparables(input: ARVCalculationInput): ARVCalc
   }
 
   // Fallback to AVM + renovation multiplier
-  if (avmValue && avmValue > 0) {
-    // Strategy-specific multipliers (more conservative than pure renovation premium)
+  // But ARV should be based on purchase price, not AVM (AVM can be misleading)
+  if (purchasePrice > 0) {
+    // Strategy-specific multipliers based on renovation level
     let multiplier: number;
 
     if (strategy === 'brrrr') {
       // BRRRR: more conservative, ARV should reflect true market value after rehab
+      switch (renovationLevel) {
+        case 'cosmetic': multiplier = 1.10; break;
+        case 'moderate': multiplier = 1.15; break;
+        case 'extensive': multiplier = 1.22; break;
+        case 'gut': multiplier = 1.30; break;
+        default: multiplier = 1.15;
+      }
+    } else {
+      // Flip: ARV should be achievable sale price after renovation
+      switch (renovationLevel) {
+        case 'cosmetic': multiplier = 1.12; break;
+        case 'moderate': multiplier = 1.18; break;
+        case 'extensive': multiplier = 1.25; break;
+        case 'gut': multiplier = 1.35; break;
+        default: multiplier = 1.18;
+      }
+    }
+
+    let arv = Math.round(purchasePrice * multiplier);
+
+    // If we have AVM and it's higher than purchase price, use it to validate ARV
+    if (avmValue && avmValue > purchasePrice) {
+      // AVM is higher than purchase price - good deal indicator
+      // ARV should be between purchase price and AVM after renovation
+      const avmBasedARV = Math.round(avmValue * (1 + renovationPremium * 0.5));
+      // Use the higher of the two calculations, capped at 110% of AVM
+      arv = Math.max(arv, Math.min(avmBasedARV, Math.round(avmValue * 1.1)));
+    }
+
+    console.log('[ARV Calculator] Calculated from purchase price:', {
+      purchasePrice,
+      avmValue,
+      strategy,
+      renovationLevel,
+      multiplier,
+      arv
+    });
+
+    return {
+      arv,
+      method: 'multiplier',
+      confidence: 'low',
+      details: {
+        pricePerSqFt: subjectPropertySqFt > 0 ? arv / subjectPropertySqFt : 0,
+        comparablesUsed: 0,
+        adjustmentApplied: multiplier - 1,
+        renovationPremium: arv - purchasePrice
+      }
+    };
+  }
+
+  // If no purchase price but we have AVM, use it as reference
+  if (avmValue && avmValue > 0) {
+    let multiplier: number;
+
+    if (strategy === 'brrrr') {
       switch (renovationLevel) {
         case 'cosmetic': multiplier = 1.08; break;
         case 'moderate': multiplier = 1.12; break;
@@ -126,19 +208,18 @@ export function calculateARVFromComparables(input: ARVCalculationInput): ARVCalc
         default: multiplier = 1.12;
       }
     } else {
-      // Flip: ARV should be achievable sale price after renovation
       switch (renovationLevel) {
-        case 'cosmetic': multiplier = 1.12; break;
-        case 'moderate': multiplier = 1.18; break;
-        case 'extensive': multiplier = 1.25; break;
-        case 'gut': multiplier = 1.32; break;
-        default: multiplier = 1.18;
+        case 'cosmetic': multiplier = 1.10; break;
+        case 'moderate': multiplier = 1.15; break;
+        case 'extensive': multiplier = 1.22; break;
+        case 'gut': multiplier = 1.30; break;
+        default: multiplier = 1.15;
       }
     }
 
     const arv = Math.round(avmValue * multiplier);
 
-    console.log('[ARV Calculator] Calculated from AVM:', {
+    console.log('[ARV Calculator] Calculated from AVM (no purchase price):', {
       avmValue,
       strategy,
       renovationLevel,
@@ -155,31 +236,6 @@ export function calculateARVFromComparables(input: ARVCalculationInput): ARVCalc
         comparablesUsed: 0,
         adjustmentApplied: multiplier - 1,
         renovationPremium: arv - avmValue
-      }
-    };
-  }
-
-  // Last resort: use purchase price with multiplier
-  if (purchasePrice > 0) {
-    const multiplier = strategy === 'brrrr' ? 1.15 : 1.20;
-    const arv = Math.round(purchasePrice * multiplier * (1 + renovationPremium));
-
-    console.log('[ARV Calculator] Calculated from purchase price:', {
-      purchasePrice,
-      multiplier,
-      renovationPremium,
-      arv
-    });
-
-    return {
-      arv,
-      method: 'multiplier',
-      confidence: 'low',
-      details: {
-        pricePerSqFt: subjectPropertySqFt > 0 ? arv / subjectPropertySqFt : 0,
-        comparablesUsed: 0,
-        adjustmentApplied: multiplier - 1 + renovationPremium,
-        renovationPremium: arv - purchasePrice
       }
     };
   }

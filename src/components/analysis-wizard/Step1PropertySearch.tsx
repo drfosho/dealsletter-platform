@@ -123,7 +123,19 @@ export default function Step1PropertySearch({
       });
     }
     
-    const purchasePrice = listingPrice > 0 ? listingPrice : avmValue;
+    // CRITICAL: Only use listing price for purchase price, NOT AVM
+    // AVM is an estimate and should only be shown for reference
+    // If no listing price, user must enter purchase price manually
+    const purchasePrice = listingPrice > 0 ? listingPrice : 0;
+
+    // Store AVM separately for reference (do NOT use as purchase price)
+    console.log('[Step1] IMPORTANT - Price Source Separation:', {
+      listingPrice: listingPrice,
+      avmEstimate: avmValue,
+      usingListingPrice: listingPrice > 0,
+      purchasePriceSet: purchasePrice,
+      note: listingPrice === 0 ? 'No listing price found - user must enter manually' : 'Using listing price'
+    });
     
     // Extract rent estimate with similar approach
     let rentEstimate = 0;
