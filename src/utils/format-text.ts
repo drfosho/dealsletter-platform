@@ -75,11 +75,39 @@ export function formatSummary(text: string | undefined | null): string {
 
 /**
  * Cleans and formats AI-generated recommendation text
+ * Removes formatting artifacts and makes text professional
  */
 export function formatRecommendation(text: string | undefined | null): string {
   if (!text) return 'No recommendation available.';
 
-  return stripMarkdown(text);
+  let cleaned = text
+    // Remove "Rationale:" or similar labels
+    .replace(/\bRationale:\s*/gi, '')
+    .replace(/\bExplanation:\s*/gi, '')
+    .replace(/\bReasoning:\s*/gi, '')
+    // Remove trailing dashes and other artifacts
+    .replace(/\s*--\s*$/g, '')
+    .replace(/\s*-+\s*$/g, '')
+    // Remove multiple asterisks (often used as separators)
+    .replace(/\*{2,}/g, '')
+    // Clean up any remaining single asterisks at word boundaries
+    .replace(/\s*\*\s*/g, ' ')
+    // Remove colons after recommendation types that are already formatted
+    .replace(/(PASS|BUY|HOLD|CONDITIONAL PASS|STRONG BUY):\s*/gi, '$1 - ')
+    // Clean up double spaces
+    .replace(/\s{2,}/g, ' ')
+    // Clean up line breaks with proper spacing
+    .replace(/\n{3,}/g, '\n\n');
+
+  // Apply markdown stripping
+  cleaned = stripMarkdown(cleaned);
+
+  // Ensure proper sentence ending
+  if (cleaned && !cleaned.match(/[.!?]$/)) {
+    cleaned = cleaned + '.';
+  }
+
+  return cleaned.trim();
 }
 
 /**

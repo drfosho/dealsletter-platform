@@ -31,7 +31,12 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
   };
 
   const getRiskLevel = () => {
-    const roi = analysis.ai_analysis?.financial_metrics?.roi || 0;
+    // CRITICAL FIX: Check multiple locations for ROI
+    // Data can be at top level (from DB) or nested in ai_analysis.financial_metrics
+    const roi = (analysis as any).roi ||
+               analysis.ai_analysis?.financial_metrics?.roi ||
+               (analysis as any).analysis_data?.roi ||
+               0;
 
     if (analysis.strategy === 'flip') {
       // Fix & Flip risk assessment based on ROI and timeline
@@ -147,7 +152,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
               </svg>
             )}
             <div className="flex-1">
-              <h4 className={`font-semibold mb-1 ${recommendationColors.title}`}>AI Recommendation</h4>
+              <h4 className={`font-semibold mb-1 ${recommendationColors.title}`}>DealLetter AI Recommendation</h4>
               <p className={`text-sm leading-relaxed ${recommendationColors.text}`}>
                 {formatRecommendation(recommendation)}
               </p>
@@ -165,14 +170,22 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
   }
 
   function getInvestmentScore(analysis: AnalysisOverviewProps['analysis']): number {
-    const roi = analysis.ai_analysis?.financial_metrics?.roi || 0;
+    // CRITICAL FIX: Check multiple locations for ROI
+    const roi = (analysis as any).roi ||
+               analysis.ai_analysis?.financial_metrics?.roi ||
+               (analysis as any).analysis_data?.roi ||
+               0;
 
     let score = 50; // Base score
 
     if (analysis.strategy === 'flip') {
       // Fix & Flip scoring based on ROI and profit margin
-      const netProfit = analysis.ai_analysis?.financial_metrics?.net_profit ||
-                       analysis.ai_analysis?.financial_metrics?.total_profit || 0;
+      // CRITICAL FIX: Check multiple locations for net profit
+      const netProfit = (analysis as any).profit ||
+                       analysis.ai_analysis?.financial_metrics?.net_profit ||
+                       analysis.ai_analysis?.financial_metrics?.total_profit ||
+                       (analysis as any).analysis_data?.profit ||
+                       0;
       const timeline = (analysis as any).strategy_details?.timeline ||
                       (analysis as any).strategyDetails?.timeline || 6;
 

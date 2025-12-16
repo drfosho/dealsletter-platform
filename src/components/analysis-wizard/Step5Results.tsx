@@ -285,7 +285,7 @@ export default function Step5Results({ data }: Step5ResultsProps) {
             )}
             <div className="flex-1">
               <h4 className={`font-semibold mb-2 ${recommendationColors.title}`}>
-                AI Recommendation
+                DealLetter AI Recommendation
               </h4>
               <p className={`${recommendationColors.text} leading-relaxed`}>
                 {formatRecommendation(analysis.recommendation)}

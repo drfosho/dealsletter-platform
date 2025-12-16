@@ -18,20 +18,41 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
     if (isFlipStrategy) {
       // Fix & Flip specific calculations
       // Try multiple locations for rehab costs
-      const rehabCosts = analysis.rehab_costs || 
-                        (analysis as any).renovationCosts || 
-                        (analysis as any).analysis_data?.rehab_costs || 
+      const rehabCosts = analysis.rehab_costs ||
+                        (analysis as any).renovationCosts ||
+                        (analysis as any).analysis_data?.rehab_costs ||
                         0;
       const closingCosts = purchasePrice * 0.03; // 3% closing costs
       const totalInvestment = downPayment + rehabCosts + closingCosts;
-      
+
       // Get metrics from AI analysis if available
+      // CRITICAL FIX: Check multiple locations for profit and ROI
+      // Data can be at top level (from DB) or nested in ai_analysis.financial_metrics
       const aiMetrics = analysis.ai_analysis?.financial_metrics;
-      const netProfit = aiMetrics?.total_profit || 0;
-      const roi = aiMetrics?.roi || 0;
-      
+      const netProfit = (analysis as any).profit ||
+                       aiMetrics?.total_profit ||
+                       aiMetrics?.net_profit ||
+                       (analysis as any).analysis_data?.profit ||
+                       0;
+      const roi = (analysis as any).roi ||
+                 aiMetrics?.roi ||
+                 (analysis as any).analysis_data?.roi ||
+                 0;
+
+      console.log('[FinancialMetrics] Flip metrics debug:', {
+        topLevelProfit: (analysis as any).profit,
+        topLevelRoi: (analysis as any).roi,
+        aiMetricsProfit: aiMetrics?.total_profit,
+        aiMetricsRoi: aiMetrics?.roi,
+        finalNetProfit: netProfit,
+        finalRoi: roi
+      });
+
       // Estimate ARV from comparables or AI analysis
-      const estimatedARV = (analysis.property_data as any)?.comparables?.value || purchasePrice * 1.3;
+      const estimatedARV = (analysis.property_data as any)?.comparables?.value ||
+                          (aiMetrics as any)?.arv ||
+                          (analysis as any).analysis_data?.arv ||
+                          purchasePrice * 1.3;
       const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
       
       return {
