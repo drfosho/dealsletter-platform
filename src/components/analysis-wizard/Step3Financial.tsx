@@ -92,24 +92,60 @@ export default function Step3Financial({
   // Initialize units based on property type
   useEffect(() => {
     if (financial.units === undefined && data.propertyData) {
-      const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+      const property = (data.propertyData as any)?.property;
+      const propertyType = property?.propertyType || '';
+      const bedrooms = property?.bedrooms || property?.beds || 0;
       let defaultUnits = 1;
-      
+
+      console.log('[Step3Financial] Units auto-detection:', {
+        propertyType,
+        bedrooms,
+        explicitUnits: property?.units,
+        numberOfUnits: property?.numberOfUnits
+      });
+
       // First check if units are explicitly provided in the data
-      if ((data.propertyData as any)?.property?.units) {
-        defaultUnits = (data.propertyData as any).property.units;
-      } 
+      if (property?.units && property.units > 0) {
+        defaultUnits = property.units;
+        console.log('[Step3Financial] Using explicit units:', defaultUnits);
+      } else if (property?.numberOfUnits && property.numberOfUnits > 0) {
+        defaultUnits = property.numberOfUnits;
+        console.log('[Step3Financial] Using numberOfUnits:', defaultUnits);
+      }
       // Infer from property type name
       else if (propertyType.toLowerCase().includes('duplex')) {
         defaultUnits = 2;
       } else if (propertyType.toLowerCase().includes('triplex')) {
         defaultUnits = 3;
-      } else if (propertyType.toLowerCase().includes('fourplex')) {
+      } else if (propertyType.toLowerCase().includes('fourplex') || propertyType.toLowerCase().includes('quadplex')) {
         defaultUnits = 4;
       }
-      
-      // Only set units if it's different from default
-      if (defaultUnits !== 1) {
+      // CRITICAL: For Multi-Family properties, use bedrooms as unit count if > 1
+      // This is common for apartment buildings where each bedroom = 1 unit
+      else if (propertyType.toLowerCase().includes('multi') ||
+               propertyType.toLowerCase().includes('apartment') ||
+               propertyType.toLowerCase().includes('multifamily')) {
+        // For multi-family, bedrooms often = units (1br apartments)
+        // But also check bathrooms as a sanity check
+        const bathrooms = property?.bathrooms || property?.baths || 0;
+        if (bedrooms > 1 && bedrooms === bathrooms) {
+          // If bedrooms = bathrooms, likely each unit has 1br/1ba
+          defaultUnits = bedrooms;
+          console.log('[Step3Financial] Multi-family: Using bedrooms as units (beds=baths):', defaultUnits);
+        } else if (bedrooms > 4) {
+          // For larger properties, bedrooms likely = units
+          defaultUnits = bedrooms;
+          console.log('[Step3Financial] Multi-family: Using bedrooms as units (5+ beds):', defaultUnits);
+        } else {
+          // Default to 2 for generic multi-family
+          defaultUnits = 2;
+          console.log('[Step3Financial] Multi-family: Defaulting to 2 units');
+        }
+      }
+
+      // Set units if we detected more than 1
+      if (defaultUnits > 1) {
+        console.log('[Step3Financial] Setting default units to:', defaultUnits);
         handleFieldChange('units', defaultUnits);
       }
     }
@@ -633,26 +669,43 @@ export default function Step3Financial({
           
           {/* Multi-family property detection */}
           {(() => {
-            const propertyType = (data.propertyData as any)?.property?.propertyType || '';
-            const isMultiFamily = propertyType.toLowerCase().includes('multi') || 
-                                  propertyType.toLowerCase().includes('duplex') || 
+            const property = (data.propertyData as any)?.property;
+            const propertyType = property?.propertyType || '';
+            const isMultiFamily = propertyType.toLowerCase().includes('multi') ||
+                                  propertyType.toLowerCase().includes('apartment') ||
+                                  propertyType.toLowerCase().includes('duplex') ||
                                   propertyType.toLowerCase().includes('triplex') ||
-                                  propertyType.toLowerCase().includes('fourplex');
-            
+                                  propertyType.toLowerCase().includes('fourplex') ||
+                                  propertyType.toLowerCase().includes('quadplex');
+
             // Extract unit count from property data or infer from property type
-            const extractUnits = () => {
+            const extractUnits = (): number => {
               // First check if units are explicitly provided in the data
-              if ((data.propertyData as any)?.property?.units) {
-                return (data.propertyData as any).property.units;
+              if (property?.units && property.units > 0) {
+                return property.units;
+              }
+              if (property?.numberOfUnits && property.numberOfUnits > 0) {
+                return property.numberOfUnits;
               }
               // Infer from property type name
               if (propertyType.toLowerCase().includes('duplex')) return 2;
               if (propertyType.toLowerCase().includes('triplex')) return 3;
-              if (propertyType.toLowerCase().includes('fourplex')) return 4;
+              if (propertyType.toLowerCase().includes('fourplex') || propertyType.toLowerCase().includes('quadplex')) return 4;
+              // For Multi-Family, use bedrooms as unit count
+              if (propertyType.toLowerCase().includes('multi') || propertyType.toLowerCase().includes('apartment')) {
+                const bedrooms = property?.bedrooms || property?.beds || 0;
+                const bathrooms = property?.bathrooms || property?.baths || 0;
+                // If bedrooms = bathrooms, likely each unit has 1br/1ba
+                if (bedrooms > 1 && bedrooms === bathrooms) return bedrooms;
+                // For larger properties (5+ beds), bedrooms likely = units
+                if (bedrooms > 4) return bedrooms;
+                // Default to 2 for generic multi-family
+                return 2;
+              }
               // Default to 1 for single family homes
               return 1;
             };
-            
+
             const unitCount = financial.units || extractUnits();
             
             if (isMultiFamily || unitCount > 1) {
@@ -663,18 +716,27 @@ export default function Step3Financial({
                     <label className="block text-xs font-medium text-muted mb-1">Number of Units</label>
                     <input
                       type="number"
-                      value={financial.units ?? ''}
+                      value={financial.units || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          handleFieldChange('units', 1);
-                        } else {
-                          const units = parseInt(value) || 1;
+                        // CRITICAL FIX: Allow empty value during editing
+                        // Parse and only update if valid number, otherwise let the field be empty
+                        const units = parseInt(value);
+                        if (!isNaN(units) && units > 0) {
                           handleFieldChange('units', units);
                           // Update total rent when units change
                           if (financial.rentPerUnit) {
                             handleFieldChange('monthlyRent', financial.rentPerUnit * units);
                           }
+                        } else if (value === '') {
+                          // Allow empty field - will be validated on blur
+                          handleFieldChange('units', 0);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Reset to 1 if left empty or zero on blur
+                        if (!e.target.value || financial.units === 0) {
+                          handleFieldChange('units', 1);
                         }
                       }}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1110,18 +1172,27 @@ export default function Step3Financial({
           </label>
           <input
             type="number"
-            value={financial.units ?? ''}
+            value={financial.units || ''}
             onChange={(e) => {
               const value = e.target.value;
-              if (value === '') {
-                handleFieldChange('units', 1);
-              } else {
-                const units = parseInt(value) || 1;
+              // CRITICAL FIX: Allow empty value during editing
+              // Parse and only update if valid number, otherwise let the field be empty
+              const units = parseInt(value);
+              if (!isNaN(units) && units > 0) {
                 handleFieldChange('units', units);
                 // Update rent calculations if we have rent per unit
                 if (financial.rentPerUnit) {
                   handleFieldChange('monthlyRent', financial.rentPerUnit * units);
                 }
+              } else if (value === '') {
+                // Allow empty field - will be validated on blur
+                handleFieldChange('units', 0);
+              }
+            }}
+            onBlur={(e) => {
+              // Reset to 1 if left empty or zero on blur
+              if (!e.target.value || financial.units === 0) {
+                handleFieldChange('units', 1);
               }
             }}
             className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
