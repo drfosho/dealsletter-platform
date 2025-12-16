@@ -191,11 +191,68 @@ export default function Step3Financial({
     }
     
     // Auto-populate monthly rent if not already set and strategy requires it
-    if (['rental', 'brrrr', 'commercial'].includes(data.strategy) && 
-        newRentEstimate > 0 && 
+    if (['rental', 'brrrr', 'commercial'].includes(data.strategy) &&
+        newRentEstimate > 0 &&
         (!financial.monthlyRent || financial.monthlyRent === 0)) {
-      console.log('[Step3Financial] Auto-populating monthly rent:', newRentEstimate);
-      updatedFinancial.monthlyRent = newRentEstimate;
+
+      // CRITICAL FIX: For multi-family properties, RentCast may return per-unit rent
+      // We need to multiply by number of units to get total property rent
+      const property = (data.propertyData as any)?.property;
+      const propertyType = property?.propertyType || '';
+      const isMultiFamily = propertyType.toLowerCase().includes('multi') ||
+                           propertyType.toLowerCase().includes('apartment') ||
+                           propertyType.toLowerCase().includes('duplex') ||
+                           propertyType.toLowerCase().includes('triplex') ||
+                           propertyType.toLowerCase().includes('fourplex');
+
+      // Detect number of units for multi-family
+      let detectedUnits = 1;
+      if (isMultiFamily) {
+        const bedrooms = property?.bedrooms || property?.beds || 0;
+        const bathrooms = property?.bathrooms || property?.baths || 0;
+
+        if (property?.units && property.units > 0) {
+          detectedUnits = property.units;
+        } else if (property?.numberOfUnits && property.numberOfUnits > 0) {
+          detectedUnits = property.numberOfUnits;
+        } else if (propertyType.toLowerCase().includes('duplex')) {
+          detectedUnits = 2;
+        } else if (propertyType.toLowerCase().includes('triplex')) {
+          detectedUnits = 3;
+        } else if (propertyType.toLowerCase().includes('fourplex') || propertyType.toLowerCase().includes('quadplex')) {
+          detectedUnits = 4;
+        } else if (bedrooms > 1 && bedrooms === bathrooms) {
+          // For multi-family where beds = baths, each is likely a 1br/1ba unit
+          detectedUnits = bedrooms;
+        } else if (bedrooms > 4) {
+          detectedUnits = bedrooms;
+        }
+      }
+
+      // Calculate total rent - multiply by units for multi-family
+      // RentCast typically returns per-unit rent estimate for multi-family properties
+      const totalMonthlyRent = isMultiFamily && detectedUnits > 1
+        ? newRentEstimate * detectedUnits
+        : newRentEstimate;
+
+      console.log('[Step3Financial] Auto-populating monthly rent:', {
+        rentCastEstimate: newRentEstimate,
+        isMultiFamily,
+        detectedUnits,
+        totalMonthlyRent,
+        calculation: isMultiFamily && detectedUnits > 1
+          ? `${newRentEstimate} × ${detectedUnits} = ${totalMonthlyRent}`
+          : `${newRentEstimate} (single unit)`
+      });
+
+      updatedFinancial.monthlyRent = totalMonthlyRent;
+
+      // Also set rent per unit for multi-family
+      if (detectedUnits > 1) {
+        updatedFinancial.rentPerUnit = newRentEstimate;
+        updatedFinancial.units = detectedUnits;
+      }
+
       hasChanges = true;
     }
     
