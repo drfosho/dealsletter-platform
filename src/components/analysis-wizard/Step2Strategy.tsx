@@ -98,7 +98,40 @@ export default function Step2Strategy({
 
   const handleStrategySelect = (strategyId: string) => {
     setSelectedStrategy(strategyId);
-    updateData({ strategy: strategyId });
+
+    // CRITICAL FIX: Reset strategyDetails when switching strategies
+    // This prevents stale values from persisting (e.g., rental timeline of "20" years
+    // being used for flip timeline which should be in months)
+    const previousStrategy = selectedStrategy;
+
+    if (previousStrategy && previousStrategy !== strategyId) {
+      console.log('[Step2Strategy] Strategy changed from', previousStrategy, 'to', strategyId, '- resetting details');
+
+      // Set appropriate defaults for the new strategy
+      let newDetails: Record<string, string> = {};
+
+      switch (strategyId) {
+        case 'flip':
+          newDetails = { timeline: '6', renovationLevel: 'moderate' };
+          break;
+        case 'brrrr':
+          newDetails = { timeline: '12', renovationLevel: 'moderate', initialFinancing: 'hardMoney', exitStrategy: '75' };
+          break;
+        case 'rental':
+          newDetails = { timeline: '10', exitStrategy: 'self' };
+          break;
+        case 'commercial':
+          newDetails = { timeline: '1' };
+          break;
+        default:
+          newDetails = {};
+      }
+
+      setStrategyDetails(newDetails);
+      updateData({ strategy: strategyId, strategyDetails: newDetails });
+    } else {
+      updateData({ strategy: strategyId });
+    }
   };
 
   const handleDetailsChange = (field: string, value: string) => {

@@ -964,16 +964,29 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
     // The strategyDetails.timeline is in months (3, 6, 9, 12)
     // The loanTerm for hard money is typically 1 year but the flip might be shorter
     let holdingTimeInMonths = 6; // Default to 6 months
-    
+
     // Check if we have a specific timeline in strategyDetails
-    if ((request as any).strategyDetails?.timeline) {
-      holdingTimeInMonths = parseInt((request as any).strategyDetails.timeline) || 6;
-      console.log('[Fix & Flip] Using timeline from strategyDetails:', holdingTimeInMonths, 'months');
+    const rawTimeline = (request as any).strategyDetails?.timeline;
+    if (rawTimeline) {
+      const parsedTimeline = parseInt(rawTimeline);
+      // CRITICAL FIX: Validate timeline is realistic for flips (max 18 months)
+      // If timeline > 18, it's likely from rental strategy (years) - ignore it
+      if (!isNaN(parsedTimeline) && parsedTimeline > 0 && parsedTimeline <= 18) {
+        holdingTimeInMonths = parsedTimeline;
+        console.log('[Fix & Flip] Using timeline from strategyDetails:', holdingTimeInMonths, 'months');
+      } else {
+        console.log('[Fix & Flip] Invalid timeline value:', rawTimeline, '- using default 6 months');
+        holdingTimeInMonths = 6;
+      }
     } else if (request.loanTerms?.loanTerm) {
       // If no specific timeline, use loan term but cap at 12 months for flips
       holdingTimeInMonths = Math.min(Math.round(request.loanTerms.loanTerm * 12), 12);
       console.log('[Fix & Flip] Using loanTerm as timeline:', holdingTimeInMonths, 'months');
     }
+
+    // Final validation: Flips should never exceed 18 months
+    holdingTimeInMonths = Math.min(holdingTimeInMonths, 18);
+    console.log('[Fix & Flip] Final holding time:', holdingTimeInMonths, 'months');
     
     const holdingTimeInYears = holdingTimeInMonths / 12;
     
