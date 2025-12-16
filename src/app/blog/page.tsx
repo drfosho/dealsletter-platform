@@ -231,7 +231,7 @@ export default function BlogPage() {
           {/* Header */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
-              Dealsletter Insights
+              DealLetter Insights
             </h1>
             <p className="text-lg text-muted max-w-2xl mx-auto">
               Market analysis, tax strategies, deal breakdowns, and insider insights from the world of real estate investing.
@@ -434,7 +434,7 @@ export default function BlogPage() {
             </h3>
             <p className="text-muted mb-6 max-w-2xl mx-auto">
               Get weekly market analysis, exclusive deal breakdowns, and tax strategies delivered straight to your inbox. 
-              Join 1,000+ investors who rely on Dealsletter for their edge.
+              Join 1,000+ investors who rely on DealLetter for their edge.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a 
@@ -460,7 +460,7 @@ export default function BlogPage() {
       <footer className="bg-card border-t border-border/20 px-6 py-12">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-sm text-muted">
-            © 2024 Dealsletter Platform. All rights reserved.
+            © 2024 DealLetter Platform. All rights reserved.
           </p>
         </div>
       </footer>

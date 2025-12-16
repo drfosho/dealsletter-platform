@@ -115,7 +115,7 @@ export default function RealStateHousingArticle() {
 
               <h2 className="text-2xl font-bold text-primary mt-8 mb-4">Where the Opportunity Is (and Isn&apos;t)</h2>
               
-              <p>Here&apos;s where I&apos;m focusing with Dealsletter:</p>
+              <p>Here&apos;s where I&apos;m focusing with DealLetter:</p>
 
               <div className="bg-green-500/10 rounded-lg p-6 border border-green-500/20 my-6">
                 <h3 className="text-lg font-semibold text-primary mb-3">✅ Distressed Submarkets in the Sunbelt</h3>
@@ -172,7 +172,7 @@ export default function RealStateHousingArticle() {
                   <li className="flex items-start space-x-3">
                     <span className="bg-accent text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold">5</span>
                     <div>
-                      <strong className="text-primary">Subscribe to sources that cut through noise</strong> &mdash; (That&apos;s why we created Dealsletter &mdash; to deliver underwritten, real deals, not hype.)
+                      <strong className="text-primary">Subscribe to sources that cut through noise</strong> &mdash; (That&apos;s why we created DealLetter &mdash; to deliver underwritten, real deals, not hype.)
                     </div>
                   </li>
                 </ol>
@@ -202,7 +202,7 @@ export default function RealStateHousingArticle() {
               Navigate the Market Reset With Expert Analysis
             </h3>
             <p className="text-muted mb-6">
-              Join Dealsletter to get weekly market insights and pre-vetted opportunities in the correction markets.
+              Join DealLetter to get weekly market insights and pre-vetted opportunities in the correction markets.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 

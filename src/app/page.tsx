@@ -681,7 +681,7 @@ export default function Home() {
           </div>
 
           <div className="border-t border-border/40 pt-8 text-center text-sm text-muted">
-            <p>&copy; {new Date().getFullYear()} Dealsletter. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} DealLetter. All rights reserved.</p>
           </div>
         </div>
       </footer>

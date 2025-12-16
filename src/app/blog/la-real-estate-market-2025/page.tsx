@@ -289,12 +289,12 @@ export default function LAMarketAnalysisArticle() {
               {/* CTA Section */}
               <div className="mt-16 bg-gradient-to-r from-accent/10 to-primary/10 rounded-xl p-8 text-center border border-accent/20">
                 <h3 className="text-2xl font-bold text-primary mb-4">Stay Ahead of the LA Market</h3>
-                <p className="mb-6">Sign up for Dealsletter to stay updated on the latest LA real estate opportunities. Get exclusive access to deals before they hit the mainstream market. Whether you&apos;re looking for flips, BRRRR investments, or house hacks to enter this competitive market, we&apos;ve got you covered!</p>
+                <p className="mb-6">Sign up for DealLetter to stay updated on the latest LA real estate opportunities. Get exclusive access to deals before they hit the mainstream market. Whether you&apos;re looking for flips, BRRRR investments, or house hacks to enter this competitive market, we&apos;ve got you covered!</p>
                 <Link 
                   href="/auth/signup" 
                   className="inline-block px-8 py-3 bg-accent text-white font-medium rounded-lg hover:bg-accent/90 transition-all transform hover:scale-105"
                 >
-                  Get Started with Dealsletter
+                  Get Started with DealLetter
                 </Link>
               </div>
 
@@ -305,7 +305,7 @@ export default function LAMarketAnalysisArticle() {
                     <span className="text-accent font-bold">DL</span>
                   </div>
                   <div>
-                    <p className="font-medium text-primary">Dealsletter Team</p>
+                    <p className="font-medium text-primary">DealLetter Team</p>
                     <p className="text-sm text-muted">Real estate insights, data analysis, and investment opportunities</p>
                   </div>
                 </div>

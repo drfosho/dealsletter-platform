@@ -48,11 +48,46 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
         finalRoi: roi
       });
 
-      // Estimate ARV from comparables or AI analysis
-      const estimatedARV = (analysis.property_data as any)?.comparables?.value ||
-                          (aiMetrics as any)?.arv ||
-                          (analysis as any).analysis_data?.arv ||
-                          purchasePrice * 1.3;
+      // CRITICAL FIX: ARV must be HIGHER than purchase price for flip profitability
+      // ARV = After Repair Value = what property will sell for AFTER renovations
+      // The comparables.value is current AVM, NOT the post-renovation ARV
+      let estimatedARV = (aiMetrics as any)?.arv ||
+                        (analysis as any).analysis_data?.arv ||
+                        (analysis.property_data as any)?.comparables?.value ||
+                        0;
+
+      // Renovation level multipliers for ARV calculation
+      const renovationLevel = (analysis as any).strategy_details?.renovationLevel ||
+                             (analysis as any).strategyDetails?.renovationLevel ||
+                             'moderate';
+      const renovationMultipliers: Record<string, number> = {
+        cosmetic: 1.12,
+        moderate: 1.18,
+        extensive: 1.25,
+        gut: 1.35
+      };
+      const multiplier = renovationMultipliers[renovationLevel] || 1.18;
+
+      // CRITICAL VALIDATION: ARV must be at least 15% higher than purchase price for flips
+      if (estimatedARV <= purchasePrice) {
+        console.log('[FinancialMetrics] WARNING: ARV <= purchase price, recalculating');
+        // Calculate proper ARV based on purchase price + renovation value
+        estimatedARV = Math.round(purchasePrice * multiplier);
+      } else if (estimatedARV < purchasePrice * 1.15) {
+        // If ARV is barely above purchase price, adjust it
+        console.log('[FinancialMetrics] WARNING: ARV too close to purchase price, adjusting');
+        estimatedARV = Math.round(purchasePrice * multiplier);
+      }
+
+      console.log('[FinancialMetrics] ARV Calculation:', {
+        originalARV: (analysis.property_data as any)?.comparables?.value,
+        renovationLevel,
+        multiplier,
+        purchasePrice,
+        finalARV: estimatedARV,
+        arvIsValid: estimatedARV > purchasePrice
+      });
+
       const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
       
       return {

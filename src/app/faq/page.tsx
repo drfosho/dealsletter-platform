@@ -14,8 +14,8 @@ interface FAQItem {
 const faqData: FAQItem[] = [
   {
     id: 1,
-    question: "How does the Dealsletter platform work?",
-    answer: "Dealsletter provides pre-vetted real estate investment opportunities with detailed financial analysis. Our team sources deals from across the country, performs comprehensive due diligence, and presents them with complete cash flow projections, risk assessments, and investment strategies.",
+    question: "How does the DealLetter platform work?",
+    answer: "DealLetter provides pre-vetted real estate investment opportunities with detailed financial analysis. Our team sources deals from across the country, performs comprehensive due diligence, and presents them with complete cash flow projections, risk assessments, and investment strategies.",
     category: "platform"
   },
   {
@@ -228,7 +228,7 @@ export default function FAQPage() {
               Frequently Asked Questions
             </h1>
             <p className="text-lg text-muted max-w-2xl mx-auto">
-              Everything you need to know about the Dealsletter platform, deal analysis, and getting started with real estate investing.
+              Everything you need to know about the DealLetter platform, deal analysis, and getting started with real estate investing.
             </p>
           </div>
 
@@ -313,7 +313,7 @@ export default function FAQPage() {
       <footer className="bg-card border-t border-border/20 px-6 py-12">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-sm text-muted">
-            © 2024 Dealsletter Platform. All rights reserved.
+            © 2024 DealLetter Platform. All rights reserved.
           </p>
         </div>
       </footer>

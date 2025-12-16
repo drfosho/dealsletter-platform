@@ -139,7 +139,7 @@ export default function ContactPage() {
               </div>
               <h3 className="text-xl font-semibold text-primary mb-2">General Inquiries</h3>
               <p className="text-muted mb-4">
-                For partnership opportunities, platform questions, or general information about Dealsletter.
+                For partnership opportunities, platform questions, or general information about DealLetter.
               </p>
               <a 
                 href="mailto:main@dealsletter.io" 
@@ -214,7 +214,7 @@ export default function ContactPage() {
       <footer className="bg-card border-t border-border/20 px-6 py-12">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-sm text-muted">
-            © 2024 Dealsletter Platform. All rights reserved.
+            © 2024 DealLetter Platform. All rights reserved.
           </p>
         </div>
       </footer>

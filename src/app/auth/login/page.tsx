@@ -78,7 +78,7 @@ export default function LoginPage() {
         <div className="bg-card rounded-xl border border-border/60 p-8 shadow-lg">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-primary mb-2">Welcome Back</h1>
-            <p className="text-muted">Sign in to your Dealsletter account</p>
+            <p className="text-muted">Sign in to your DealLetter account</p>
           </div>
 
           {error && (
@@ -165,7 +165,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted">
-          <p>© 2024 Dealsletter Platform. All rights reserved.</p>
+          <p>© 2024 DealLetter Platform. All rights reserved.</p>
         </div>
       </div>
     </div>

@@ -49,7 +49,7 @@ export default function VerifySuccess() {
           </h1>
           
           <p className="text-muted mb-6">
-            Welcome to Dealsletter! Your account is now active and ready to use.
+            Welcome to DealLetter! Your account is now active and ready to use.
           </p>
 
           {user && (
