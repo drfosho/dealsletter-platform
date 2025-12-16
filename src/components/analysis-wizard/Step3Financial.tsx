@@ -153,40 +153,45 @@ export default function Step3Financial({
   
   // Auto-populate fields only when property data changes and values are missing
   useEffect(() => {
-    // Skip if we already have purchase price from props
-    if (data.financial.purchasePrice > 0) {
-      console.log('[Step3Financial] Purchase price already set from props:', data.financial.purchasePrice);
-      return;
-    }
-    
     const newListing = (data.propertyData as any)?.listing;
     const newListingPrice = newListing?.price || newListing?.listPrice || newListing?.askingPrice || 0;
     const newComparablesValue = (data.propertyData as any)?.comparables?.value || 0;
-    const newRentEstimate = (data.propertyData as any)?.rental?.rentEstimate || 
+    const newRentEstimate = (data.propertyData as any)?.rental?.rentEstimate ||
                            (data.propertyData as any)?.rental?.rent || 0;
-    
+
     // Use listing price for on-market properties, otherwise use AVM
     const newEffectivePrice = newListingPrice > 0 ? newListingPrice : newComparablesValue;
-    
-    console.log('[Step3Financial] Auto-populate check (no price from props):', {
+
+    // Determine current purchase price (from props or already in financial state)
+    const currentPurchasePrice = data.financial.purchasePrice > 0
+      ? data.financial.purchasePrice
+      : financial.purchasePrice;
+
+    console.log('[Step3Financial] Auto-populate check:', {
       strategy: data.strategy,
       newListingPrice,
       newComparablesValue,
       newEffectivePrice,
       newRentEstimate,
+      propsFinancialPurchasePrice: data.financial.purchasePrice,
       currentPurchasePrice: financial.purchasePrice,
       currentMonthlyRent: financial.monthlyRent,
       currentARV: financial.arv,
       isOnMarket: newListingPrice > 0
     });
-    
+
     let updatedFinancial = { ...financial };
     let hasChanges = false;
-    
-    // Auto-populate purchase price only if not already set and we have a new price
-    if (newEffectivePrice > 0 && financial.purchasePrice === 0) {
+
+    // Auto-populate purchase price only if not already set anywhere
+    if (newEffectivePrice > 0 && currentPurchasePrice === 0) {
       console.log('[Step3Financial] Auto-populating purchase price:', newEffectivePrice);
       updatedFinancial.purchasePrice = newEffectivePrice;
+      hasChanges = true;
+    } else if (data.financial.purchasePrice > 0 && financial.purchasePrice === 0) {
+      // Sync purchase price from props if not in local state
+      console.log('[Step3Financial] Syncing purchase price from props:', data.financial.purchasePrice);
+      updatedFinancial.purchasePrice = data.financial.purchasePrice;
       hasChanges = true;
     }
     
