@@ -353,7 +353,14 @@ export function calculateCompleteFinancials(inputs: FinancialInputs): FinancialO
   const annualCashFlow = monthlyCashFlow * 12;
 
   // Calculate investment metrics
-  const totalInvestment = downPayment + renovationCosts + pointsCost + (purchasePrice * 0.03); // 3% closing costs
+  // IMPORTANT: Closing costs INCLUDE lender points - do NOT double count
+  // Total closing costs = lender points + other fees (title, escrow, etc.)
+  // If points are provided, they are PART OF the 3% closing costs
+  // If points are 0, use full 3% for other closing costs
+  const otherClosingCostsPercent = points > 0 ? (3 - points) : 3; // Remaining after points
+  const otherClosingCosts = (purchasePrice * Math.max(0, otherClosingCostsPercent)) / 100;
+  const totalClosingCosts = pointsCost + otherClosingCosts; // Points ARE part of closing costs
+  const totalInvestment = downPayment + renovationCosts + totalClosingCosts;
   const annualNOI = (totalMonthlyRent * 12) - (monthlyExpenses * 12);
 
   // Cap Rate
@@ -507,20 +514,57 @@ export function validateOutputs(outputs: FinancialOutputs, inputs: FinancialInpu
 export interface FlipCalculationInputs extends FinancialInputs {
   arv: number;
   holdingPeriodMonths?: number;
+  isHardMoney?: boolean; // Indicates hard money loan with rehab holdback
+}
+
+export interface ClosingCostsBreakdown {
+  lenderPoints: number;
+  lenderPointsPercent: number;
+  otherClosingCosts: number;
+  otherClosingCostsPercent: number;
+  totalClosingCosts: number;
+  totalClosingCostsPercent: number;
 }
 
 export interface FlipCalculationOutputs {
+  // Cash Required = What investor brings to closing (down payment + closing costs)
+  // For hard money: does NOT include rehab (lender funds via holdback)
+  cashRequired: number;
+
+  // Total Investment = All-in project cost for tracking purposes
+  // Includes: purchase + rehab + closing + holding
   totalInvestment: number;
+
+  // Total Project Cost = Everything including selling costs
   totalProjectCost: number;
+
+  // Individual cost components
+  downPayment: number;
+  acquisitionLoan: number;
+  rehabHoldback: number;     // Amount funded by lender for rehab (0 if conventional)
+  totalLoan: number;         // acquisitionLoan + rehabHoldback
   holdingCosts: number;
   sellingCosts: number;
+  closingCosts: number;
+  closingCostsBreakdown: ClosingCostsBreakdown;
+
+  // Returns
   netProfit: number;
-  roi: number;
-  profitMargin: number;
+  roi: number;               // Based on cashRequired (what you actually invest)
+  profitMargin: number;      // Based on ARV
+
+  // Financing details
+  isHardMoney: boolean;
 }
 
 /**
  * Calculate fix & flip returns
+ *
+ * IMPORTANT: Properly handles hard money financing with rehab holdback:
+ * - Hard Money: Lender funds 100% of rehab via holdback (not cash from investor)
+ * - Cash Required = Down payment + Closing costs (what investor brings)
+ * - Total Investment = All-in cost (for project tracking)
+ * - ROI = Net Profit / Cash Required (shows return on actual cash invested)
  */
 export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalculationOutputs {
   const purchasePrice = parsePrice(inputs.purchasePrice);
@@ -531,53 +575,115 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   const holdingMonths = parseInteger(inputs.holdingPeriodMonths || 6);
   const points = parsePercentage(inputs.points || 0);
 
-  // Calculate financing
+  // Determine if this is a hard money loan (default to true for flips with points > 2%)
+  const isHardMoney = inputs.isHardMoney ??
+    (inputs.loanType === 'hardMoney' || points >= 2);
+
+  // Calculate financing structure
   const downPayment = (purchasePrice * downPaymentPercent) / 100;
-  const loanAmount = purchasePrice - downPayment;
-  const pointsCost = (loanAmount * points) / 100;
+  const acquisitionLoan = purchasePrice - downPayment;
+
+  // REHAB HOLDBACK: Hard money lenders fund 100% of rehab in holdback
+  // This is NOT cash from the investor
+  const rehabHoldback = isHardMoney ? renovationCosts : 0;
+  const cashForRehab = isHardMoney ? 0 : renovationCosts; // Only pay if conventional
+
+  // Total loan = acquisition + rehab holdback
+  const totalLoan = acquisitionLoan + rehabHoldback;
+
+  // Lender points (on acquisition loan, not on rehab holdback typically)
+  const pointsCost = (acquisitionLoan * points) / 100;
 
   // Calculate holding costs
-  const monthlyInterest = loanAmount * (interestRate / 100 / 12);
-  const monthlyRehabInterest = renovationCosts * (interestRate / 100 / 12);
+  // Interest on acquisition loan
+  const monthlyAcquisitionInterest = acquisitionLoan * (interestRate / 100 / 12);
+  // Interest on rehab holdback (drawn over time, so use 50% average)
+  const monthlyRehabInterest = rehabHoldback * (interestRate / 100 / 12) * 0.5;
   const monthlyPropertyTax = (purchasePrice * 0.012) / 12;
   const monthlyInsurance = (purchasePrice * 0.0035) / 12;
   const monthlyUtilities = 200;
   const monthlyMaintenance = 150;
 
-  const monthlyHoldingCosts = monthlyInterest + monthlyRehabInterest +
+  const monthlyHoldingCosts = monthlyAcquisitionInterest + monthlyRehabInterest +
     monthlyPropertyTax + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
   const totalHoldingCosts = monthlyHoldingCosts * holdingMonths;
 
-  // Calculate costs
-  const closingCosts = purchasePrice * 0.03;
+  // Calculate closing costs
+  // IMPORTANT: Closing costs INCLUDE lender points - do NOT double count
+  // For hard money: 2.5% points + 0.5% other = 3% total
+  const otherClosingCostsPercent = points > 0 ? Math.max(0.5, 3 - points) : 3;
+  const otherClosingCosts = purchasePrice * (otherClosingCostsPercent / 100);
+  const totalClosingCosts = pointsCost + otherClosingCosts; // Points ARE part of closing costs
+
+  // Selling costs
   const sellingCosts = arv * 0.08; // 8% for realtor + closing
 
-  // Calculate investment and returns
-  const totalInvestment = downPayment + renovationCosts + closingCosts + pointsCost;
-  const totalProjectCost = purchasePrice + renovationCosts + closingCosts + totalHoldingCosts + sellingCosts + pointsCost;
+  // CASH REQUIRED = What investor actually brings to closing
+  // For hard money: Down payment + Closing costs (NOT including rehab)
+  // For conventional: Down payment + Closing costs + Rehab costs
+  const cashRequired = downPayment + totalClosingCosts + cashForRehab;
+
+  // TOTAL INVESTMENT = All-in project cost (for tracking, not cash flow)
+  // Includes all costs regardless of financing source
+  const totalInvestment = purchasePrice + renovationCosts + totalClosingCosts + totalHoldingCosts;
+
+  // TOTAL PROJECT COST = Total investment + selling costs
+  const totalProjectCost = totalInvestment + sellingCosts;
+
+  // Calculate returns
   const netProfit = arv - totalProjectCost;
-  const roi = totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0;
+
+  // ROI = Net Profit / Cash Required (shows return on actual cash invested)
+  // This accounts for leverage from hard money financing
+  const roi = cashRequired > 0 ? (netProfit / cashRequired) * 100 : 0;
+
+  // Profit Margin = Net Profit / ARV (industry standard)
   const profitMargin = arv > 0 ? (netProfit / arv) * 100 : 0;
 
-  console.log('[calculateFlipReturns]', {
+  console.log('[calculateFlipReturns] Hard Money Flip Calculation:', {
+    isHardMoney,
     purchasePrice,
+    downPayment,
+    acquisitionLoan,
+    rehabHoldback,
+    totalLoan,
     renovationCosts,
+    cashForRehab,
+    totalClosingCosts,
+    totalHoldingCosts,
+    sellingCosts,
+    cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
+    totalInvestment: `$${totalInvestment.toLocaleString()} (all-in cost)`,
+    totalProjectCost: `$${totalProjectCost.toLocaleString()} (including selling)`,
     arv,
-    holdingMonths,
-    totalInvestment,
-    totalProjectCost,
     netProfit,
-    roi
+    roi: `${roi.toFixed(2)}% (on cash required)`,
+    profitMargin: `${profitMargin.toFixed(2)}% (on ARV)`
   });
 
   return {
+    cashRequired,
     totalInvestment,
     totalProjectCost,
+    downPayment,
+    acquisitionLoan,
+    rehabHoldback,
+    totalLoan,
     holdingCosts: totalHoldingCosts,
     sellingCosts,
     netProfit,
     roi,
-    profitMargin
+    profitMargin,
+    closingCosts: totalClosingCosts,
+    closingCostsBreakdown: {
+      lenderPoints: pointsCost,
+      lenderPointsPercent: points,
+      otherClosingCosts,
+      otherClosingCostsPercent,
+      totalClosingCosts,
+      totalClosingCostsPercent: points + otherClosingCostsPercent
+    },
+    isHardMoney
   };
 }
 

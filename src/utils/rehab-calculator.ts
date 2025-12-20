@@ -5,9 +5,10 @@
 
 export enum RehabLevel {
   NONE = 'none',       // $0 - No rehab needed
-  LIGHT = 'light',     // $15-25/sqft - Paint, flooring, minor updates
-  MEDIUM = 'medium',   // $30-50/sqft - Kitchen, bath, systems updates  
-  HEAVY = 'heavy',     // $60-100/sqft - Structural, complete renovation
+  LIGHT = 'light',     // $15-35/sqft - Paint, carpet, minor updates (cosmetic)
+  MEDIUM = 'medium',   // $35-65/sqft - Kitchen, bath, systems updates (moderate)
+  HEAVY = 'heavy',     // $75-125/sqft - Major systems, structural work
+  GUT = 'gut',         // $125-200/sqft - Complete gut renovation
 }
 
 export interface RehabCostEstimate {
@@ -31,9 +32,10 @@ export interface RehabBreakdown {
 
 export const REHAB_COST_PER_SQFT = {
   none: { min: 0, max: 0, default: 0, description: 'No rehab needed' },
-  light: { min: 15, max: 25, default: 20, description: 'Paint, carpet, minor updates' },
-  medium: { min: 30, max: 50, default: 40, description: 'Kitchen/bath updates, new flooring' },
-  heavy: { min: 60, max: 100, default: 80, description: 'Major systems, structural work' },
+  light: { min: 15, max: 35, default: 25, description: 'Paint, carpet, minor updates (cosmetic)' },
+  medium: { min: 35, max: 65, default: 50, description: 'Kitchen/bath updates, new flooring (moderate)' },
+  heavy: { min: 75, max: 125, default: 100, description: 'Major systems, structural work' },
+  gut: { min: 125, max: 200, default: 150, description: 'Complete gut renovation' },
 } as const
 
 /**
@@ -148,7 +150,7 @@ export function calculateRehabCosts(
  * Get detailed breakdown of rehab costs
  */
 export function getRehabBreakdown(totalCost: number, level: RehabLevel): RehabBreakdown {
-  const breakdowns = {
+  const breakdowns: Record<string, { name: string; percentage: number; description: string }[]> = {
     none: [],
     light: [
       { name: 'Paint & Cosmetics', percentage: 35, description: 'Interior/exterior paint, fixtures' },
@@ -175,10 +177,21 @@ export function getRehabBreakdown(totalCost: number, level: RehabLevel): RehabBr
       { name: 'Flooring Throughout', percentage: 8, description: 'Premium materials' },
       { name: 'Exterior Renovation', percentage: 6, description: 'Siding, stucco, landscaping' },
       { name: 'Contingency', percentage: 3, description: 'Unexpected issues' }
+    ],
+    gut: [
+      { name: 'Demo & Structural', percentage: 20, description: 'Full demo, foundation, framing' },
+      { name: 'MEP Systems', percentage: 22, description: 'New electrical, plumbing, HVAC throughout' },
+      { name: 'Complete Kitchen', percentage: 15, description: 'Custom kitchen build-out' },
+      { name: 'All Bathrooms', percentage: 12, description: 'Full bathroom builds' },
+      { name: 'Windows & Doors', percentage: 8, description: 'All new windows and doors' },
+      { name: 'Flooring & Finishes', percentage: 10, description: 'Premium materials throughout' },
+      { name: 'Exterior & Roof', percentage: 8, description: 'Exterior renovation, new roof' },
+      { name: 'Contingency', percentage: 5, description: 'Unexpected issues' }
     ]
   }
 
-  const categories = breakdowns[level].map(item => ({
+  const levelBreakdown = breakdowns[level] || breakdowns.none
+  const categories = levelBreakdown.map(item => ({
     ...item,
     cost: Math.round(totalCost * (item.percentage / 100))
   }))
@@ -249,12 +262,13 @@ export function formatRehabCost(cost: number): string {
  * Format renovation level for display
  */
 export function formatRenovationLevel(level: RehabLevel): string {
-  const labels = {
+  const labels: Record<string, string> = {
     none: 'No Rehab Needed',
-    light: 'Light Renovation',
-    medium: 'Medium Renovation',
-    heavy: 'Heavy Renovation'
+    light: 'Light Renovation (Cosmetic)',
+    medium: 'Medium Renovation (Moderate)',
+    heavy: 'Heavy Renovation',
+    gut: 'Gut Renovation'
   }
-  
+
   return labels[level] || level
 }

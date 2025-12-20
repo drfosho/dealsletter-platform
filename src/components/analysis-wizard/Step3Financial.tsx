@@ -3,27 +3,33 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
 import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
+import {
+  getSimpleFinancingDefaults,
+  calculateClosingCosts,
+  type InvestmentStrategy,
+  type ClosingCostBreakdown
+} from '@/utils/financing-defaults';
 import { calculateARVFromComparables, extractComparableProperties, formatARVDetails, type ARVCalculationResult } from '@/utils/arv-calculator';
 import {
   parsePrice,
   parsePercentage,
   parseInteger,
-  calculateMonthlyMortgage,
-  calculateMonthlyRevenue,
-  calculateMonthlyExpenses,
-  validateInputs as validateFinancialInputs
+  calculateMonthlyMortgage
 } from '@/utils/financial-calculations';
 
 // Map UI renovation levels to RehabLevel enum
 function mapRenovationLevelToRehabLevel(renovationLevel?: string): RehabLevel {
   const mapping: Record<string, RehabLevel> = {
     'cosmetic': RehabLevel.LIGHT,
+    'light': RehabLevel.LIGHT,
     'moderate': RehabLevel.MEDIUM,
+    'medium': RehabLevel.MEDIUM,
     'extensive': RehabLevel.HEAVY,
-    'gut': RehabLevel.HEAVY,
+    'heavy': RehabLevel.HEAVY,
+    'gut': RehabLevel.GUT,
   };
-  
-  return mapping[renovationLevel || ''] || RehabLevel.MEDIUM;
+
+  return mapping[renovationLevel?.toLowerCase() || ''] || RehabLevel.MEDIUM;
 }
 
 interface Step3FinancialProps {
@@ -394,57 +400,154 @@ export default function Step3Financial({
     });
   }, [data, initialFinancial]);
 
-  // Quick select options for down payment
-  const downPaymentOptions = loanType === 'hardMoney' ? [
-    { value: 10, label: '10%', description: 'Hard money minimum' },
-    { value: 15, label: '15%', description: 'Standard hard money' },
-    { value: 20, label: '20%', description: 'Lower risk' },
-    { value: 25, label: '25%', description: 'Best terms' }
-  ] : [
-    { value: 5, label: '5%', description: 'FHA minimum' },
-    { value: 10, label: '10%', description: 'Low down payment' },
-    { value: 20, label: '20%', description: 'Conventional' },
-    { value: 25, label: '25%', description: 'Investment property' }
-  ];
+  // Quick select options for down payment (strategy-aware)
+  const downPaymentOptions = useMemo(() => {
+    if (loanType === 'hardMoney') {
+      return [
+        { value: 10, label: '10%', description: 'Hard money minimum' },
+        { value: 15, label: '15%', description: 'Standard hard money' },
+        { value: 20, label: '20%', description: 'Lower risk' },
+        { value: 25, label: '25%', description: 'Best terms' }
+      ];
+    }
 
-  // Hard money loan defaults
-  const hardMoneyDefaults = {
-    interestRate: 10.45,
-    loanTerm: 1, // 12 months
-    downPaymentPercent: 10,
-    points: 2.5, // 2-3 points average
-    rehabFunding: 100 // 100% rehab funding
-  };
+    // Strategy-specific options
+    if (data.strategy === 'house-hack') {
+      return [
+        { value: 3.5, label: '3.5%', description: 'FHA minimum' },
+        { value: 5, label: '5%', description: 'Low down' },
+        { value: 10, label: '10%', description: 'Conventional' },
+        { value: 20, label: '20%', description: 'No PMI' }
+      ];
+    }
+
+    // Investment property options
+    return [
+      { value: 20, label: '20%', description: 'Minimum investment' },
+      { value: 25, label: '25%', description: 'Standard investment' },
+      { value: 30, label: '30%', description: 'Better terms' },
+      { value: 35, label: '35%', description: 'Best terms' }
+    ];
+  }, [loanType, data.strategy]);
+
+  // Get strategy-based financing defaults
+  const strategyFinancingDefaults = useMemo(() => {
+    // Map strategy to InvestmentStrategy type
+    const strategyMap: Record<string, InvestmentStrategy> = {
+      'flip': 'flip',
+      'brrrr': 'brrrr',
+      'rental': 'rental',
+      'buy-and-hold': 'buy-and-hold',
+      'house-hack': 'house-hack',
+      'commercial': 'commercial',
+      'short-term-rental': 'short-term-rental'
+    };
+    const mappedStrategy = strategyMap[data.strategy] || 'rental';
+    return getSimpleFinancingDefaults(mappedStrategy);
+  }, [data.strategy]);
+
+  // Hard money loan defaults (now sourced from strategy defaults)
+  const hardMoneyDefaults = useMemo(() => {
+    if (data.strategy === 'flip' || data.strategy === 'brrrr') {
+      return {
+        interestRate: strategyFinancingDefaults.interestRate,
+        loanTerm: strategyFinancingDefaults.loanTermYears,
+        downPaymentPercent: strategyFinancingDefaults.downPaymentPercent,
+        points: strategyFinancingDefaults.lenderPointsPercent,
+        rehabFunding: 100, // 100% rehab funding
+        totalClosingCostsPercent: strategyFinancingDefaults.totalClosingCostsPercent
+      };
+    }
+    // Default hard money settings
+    return {
+      interestRate: 10.45,
+      loanTerm: 1,
+      downPaymentPercent: 10,
+      points: 2.5,
+      rehabFunding: 100,
+      totalClosingCostsPercent: 3.0
+    };
+  }, [data.strategy, strategyFinancingDefaults]);
+
+  // Closing costs breakdown state
+  const [closingCostsBreakdown, setClosingCostsBreakdown] = useState<ClosingCostBreakdown | null>(null);
+
+  // Update closing costs breakdown when relevant values change
+  useEffect(() => {
+    if (financial.purchasePrice > 0) {
+      const points = financial.points || (loanType === 'hardMoney' ? hardMoneyDefaults.points : 1.0);
+      const otherCosts = loanType === 'hardMoney' ? 0.5 : 2.0;
+      const breakdown = calculateClosingCosts(financial.purchasePrice, points, otherCosts);
+      setClosingCostsBreakdown(breakdown);
+    }
+  }, [financial.purchasePrice, financial.points, loanType, hardMoneyDefaults.points]);
 
   // Determine if renovation costs should be shown
   const showRenovationCosts = ['flip', 'brrrr'].includes(data.strategy);
+
+  // Apply strategy-based financing defaults when strategy is first loaded
+  // This ensures proper defaults for each strategy type
+  useEffect(() => {
+    // Only apply if we haven't initialized financing values yet
+    const needsDefaults = !financial.interestRate || financial.interestRate === 0;
+    if (!needsDefaults) return;
+
+    console.log('[Step3Financial] Applying strategy-based financing defaults:', {
+      strategy: data.strategy,
+      defaults: strategyFinancingDefaults
+    });
+
+    const newFinancial = {
+      ...financial,
+      downPaymentPercent: strategyFinancingDefaults.downPaymentPercent,
+      interestRate: strategyFinancingDefaults.interestRate,
+      loanTerm: strategyFinancingDefaults.loanTermYears,
+      points: strategyFinancingDefaults.lenderPointsPercent,
+      loanType: strategyFinancingDefaults.financingType === 'hard-money' ? 'hardMoney' as const : 'conventional' as const
+    };
+
+    setFinancial(newFinancial);
+    updateData({ financial: newFinancial });
+
+    // Update loan type state to match
+    if (strategyFinancingDefaults.financingType === 'hard-money') {
+      setLoanType('hardMoney');
+    } else {
+      setLoanType('conventional');
+    }
+  }, [data.strategy]); // Only run when strategy changes
+
+
+  // Track previous renovation level to detect changes
+  const previousRenovationLevel = useRef<string | undefined>(data.strategyDetails?.renovationLevel);
 
   // Calculate rehab costs based on property size and renovation level
   useEffect(() => {
     const propertyData = data.propertyData as any;
     const renovationLevelString = data.strategyDetails?.renovationLevel;
-    
+
     // Try multiple locations for square footage
-    const squareFootage = propertyData?.property?.squareFootage || 
+    const squareFootage = propertyData?.property?.squareFootage ||
                          propertyData?.listing?.squareFootage ||
                          propertyData?.comparables?.property?.squareFootage ||
                          (Array.isArray(propertyData?.property) ? propertyData.property[0]?.squareFootage : undefined) ||
                          0;
-    
+
     console.log('[Step3Financial] Renovation cost calculation check:', {
       showRenovationCosts,
       squareFootage,
       renovationLevelString,
       strategy: data.strategy,
       currentRenovationCosts: financial.renovationCosts,
+      previousLevel: previousRenovationLevel.current,
       propertyDataStructure: propertyData ? Object.keys(propertyData) : 'null'
     });
-    
+
     // Calculate and set rehab costs if we have the necessary data
     if (squareFootage > 0 && renovationLevelString && showRenovationCosts) {
       const mappedLevel = mapRenovationLevelToRehabLevel(renovationLevelString);
-      const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, mappedLevel);
-      
+      const { lowEstimate, highEstimate, averageEstimate, costPerSqft } = calculateRehabCosts(squareFootage, mappedLevel);
+
       console.log('[Step3Financial] Calculated renovation costs:', {
         squareFootage,
         renovationLevelString,
@@ -452,18 +555,29 @@ export default function Step3Financial({
         lowEstimate,
         highEstimate,
         averageEstimate,
-        perSqFt: averageEstimate / squareFootage
+        perSqFt: costPerSqft
       });
-      
-      // Only update if the value hasn't been set yet or is 0
-      if (!financial.renovationCosts || financial.renovationCosts === 0) {
+
+      // Check if renovation level changed
+      const levelChanged = renovationLevelString !== previousRenovationLevel.current;
+      previousRenovationLevel.current = renovationLevelString;
+
+      // Auto-populate if:
+      // 1. Value hasn't been set yet (0 or undefined)
+      // 2. Renovation level was just changed (recalculate)
+      const shouldAutoPopulate = !financial.renovationCosts ||
+                                 financial.renovationCosts === 0 ||
+                                 levelChanged;
+
+      if (shouldAutoPopulate) {
         const newFinancial = {
           ...financial,
           renovationCosts: averageEstimate
         };
         setFinancial(newFinancial);
         updateData({ financial: newFinancial });
-        console.log('[Step3Financial] Set renovation costs to:', averageEstimate);
+        console.log('[Step3Financial] Auto-populated renovation costs to:', averageEstimate,
+          levelChanged ? '(renovation level changed)' : '(initial population)');
       }
     }
   }, [data.propertyData, data.strategyDetails?.renovationLevel, showRenovationCosts]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -640,21 +754,61 @@ export default function Step3Financial({
     return payment;
   };
 
-  const calculateTotalInvestment = () => {
+  /**
+   * Calculate Cash Required (what investor brings to closing)
+   * For hard money: Down payment + Closing costs (rehab is lender funded)
+   * For conventional: Down payment + Closing costs + Rehab costs
+   */
+  const calculateCashRequired = () => {
     if (!financial.purchasePrice || financial.downPaymentPercent === undefined) return 0;
     const downPayment = (financial.purchasePrice * financial.downPaymentPercent) / 100;
     const loanAmount = financial.purchasePrice - downPayment;
     const pointsCost = loanType === 'hardMoney' ? (loanAmount * (financial.points || 0)) / 100 : 0;
-    
+
     // For hard money loans, renovation costs are 100% funded by lender
     // so they should NOT be included in the upfront investment
     const renovationContribution = loanType === 'hardMoney' ? 0 : (financial.renovationCosts || 0);
-    
-    return downPayment + 
-      (financial.closingCosts || 0) + 
-      renovationContribution + 
-      (financial.holdingCosts || 0) +
+
+    return downPayment +
+      (financial.closingCosts || 0) +
+      renovationContribution +
       pointsCost;
+  };
+
+  // Alias for backward compatibility
+  const calculateTotalInvestment = calculateCashRequired;
+
+  /**
+   * Calculate Total Project Cost (all-in cost for the project)
+   * This includes ALL costs regardless of financing source:
+   * Purchase + Rehab + Closing + Holding + Selling
+   */
+  const calculateTotalProjectCost = () => {
+    if (!financial.purchasePrice) return 0;
+    const rehabCosts = financial.renovationCosts || 0;
+    const closingCosts = financial.closingCosts || 0;
+    const holdingCosts = financial.holdingCosts || 0;
+    const arv = financial.arv || financial.purchasePrice;
+    const sellingCosts = arv * 0.08; // 8% selling costs
+
+    return financial.purchasePrice + rehabCosts + closingCosts + holdingCosts + sellingCosts;
+  };
+
+  /**
+   * Calculate estimated net profit
+   */
+  const calculateEstimatedProfit = () => {
+    if (!financial.arv) return 0;
+    return financial.arv - calculateTotalProjectCost();
+  };
+
+  /**
+   * Calculate ROI based on cash required (proper leverage calculation)
+   */
+  const calculateROI = () => {
+    const cashRequired = calculateCashRequired();
+    const profit = calculateEstimatedProfit();
+    return cashRequired > 0 ? (profit / cashRequired) * 100 : 0;
   };
 
   const handleContinue = () => {
@@ -1415,6 +1569,7 @@ export default function Step3Financial({
             <div>
               <label className="block text-sm font-medium text-primary mb-2">
                 Closing Costs
+                <span className="text-xs text-muted font-normal ml-2">(includes lender points)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
@@ -1426,14 +1581,36 @@ export default function Step3Financial({
                   placeholder="0"
                 />
               </div>
+              {/* Closing Costs Breakdown */}
+              {closingCostsBreakdown && financial.purchasePrice > 0 && (
+                <div className="mt-2 p-2 bg-muted/10 rounded-lg border border-border/50 text-xs">
+                  <div className="flex justify-between text-muted">
+                    <span>Lender Points ({closingCostsBreakdown.lenderPointsPercent}%):</span>
+                    <span>${closingCostsBreakdown.lenderPoints.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-muted">
+                    <span>Title/Escrow/Other ({closingCostsBreakdown.otherClosingCostsPercent}%):</span>
+                    <span>${closingCostsBreakdown.otherClosingCosts.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between font-medium text-primary border-t border-border/30 pt-1 mt-1">
+                    <span>Total ({closingCostsBreakdown.totalClosingCostsPercent}%):</span>
+                    <span>${closingCostsBreakdown.totalClosingCosts.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-muted mt-1">
-                Typical: {loanType === 'hardMoney' ? '3%' : '2-3%'} of purchase price
+                Typical: {loanType === 'hardMoney' ? '3%' : '3%'} of purchase price
                 {financial.purchasePrice > 0 && !financial.closingCosts && (
                   <button
                     type="button"
                     onClick={() => {
-                      const rate = loanType === 'hardMoney' ? 0.03 : 0.025;
-                      handleFieldChange('closingCosts', Math.round(financial.purchasePrice * rate));
+                      // Use closing costs breakdown which properly combines points + other fees
+                      if (closingCostsBreakdown) {
+                        handleFieldChange('closingCosts', closingCostsBreakdown.totalClosingCosts);
+                      } else {
+                        // Fallback to 3% if breakdown not available
+                        handleFieldChange('closingCosts', Math.round(financial.purchasePrice * 0.03));
+                      }
                     }}
                     className="ml-2 text-primary hover:underline"
                   >
@@ -1482,31 +1659,51 @@ export default function Step3Financial({
                     return null;
                   })()}
                 </div>
-                <p className="text-xs text-muted mt-1">
-                  {(() => {
-                    const propertyData = data.propertyData as any;
-                    const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
-                    const squareFootage = propertyData?.property?.squareFootage;
-                    
-                    if (squareFootage && renovationLevel) {
-                      const { lowEstimate, highEstimate } = calculateRehabCosts(squareFootage, renovationLevel);
-                      const levelLabel = renovationLevel === RehabLevel.LIGHT ? 'Light' :
-                                       renovationLevel === RehabLevel.MEDIUM ? 'Medium' :
-                                       renovationLevel === RehabLevel.HEAVY ? 'Heavy' : 'None';
-                      
-                      const baseText = `${levelLabel} renovation estimate: $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()} (${squareFootage?.toLocaleString() || 'N/A'} sqft)`;
-                      
-                      if (loanType === 'hardMoney') {
-                        return `${baseText} - 100% funded by lender`;
-                      }
-                      return baseText;
-                    }
-                    
-                    return loanType === 'hardMoney' 
-                      ? '100% funded by hard money lender (no upfront cost)' 
-                      : `Based on ${data.strategyDetails?.renovationLevel || 'moderate'} renovation`;
-                  })()}
-                </p>
+                {/* Detailed Rehab Estimate Display */}
+                {(() => {
+                  const propertyData = data.propertyData as any;
+                  const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
+                  const squareFootage = propertyData?.property?.squareFootage ||
+                                       propertyData?.listing?.squareFootage || 0;
+
+                  if (squareFootage > 0 && renovationLevel !== RehabLevel.NONE) {
+                    const { lowEstimate, highEstimate, averageEstimate, costPerSqft } = calculateRehabCosts(squareFootage, renovationLevel);
+                    const levelLabel = renovationLevel === RehabLevel.LIGHT ? 'Cosmetic' :
+                                     renovationLevel === RehabLevel.MEDIUM ? 'Moderate' :
+                                     renovationLevel === RehabLevel.HEAVY ? 'Heavy' :
+                                     renovationLevel === RehabLevel.GUT ? 'Gut' : 'None';
+
+                    return (
+                      <div className="mt-2 p-2 bg-accent/5 rounded-lg border border-accent/20 text-xs">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-primary">{levelLabel} Renovation</span>
+                          <span className="text-accent">${costPerSqft}/sqft</span>
+                        </div>
+                        <div className="flex justify-between text-muted">
+                          <span>Estimated ({squareFootage.toLocaleString()} sqft):</span>
+                          <span className="font-medium">${averageEstimate.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-muted">
+                          <span>Typical range:</span>
+                          <span>${lowEstimate.toLocaleString()} - ${highEstimate.toLocaleString()}</span>
+                        </div>
+                        {loanType === 'hardMoney' && (
+                          <div className="mt-1 pt-1 border-t border-accent/20 text-green-600">
+                            100% funded by lender (no upfront cost)
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <p className="text-xs text-muted mt-1">
+                      {loanType === 'hardMoney'
+                        ? '100% funded by hard money lender (no upfront cost)'
+                        : `Based on ${data.strategyDetails?.renovationLevel || 'moderate'} renovation`}
+                    </p>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -1540,25 +1737,30 @@ export default function Step3Financial({
                   ${financial.renovationCosts?.toLocaleString() || '0'}
                 </p>
                 {loanType === 'hardMoney' && (
-                  <p className="text-xs text-green-600 mt-1">Lender funded</p>
+                  <p className="text-xs text-green-600 mt-1">Lender funded via holdback</p>
                 )}
               </div>
             ) : (
               <div>
-                <p className="text-muted mb-1">Total Investment</p>
+                <p className="text-muted mb-1">Total Project Cost</p>
                 <p className="text-xl font-bold text-primary">
-                  ${calculateTotalInvestment()?.toLocaleString() || '0'}
+                  ${calculateTotalProjectCost()?.toLocaleString() || '0'}
                 </p>
+                <p className="text-xs text-muted mt-1">All-in cost</p>
               </div>
             )}
             <div>
-              <p className="text-muted mb-1">Cash to Close</p>
+              <p className="text-muted mb-1">Cash Required</p>
               <p className="text-xl font-bold text-accent">
-                ${calculateTotalInvestment()?.toLocaleString() || '0'}
+                ${calculateCashRequired()?.toLocaleString() || '0'}
               </p>
-              {loanType === 'hardMoney' && (
+              {loanType === 'hardMoney' ? (
                 <p className="text-xs text-muted mt-1">
-                  Down + closing + points
+                  What you bring to closing
+                </p>
+              ) : (
+                <p className="text-xs text-muted mt-1">
+                  Down + closing + rehab
                 </p>
               )}
             </div>
@@ -1567,7 +1769,7 @@ export default function Step3Financial({
             <>
               <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                 <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">
-                  ✓ Cash to Close Breakdown
+                  ✓ Cash Required (What You Bring)
                 </p>
                 <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
                   <div className="flex justify-between">
@@ -1579,31 +1781,69 @@ export default function Step3Financial({
                     <span className="font-medium">${(financial.closingCosts || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Points ({financial.points || hardMoneyDefaults.points}%):</span>
-                    <span className="font-medium">${Math.round((calculateLoanAmount() * (financial.points || hardMoneyDefaults.points)) / 100).toLocaleString()}</span>
+                    <span>Rehab:</span>
+                    <span className="font-medium text-green-500">$0 (lender funded)</span>
                   </div>
                   <div className="flex justify-between border-t border-green-500/20 pt-1 font-semibold">
                     <span>Total Cash Required:</span>
-                    <span>${calculateTotalInvestment().toLocaleString()}</span>
+                    <span>${calculateCashRequired().toLocaleString()}</span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">
-                  💰 Lender Funded (No Upfront Cost)
+                  💰 Financing Structure
                 </p>
                 <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
                   <div className="flex justify-between">
-                    <span>Renovation Budget:</span>
+                    <span>Acquisition Loan:</span>
+                    <span className="font-medium">${calculateLoanAmount().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rehab Holdback:</span>
                     <span className="font-medium">${(financial.renovationCosts || 0).toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between border-t border-blue-500/20 pt-1 font-semibold">
+                    <span>Total Loan Amount:</span>
+                    <span>${(calculateLoanAmount() + (financial.renovationCosts || 0)).toLocaleString()}</span>
+                  </div>
                   <div className="text-xs mt-2 italic">
-                    * Drawn as needed during construction
+                    * Rehab drawn as needed during construction
                   </div>
                 </div>
               </div>
-              
+
+              {showRenovationCosts && financial.arv && financial.arv > 0 && (
+                <div className="mt-3 p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                  <p className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">
+                    📊 Projected Returns
+                  </p>
+                  <div className="space-y-1 text-sm text-purple-700 dark:text-purple-300">
+                    <div className="flex justify-between">
+                      <span>ARV:</span>
+                      <span className="font-medium">${financial.arv.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Project Cost:</span>
+                      <span className="font-medium">${calculateTotalProjectCost().toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-purple-500/20 pt-1">
+                      <span>Est. Net Profit:</span>
+                      <span className={`font-semibold ${calculateEstimatedProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ${calculateEstimatedProfit().toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Est. ROI:</span>
+                      <span className={calculateROI() >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {calculateROI().toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-3 p-3 bg-yellow-500/10 rounded-lg">
                 <p className="text-sm text-yellow-700 dark:text-yellow-300">
                   <strong>Hard Money Loan Features:</strong>

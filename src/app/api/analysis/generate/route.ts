@@ -14,8 +14,7 @@ import {
   parseInteger,
   calculateMonthlyMortgage as calculateMortgagePayment,
   calculateMonthlyRevenue,
-  validateInputs as validateFinancialInputs,
-  validateOutputs as validateFinancialOutputs
+  validateInputs as validateFinancialInputs
 } from '@/utils/financial-calculations';
 
 console.log('[Generate] Module loaded, Anthropic SDK available:', !!Anthropic);
@@ -1121,27 +1120,66 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       });
     }
     const sellingCosts = estimatedARV * 0.08; // 8% for realtor fees, closing costs
-    const totalInvestment = downPayment + rehabCosts + closingCosts + pointsCost;
-    const totalProjectCost = effectivePurchasePrice + rehabCosts + closingCosts + totalHoldingCosts + sellingCosts + pointsCost;
+
+    // Determine if this is hard money financing
+    const isHardMoney = request.loanTerms?.loanType === 'hardMoney' ||
+                        (request.loanTerms?.points && request.loanTerms.points >= 2);
+
+    // CASH REQUIRED = What investor brings to closing
+    // For hard money: Down payment + Closing costs (NOT including rehab - lender funds via holdback)
+    // For conventional: Down payment + Closing costs + Rehab costs
+    const rehabHoldback = isHardMoney ? rehabCosts : 0;
+    const cashForRehab = isHardMoney ? 0 : rehabCosts;
+    const cashRequired = downPayment + closingCosts + cashForRehab;
+
+    // Total loan amount (including rehab holdback for hard money)
+    const totalLoanAmount = loanAmount + rehabHoldback;
+
+    // TOTAL PROJECT COST = All-in cost including selling
+    const totalProjectCost = effectivePurchasePrice + rehabCosts + closingCosts + totalHoldingCosts + sellingCosts;
     const netProfit = estimatedARV - totalProjectCost;
-    const roi = totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0;
-    
+
+    // ROI = Net Profit / Cash Required (shows return on actual cash invested)
+    // This properly accounts for leverage from hard money financing
+    const roi = cashRequired > 0 ? (netProfit / cashRequired) * 100 : 0;
+    const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
+
+    console.log('[Fix & Flip] Investment Calculation:', {
+      isHardMoney,
+      downPayment,
+      rehabCosts,
+      rehabHoldback,
+      cashForRehab,
+      closingCosts,
+      cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
+      totalProjectCost: `$${totalProjectCost.toLocaleString()} (all-in cost)`,
+      arv: estimatedARV,
+      netProfit,
+      roi: `${roi.toFixed(2)}% (on cash required)`
+    });
+
     context += `\n\nFIX & FLIP ANALYSIS:
-    
+
 PURCHASE & FINANCING:
 - Purchase Price: $${effectivePurchasePrice.toLocaleString()}
 - Down Payment: $${downPayment.toLocaleString()} (${effectivePurchasePrice > 0 ? ((downPayment/effectivePurchasePrice) * 100).toFixed(1) : '20.0'}%)
-- Loan Amount: $${loanAmount.toLocaleString()}
+- Acquisition Loan: $${loanAmount.toLocaleString()}
 - Interest Rate: ${request.loanTerms?.interestRate || 10.45}%
 - Loan Term: ${holdingTimeInMonths} months
-- Loan Type: ${request.loanTerms?.loanType === 'hardMoney' ? 'Hard Money' : 'Conventional'}${request.loanTerms?.points ? `
+- Loan Type: ${isHardMoney ? 'Hard Money (with rehab holdback)' : 'Conventional'}${request.loanTerms?.points ? `
 - Points/Fees: ${request.loanTerms.points} points ($${Math.round(pointsCost).toLocaleString()})` : ''}
 
 RENOVATION & COSTS:
-- Rehab Budget: $${rehabCosts.toLocaleString()}
+- Rehab Budget: $${rehabCosts.toLocaleString()}${isHardMoney ? ' (100% funded via lender holdback)' : ' (investor cash)'}
 - Closing Costs (Purchase): $${Math.round(closingCosts).toLocaleString()}
 
-HOLDING COSTS BREAKDOWN:
+${isHardMoney ? `FINANCING STRUCTURE:
+- Down Payment (${((downPayment/effectivePurchasePrice) * 100).toFixed(1)}%): $${downPayment.toLocaleString()}
+- Acquisition Loan: $${loanAmount.toLocaleString()}
+- Rehab Holdback: $${rehabHoldback.toLocaleString()} (lender funds)
+- Total Loan Amount: $${totalLoanAmount.toLocaleString()}
+
+` : ''}HOLDING COSTS BREAKDOWN:
 - Monthly Loan Interest: $${monthlyLoanPayment.toLocaleString()}
 - Monthly Property Taxes: $${monthlyPropertyTaxes.toLocaleString()} (1.2% annually)
 - Monthly Insurance: $${monthlyInsurance.toLocaleString()} (0.35% annually)
@@ -1154,18 +1192,28 @@ HOLDING COSTS BREAKDOWN:
 SELLING COSTS:
 - Realtor Fees & Closing (8%): $${Math.round(sellingCosts).toLocaleString()}
 
+INVESTMENT SUMMARY:
+- Cash Required: $${Math.round(cashRequired).toLocaleString()} (what investor brings)${isHardMoney ? `
+  - Down Payment: $${downPayment.toLocaleString()}
+  - Closing Costs: $${Math.round(closingCosts).toLocaleString()}
+  - Rehab: $0 (lender funded)` : `
+  - Down Payment: $${downPayment.toLocaleString()}
+  - Closing Costs: $${Math.round(closingCosts).toLocaleString()}
+  - Rehab: $${rehabCosts.toLocaleString()}`}
+- Total Project Cost: $${Math.round(totalProjectCost).toLocaleString()} (all-in cost)
+
 EXIT STRATEGY:
 - After Repair Value (ARV): $${Math.round(estimatedARV).toLocaleString()}
 - Total Project Cost: $${Math.round(totalProjectCost).toLocaleString()}
 - Net Profit: $${Math.round(netProfit).toLocaleString()} ${netProfit < 0 ? '(LOSS)' : '(PROFIT)'}
-- Cash Investment: $${Math.round(totalInvestment).toLocaleString()}
-- Return on Investment: ${roi.toFixed(2)}%
-- Profit Margin: ${estimatedARV > 0 ? ((netProfit / estimatedARV) * 100).toFixed(2) : '0.00'}%
+- Cash Required: $${Math.round(cashRequired).toLocaleString()}
+- Return on Investment (ROI): ${roi.toFixed(2)}% (on cash invested)
+- Profit Margin: ${profitMargin.toFixed(2)}% (of ARV)
 
 Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, holding costs, and profit margins. Do NOT include rental income or cash flow calculations.`;
 
     calculatedMetrics = {
-      totalInvestment: totalInvestment,
+      totalInvestment: cashRequired, // Use cash required for investment metric
       totalProfit: netProfit,
       roi: roi,
       holdingCosts: totalHoldingCosts,
