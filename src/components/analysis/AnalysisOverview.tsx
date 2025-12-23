@@ -152,7 +152,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
               </svg>
             )}
             <div className="flex-1">
-              <h4 className={`font-semibold mb-1 ${recommendationColors.title}`}>DealLetter AI Recommendation</h4>
+              <h4 className={`font-semibold mb-1 ${recommendationColors.title}`}>Dealsletter AI Recommendation</h4>
               <p className={`text-sm leading-relaxed ${recommendationColors.text}`}>
                 {formatRecommendation(recommendation)}
               </p>

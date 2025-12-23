@@ -388,7 +388,7 @@ export default function SFOfficeMarket2025Article() {
                   📬 Don&apos;t Miss Out on Real Estate Opportunities
                 </h3>
                 <p className="text-primary mb-4">
-                  If you aren&apos;t already subscribed to DealLetter, you&apos;re missing out on tons of real estate deals. Make sure you get on the list today for free!
+                  If you aren&apos;t already subscribed to Dealsletter, you&apos;re missing out on tons of real estate deals. Make sure you get on the list today for free!
                 </p>
                 <a 
                   href="https://www.dealsletter.io" 
@@ -396,7 +396,7 @@ export default function SFOfficeMarket2025Article() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors font-medium"
                 >
-                  <span>Subscribe to DealLetter</span>
+                  <span>Subscribe to Dealsletter</span>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>

@@ -14,7 +14,9 @@ import {
   parseInteger,
   calculateMonthlyMortgage as calculateMortgagePayment,
   calculateMonthlyRevenue,
-  validateInputs as validateFinancialInputs
+  validateInputs as validateFinancialInputs,
+  calculateFlipReturns,
+  type FlipCalculationInputs
 } from '@/utils/financial-calculations';
 
 console.log('[Generate] Module loaded, Anthropic SDK available:', !!Anthropic);
@@ -989,10 +991,12 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
     };
     
   } else if (isFlipStrategy) {
-    // Fix & Flip specific calculations
+    // Fix & Flip specific calculations using CENTRALIZED calculator
+    console.log('[Fix & Flip] Using centralized calculateFlipReturns function');
+
     // Use provided ARV if available, otherwise use comparables or estimate
     const estimatedARV = request.arv || (comparables as any)?.value || effectivePurchasePrice * 1.3;
-    
+
     // Calculate rehab costs if not provided
     let rehabCosts = request.rehabCosts || 0;
     if (rehabCosts === 0) {
@@ -1007,223 +1011,120 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       rehabCosts = squareFootage > 0 ? squareFootage * (rehabMultipliers[renovationLevel] || 40) : effectivePurchasePrice * 0.15;
       console.log('[Context] Calculated rehab costs:', { squareFootage, renovationLevel, rehabCosts });
     }
-    const closingCosts = effectivePurchasePrice * 0.03; // 3% closing costs
-    
-    // For flip strategies, we need to get the actual flip timeline
-    // The strategyDetails.timeline is in months (3, 6, 9, 12)
-    // The loanTerm for hard money is typically 1 year but the flip might be shorter
-    let holdingTimeInMonths = 6; // Default to 6 months
 
-    // Check if we have a specific timeline in strategyDetails
+    // Get holding period from strategy details
+    let holdingTimeInMonths = 6; // Default to 6 months
     const rawTimeline = (request as any).strategyDetails?.timeline;
     if (rawTimeline) {
       const parsedTimeline = parseInt(rawTimeline);
-      // CRITICAL FIX: Validate timeline is realistic for flips (max 18 months)
-      // If timeline > 18, it's likely from rental strategy (years) - ignore it
       if (!isNaN(parsedTimeline) && parsedTimeline > 0 && parsedTimeline <= 18) {
         holdingTimeInMonths = parsedTimeline;
-        console.log('[Fix & Flip] Using timeline from strategyDetails:', holdingTimeInMonths, 'months');
-      } else {
-        console.log('[Fix & Flip] Invalid timeline value:', rawTimeline, '- using default 6 months');
-        holdingTimeInMonths = 6;
       }
     } else if (request.loanTerms?.loanTerm) {
-      // If no specific timeline, use loan term but cap at 12 months for flips
       holdingTimeInMonths = Math.min(Math.round(request.loanTerms.loanTerm * 12), 12);
-      console.log('[Fix & Flip] Using loanTerm as timeline:', holdingTimeInMonths, 'months');
     }
-
-    // Final validation: Flips should never exceed 18 months
     holdingTimeInMonths = Math.min(holdingTimeInMonths, 18);
     console.log('[Fix & Flip] Final holding time:', holdingTimeInMonths, 'months');
-    
-    const holdingTimeInYears = holdingTimeInMonths / 12;
-    
-    // Calculate accurate monthly holding costs
-    // Property taxes: typically 1.2% annually in most areas
-    const annualPropertyTaxes = effectivePurchasePrice * 0.012; // 1.2% of purchase price
-    const monthlyPropertyTaxes = Math.round(annualPropertyTaxes / 12);
-    
-    // Insurance: typically 0.35% annually for investment properties
-    const annualInsurance = effectivePurchasePrice * 0.0035; // 0.35% of purchase price
-    const monthlyInsurance = Math.round(annualInsurance / 12);
-    
-    // Utilities during renovation (higher during construction)
-    const monthlyUtilities = 200; // $200/month average during renovation
-    
-    // Maintenance/Security during renovation
-    const monthlyMaintenance = 150; // $150/month for security, misc maintenance
-    
-    // Calculate monthly loan interest payment
-    // For hard money loans: interest-only on both purchase and rehab loans
-    const interestRate = request.loanTerms?.interestRate || 10.45;
-    const monthlyInterestRate = interestRate / 100 / 12;
-    
-    let monthlyLoanPayment = 0;
-    if (request.loanTerms?.loanType === 'hardMoney') {
-      // Interest-only payment on purchase loan
-      monthlyLoanPayment = Math.round(loanAmount * monthlyInterestRate);
-      
-      // Add interest on rehab loan if 100% financed
-      if (rehabCosts > 0) {
-        monthlyLoanPayment += Math.round(rehabCosts * monthlyInterestRate);
-      }
-    } else {
-      // Traditional loan payment calculation
-      monthlyLoanPayment = calculateMonthlyPayment(
-        loanAmount,
-        interestRate,
-        holdingTimeInYears,
-        request.loanTerms?.loanType
-      );
-    }
-    
-    // Total monthly holding costs = loan payment + taxes + insurance + utilities + maintenance
-    const monthlyHoldingCosts = monthlyLoanPayment + monthlyPropertyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
-    
-    // Log detailed holding costs calculation for debugging and transparency
-    console.log('[Fix & Flip] DETAILED Holding Costs Calculation:', {
+
+    // Prepare inputs for centralized calculator
+    const flipInputs: FlipCalculationInputs = {
       purchasePrice: effectivePurchasePrice,
-      loanAmount,
-      rehabCosts,
-      interestRate: interestRate,
-      holdingTimeInYears,
-      holdingTimeInMonths,
-      monthlyBreakdown: {
-        loanInterest: monthlyLoanPayment,
-        propertyTaxes: monthlyPropertyTaxes,
-        insurance: monthlyInsurance,
-        utilities: monthlyUtilities,
-        maintenance: monthlyMaintenance,
-        totalMonthly: monthlyHoldingCosts
-      },
-      annualRates: {
-        propertyTaxRate: '1.2%',
-        insuranceRate: '0.35%',
-        interestRate: `${interestRate}%`
-      },
-      totalHoldingCosts: monthlyHoldingCosts * holdingTimeInMonths,
-      calculation: `$${monthlyHoldingCosts}/month × ${holdingTimeInMonths} months = $${monthlyHoldingCosts * holdingTimeInMonths}`
-    });
-    
-    // Total holding costs for the entire project duration
-    const totalHoldingCosts = monthlyHoldingCosts * holdingTimeInMonths;
-    
-    // Validation: Ensure holding costs are reasonable (typically 3-10% of purchase price for 6-month flip)
-    const holdingCostPercentage = (totalHoldingCosts / effectivePurchasePrice) * 100;
-    if (holdingCostPercentage < 1 || holdingCostPercentage > 20) {
-      console.warn('[Fix & Flip] WARNING: Holding costs may be incorrect:', {
-        totalHoldingCosts,
-        purchasePrice: effectivePurchasePrice,
-        percentage: holdingCostPercentage.toFixed(2) + '%',
-        expected: '3-10% for 6-month flip, 6-20% for 12-month flip'
-      });
-    }
-    const sellingCosts = estimatedARV * 0.08; // 8% for realtor fees, closing costs
-
-    // Determine if this is hard money financing
-    const isHardMoney = request.loanTerms?.loanType === 'hardMoney' ||
-                        (request.loanTerms?.points && request.loanTerms.points >= 2);
-
-    // CASH REQUIRED = What investor brings to closing
-    // For hard money: Down payment + Closing costs (NOT including rehab - lender funds via holdback)
-    // For conventional: Down payment + Closing costs + Rehab costs
-    const rehabHoldback = isHardMoney ? rehabCosts : 0;
-    const cashForRehab = isHardMoney ? 0 : rehabCosts;
-    const cashRequired = downPayment + closingCosts + cashForRehab;
-
-    // Total loan amount (including rehab holdback for hard money)
-    const totalLoanAmount = loanAmount + rehabHoldback;
-
-    // TOTAL PROJECT COST = All-in cost including selling
-    const totalProjectCost = effectivePurchasePrice + rehabCosts + closingCosts + totalHoldingCosts + sellingCosts;
-    const netProfit = estimatedARV - totalProjectCost;
-
-    // ROI = Net Profit / Cash Required (shows return on actual cash invested)
-    // This properly accounts for leverage from hard money financing
-    const roi = cashRequired > 0 ? (netProfit / cashRequired) * 100 : 0;
-    const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
-
-    console.log('[Fix & Flip] Investment Calculation:', {
-      isHardMoney,
-      downPayment,
-      rehabCosts,
-      rehabHoldback,
-      cashForRehab,
-      closingCosts,
-      cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
-      totalProjectCost: `$${totalProjectCost.toLocaleString()} (all-in cost)`,
+      downPaymentPercent: (downPayment / effectivePurchasePrice) * 100,
+      interestRate: request.loanTerms?.interestRate || 10.45,
+      loanTermYears: 1,
+      renovationCosts: rehabCosts,
       arv: estimatedARV,
-      netProfit,
-      roi: `${roi.toFixed(2)}% (on cash required)`
-    });
+      holdingPeriodMonths: holdingTimeInMonths,
+      loanType: request.loanTerms?.loanType as 'conventional' | 'hardMoney' || 'hardMoney',
+      points: request.loanTerms?.points || 2.5,
+      isHardMoney: request.loanTerms?.loanType === 'hardMoney' ||
+                   (request.loanTerms?.points !== undefined && request.loanTerms.points >= 2)
+    };
 
+    console.log('[Fix & Flip] Calculator inputs:', flipInputs);
+
+    // Use centralized calculator with full validation
+    const flipResults = calculateFlipReturns(flipInputs);
+
+    // Check for validation errors
+    if (!flipResults.validation.isValid) {
+      console.error('[Fix & Flip] VALIDATION ERRORS:', flipResults.validation.errors);
+    }
+    if (flipResults.validation.warnings.length > 0) {
+      console.warn('[Fix & Flip] VALIDATION WARNINGS:', flipResults.validation.warnings);
+    }
+
+    // Build context string using validated results
     context += `\n\nFIX & FLIP ANALYSIS:
 
 PURCHASE & FINANCING:
 - Purchase Price: $${effectivePurchasePrice.toLocaleString()}
-- Down Payment: $${downPayment.toLocaleString()} (${effectivePurchasePrice > 0 ? ((downPayment/effectivePurchasePrice) * 100).toFixed(1) : '20.0'}%)
-- Acquisition Loan: $${loanAmount.toLocaleString()}
-- Interest Rate: ${request.loanTerms?.interestRate || 10.45}%
+- Down Payment: $${Math.round(flipResults.downPayment).toLocaleString()} (${((flipResults.downPayment/effectivePurchasePrice) * 100).toFixed(1)}%)
+- Acquisition Loan: $${Math.round(flipResults.acquisitionLoan).toLocaleString()}
+- Interest Rate: ${flipInputs.interestRate}%
 - Loan Term: ${holdingTimeInMonths} months
-- Loan Type: ${isHardMoney ? 'Hard Money (with rehab holdback)' : 'Conventional'}${request.loanTerms?.points ? `
-- Points/Fees: ${request.loanTerms.points} points ($${Math.round(pointsCost).toLocaleString()})` : ''}
+- Loan Type: ${flipResults.isHardMoney ? 'Hard Money (with rehab holdback)' : 'Conventional'}${flipInputs.points ? `
+- Points/Fees: ${flipInputs.points} points ($${Math.round(flipResults.closingCostsBreakdown.lenderPoints).toLocaleString()})` : ''}
 
 RENOVATION & COSTS:
-- Rehab Budget: $${rehabCosts.toLocaleString()}${isHardMoney ? ' (100% funded via lender holdback)' : ' (investor cash)'}
-- Closing Costs (Purchase): $${Math.round(closingCosts).toLocaleString()}
+- Rehab Budget: $${rehabCosts.toLocaleString()}${flipResults.isHardMoney ? ' (100% funded via lender holdback)' : ' (investor cash)'}
+- Closing Costs (Purchase): $${Math.round(flipResults.closingCosts).toLocaleString()}
 
-${isHardMoney ? `FINANCING STRUCTURE:
-- Down Payment (${((downPayment/effectivePurchasePrice) * 100).toFixed(1)}%): $${downPayment.toLocaleString()}
-- Acquisition Loan: $${loanAmount.toLocaleString()}
-- Rehab Holdback: $${rehabHoldback.toLocaleString()} (lender funds)
-- Total Loan Amount: $${totalLoanAmount.toLocaleString()}
+${flipResults.isHardMoney ? `FINANCING STRUCTURE:
+- Down Payment (${((flipResults.downPayment/effectivePurchasePrice) * 100).toFixed(1)}%): $${Math.round(flipResults.downPayment).toLocaleString()}
+- Acquisition Loan: $${Math.round(flipResults.acquisitionLoan).toLocaleString()}
+- Rehab Holdback: $${Math.round(flipResults.rehabHoldback).toLocaleString()} (lender funds)
+- Total Loan Amount: $${Math.round(flipResults.totalLoan).toLocaleString()}
 
-` : ''}HOLDING COSTS BREAKDOWN:
-- Monthly Loan Interest: $${monthlyLoanPayment.toLocaleString()}
-- Monthly Property Taxes: $${monthlyPropertyTaxes.toLocaleString()} (1.2% annually)
-- Monthly Insurance: $${monthlyInsurance.toLocaleString()} (0.35% annually)
-- Monthly Utilities: $${monthlyUtilities.toLocaleString()}
-- Monthly Maintenance/Security: $${monthlyMaintenance.toLocaleString()}
-- Total Monthly Holding: $${monthlyHoldingCosts.toLocaleString()}
-- Project Duration: ${holdingTimeInMonths} months
-- Total Holding Costs: $${Math.round(totalHoldingCosts).toLocaleString()}
+` : ''}HOLDING COSTS:
+- Total Holding Costs: $${Math.round(flipResults.holdingCosts).toLocaleString()} (${holdingTimeInMonths} months)
 
 SELLING COSTS:
-- Realtor Fees & Closing (8%): $${Math.round(sellingCosts).toLocaleString()}
+- Realtor Fees & Closing (8%): $${Math.round(flipResults.sellingCosts).toLocaleString()}
 
 INVESTMENT SUMMARY:
-- Cash Required: $${Math.round(cashRequired).toLocaleString()} (what investor brings)${isHardMoney ? `
-  - Down Payment: $${downPayment.toLocaleString()}
-  - Closing Costs: $${Math.round(closingCosts).toLocaleString()}
-  - Rehab: $0 (lender funded)` : `
-  - Down Payment: $${downPayment.toLocaleString()}
-  - Closing Costs: $${Math.round(closingCosts).toLocaleString()}
-  - Rehab: $${rehabCosts.toLocaleString()}`}
-- Total Project Cost: $${Math.round(totalProjectCost).toLocaleString()} (all-in cost)
+- Cash Required: $${Math.round(flipResults.cashRequired).toLocaleString()} (what investor brings)
+- Total Investment: $${Math.round(flipResults.totalInvestment).toLocaleString()} (all-in cost)
+- Total Project Cost: $${Math.round(flipResults.totalProjectCost).toLocaleString()} (including selling)
 
 EXIT STRATEGY:
 - After Repair Value (ARV): $${Math.round(estimatedARV).toLocaleString()}
-- Total Project Cost: $${Math.round(totalProjectCost).toLocaleString()}
-- Net Profit: $${Math.round(netProfit).toLocaleString()} ${netProfit < 0 ? '(LOSS)' : '(PROFIT)'}
-- Cash Required: $${Math.round(cashRequired).toLocaleString()}
-- Return on Investment (ROI): ${roi.toFixed(2)}% (on cash invested)
-- Profit Margin: ${profitMargin.toFixed(2)}% (of ARV)
+- Net Profit: $${Math.round(flipResults.netProfit).toLocaleString()} ${flipResults.netProfit < 0 ? '(LOSS)' : '(PROFIT)'}
+- Return on Investment (ROI): ${flipResults.roi.toFixed(2)}% (on cash invested)
+- Profit Margin: ${flipResults.profitMargin.toFixed(2)}% (of ARV)
 
+${flipResults.validation.errors.length > 0 ? `
+VALIDATION ERRORS:
+${flipResults.validation.errors.map(e => `- ${e}`).join('\n')}
+` : ''}${flipResults.validation.warnings.length > 0 ? `
+VALIDATION WARNINGS:
+${flipResults.validation.warnings.map(w => `- ${w}`).join('\n')}
+` : ''}
 Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, holding costs, and profit margins. Do NOT include rental income or cash flow calculations.`;
 
     calculatedMetrics = {
-      totalInvestment: cashRequired, // Use cash required for investment metric
-      totalProfit: netProfit,
-      roi: roi,
-      holdingCosts: totalHoldingCosts,
+      totalInvestment: flipResults.cashRequired, // Use cash required for investment metric
+      totalProfit: flipResults.netProfit,
+      roi: flipResults.roi,
+      holdingCosts: flipResults.holdingCosts,
       // Set rental-focused metrics to 0 or undefined for flips
       cashFlow: 0,
       capRate: 0,
-      cocReturn: roi, // Use ROI instead
+      cocReturn: flipResults.roi, // Use ROI instead
       annualNOI: 0
     };
-    
+
+    // Log the final validated results
+    console.log('[Fix & Flip] FINAL VALIDATED RESULTS:', {
+      isValid: flipResults.validation.isValid,
+      netProfit: flipResults.netProfit,
+      roi: flipResults.roi,
+      profitMargin: flipResults.profitMargin,
+      cashRequired: flipResults.cashRequired,
+      errors: flipResults.validation.errors,
+      warnings: flipResults.validation.warnings
+    });
+
   } else {
     // Rental property calculations - use user-specified rent if available
     // CRITICAL: Properly handle multi-family properties by multiplying rent by units

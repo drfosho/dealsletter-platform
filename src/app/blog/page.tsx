@@ -149,7 +149,7 @@ export default function BlogPage() {
             <Link href="/auth/login" className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium">
               Log In
             </Link>
-            <Link href="/auth/signup" className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium">
+            <Link href="/auth/signup" className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-medium shadow-md shadow-purple-500/20">
               Start Analyzing Deals
             </Link>
           </div>
@@ -212,9 +212,9 @@ export default function BlogPage() {
                 >
                   Log In
                 </Link>
-                <Link 
+                <Link
                   href="/auth/signup"
-                  className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center"
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-medium min-h-[44px] flex items-center justify-center shadow-md shadow-purple-500/20"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Start Analyzing Deals
@@ -230,8 +230,11 @@ export default function BlogPage() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
+            <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
+              Investment Education
+            </span>
             <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
-              DealLetter Insights
+              Dealsletter Insights
             </h1>
             <p className="text-lg text-muted max-w-2xl mx-auto">
               Market analysis, tax strategies, deal breakdowns, and insider insights from the world of real estate investing.
@@ -240,10 +243,14 @@ export default function BlogPage() {
 
           {/* Category Filter */}
           <div className="flex flex-wrap gap-2 justify-center mb-12">
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <button
                 key={category}
-                className="px-4 py-2 rounded-lg font-medium text-sm transition-colors bg-card text-muted hover:text-primary border border-border/60 hover:border-accent/30"
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors border ${
+                  index === 0
+                    ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                    : 'bg-card text-muted hover:text-primary border-border/60 hover:border-purple-500/30'
+                }`}
               >
                 {category}
               </button>
@@ -282,9 +289,9 @@ export default function BlogPage() {
                   <p className="text-muted mb-6 leading-relaxed">
                     {blogPosts[0].excerpt}
                   </p>
-                  <Link 
+                  <Link
                     href={`/blog/${blogPosts[0].slug}`}
-                    className="inline-flex items-center space-x-2 px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                    className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-medium shadow-md shadow-purple-500/20"
                   >
                     <span>Read Full Article</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -428,26 +435,29 @@ export default function BlogPage() {
           </div>
 
           {/* Newsletter CTA */}
-          <div className="mt-16 bg-primary/5 rounded-xl border border-primary/20 p-8 text-center">
+          <div className="mt-16 bg-gradient-to-br from-purple-500/5 to-blue-500/5 rounded-xl border border-purple-500/20 p-8 text-center">
+            <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
+              Stay Updated
+            </span>
             <h3 className="text-2xl font-semibold text-primary mb-3">
               Want More Insights Like These?
             </h3>
             <p className="text-muted mb-6 max-w-2xl mx-auto">
-              Get weekly market analysis, exclusive deal breakdowns, and tax strategies delivered straight to your inbox. 
-              Join 1,000+ investors who rely on DealLetter for their edge.
+              Get weekly market analysis, exclusive deal breakdowns, and tax strategies delivered straight to your inbox.
+              Join 1,000+ investors who rely on Dealsletter for their edge.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a 
-                href="https://dealsletter.io" 
+              <a
+                href="https://dealsletter.io"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-medium shadow-md shadow-purple-500/20"
               >
                 Subscribe to Newsletter
               </a>
-              <Link 
+              <Link
                 href="/auth/signup"
-                className="px-6 py-3 border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors font-medium"
+                className="px-6 py-3 border-2 border-purple-500/30 hover:border-purple-500 text-primary rounded-lg hover:bg-purple-500/5 transition-all font-medium"
               >
                 Join the Platform
               </Link>
@@ -460,7 +470,7 @@ export default function BlogPage() {
       <footer className="bg-card border-t border-border/20 px-6 py-12">
         <div className="max-w-7xl mx-auto text-center">
           <p className="text-sm text-muted">
-            © 2024 DealLetter Platform. All rights reserved.
+            © 2024 Dealsletter Platform. All rights reserved.
           </p>
         </div>
       </footer>

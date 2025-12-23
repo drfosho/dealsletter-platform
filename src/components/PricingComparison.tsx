@@ -107,7 +107,7 @@ export default function PricingComparison() {
       yearlyPrice: 0,
       icon: '🆓',
       color: 'bg-gray-500',
-      borderColor: 'border-gray-500',
+      borderColor: 'border-gray-300',
       bgGradient: 'from-gray-500/5 to-gray-500/10',
       features: [
         '3 property analyses per month',
@@ -129,9 +129,9 @@ export default function PricingComparison() {
       description: '30 analyses/month for serious investors',
       price: 49,
       yearlyPrice: Math.floor(49 * 12 * 0.8), // 20% discount = $470/year
-      color: 'bg-accent',
-      borderColor: 'border-accent',
-      bgGradient: 'from-accent/5 to-accent/10',
+      color: 'bg-gradient-to-r from-purple-600 to-purple-700',
+      borderColor: 'border-purple-500',
+      bgGradient: 'from-purple-500/5 to-blue-500/5',
       popular: true,
       trialDays: 14,
       features: [
@@ -153,6 +153,9 @@ export default function PricingComparison() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Header */}
       <div className="text-center mb-12">
+        <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
+          Pricing Plans
+        </span>
         <h2 className="text-4xl font-bold text-primary mb-4">
           Simple, Transparent Pricing
         </h2>
@@ -167,10 +170,10 @@ export default function PricingComparison() {
           </span>
           <button
             onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-            className="relative inline-flex h-7 w-14 items-center rounded-full bg-muted/20 border border-border/60 transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+            className="relative inline-flex h-7 w-14 items-center rounded-full bg-muted/20 border border-border/60 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-accent transition-transform ${
+              className={`inline-block h-5 w-5 transform rounded-full bg-purple-600 transition-transform ${
                 billingPeriod === 'yearly' ? 'translate-x-7' : 'translate-x-1'
               }`}
             />
@@ -304,7 +307,7 @@ export default function PricingComparison() {
             <tbody>
               {/* Analysis Features */}
               <tr className="bg-muted/5">
-                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-accent">
+                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-purple-600">
                   Property Analysis
                 </td>
               </tr>
@@ -331,7 +334,7 @@ export default function PricingComparison() {
 
               {/* Export Features */}
               <tr className="bg-muted/5">
-                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-accent">
+                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-purple-600">
                   Export & Reports
                 </td>
               </tr>
@@ -348,7 +351,7 @@ export default function PricingComparison() {
 
               {/* Support */}
               <tr className="bg-muted/5">
-                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-accent">
+                <td colSpan={3} className="px-6 py-3 text-sm font-semibold text-purple-600">
                   Support
                 </td>
               </tr>

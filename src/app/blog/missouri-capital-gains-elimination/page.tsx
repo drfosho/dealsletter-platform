@@ -108,7 +108,7 @@ export default function MissouriCapitalGainsArticle() {
               
               <p>If you&apos;re an investor, entrepreneur, or someone who&apos;s serious about building generational wealth, this is your wake-up call to start exploring opportunities beyond the usual markets.</p>
 
-              <p>We are actively investing and growing our footprint in Missouri through <strong>DealLetter</strong>, and we&apos;re seeing firsthand how this kind of policy unlocks new doors.</p>
+              <p>We are actively investing and growing our footprint in Missouri through <strong>Dealsletter</strong>, and we&apos;re seeing firsthand how this kind of policy unlocks new doors.</p>
 
               <p className="text-lg font-semibold text-primary">Whether it&apos;s buying your first rental, flipping homes, or repositioning your portfolio for tax efficiency&mdash;<strong>Missouri just became one of the most profitable places to do it</strong>.</p>
             </div>
@@ -120,7 +120,7 @@ export default function MissouriCapitalGainsArticle() {
               Ready to Explore Missouri Opportunities?
             </h3>
             <p className="text-muted mb-6">
-              Join DealLetter to get access to pre-vetted Missouri deals and tax-advantaged investment strategies.
+              Join Dealsletter to get access to pre-vetted Missouri deals and tax-advantaged investment strategies.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 

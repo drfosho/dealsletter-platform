@@ -13,7 +13,7 @@ export default function Logo({ width = 400, height = 100, className = "", priori
       {/* Light mode logo */}
       <Image 
         src="/logos/websiteMainLogoLight.png" 
-        alt="DealLetter Logo" 
+        alt="Dealsletter Logo" 
         width={width}
         height={height}
         className={`block dark:hidden ${className}`}
@@ -22,7 +22,7 @@ export default function Logo({ width = 400, height = 100, className = "", priori
       {/* Dark mode logo */}
       <Image 
         src="/logos/websiteMainLogo.png" 
-        alt="DealLetter Logo" 
+        alt="Dealsletter Logo" 
         width={width}
         height={height}
         className={`hidden dark:block ${className}`}

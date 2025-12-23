@@ -209,7 +209,7 @@ export default function JunePropertyRecapArticle() {
               <p>Free version is stacked, and always here! Want more? $12/mo or $99/year!</p>
 
               <div className="bg-primary/10 rounded-lg p-6 border border-primary/20 my-8">
-                <h3 className="text-lg font-semibold text-primary mb-3">DealLetter PRO was built for serious investors who want to move faster, analyze smarter, and stop wasting time on bad deals.</h3>
+                <h3 className="text-lg font-semibold text-primary mb-3">Dealsletter PRO was built for serious investors who want to move faster, analyze smarter, and stop wasting time on bad deals.</h3>
                 
                 <div className="space-y-2 text-sm">
                   <p>With PRO, you&apos;ll get:</p>
@@ -236,7 +236,7 @@ export default function JunePropertyRecapArticle() {
               Ready for Exclusive Deal Access?
             </h3>
             <p className="text-muted mb-6">
-              Join DealLetter to get pre-vetted deals with full financial analysis before they hit the market.
+              Join Dealsletter to get pre-vetted deals with full financial analysis before they hit the market.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 

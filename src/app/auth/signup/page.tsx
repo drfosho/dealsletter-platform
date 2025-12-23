@@ -512,7 +512,7 @@ export default function SignUpPage() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-muted">
-          <p>© 2024 DealLetter Platform. All rights reserved.</p>
+          <p>© 2024 Dealsletter Platform. All rights reserved.</p>
         </div>
       </div>
     </div>

@@ -153,6 +153,9 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
             <Link href="/pricing" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
               Pricing
             </Link>
+            <Link href="/faq" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
+              FAQ
+            </Link>
 
             {user ? (
               <>
@@ -393,6 +396,14 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Pricing
+              </Link>
+
+              <Link
+                href="/faq"
+                className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                FAQ
               </Link>
 
               {user ? (

@@ -57,7 +57,7 @@ export default function BigBeautifulBillArticle() {
                 On May 22, the House passed what they&apos;re calling the &quot;One Big, Beautiful Bill&quot;&mdash;a sweeping tax reform that could reshape the game for entrepreneurs, investors, and working-class families alike.
               </p>
 
-              <p>As the founder of DealLetter and an active real estate investor, I&apos;ve spent the last 48 hours diving deep into this bill. Here&apos;s what actually matters:</p>
+              <p>As the founder of Dealsletter and an active real estate investor, I&apos;ve spent the last 48 hours diving deep into this bill. Here&apos;s what actually matters:</p>
 
               <div className="bg-green-500/10 rounded-lg p-6 border border-green-500/20 my-8">
                 <h2 className="text-2xl font-bold text-primary mb-4">Business Owners Win Big</h2>
@@ -130,7 +130,7 @@ export default function BigBeautifulBillArticle() {
 
               <p>Whether you&apos;re flipping homes, building a startup, or just grinding a 9-to-5&mdash;these changes affect you.</p>
 
-              <p>At <strong>DealLetter</strong>, we&apos;re building more than a newsletter. We&apos;re building an ecosystem that makes navigating things like this <em>automatic</em>. If you invest, you need to be paying attention now&mdash;not in 2026 when it&apos;s too late to plan.</p>
+              <p>At <strong>Dealsletter</strong>, we&apos;re building more than a newsletter. We&apos;re building an ecosystem that makes navigating things like this <em>automatic</em>. If you invest, you need to be paying attention now&mdash;not in 2026 when it&apos;s too late to plan.</p>
 
               <blockquote className="border-l-4 border-accent pl-6 py-4 my-8 bg-accent/5 rounded-r-lg">
                 <p className="text-lg text-primary font-medium">What do you think&mdash;smart tax strategy or political bait-and-switch?</p>
@@ -166,7 +166,7 @@ export default function BigBeautifulBillArticle() {
               Stay Ahead of Policy Changes
             </h3>
             <p className="text-muted mb-6">
-              Join DealLetter to get analysis of how tax and policy changes affect your real estate investments.
+              Join Dealsletter to get analysis of how tax and policy changes affect your real estate investments.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 

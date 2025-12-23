@@ -257,32 +257,46 @@ export default function Step1PropertySearch({
 
       {/* Usage Meter */}
       {usageData && (
-        <div className="mb-6 bg-muted/20 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-primary">Monthly Analyses</span>
-            <span className="text-sm text-muted">
-              {usageData.analyses_used} / {usageData.tier_limit} used
+        <div className="mb-6 bg-gradient-to-r from-purple-500/5 to-blue-500/5 border border-purple-500/20 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <span className="text-sm font-semibold text-primary">Monthly Analyses</span>
+            </div>
+            <span className="text-sm font-medium text-purple-600">
+              {usageData.analyses_used || 0} of {usageData.tier_limit && usageData.tier_limit !== 9999 ? usageData.tier_limit : '∞'} used
             </span>
           </div>
-          <div className="w-full bg-muted rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-500 ${
-                usageData.analyses_used >= usageData.tier_limit 
-                  ? 'bg-red-500' 
-                  : usageData.analyses_used >= usageData.tier_limit * 0.8
-                  ? 'bg-yellow-500'
-                  : 'bg-green-500'
-              }`}
-              style={{ width: `${(usageData.analyses_used / usageData.tier_limit) * 100}%` }}
-            />
-          </div>
-          {usageData.subscription_tier === 'free' && usageData.remaining <= 1 && (
-            <p className="text-xs text-yellow-500 mt-2">
-              {usageData.remaining === 0 
-                ? 'Monthly limit reached. Upgrade to Pro for more analyses.'
-                : `Only ${usageData.remaining} analysis remaining this month.`
-              }
-            </p>
+          {usageData.tier_limit && usageData.tier_limit !== 9999 && (
+            <div className="w-full bg-purple-500/10 rounded-full h-2.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  (usageData.analyses_used || 0) >= (usageData.tier_limit || 3)
+                    ? 'bg-red-500'
+                    : (usageData.analyses_used || 0) >= (usageData.tier_limit || 3) * 0.8
+                    ? 'bg-yellow-500'
+                    : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                }`}
+                style={{ width: `${Math.min(((usageData.analyses_used || 0) / (usageData.tier_limit || 3)) * 100, 100)}%` }}
+              />
+            </div>
+          )}
+          {(usageData.subscription_tier === 'free' || usageData.subscription_tier === 'basic') && (usageData.remaining || 0) <= 1 && (
+            <div className="mt-3 flex items-center justify-between">
+              <p className="text-xs text-yellow-600">
+                {(usageData.remaining || 0) === 0
+                  ? 'Monthly limit reached'
+                  : `Only ${usageData.remaining} analysis remaining`
+                }
+              </p>
+              <a href="/pricing" className="text-xs font-medium text-purple-600 hover:text-purple-500">
+                Upgrade to Pro →
+              </a>
+            </div>
           )}
         </div>
       )}

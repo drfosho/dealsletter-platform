@@ -555,6 +555,15 @@ export interface FlipCalculationOutputs {
 
   // Financing details
   isHardMoney: boolean;
+
+  // Validation results
+  validation: FlipValidationResult;
+}
+
+export interface FlipValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
 /**
@@ -567,6 +576,10 @@ export interface FlipCalculationOutputs {
  * - ROI = Net Profit / Cash Required (shows return on actual cash invested)
  */
 export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalculationOutputs {
+  console.log('=== FIX & FLIP CALCULATION DEBUG ===');
+  console.log('STEP 1: Parsing inputs...');
+
+  // Parse and validate all inputs
   const purchasePrice = parsePrice(inputs.purchasePrice);
   const downPaymentPercent = parsePercentage(inputs.downPaymentPercent);
   const interestRate = parsePercentage(inputs.interestRate);
@@ -575,13 +588,57 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   const holdingMonths = parseInteger(inputs.holdingPeriodMonths || 6);
   const points = parsePercentage(inputs.points || 0);
 
+  console.log('Parsed Input Values:', {
+    purchasePrice,
+    downPaymentPercent,
+    interestRate,
+    renovationCosts,
+    arv,
+    holdingMonths,
+    points
+  });
+
+  // Initialize validation
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // INPUT VALIDATION
+  console.log('STEP 2: Validating inputs...');
+
+  if (purchasePrice <= 0) {
+    errors.push('Purchase price must be greater than 0');
+  }
+  if (arv <= 0) {
+    errors.push('ARV (After Repair Value) must be greater than 0');
+  }
+  if (arv < purchasePrice) {
+    errors.push(`ARV ($${arv.toLocaleString()}) is less than purchase price ($${purchasePrice.toLocaleString()}) - flip cannot be profitable`);
+  }
+  if (downPaymentPercent < 0 || downPaymentPercent > 100) {
+    errors.push(`Down payment percentage (${downPaymentPercent}%) is invalid - must be 0-100%`);
+  }
+  if (interestRate < 0 || interestRate > 30) {
+    errors.push(`Interest rate (${interestRate}%) is out of reasonable range (0-30%)`);
+  }
+  if (holdingMonths < 1 || holdingMonths > 36) {
+    warnings.push(`Holding period (${holdingMonths} months) is unusual - typical flips are 3-12 months`);
+  }
+
   // Determine if this is a hard money loan (default to true for flips with points > 2%)
   const isHardMoney = inputs.isHardMoney ??
     (inputs.loanType === 'hardMoney' || points >= 2);
 
+  console.log('STEP 3: Calculating financing structure...');
+
   // Calculate financing structure
   const downPayment = (purchasePrice * downPaymentPercent) / 100;
   const acquisitionLoan = purchasePrice - downPayment;
+
+  console.log('Financing:', {
+    downPayment: `$${downPayment.toLocaleString()} (${downPaymentPercent}%)`,
+    acquisitionLoan: `$${acquisitionLoan.toLocaleString()}`,
+    isHardMoney
+  });
 
   // REHAB HOLDBACK: Hard money lenders fund 100% of rehab in holdback
   // This is NOT cash from the investor
@@ -593,6 +650,8 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
 
   // Lender points (on acquisition loan, not on rehab holdback typically)
   const pointsCost = (acquisitionLoan * points) / 100;
+
+  console.log('STEP 4: Calculating holding costs...');
 
   // Calculate holding costs
   // Interest on acquisition loan
@@ -608,6 +667,20 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     monthlyPropertyTax + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
   const totalHoldingCosts = monthlyHoldingCosts * holdingMonths;
 
+  console.log('Holding Costs Breakdown:', {
+    monthlyAcquisitionInterest: `$${monthlyAcquisitionInterest.toFixed(2)}`,
+    monthlyRehabInterest: `$${monthlyRehabInterest.toFixed(2)}`,
+    monthlyPropertyTax: `$${monthlyPropertyTax.toFixed(2)}`,
+    monthlyInsurance: `$${monthlyInsurance.toFixed(2)}`,
+    monthlyUtilities: `$${monthlyUtilities}`,
+    monthlyMaintenance: `$${monthlyMaintenance}`,
+    totalMonthly: `$${monthlyHoldingCosts.toFixed(2)}`,
+    holdingMonths,
+    totalHoldingCosts: `$${totalHoldingCosts.toFixed(2)}`
+  });
+
+  console.log('STEP 5: Calculating closing costs...');
+
   // Calculate closing costs
   // IMPORTANT: Closing costs INCLUDE lender points - do NOT double count
   // For hard money: 2.5% points + 0.5% other = 3% total
@@ -615,8 +688,22 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   const otherClosingCosts = purchasePrice * (otherClosingCostsPercent / 100);
   const totalClosingCosts = pointsCost + otherClosingCosts; // Points ARE part of closing costs
 
+  console.log('Closing Costs:', {
+    pointsCost: `$${pointsCost.toFixed(2)} (${points}%)`,
+    otherClosingCosts: `$${otherClosingCosts.toFixed(2)} (${otherClosingCostsPercent}%)`,
+    totalClosingCosts: `$${totalClosingCosts.toFixed(2)}`
+  });
+
+  console.log('STEP 6: Calculating selling costs...');
+
   // Selling costs
   const sellingCosts = arv * 0.08; // 8% for realtor + closing
+
+  console.log('Selling Costs:', {
+    sellingCosts: `$${sellingCosts.toFixed(2)} (8% of ARV $${arv.toLocaleString()})`
+  });
+
+  console.log('STEP 7: Calculating investment totals...');
 
   // CASH REQUIRED = What investor actually brings to closing
   // For hard money: Down payment + Closing costs (NOT including rehab)
@@ -630,6 +717,14 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   // TOTAL PROJECT COST = Total investment + selling costs
   const totalProjectCost = totalInvestment + sellingCosts;
 
+  console.log('Investment Summary:', {
+    cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
+    totalInvestment: `$${totalInvestment.toLocaleString()} (all-in cost)`,
+    totalProjectCost: `$${totalProjectCost.toLocaleString()} (including selling)`
+  });
+
+  console.log('STEP 8: Calculating returns...');
+
   // Calculate returns
   const netProfit = arv - totalProjectCost;
 
@@ -640,25 +735,78 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   // Profit Margin = Net Profit / ARV (industry standard)
   const profitMargin = arv > 0 ? (netProfit / arv) * 100 : 0;
 
-  console.log('[calculateFlipReturns] Hard Money Flip Calculation:', {
+  console.log('Returns:', {
+    arv: `$${arv.toLocaleString()}`,
+    totalProjectCost: `$${totalProjectCost.toLocaleString()}`,
+    netProfit: `$${netProfit.toLocaleString()}`,
+    cashRequired: `$${cashRequired.toLocaleString()}`,
+    roi: `${roi.toFixed(2)}%`,
+    profitMargin: `${profitMargin.toFixed(2)}%`
+  });
+
+  console.log('STEP 9: Running sanity checks...');
+
+  // SANITY CHECKS - Catch calculation errors
+  if (netProfit > arv) {
+    errors.push(`CALCULATION ERROR: Net profit ($${netProfit.toLocaleString()}) exceeds ARV ($${arv.toLocaleString()}) - this is mathematically impossible`);
+    console.error('SANITY CHECK FAILED: Net profit exceeds ARV!');
+  }
+
+  if (netProfit > purchasePrice && profitMargin > 50) {
+    warnings.push(`Net profit ($${netProfit.toLocaleString()}) exceeds purchase price with ${profitMargin.toFixed(1)}% margin - verify ARV is accurate`);
+  }
+
+  if (roi > 500) {
+    warnings.push(`ROI of ${roi.toFixed(1)}% is unusually high - verify inputs are correct`);
+  }
+
+  if (roi > 1000) {
+    errors.push(`CALCULATION ERROR: ROI of ${roi.toFixed(1)}% is unrealistic - likely a calculation error`);
+    console.error('SANITY CHECK FAILED: ROI over 1000%!');
+  }
+
+  if (totalProjectCost < purchasePrice) {
+    errors.push(`CALCULATION ERROR: Total project cost ($${totalProjectCost.toLocaleString()}) is less than purchase price ($${purchasePrice.toLocaleString()})`);
+    console.error('SANITY CHECK FAILED: Total project cost less than purchase price!');
+  }
+
+  if (totalInvestment < purchasePrice) {
+    errors.push(`CALCULATION ERROR: Total investment ($${totalInvestment.toLocaleString()}) is less than purchase price ($${purchasePrice.toLocaleString()})`);
+    console.error('SANITY CHECK FAILED: Total investment less than purchase price!');
+  }
+
+  // Check if holding costs seem reasonable (1-15% of purchase price for typical 3-12 month flip)
+  const holdingCostPercent = (totalHoldingCosts / purchasePrice) * 100;
+  if (holdingCostPercent < 1) {
+    warnings.push(`Holding costs (${holdingCostPercent.toFixed(1)}% of purchase price) seem too low`);
+  }
+  if (holdingCostPercent > 20) {
+    warnings.push(`Holding costs (${holdingCostPercent.toFixed(1)}% of purchase price) seem too high`);
+  }
+
+  const validation: FlipValidationResult = {
+    isValid: errors.length === 0,
+    errors,
+    warnings
+  };
+
+  console.log('STEP 10: Validation Results:', {
+    isValid: validation.isValid,
+    errors: validation.errors,
+    warnings: validation.warnings
+  });
+
+  console.log('=== END FIX & FLIP CALCULATION ===');
+
+  // Log final summary for easy debugging
+  console.log('[calculateFlipReturns] FINAL SUMMARY:', {
     isHardMoney,
-    purchasePrice,
-    downPayment,
-    acquisitionLoan,
-    rehabHoldback,
-    totalLoan,
-    renovationCosts,
-    cashForRehab,
-    totalClosingCosts,
-    totalHoldingCosts,
-    sellingCosts,
-    cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
-    totalInvestment: `$${totalInvestment.toLocaleString()} (all-in cost)`,
-    totalProjectCost: `$${totalProjectCost.toLocaleString()} (including selling)`,
-    arv,
-    netProfit,
-    roi: `${roi.toFixed(2)}% (on cash required)`,
-    profitMargin: `${profitMargin.toFixed(2)}% (on ARV)`
+    purchasePrice: `$${purchasePrice.toLocaleString()}`,
+    arv: `$${arv.toLocaleString()}`,
+    renovationCosts: `$${renovationCosts.toLocaleString()}`,
+    netProfit: `$${netProfit.toLocaleString()}`,
+    roi: `${roi.toFixed(2)}%`,
+    isValid: validation.isValid
   });
 
   return {
@@ -683,8 +831,17 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
       totalClosingCosts,
       totalClosingCostsPercent: points + otherClosingCostsPercent
     },
-    isHardMoney
+    isHardMoney,
+    validation
   };
+}
+
+/**
+ * Validate flip calculation results for sanity
+ * Use this to catch impossible results before displaying to user
+ */
+export function validateFlipResults(results: FlipCalculationOutputs): FlipValidationResult {
+  return results.validation;
 }
 
 // ============================================================================

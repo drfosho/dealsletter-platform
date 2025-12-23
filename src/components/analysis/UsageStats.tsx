@@ -11,18 +11,23 @@ interface UsageStatsProps {
 }
 
 export default function UsageStats({ usage }: UsageStatsProps) {
+  // Ensure we have valid numbers with fallbacks
+  const safeUsed = typeof usage?.used === 'number' && !isNaN(usage.used) ? usage.used : 0;
+  const safeLimit = typeof usage?.limit === 'number' && !isNaN(usage.limit) && usage.limit > 0 ? usage.limit : 3;
+  const safeRemaining = Math.max(0, safeLimit - safeUsed);
+
   const { percentageUsed, daysUntilReset, isNearLimit } = useMemo(() => {
-    const percentage = (usage.used / usage.limit) * 100;
+    const percentage = safeLimit > 0 ? (safeUsed / safeLimit) * 100 : 0;
     const now = new Date();
-    const reset = new Date(usage.nextReset);
+    const reset = usage?.nextReset ? new Date(usage.nextReset) : new Date();
     const days = Math.ceil((reset.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     return {
-      percentageUsed: percentage,
-      daysUntilReset: Math.max(0, days),
+      percentageUsed: isNaN(percentage) ? 0 : percentage,
+      daysUntilReset: Math.max(0, isNaN(days) ? 0 : days),
       isNearLimit: percentage >= 80
     };
-  }, [usage]);
+  }, [safeUsed, safeLimit, usage?.nextReset]);
 
   const getUsageColor = () => {
     if (percentageUsed >= 90) return 'text-red-600 bg-red-100';
@@ -44,7 +49,7 @@ export default function UsageStats({ usage }: UsageStatsProps) {
         <div>
           <h3 className="text-lg font-semibold text-primary mb-1">Usage Statistics</h3>
           <p className="text-sm text-muted">
-            {usage.used} of {usage.limit} analyses used this month
+            {safeUsed} of {safeLimit} analyses used this month
           </p>
         </div>
         <div className={`px-3 py-1 rounded-full text-sm font-medium ${getUsageColor()}`}>
@@ -55,7 +60,7 @@ export default function UsageStats({ usage }: UsageStatsProps) {
       {/* Progress Bar */}
       <div className="mb-4">
         <div className="h-3 bg-muted/20 rounded-full overflow-hidden">
-          <div 
+          <div
             className={`h-full transition-all duration-500 ${getProgressColor()}`}
             style={{ width: `${Math.min(100, percentageUsed)}%` }}
           />
@@ -65,11 +70,11 @@ export default function UsageStats({ usage }: UsageStatsProps) {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="text-center">
-          <p className="text-2xl font-bold text-primary">{usage.used}</p>
+          <p className="text-2xl font-bold text-primary">{safeUsed}</p>
           <p className="text-sm text-muted">Analyses Used</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-primary">{usage.limit - usage.used}</p>
+          <p className="text-2xl font-bold text-primary">{safeRemaining}</p>
           <p className="text-sm text-muted">Remaining</p>
         </div>
         <div className="text-center">

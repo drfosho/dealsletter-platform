@@ -93,7 +93,7 @@ export default function AccountPage() {
     switch (subscriptionTier) {
       case 'premium':
       case 'pro':
-        return 'bg-gradient-to-r from-blue-500 to-cyan-500';
+        return 'bg-gradient-to-r from-purple-500 to-blue-500';
       default:
         return 'bg-gradient-to-r from-gray-500 to-gray-600';
     }
@@ -225,7 +225,7 @@ export default function AccountPage() {
                   <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
                     subscriptionTier === 'basic'
                       ? 'bg-gray-500/10 text-gray-600 border border-gray-500/20'
-                      : 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                      : 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
                   }`}>
                     {subscriptionTier === 'basic' ? 'Free' : 'Active'}
                   </span>
@@ -239,7 +239,7 @@ export default function AccountPage() {
               {subscriptionTier === 'basic' ? (
                 <Link
                   href="/pricing"
-                  className="px-6 py-2 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-semibold"
+                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-semibold shadow-md shadow-purple-500/20"
                 >
                   Upgrade to Pro
                 </Link>
@@ -255,9 +255,9 @@ export default function AccountPage() {
             </div>
 
             {subscriptionTier === 'basic' && (
-              <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
+              <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <svg className="w-5 h-5 text-accent mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <div>
@@ -315,7 +315,7 @@ export default function AccountPage() {
                   <div
                     className={`h-full transition-all duration-300 ${
                       getUsagePercentage() >= 100 ? 'bg-red-500' :
-                      getUsagePercentage() >= 75 ? 'bg-orange-500' : 'bg-accent'
+                      getUsagePercentage() >= 75 ? 'bg-orange-500' : 'bg-purple-500'
                     }`}
                     style={{ width: `${getUsagePercentage()}%` }}
                   />
@@ -343,11 +343,11 @@ export default function AccountPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <Link
                 href="/analysis/new"
-                className="flex items-center gap-3 p-4 border border-border/60 rounded-lg hover:bg-muted/5 transition-colors"
+                className="flex items-center gap-3 p-4 border border-border/60 rounded-lg hover:bg-purple-500/5 hover:border-purple-500/40 transition-colors"
               >
-                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div>

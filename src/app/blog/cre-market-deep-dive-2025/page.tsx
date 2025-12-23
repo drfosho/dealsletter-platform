@@ -54,7 +54,7 @@ export default function CREMarketDeepDiveArticle() {
           <div className="prose prose-lg max-w-none">
             <div className="text-muted leading-relaxed space-y-6">
               <p className="text-lg font-medium text-primary">
-                Over the past few weeks, the DealLetter team has been digging into national market reports, CMBS data, and broker intel to see where commercial real estate is headed. The short answer? The market is as fragmented as we&apos;ve ever seen it.
+                Over the past few weeks, the Dealsletter team has been digging into national market reports, CMBS data, and broker intel to see where commercial real estate is headed. The short answer? The market is as fragmented as we&apos;ve ever seen it.
               </p>
 
               <p>

@@ -141,7 +141,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
             <h2 className="text-xl font-semibold text-primary mb-2">{error || 'Analysis not found'}</h2>
             <button
               onClick={() => router.push('/analysis')}
-              className="mt-4 px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90"
+              className="mt-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-md shadow-purple-500/20"
             >
               Back to Analysis
             </button>
@@ -273,7 +273,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                   {!isEditMode && analysis.strategy !== 'flip' && (
                     <button
                       onClick={() => setIsEditMode(true)}
-                      className="absolute top-6 right-6 z-50 px-3 py-1 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center gap-1 transition-all"
+                      className="absolute top-6 right-6 z-50 px-3 py-1 text-sm bg-purple-500/10 text-purple-600 rounded-lg hover:bg-purple-500/20 flex items-center gap-1 transition-all"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -284,7 +284,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                   {isEditMode && (
                     <button
                       onClick={() => setIsEditMode(false)}
-                      className="absolute top-6 right-6 z-10 px-3 py-1 text-sm bg-primary text-secondary rounded-lg hover:bg-primary/90"
+                      className="absolute top-6 right-6 z-10 px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                     >
                       Done
                     </button>
@@ -309,7 +309,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
               {/* Right Column - Property Details & Strategy */}
               <div className="space-y-6">
                 {/* Property Details */}
-                <div className="bg-card rounded-xl border border-border p-6">
+                <div className="bg-card rounded-xl border border-border/60 hover:border-purple-500/40 transition-colors p-6">
                   <h3 className="text-lg font-semibold text-primary mb-4">Property Details</h3>
                   <div className="space-y-3">
                     {(() => {
@@ -377,7 +377,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 </div>
 
                 {/* Investment Parameters */}
-                <div className="bg-card rounded-xl border border-border p-6">
+                <div className="bg-card rounded-xl border border-border/60 hover:border-purple-500/40 transition-colors p-6">
                   <h3 className="text-lg font-semibold text-primary mb-4">Investment Parameters</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between">
@@ -416,7 +416,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 </div>
 
                 {/* Market Data */}
-                <div className="bg-card rounded-xl border border-border p-6">
+                <div className="bg-card rounded-xl border border-border/60 hover:border-blue-500/40 transition-colors p-6">
                   <h3 className="text-lg font-semibold text-primary mb-4">Market Analysis</h3>
                   {(() => {
                     const marketData = analysis.market_data || (analysis.property_data as any)?.market;

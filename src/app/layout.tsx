@@ -17,13 +17,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DealLetter Platform - Real Estate Deal Analysis",
+  title: "Dealsletter Platform - Real Estate Deal Analysis",
   description: "Analyze real estate investment opportunities with advanced metrics, AI-powered deal scoring, and comprehensive property analysis tools.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "DealLetter",
+    title: "Dealsletter",
   },
 };
 
