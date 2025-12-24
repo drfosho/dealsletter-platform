@@ -43,12 +43,13 @@ export const stripe = new Proxy({} as Stripe, {
 // Subscription tiers configuration
 // NEW PRICING STRUCTURE (December 2024):
 // - FREE: $0/month, 3 analyses/month
-// - PRO: $49/month, 30 analyses/month
+// - PRO: $29/month, 50 analyses/month
+// - PRO PLUS: $59/month, 200 analyses/month
 export const SUBSCRIPTION_TIERS = {
   FREE: {
     name: 'Free',
     priceId: null,
-    analysisLimit: 3,  // 3 analyses per month
+    analysisLimit: 3,
     features: [
       'view_deals',
       'basic_comparison',
@@ -73,8 +74,8 @@ export const SUBSCRIPTION_TIERS = {
   },
   PRO: {
     name: 'Pro',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,  // $49/month
-    analysisLimit: 30,  // 30 analyses per month
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,  // $29/month
+    analysisLimit: 50,
     features: [
       'view_deals',
       'basic_comparison',
@@ -90,10 +91,30 @@ export const SUBSCRIPTION_TIERS = {
       'analysis_history',
     ],
   },
+  'PRO-PLUS': {
+    name: 'Pro Plus',
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_PLUS,  // $59/month
+    analysisLimit: 200,
+    features: [
+      'view_deals',
+      'basic_comparison',
+      'archive_access_30days',
+      'personal_analysis',
+      'deal_alerts',
+      'pdf_exports',
+      'email_support',
+      'advanced_analytics',
+      'early_access',
+      'priority_support',
+      'market_reports',
+      'analysis_history',
+      'advanced_dashboard',
+    ],
+  },
   PREMIUM: {
     name: 'Premium',
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
-    analysisLimit: 30,  // Legacy - grandfathered Pro users get same 30 limit
+    analysisLimit: 50,  // Legacy - grandfathered users
     features: [
       'view_deals',
       'basic_comparison',

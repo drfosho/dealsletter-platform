@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 
+// Force Node.js runtime to ensure env vars are accessible
+export const runtime = 'nodejs'
+
 export async function POST(_request: NextRequest) {
   try {
     const supabase = await createClient()

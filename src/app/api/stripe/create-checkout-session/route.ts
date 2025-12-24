@@ -3,6 +3,9 @@ import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import { getOrCreatePrice } from '@/lib/stripe-helpers'
 
+// Force Node.js runtime to ensure env vars are accessible
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG START ======')
   console.log('[Checkout] Timestamp:', new Date().toISOString())
