@@ -48,7 +48,7 @@ const faqData: FAQItem[] = [
   {
     id: 'pro-plan',
     question: "What's included in the Pro plan?",
-    answer: "Pro users ($49/month) get 30 property analyses per month, detailed investment projections, AI-powered investment recommendations, analysis history & comparison tools, PDF export functionality, and priority email support.",
+    answer: "Pro users ($29/month) get 50 property analyses per month, detailed investment projections, AI-powered investment recommendations, analysis history & comparison tools, PDF export functionality, and priority email support. Pro Plus users ($59/month) get 200 analyses per month plus advanced analytics and early access to new features.",
     category: "pricing"
   },
   {
@@ -60,7 +60,7 @@ const faqData: FAQItem[] = [
   {
     id: 'annual-subscription',
     question: "Do you offer annual subscriptions?",
-    answer: "Yes! Annual subscriptions save you 20% ($39/month billed yearly at $470 vs $588 for monthly). That's essentially 2 months free!",
+    answer: "Yes! Annual subscriptions save you 20%. Pro is $278/year (save $70), Pro Plus is $566/year (save $142). That's essentially 2 months free!",
     category: "pricing"
   },
   {

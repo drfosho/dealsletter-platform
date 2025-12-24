@@ -10,13 +10,16 @@ export const runtime = 'nodejs';
 function mapTierName(stripeTier: string): string {
   const tierMap: Record<string, string> = {
     'STARTER': 'starter',
-    'PRO': 'professional',  // Map PRO to professional
+    'PRO': 'pro',  // Map PRO to pro
     'PROFESSIONAL': 'professional',
+    'PRO_PLUS': 'pro-plus',  // New Pro Plus tier
+    'PRO-PLUS': 'pro-plus',
+    'PROPLUS': 'pro-plus',
     'PREMIUM': 'premium',
     'FREE': 'free'
   };
-  
-  const upperTier = stripeTier.toUpperCase();
+
+  const upperTier = stripeTier.toUpperCase().replace('-', '_');
   return tierMap[upperTier] || 'free';  // Default to free if not found
 }
 

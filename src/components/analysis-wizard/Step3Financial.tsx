@@ -343,6 +343,7 @@ export default function Step3Financial({
   );
   const previousLoanType = useRef(loanType);
   const hasInitializedHardMoney = useRef(false);
+  const previousStrategy = useRef(data.strategy); // Track strategy changes for forced defaults
 
   // Initialize hard money defaults on first mount for flip/brrrr strategies
   useEffect(() => {
@@ -460,7 +461,7 @@ export default function Step3Financial({
     }
     // Default hard money settings
     return {
-      interestRate: 10.45,
+      interestRate: 10.0,         // 10% minimum hard money rate
       loanTerm: 1,
       downPaymentPercent: 10,
       points: 2.5,
@@ -485,17 +486,32 @@ export default function Step3Financial({
   // Determine if renovation costs should be shown
   const showRenovationCosts = ['flip', 'brrrr'].includes(data.strategy);
 
-  // Apply strategy-based financing defaults when strategy is first loaded
-  // This ensures proper defaults for each strategy type
+  // Apply strategy-based financing defaults when strategy changes
+  // CRITICAL: This ensures proper defaults for each strategy type
+  // Defaults MUST apply when switching strategies, not just on first load
   useEffect(() => {
-    // Only apply if we haven't initialized financing values yet
-    const needsDefaults = !financial.interestRate || financial.interestRate === 0;
-    if (!needsDefaults) return;
+    // Check if strategy actually changed
+    const strategyChanged = data.strategy !== previousStrategy.current;
+    const needsInitialDefaults = !financial.interestRate || financial.interestRate === 0;
 
-    console.log('[Step3Financial] Applying strategy-based financing defaults:', {
-      strategy: data.strategy,
-      defaults: strategyFinancingDefaults
-    });
+    // Apply defaults if:
+    // 1. Strategy changed (user switched strategies)
+    // 2. OR we haven't initialized defaults yet
+    if (!strategyChanged && !needsInitialDefaults) return;
+
+    if (strategyChanged) {
+      console.log('[Step3Financial] STRATEGY CHANGED - Applying new defaults:', {
+        previousStrategy: previousStrategy.current,
+        newStrategy: data.strategy,
+        defaults: strategyFinancingDefaults
+      });
+      previousStrategy.current = data.strategy; // Update ref
+    } else {
+      console.log('[Step3Financial] Initial defaults application:', {
+        strategy: data.strategy,
+        defaults: strategyFinancingDefaults
+      });
+    }
 
     const newFinancial = {
       ...financial,
@@ -515,7 +531,16 @@ export default function Step3Financial({
     } else {
       setLoanType('conventional');
     }
-  }, [data.strategy]); // Only run when strategy changes
+
+    // Log verification after short delay to confirm defaults applied
+    setTimeout(() => {
+      console.log('[Step3Financial] Defaults verification:', {
+        expectedDownPayment: strategyFinancingDefaults.downPaymentPercent,
+        expectedInterestRate: strategyFinancingDefaults.interestRate,
+        expectedLoanType: strategyFinancingDefaults.financingType
+      });
+    }, 100);
+  }, [data.strategy]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Track previous renovation level to detect changes

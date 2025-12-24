@@ -21,22 +21,37 @@ export default function UpgradePromptModal({
     if (subscriptionTier === 'free' || subscriptionTier === 'basic') {
       return {
         title: 'Monthly Limit Reached',
-        description: 'You&apos;ve used your 3 free analyses this month. Upgrade to Pro for 30 analyses per month.',
+        description: 'You&apos;ve used your 3 free analyses this month. Upgrade to Pro for 50 analyses per month.',
         features: [
-          '30 property analyses per month',
+          '50 property analyses per month',
           'Detailed investment projections',
           'Analysis history & comparison',
           'PDF export functionality',
           'Priority email support'
         ],
-        primaryCTA: 'Upgrade to Pro - $49/month',
+        primaryCTA: 'Upgrade to Pro - $29/month',
         secondaryCTA: 'View Pricing',
-        price: '$49'
+        price: '$29'
+      };
+    } else if (subscriptionTier === 'pro') {
+      return {
+        title: 'Monthly Limit Reached',
+        description: 'You&apos;ve used all 50 analyses for this month. Upgrade to Pro Plus for 200 analyses per month.',
+        features: [
+          '200 property analyses per month',
+          'Everything in Pro',
+          'Advanced analytics dashboard',
+          'Highest priority support',
+          'Early access to new features'
+        ],
+        primaryCTA: 'Upgrade to Pro Plus - $59/month',
+        secondaryCTA: 'View Pricing',
+        price: '$59'
       };
     } else {
       return {
         title: 'Monthly Limit Reached',
-        description: 'You&apos;ve used all 30 analyses for this month. Need more? Contact us for enterprise pricing.',
+        description: 'You&apos;ve used all your analyses for this month. Need more? Contact us for enterprise pricing.',
         features: [
           'Custom analysis limits',
           'Dedicated support',
@@ -95,18 +110,20 @@ export default function UpgradePromptModal({
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-muted">
                 {subscriptionTier === 'free' || subscriptionTier === 'basic'
-                  ? 'Just $1.63 per analysis'
+                  ? 'Just $0.58 per analysis'
+                  : subscriptionTier === 'pro'
+                  ? 'Just $0.30 per analysis'
                   : 'Enterprise pricing'}
               </span>
-              {(subscriptionTier === 'free' || subscriptionTier === 'basic') && (
+              {(subscriptionTier === 'free' || subscriptionTier === 'basic' || subscriptionTier === 'pro') && (
                 <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded">BEST VALUE</span>
               )}
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-bold text-primary">
-                {subscriptionTier === 'free' || subscriptionTier === 'basic' ? '$49' : 'Custom'}
+                {content.price}
               </span>
-              {(subscriptionTier === 'free' || subscriptionTier === 'basic') && (
+              {(subscriptionTier === 'free' || subscriptionTier === 'basic' || subscriptionTier === 'pro') && (
                 <span className="text-muted">/month</span>
               )}
             </div>

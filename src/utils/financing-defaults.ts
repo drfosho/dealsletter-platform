@@ -68,7 +68,7 @@ export function getFinancingDefaults(strategy: InvestmentStrategy): FinancingDef
       return {
         financingType: 'hard-money',
         downPaymentPercent: 10,           // 10% down for hard money
-        interestRate: 10.45,              // Current hard money avg
+        interestRate: 10.0,               // 10% minimum hard money rate
         loanTermYears: 1,                 // 12 months
         lenderPointsPercent: 2.5,         // 2.5% origination
         otherClosingCostsPercent: 0.5,    // 0.5% other fees
@@ -81,7 +81,7 @@ export function getFinancingDefaults(strategy: InvestmentStrategy): FinancingDef
         acquisition: {
           financingType: 'hard-money',
           downPaymentPercent: 10,
-          interestRate: 10.45,
+          interestRate: 10.0,             // 10% minimum hard money rate
           loanTermYears: 1,
           lenderPointsPercent: 2.5,
           otherClosingCostsPercent: 0.5,
@@ -91,7 +91,7 @@ export function getFinancingDefaults(strategy: InvestmentStrategy): FinancingDef
         refinance: {
           financingType: 'conventional',
           ltvPercent: 75,                 // 75% LTV on ARV
-          interestRate: 7.5,
+          interestRate: 6.75,             // Current conventional rate
           loanTermYears: 30,
           closingCostsPercent: 2.0        // Refi closing costs lower
         }
@@ -102,7 +102,7 @@ export function getFinancingDefaults(strategy: InvestmentStrategy): FinancingDef
       return {
         financingType: 'conventional',
         downPaymentPercent: 25,           // 25% down for investment property
-        interestRate: 7.5,                // Current conventional investment rate
+        interestRate: 6.75,               // Current conventional rate
         loanTermYears: 30,
         lenderPointsPercent: 1.0,         // 1% origination
         otherClosingCostsPercent: 2.0,    // 2% other fees
@@ -113,13 +113,13 @@ export function getFinancingDefaults(strategy: InvestmentStrategy): FinancingDef
     case 'house-hack':
       return {
         financingType: 'fha',
-        downPaymentPercent: 3.5,          // 3.5% down (FHA minimum)
-        interestRate: 6.5,                // Current FHA rate
+        downPaymentPercent: 5,            // 5% down (can be 3.5% FHA)
+        interestRate: 6.25,               // Low 6s %
         loanTermYears: 30,
         lenderPointsPercent: 1.0,         // 1% origination
         otherClosingCostsPercent: 4.0,    // 4% other (higher for FHA)
         totalClosingCostsPercent: 5.0,    // 5% total (FHA higher closing)
-        pmi: true,                        // FHA requires MIP
+        pmi: true,                        // FHA requires MIP (PMI)
         description: 'FHA owner-occupied loan for house hacking'
       };
 

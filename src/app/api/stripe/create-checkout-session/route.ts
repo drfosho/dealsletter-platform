@@ -75,33 +75,45 @@ export async function POST(request: NextRequest) {
       // Also try the hardcoded mapping as fallback
       if (!priceId) {
         const tierToPriceMap: Record<string, string | undefined> = billingPeriod === 'yearly' ? {
-          'STARTER': process.env.STRIPE_PRICE_STARTER_YEARLY || 
+          'STARTER': process.env.STRIPE_PRICE_STARTER_YEARLY ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY ||
-                     process.env.STRIPE_PRICE_STARTER_ANNUAL || 
+                     process.env.STRIPE_PRICE_STARTER_ANNUAL ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL,
-          'PRO': process.env.STRIPE_PRICE_PRO_YEARLY || 
+          'PRO': process.env.STRIPE_PRO_ANNUAL_PRICE_ID ||
+                 process.env.STRIPE_PRICE_PRO_YEARLY ||
                  process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY ||
-                 process.env.STRIPE_PRICE_PRO_ANNUAL || 
+                 process.env.STRIPE_PRICE_PRO_ANNUAL ||
                  process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL,
-          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_YEARLY || 
+          'PRO_PLUS': process.env.STRIPE_PRO_PLUS_ANNUAL_PRICE_ID ||
+                      process.env.STRIPE_PRICE_PRO_PLUS_YEARLY ||
+                      process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_PLUS_YEARLY ||
+                      process.env.STRIPE_PRICE_PRO_PLUS_ANNUAL ||
+                      process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_PLUS_ANNUAL,
+          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_YEARLY ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_YEARLY ||
-                     process.env.STRIPE_PRICE_PREMIUM_ANNUAL || 
+                     process.env.STRIPE_PRICE_PREMIUM_ANNUAL ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_ANNUAL,
         } : {
-          'STARTER': process.env.STRIPE_PRICE_STARTER_MONTHLY || 
+          'STARTER': process.env.STRIPE_PRICE_STARTER_MONTHLY ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY ||
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER,
-          'PRO': process.env.STRIPE_PRICE_PRO_MONTHLY || 
+          'PRO': process.env.STRIPE_PRO_MONTHLY_PRICE_ID ||
+                 process.env.STRIPE_PRICE_PRO_MONTHLY ||
                  process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY ||
-                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 
+                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO ||
                  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
-          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_MONTHLY || 
+          'PRO_PLUS': process.env.STRIPE_PRO_PLUS_MONTHLY_PRICE_ID ||
+                      process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY ||
+                      process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_PLUS_MONTHLY ||
+                      process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_PLUS ||
+                      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_PLUS,
+          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_MONTHLY ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_MONTHLY ||
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 
+                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM ||
                      process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM,
         }
-        
+
         priceId = tierToPriceMap[upperTier]
         console.log('[Checkout] Hardcoded mapping result for', billingPeriod, ':', tierToPriceMap)
       }

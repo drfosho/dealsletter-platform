@@ -15,7 +15,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
   const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [subscriptionTier, setSubscriptionTier] = useState<'basic' | 'pro' | 'premium'>('basic');
+  const [subscriptionTier, setSubscriptionTier] = useState<'basic' | 'pro' | 'pro-plus' | 'premium'>('basic');
   const [remainingAnalyses, setRemainingAnalyses] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +103,8 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
 
   const getTierBadgeColor = () => {
     switch (subscriptionTier) {
+      case 'pro-plus':
+        return 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20';
       case 'premium':
       case 'pro':
         return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
@@ -113,6 +115,8 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
 
   const getTierDisplayName = () => {
     switch (subscriptionTier) {
+      case 'pro-plus':
+        return 'Pro Plus';
       case 'premium':
       case 'pro':
         return 'Pro';
@@ -350,7 +354,9 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                       {getTierDisplayName()}
                     </span>
                     <span className="text-xs text-muted">
-                      {subscriptionTier === 'pro' || subscriptionTier === 'premium' ? `${remainingAnalyses}/30 analyses` : `${remainingAnalyses}/3 analyses`}
+                      {subscriptionTier === 'pro-plus' ? `${remainingAnalyses}/200 analyses` :
+                       subscriptionTier === 'pro' || subscriptionTier === 'premium' ? `${remainingAnalyses}/50 analyses` :
+                       `${remainingAnalyses}/3 analyses`}
                     </span>
                   </div>
                 </div>

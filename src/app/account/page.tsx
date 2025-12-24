@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserProfile } from '@/lib/supabase/profiles';
 import { getCurrentMonthUsage, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 
-type SubscriptionTier = 'basic' | 'pro' | 'premium';
+type SubscriptionTier = 'basic' | 'pro' | 'pro-plus' | 'premium';
 
 interface UsageData {
   analysisCount: number;
@@ -81,6 +81,8 @@ export default function AccountPage() {
 
   const getTierDisplayName = () => {
     switch (subscriptionTier) {
+      case 'pro-plus':
+        return 'Pro Plus';
       case 'premium':
       case 'pro':
         return 'Pro';
@@ -91,6 +93,8 @@ export default function AccountPage() {
 
   const getTierColor = () => {
     switch (subscriptionTier) {
+      case 'pro-plus':
+        return 'bg-gradient-to-r from-indigo-500 to-purple-600';
       case 'premium':
       case 'pro':
         return 'bg-gradient-to-r from-purple-500 to-blue-500';
@@ -105,16 +109,16 @@ export default function AccountPage() {
   };
 
   const getUsagePercentage = () => {
-    if (!usageData || subscriptionTier === 'pro' || subscriptionTier === 'premium') return 0;
+    if (!usageData) return 0;
     const limit = SUBSCRIPTION_LIMITS[subscriptionTier];
-    if (limit === -1) return 0;
+    if (limit === -1 || limit === undefined) return 0;
     return Math.min((usageData.analysisCount / limit) * 100, 100);
   };
 
   const getRemainingAnalyses = () => {
     if (!usageData) return 0;
-    if (subscriptionTier === 'pro' || subscriptionTier === 'premium') return -1;
     const limit = SUBSCRIPTION_LIMITS[subscriptionTier];
+    if (limit === undefined) return 0;
     return Math.max(limit - usageData.analysisCount, 0);
   };
 
@@ -261,9 +265,9 @@ export default function AccountPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <div>
-                    <div className="font-medium text-primary mb-1">Upgrade to Pro for 30 analyses/month</div>
+                    <div className="font-medium text-primary mb-1">Upgrade to Pro for 50 analyses/month</div>
                     <p className="text-sm text-muted">
-                      Get 30 property analyses per month, priority support, and detailed projections for just $49/month.
+                      Get 50 property analyses per month, priority support, and detailed projections for just $29/month.
                     </p>
                   </div>
                 </div>
@@ -322,7 +326,7 @@ export default function AccountPage() {
                 </div>
                 {getUsagePercentage() >= 100 && (
                   <p className="text-sm text-red-600 mt-2">
-                    You&apos;ve reached your monthly limit. Upgrade to Pro for 30 analyses/month.
+                    You&apos;ve reached your monthly limit. Upgrade to Pro for 50 analyses/month.
                   </p>
                 )}
               </div>

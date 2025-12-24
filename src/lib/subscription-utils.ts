@@ -2,7 +2,8 @@
 
 // NEW PRICING STRUCTURE (December 2024):
 // - FREE: 3 analyses/month
-// - PRO: 30 analyses/month @ $49/month
+// - PRO: 50 analyses/month @ $29/month
+// - PRO PLUS: 200 analyses/month @ $59/month
 
 export const SUBSCRIPTION_TIERS = {
   FREE: {
@@ -15,15 +16,23 @@ export const SUBSCRIPTION_TIERS = {
   },
   PROFESSIONAL: {
     name: 'Pro',
-    analysisLimit: 30,  // 30 analyses per month
+    analysisLimit: 50,  // 50 analyses per month
   },
   PRO: {
     name: 'Pro',
-    analysisLimit: 30,  // 30 analyses per month @ $49/month
+    analysisLimit: 50,  // 50 analyses per month @ $29/month
+  },
+  'PRO-PLUS': {
+    name: 'Pro Plus',
+    analysisLimit: 200,  // 200 analyses per month @ $59/month
+  },
+  PRO_PLUS: {
+    name: 'Pro Plus',
+    analysisLimit: 200,  // 200 analyses per month @ $59/month
   },
   PREMIUM: {
     name: 'Pro',
-    analysisLimit: 30,  // Legacy - maps to Pro (grandfathered users)
+    analysisLimit: 50,  // Legacy - maps to Pro (grandfathered users)
   },
 }
 
@@ -37,12 +46,15 @@ export function getAnalysisLimit(tierName: string): number {
 
 // Map tier names to our standard names
 export function normalizeTierName(tierName: string): string {
-  const upperTier = tierName.toUpperCase()
-  
+  const upperTier = tierName.toUpperCase().replace('-', '_')
+
   // Map variations to standard names
   switch(upperTier) {
+    case 'PRO_PLUS':
+    case 'PROPLUS':
+      return 'pro-plus'
     case 'PRO':
-      return 'professional'
+      return 'pro'
     case 'PROFESSIONAL':
       return 'professional'
     case 'STARTER':

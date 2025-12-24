@@ -1257,8 +1257,14 @@ interface ParsedAnalysisResponse {
     total_investment?: number;
     annual_noi?: number;
     total_profit?: number;
+    net_profit?: number; // Alias for total_profit (compatibility)
     holding_costs?: number;
     monthly_rent?: number;
+    // BRRRR-specific metrics
+    cash_returned?: number;
+    cash_left_in_deal?: number;
+    capital_recovery_percent?: number;
+    is_infinite_return?: boolean;
   };
   market_analysis: string;
   investment_strategy: {
@@ -1269,20 +1275,43 @@ interface ParsedAnalysisResponse {
 }
 
 function parseAnalysisResponse(analysisText: string, strategy: string, calculatedMetrics?: FinancialData): ParsedAnalysisResponse {
-  // Extract financial metrics
+  // Extract financial metrics from AI response text
   const financialData = extractFinancialData(analysisText);
-  
-  // Use calculated metrics as fallback if extraction fails
+
+  // CRITICAL FIX: Helper function to get best value
+  // Use extracted value only if it's a valid non-zero number
+  // Otherwise use calculated metrics (which are always accurate)
+  const getBestValue = (extracted: number | undefined, calculated: number | undefined): number | undefined => {
+    // If extracted value is a valid positive number, use it
+    if (typeof extracted === 'number' && extracted > 0 && isFinite(extracted)) {
+      return extracted;
+    }
+    // Otherwise use calculated value (even if 0, as 0 can be valid for cash flow)
+    if (typeof calculated === 'number' && isFinite(calculated)) {
+      return calculated;
+    }
+    // For special cases like infinite return, keep the calculated value
+    return calculated;
+  };
+
+  // Merge extracted and calculated metrics - prefer calculated for accuracy
+  // CRITICAL: calculatedMetrics are computed server-side and always accurate
+  // AI extraction can miss or misparse values, so use calculatedMetrics as primary
   const finalMetrics = {
-    cashFlow: financialData.cashFlow !== undefined ? financialData.cashFlow : calculatedMetrics?.cashFlow,
-    capRate: financialData.capRate !== undefined ? financialData.capRate : calculatedMetrics?.capRate,
-    cocReturn: financialData.cocReturn !== undefined ? financialData.cocReturn : calculatedMetrics?.cocReturn,
-    roi: financialData.roi !== undefined ? financialData.roi : calculatedMetrics?.roi,
-    totalInvestment: financialData.totalInvestment !== undefined ? financialData.totalInvestment : calculatedMetrics?.totalInvestment,
-    annualNOI: financialData.annualNOI !== undefined ? financialData.annualNOI : calculatedMetrics?.annualNOI,
-    totalProfit: financialData.totalProfit !== undefined ? financialData.totalProfit : calculatedMetrics?.totalProfit,
-    holdingCosts: financialData.holdingCosts !== undefined ? financialData.holdingCosts : calculatedMetrics?.holdingCosts,
-    monthlyRent: financialData.monthlyRent !== undefined ? financialData.monthlyRent : calculatedMetrics?.monthlyRent
+    cashFlow: getBestValue(financialData.cashFlow, calculatedMetrics?.cashFlow),
+    capRate: getBestValue(financialData.capRate, calculatedMetrics?.capRate),
+    cocReturn: calculatedMetrics?.cocReturn ?? financialData.cocReturn, // Use calculated first for CoC
+    roi: calculatedMetrics?.roi ?? getBestValue(financialData.roi, calculatedMetrics?.roi), // Use calculated for ROI
+    totalInvestment: calculatedMetrics?.totalInvestment ?? getBestValue(financialData.totalInvestment, calculatedMetrics?.totalInvestment),
+    annualNOI: getBestValue(financialData.annualNOI, calculatedMetrics?.annualNOI),
+    totalProfit: calculatedMetrics?.totalProfit ?? getBestValue(financialData.totalProfit, calculatedMetrics?.totalProfit), // Use calculated for profit
+    holdingCosts: calculatedMetrics?.holdingCosts ?? getBestValue(financialData.holdingCosts, calculatedMetrics?.holdingCosts),
+    monthlyRent: calculatedMetrics?.monthlyRent ?? getBestValue(financialData.monthlyRent, calculatedMetrics?.monthlyRent),
+    // BRRRR-specific metrics - always use calculated
+    cashReturned: calculatedMetrics?.cashReturned,
+    cashLeftInDeal: calculatedMetrics?.cashLeftInDeal,
+    capitalRecoveryPercent: calculatedMetrics?.capitalRecoveryPercent,
+    isInfiniteReturn: calculatedMetrics?.isInfiniteReturn
   };
   
   // Extract sections more reliably
@@ -1319,8 +1348,14 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
       total_investment: finalMetrics.totalInvestment,
       annual_noi: finalMetrics.annualNOI,
       total_profit: finalMetrics.totalProfit,
+      net_profit: finalMetrics.totalProfit, // Alias for compatibility
       holding_costs: finalMetrics.holdingCosts,
-      monthly_rent: finalMetrics.monthlyRent
+      monthly_rent: finalMetrics.monthlyRent,
+      // BRRRR-specific metrics
+      cash_returned: finalMetrics.cashReturned,
+      cash_left_in_deal: finalMetrics.cashLeftInDeal,
+      capital_recovery_percent: finalMetrics.capitalRecoveryPercent,
+      is_infinite_return: finalMetrics.isInfiniteReturn
     },
     market_analysis: marketAnalysis,
     investment_strategy: {

@@ -397,7 +397,7 @@ export default function Home() {
                 <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span className="text-purple-600 font-medium">Pro: 30/month @ $49</span>
+                <span className="text-purple-600 font-medium">Pro: 50/month @ $29</span>
               </div>
             </div>
           </div>
@@ -849,7 +849,7 @@ export default function Home() {
             Join thousands of investors making data-driven decisions.
           </p>
           <p className="text-base text-purple-600 font-medium mb-10">
-            Start with 3 free analyses/month. Upgrade to Pro for 30 analyses @ $49/mo.
+            Start with 3 free analyses/month. Upgrade to Pro for 50 analyses @ $29/mo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
