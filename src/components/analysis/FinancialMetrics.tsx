@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import type { Analysis } from '@/types';
+import { calculateFlipReturns, type FlipCalculationInputs } from '@/utils/financial-calculations';
 
 interface FinancialMetricsProps {
   analysis: Analysis;
@@ -11,10 +12,10 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
   const isFlipStrategy = analysis.strategy === 'flip';
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
-  
+
   const metrics = useMemo(() => {
     const loanAmount = purchasePrice - downPayment;
-    
+
     if (isFlipStrategy) {
       // Fix & Flip specific calculations
       // Try multiple locations for rehab costs
@@ -22,19 +23,17 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
                         (analysis as any).renovationCosts ||
                         (analysis as any).analysis_data?.rehab_costs ||
                         0;
-      const closingCosts = purchasePrice * 0.03; // 3% closing costs
-      const totalInvestment = downPayment + rehabCosts + closingCosts;
 
       // Get metrics from AI analysis if available
       // CRITICAL FIX: Check multiple locations for profit and ROI
       // Data can be at top level (from DB) or nested in ai_analysis.financial_metrics
       const aiMetrics = analysis.ai_analysis?.financial_metrics;
-      const netProfit = (analysis as any).profit ||
+      let netProfit = (analysis as any).profit ||
                        aiMetrics?.total_profit ||
                        aiMetrics?.net_profit ||
                        (analysis as any).analysis_data?.profit ||
                        0;
-      const roi = (analysis as any).roi ||
+      let roi = (analysis as any).roi ||
                  aiMetrics?.roi ||
                  (analysis as any).analysis_data?.roi ||
                  0;
@@ -44,8 +43,8 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
         topLevelRoi: (analysis as any).roi,
         aiMetricsProfit: aiMetrics?.total_profit,
         aiMetricsRoi: aiMetrics?.roi,
-        finalNetProfit: netProfit,
-        finalRoi: roi
+        initialNetProfit: netProfit,
+        initialRoi: roi
       });
 
       // CRITICAL FIX: ARV must be HIGHER than purchase price for flip profitability
@@ -53,12 +52,14 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
       // The comparables.value is current AVM, NOT the post-renovation ARV
       let estimatedARV = (aiMetrics as any)?.arv ||
                         (analysis as any).analysis_data?.arv ||
+                        (analysis as any).analysis_data?.strategy_details?.arv ||
                         (analysis.property_data as any)?.comparables?.value ||
                         0;
 
       // Renovation level multipliers for ARV calculation
       const renovationLevel = (analysis as any).strategy_details?.renovationLevel ||
                              (analysis as any).strategyDetails?.renovationLevel ||
+                             (analysis as any).analysis_data?.strategy_details?.renovationLevel ||
                              'moderate';
       const renovationMultipliers: Record<string, number> = {
         cosmetic: 1.12,
@@ -88,8 +89,86 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
         arvIsValid: estimatedARV > purchasePrice
       });
 
+      // CRITICAL FIX: If netProfit or ROI is 0 but we have valid inputs, recalculate
+      // This handles cases where the DB update failed or values weren't saved properly
+      if ((netProfit === 0 || roi === 0) && purchasePrice > 0 && estimatedARV > purchasePrice) {
+        console.log('[FinancialMetrics] RECALCULATING: netProfit or ROI is 0, using centralized calculator');
+
+        // Get loan details from analysis data
+        const interestRate = analysis.interest_rate ||
+                            (analysis as any).analysis_data?.interest_rate ||
+                            10.45;
+        const holdingMonths = (analysis.loan_term && analysis.loan_term < 2)
+          ? Math.round(analysis.loan_term * 12)
+          : (analysis as any).analysis_data?.strategy_details?.timeline || 6;
+        const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
+        const loanType = (analysis as any).analysis_data?.loan_terms?.loanType || 'hardMoney';
+
+        const flipInputs: FlipCalculationInputs = {
+          purchasePrice,
+          downPaymentPercent: analysis.down_payment_percent || 20,
+          interestRate,
+          loanTermYears: 1,
+          renovationCosts: rehabCosts,
+          arv: estimatedARV,
+          holdingPeriodMonths: holdingMonths,
+          loanType: loanType as 'conventional' | 'hardMoney',
+          points,
+          isHardMoney: loanType === 'hardMoney' || points >= 2
+        };
+
+        console.log('[FinancialMetrics] Recalculating with inputs:', flipInputs);
+
+        const flipResults = calculateFlipReturns(flipInputs);
+
+        console.log('[FinancialMetrics] Recalculated results:', {
+          netProfit: flipResults.netProfit,
+          roi: flipResults.roi,
+          profitMargin: flipResults.profitMargin,
+          isValid: flipResults.validation.isValid
+        });
+
+        // Use recalculated values
+        netProfit = flipResults.netProfit;
+        roi = flipResults.roi;
+
+        // Also get proper investment values from the calculator
+        const totalInvestment = flipResults.cashRequired;
+        const profitMargin = flipResults.profitMargin;
+
+        return {
+          purchasePrice,
+          rehabCosts,
+          totalInvestment,
+          estimatedARV,
+          netProfit,
+          roi,
+          profitMargin,
+          holdingPeriod: holdingMonths / 12,
+          // Set rental metrics to 0 for flips
+          monthlyRent: 0,
+          monthlyPayment: 0,
+          totalExpenses: 0,
+          monthlyCashFlow: 0,
+          annualCashFlow: 0,
+          annualNOI: 0,
+          capRate: 0,
+          cashOnCashReturn: 0,
+          totalReturn: roi,
+          totalCashInvested: totalInvestment,
+          propertyTax: 0,
+          insurance: 0,
+          maintenance: 0,
+          vacancy: 0,
+          propertyManagement: 0
+        };
+      }
+
+      // Calculate values using stored data (original path when values are present)
+      const closingCosts = purchasePrice * 0.03;
+      const totalInvestment = downPayment + rehabCosts + closingCosts;
       const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
-      
+
       return {
         purchasePrice,
         rehabCosts,

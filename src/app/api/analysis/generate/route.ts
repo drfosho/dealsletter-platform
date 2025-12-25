@@ -539,26 +539,57 @@ export async function POST(request: NextRequest) {
       
       // Update analyzed_properties table with AI results
       console.log('Updating analyzed_properties table with AI analysis...');
-      
+
+      // CRITICAL: Extract ROI and profit from AI analysis with explicit logging
+      const extractedRoi = aiAnalysis.financial_metrics?.roi;
+      const extractedProfit = aiAnalysis.financial_metrics?.total_profit ||
+                              aiAnalysis.financial_metrics?.net_profit;
+
+      console.log('[Generate] Extracted financial metrics for DB update:', {
+        roi: extractedRoi,
+        roiType: typeof extractedRoi,
+        profit: extractedProfit,
+        profitType: typeof extractedProfit,
+        fullFinancialMetrics: aiAnalysis.financial_metrics
+      });
+
+      // Use the extracted values, defaulting to 0 only if undefined/null
+      const finalRoi = extractedRoi ?? 0;
+      const finalProfit = extractedProfit ?? 0;
+
+      console.log('[Generate] Final values for DB:', { finalRoi, finalProfit });
+
       const updateData = {
         analysis_data: {
           ...analysisRecord.analysis_data,
           ai_analysis: aiAnalysis,
           status: 'completed'
         },
-        roi: aiAnalysis.financial_metrics?.roi || 0,
-        profit: aiAnalysis.financial_metrics?.total_profit || 0
+        roi: finalRoi,
+        profit: finalProfit
       };
-      
-      console.log('Update data:', JSON.stringify(updateData, null, 2));
-      
-      const { error: updateError } = await supabase
+
+      console.log('[Generate] Update data ROI/Profit:', {
+        roi: updateData.roi,
+        profit: updateData.profit
+      });
+
+      const { data: updateResult, error: updateError } = await supabase
         .from('analyzed_properties')
         .update(updateData)
-        .eq('id', analysisRecord.id);
+        .eq('id', analysisRecord.id)
+        .select('roi, profit')
+        .single();
 
       if (updateError) {
-        console.error('Failed to update analysis:', updateError);
+        console.error('[Generate] CRITICAL: Failed to update analysis:', updateError);
+        console.error('[Generate] Update error details:', {
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details
+        });
+      } else {
+        console.log('[Generate] Successfully updated analysis. Verified values:', updateResult);
       }
 
       // Update user's usage count (including admin tracking)
