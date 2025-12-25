@@ -7,47 +7,59 @@ export const runtime = 'nodejs'
 
 // Explicit price ID mapping - Vercel requires explicit references (no dynamic access)
 function getPriceId(tier: string, billingPeriod: string): string | undefined {
-  // Log available env vars for debugging
-  console.log('[Checkout] getPriceId called with:', { tier, billingPeriod })
-  console.log('[Checkout] Available Stripe Price IDs:')
-  console.log('[Checkout] - STRIPE_PRICE_PRO_MONTHLY:', process.env.STRIPE_PRICE_PRO_MONTHLY ? 'SET' : 'NOT SET')
-  console.log('[Checkout] - STRIPE_PRICE_PRO_YEARLY:', process.env.STRIPE_PRICE_PRO_YEARLY ? 'SET' : 'NOT SET')
-  console.log('[Checkout] - STRIPE_PRICE_PRO_PLUS_MONTHLY:', process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY ? 'SET' : 'NOT SET')
-  console.log('[Checkout] - STRIPE_PRICE_PRO_PLUS_YEARLY:', process.env.STRIPE_PRICE_PRO_PLUS_YEARLY ? 'SET' : 'NOT SET')
+  console.log('[getPriceId] ========== PRICE LOOKUP START ==========')
+  console.log('[getPriceId] Input tier:', JSON.stringify(tier))
+  console.log('[getPriceId] Input billingPeriod:', JSON.stringify(billingPeriod))
 
-  const normalizedTier = tier.toUpperCase().replace('-', '_')
-  const isYearly = billingPeriod === 'yearly' || billingPeriod === 'annual'
+  // Log ALL Stripe env vars (explicit references required for Vercel)
+  const envVars = {
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? `SET (${process.env.STRIPE_SECRET_KEY.substring(0, 10)}...)` : 'MISSING',
+    STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY || 'MISSING',
+    STRIPE_PRICE_PRO_YEARLY: process.env.STRIPE_PRICE_PRO_YEARLY || 'MISSING',
+    STRIPE_PRICE_PRO_PLUS_MONTHLY: process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 'MISSING',
+    STRIPE_PRICE_PRO_PLUS_YEARLY: process.env.STRIPE_PRICE_PRO_PLUS_YEARLY || 'MISSING',
+  }
+  console.log('[getPriceId] Environment variables:', JSON.stringify(envVars, null, 2))
+
+  // Normalize inputs
+  const normalizedTier = (tier || '').toUpperCase().replace(/-/g, '_').trim()
+  const normalizedPeriod = (billingPeriod || 'monthly').toLowerCase().trim()
+  const isYearly = normalizedPeriod === 'yearly' || normalizedPeriod === 'annual'
+
+  console.log('[getPriceId] Normalized tier:', normalizedTier)
+  console.log('[getPriceId] Normalized period:', normalizedPeriod)
+  console.log('[getPriceId] Is yearly:', isYearly)
+
+  let priceId: string | undefined
 
   // Explicit mapping to match Vercel environment variable names exactly
   if (normalizedTier === 'PRO' || normalizedTier === 'PROFESSIONAL') {
-    if (isYearly) {
-      return process.env.STRIPE_PRICE_PRO_YEARLY
-    }
-    return process.env.STRIPE_PRICE_PRO_MONTHLY
-  }
-
-  if (normalizedTier === 'PRO_PLUS' || normalizedTier === 'PROPLUS') {
-    if (isYearly) {
-      return process.env.STRIPE_PRICE_PRO_PLUS_YEARLY
-    }
-    return process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY
-  }
-
-  if (normalizedTier === 'STARTER' || normalizedTier === 'BASIC' || normalizedTier === 'FREE') {
-    // Free tier - no price ID needed
-    return undefined
-  }
-
-  if (normalizedTier === 'PREMIUM') {
+    priceId = isYearly
+      ? process.env.STRIPE_PRICE_PRO_YEARLY
+      : process.env.STRIPE_PRICE_PRO_MONTHLY
+    console.log('[getPriceId] Matched PRO tier, priceId:', priceId || 'NOT FOUND')
+  } else if (normalizedTier === 'PRO_PLUS' || normalizedTier === 'PROPLUS') {
+    priceId = isYearly
+      ? process.env.STRIPE_PRICE_PRO_PLUS_YEARLY
+      : process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY
+    console.log('[getPriceId] Matched PRO_PLUS tier, priceId:', priceId || 'NOT FOUND')
+  } else if (normalizedTier === 'STARTER' || normalizedTier === 'BASIC' || normalizedTier === 'FREE') {
+    console.log('[getPriceId] Free tier - no price ID needed')
+    priceId = undefined
+  } else if (normalizedTier === 'PREMIUM') {
     // Premium uses same prices as Pro (legacy tier)
-    if (isYearly) {
-      return process.env.STRIPE_PRICE_PRO_YEARLY
-    }
-    return process.env.STRIPE_PRICE_PRO_MONTHLY
+    priceId = isYearly
+      ? process.env.STRIPE_PRICE_PRO_YEARLY
+      : process.env.STRIPE_PRICE_PRO_MONTHLY
+    console.log('[getPriceId] Matched PREMIUM tier (using Pro prices), priceId:', priceId || 'NOT FOUND')
+  } else {
+    console.log('[getPriceId] ❌ Unknown tier:', normalizedTier)
+    console.log('[getPriceId] Expected one of: PRO, PRO_PLUS, PROFESSIONAL, PROPLUS, STARTER, BASIC, FREE, PREMIUM')
+    priceId = undefined
   }
 
-  console.log('[Checkout] Unknown tier:', normalizedTier)
-  return undefined
+  console.log('[getPriceId] ========== RESULT:', priceId || 'undefined', '==========')
+  return priceId
 }
 
 export async function POST(request: NextRequest) {
