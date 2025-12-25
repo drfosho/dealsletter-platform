@@ -4,13 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Zap, Crown } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
-import { loadStripe } from '@stripe/stripe-js';
-
-// Initialize Stripe with proper error handling
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripePublishableKey
-  ? loadStripe(stripePublishableKey)
-  : null;
 
 type PlanTier = 'free' | 'pro' | 'pro-plus';
 type BillingPeriod = 'monthly' | 'yearly';
@@ -22,7 +15,7 @@ export default function PricingComparison() {
   const [error, setError] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
 
-  const handleCheckout = async (tier: PlanTier) => {
+  const handleCheckout = (tier: PlanTier) => {
     if (tier === 'free') {
       // Free tier just needs signup
       if (!user) {
@@ -36,63 +29,13 @@ export default function PricingComparison() {
     setIsLoading(tier);
     setError(null);
 
-    try {
-      console.log('[PricingComparison] Starting checkout for:', tier, billingPeriod);
-
-      // Map tier to Stripe tier name
-      const tierNameMap: Record<string, string> = {
-        'pro': 'PRO',
-        'pro-plus': 'PRO_PLUS'
-      };
-
-      // Create checkout session - let backend handle price ID resolution
-      const response = await fetch('/api/stripe/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tierName: tierNameMap[tier],
-          email: user?.email,
-          billingPeriod
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[PricingComparison] Checkout session error:', errorData);
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-
-      const { sessionId } = await response.json();
-      console.log('[PricingComparison] Session created:', sessionId);
-
-      // Redirect to Stripe Checkout
-      if (!stripePromise) {
-        throw new Error('Stripe is not configured. Please check your environment variables.');
-      }
-
-      const stripe = await stripePromise;
-      if (!stripe) {
-        throw new Error('Stripe failed to load');
-      }
-
-      const { error: stripeError } = await stripe.redirectToCheckout({
-        sessionId,
-      });
-
-      if (stripeError) {
-        throw stripeError;
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
-      console.error('[PricingComparison] Checkout error:', err);
-      setError(errorMessage);
-      setIsLoading(null);
-    }
+    // Navigate to embedded checkout page
+    // The tier name mapping happens on the checkout page
+    const tierParam = tier === 'pro-plus' ? 'PRO_PLUS' : 'PRO';
+    router.push(`/checkout?tier=${tierParam}&period=${billingPeriod}`);
   };
 
-  const handleGetStarted = async (tier: PlanTier) => {
+  const handleGetStarted = (tier: PlanTier) => {
     if (!user && tier !== 'free') {
       // Store intended plan in session storage for post-signup redirect
       sessionStorage.setItem('intendedPlan', tier);
@@ -101,7 +44,7 @@ export default function PricingComparison() {
       return;
     }
 
-    await handleCheckout(tier);
+    handleCheckout(tier);
   };
 
   const plans = [
