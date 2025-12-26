@@ -203,11 +203,25 @@ export default function Step3Financial({
       console.log('[Step3Financial] Auto-populating purchase price:', newEffectivePrice);
       updatedFinancial.purchasePrice = newEffectivePrice;
       hasChanges = true;
+
+      // CRITICAL FIX: Auto-calculate closing costs immediately when purchase price is set
+      if (!updatedFinancial.closingCosts || updatedFinancial.closingCosts === 0) {
+        const closingCostPercent = data.strategy === 'flip' || data.strategy === 'brrrr' ? 0.03 : 0.025;
+        updatedFinancial.closingCosts = Math.round(newEffectivePrice * closingCostPercent);
+        console.log('[Step3Financial] Auto-calculating closing costs:', updatedFinancial.closingCosts);
+      }
     } else if (data.financial.purchasePrice > 0 && financial.purchasePrice === 0) {
       // Sync purchase price from props if not in local state
       console.log('[Step3Financial] Syncing purchase price from props:', data.financial.purchasePrice);
       updatedFinancial.purchasePrice = data.financial.purchasePrice;
       hasChanges = true;
+
+      // CRITICAL FIX: Auto-calculate closing costs when syncing purchase price
+      if (!updatedFinancial.closingCosts || updatedFinancial.closingCosts === 0) {
+        const closingCostPercent = data.strategy === 'flip' || data.strategy === 'brrrr' ? 0.03 : 0.025;
+        updatedFinancial.closingCosts = Math.round(data.financial.purchasePrice * closingCostPercent);
+        console.log('[Step3Financial] Auto-calculating closing costs from synced price:', updatedFinancial.closingCosts);
+      }
     }
     
     // Auto-populate monthly rent if not already set and strategy requires it
@@ -736,6 +750,20 @@ export default function Step3Financial({
     }
 
     const newFinancial = { ...financial, [field]: numValue };
+
+    // CRITICAL FIX: Auto-recalculate closing costs when purchase price changes
+    // Only if closing costs haven't been manually edited (closingCostsManuallySet flag)
+    if (field === 'purchasePrice' && numValue > 0 && !newFinancial.closingCostsManuallySet) {
+      const closingCostPercent = data.strategy === 'flip' || data.strategy === 'brrrr' ? 0.03 : 0.025;
+      newFinancial.closingCosts = Math.round(numValue * closingCostPercent);
+      console.log('[Step3Financial] Auto-recalculating closing costs on price change:', newFinancial.closingCosts);
+    }
+
+    // Mark closing costs as manually set if user edits them directly
+    if (field === 'closingCosts') {
+      newFinancial.closingCostsManuallySet = true;
+    }
+
     setFinancial(newFinancial);
     updateData({ financial: newFinancial });
 

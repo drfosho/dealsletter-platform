@@ -36,6 +36,7 @@ export interface WizardData {
     monthlyRent?: number; // Monthly rent for rental strategies
     rentPerUnit?: number; // Rent per unit for multi-family properties
     units?: number; // Number of units for multi-family properties
+    closingCostsManuallySet?: boolean; // Track if user manually edited closing costs
   };
   analysis?: Record<string, unknown>;
   analysisId?: string;
