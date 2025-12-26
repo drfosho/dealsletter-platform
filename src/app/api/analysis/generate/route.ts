@@ -698,59 +698,105 @@ async function generatePropertyAnalysis(propertyData: PropertyData, request: Pro
     // Generate analysis using Claude
     console.log('[generatePropertyAnalysis] Calling Claude API...');
     // Optimized system prompt - strategy-specific to reduce token usage
+    // QUALITY GUIDELINES for all prompts:
+    // - Professional, grammatically correct English
+    // - No markdown formatting (**, *, --, #, etc.)
+    // - Clear, complete sentences
+    // - Concise and actionable recommendations
     const systemPrompts: Record<string, string> = {
-      brrrr: `You are a real estate investment analyst. Analyze BRRRR investments.
+      brrrr: `You are a professional real estate investment analyst providing clear, actionable analysis.
 
-CRITICAL: Use EXACT numerical values from "BRRRR STRATEGY ANALYSIS" section. DO NOT recalculate.
+CRITICAL REQUIREMENTS:
+- Use EXACT numerical values from "BRRRR STRATEGY ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Be concise but thorough
 
-Output format:
-1. Executive Summary (2-3 sentences on capital recovery)
-2. Recommendation (Buy/Hold/Pass)
-3. BRRRR Phases (use EXACT values):
-   - Phase 1: Total Cash Invested
-   - Phase 2: Cash Returned at Refinance
-   - Phase 3: Monthly Cash Flow
-4. Key Metrics (COPY EXACTLY): Total Investment, Cash Returned, Cash Left, Cash Flow, CoC Return, 5yr ROI
-5. Risk Assessment (ARV accuracy, refinance approval, delays)
-6. 3-5 Opportunities
-7. 3-5 Risks
-8. Action Items
+OUTPUT FORMAT:
 
-Use provided values verbatim. If CoC Return shows "INFINITE", write "INFINITE".`,
+SUMMARY: [2-3 sentences explaining the investment opportunity and capital recovery potential]
 
-      flip: `You are a real estate investment analyst. Analyze Fix & Flip investments.
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why]
 
-CRITICAL: Use EXACT values from "FIX & FLIP ANALYSIS" section.
+BRRRR PHASES:
+Phase 1 (Acquisition): Cash required: [exact value]
+Phase 2 (Refinance): Cash returned: [exact value]
+Phase 3 (Rental): Monthly cash flow: [exact value]
 
-Output format:
-1. Executive Summary (2-3 sentences on profit potential)
-2. Recommendation (Buy/Hold/Pass)
-3. Key Metrics: ARV, Total Investment, Net Profit, ROI%, Profit Margin%, Holding Period
-4. Risk Assessment (renovation, timing, ARV accuracy)
-5. Market Analysis (buyer demand, comparable sales)
-6. Renovation Strategy
-7. 3-5 Opportunities
-8. 3-5 Risks
-9. Exit Strategy & Actions
+KEY METRICS: Total Investment: [value], Cash Returned: [value], Cash Remaining: [value], Monthly Cash Flow: [value], Cash-on-Cash Return: [value], 5-Year ROI: [value]
 
-DO NOT include cash flow, cap rates, or rental metrics for flips.`,
+RISK LEVEL: [Low/Medium/High] - [Brief explanation of main risk factors including ARV accuracy, refinance approval likelihood, and potential delays]
 
-      rental: `You are a real estate investment analyst. Analyze rental property investments.
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
 
-CRITICAL: Use EXACT values from "CASH FLOW ANALYSIS" section.
+RISKS: [3-5 specific risks as complete sentences]
 
-Output format:
-1. Executive Summary (2-3 sentences)
-2. Recommendation (Buy/Hold/Pass)
-3. Key Metrics: Monthly Cash Flow, Cap Rate%, CoC Return%, Total ROI%, Annual NOI
-4. Risk Assessment (Low/Medium/High)
-5. Market Analysis
-6. Strategy Details
-7. 3-5 Opportunities
-8. 3-5 Risks
-9. Action Items
+NEXT STEPS: [2-3 specific, actionable items]
 
-Format monetary values with commas but preserve exact amounts.`
+Use provided values verbatim. Write naturally without any formatting symbols.`,
+
+      flip: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "FIX & FLIP ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Focus on flip-specific metrics only (no rental metrics)
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the profit potential and project scope]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on the numbers]
+
+KEY METRICS: ARV: [value], Total Investment: [value], Net Profit: [value], ROI: [value]%, Profit Margin: [value]%, Holding Period: [value] months
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation covering renovation risk, market timing, and ARV accuracy]
+
+MARKET ANALYSIS: [2-3 sentences on buyer demand and comparable sales in the area]
+
+RENOVATION STRATEGY: [2-3 sentences on the recommended approach based on renovation level]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+EXIT STRATEGY: [Recommended exit approach and 2-3 action items]
+
+Write naturally in plain text. No markdown, bullets, or special formatting.`,
+
+      rental: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "CASH FLOW ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Be concise but thorough
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the rental investment opportunity]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on cash flow and returns]
+
+KEY METRICS: Monthly Cash Flow: [value], Cap Rate: [value]%, Cash-on-Cash Return: [value]%, Total ROI: [value]%, Annual NOI: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation of main risk factors]
+
+MARKET ANALYSIS: [2-3 sentences on rental market conditions and demand]
+
+INVESTMENT STRATEGY: [2-3 sentences on recommended approach for this property]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items]
+
+Format monetary values with commas. Write in plain text without any formatting symbols.`
     };
 
     const claudeRequest = {

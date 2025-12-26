@@ -11,23 +11,40 @@ export function stripMarkdown(text: string | undefined | null): string {
 
   return text
     // Remove bold/italic markers
+    .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/___([^_]+)___/g, '$1')
     .replace(/__([^_]+)__/g, '$1')
     .replace(/_([^_]+)_/g, '$1')
     // Remove headers
     .replace(/^#{1,6}\s*/gm, '')
     // Remove bullet points at start of lines
-    .replace(/^[-*•]\s*/gm, '')
+    .replace(/^[-*•→►]\s*/gm, '')
+    .replace(/^\s*[-*•→►]\s*/gm, '')
     // Remove numbered list markers
     .replace(/^\d+\.\s*/gm, '')
+    .replace(/^\s*\d+\.\s*/gm, '')
     // Remove code blocks
     .replace(/```[\s\S]*?```/g, '')
     .replace(/`([^`]+)`/g, '$1')
     // Remove links but keep text
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove horizontal rules
+    .replace(/^---+\s*$/gm, '')
+    .replace(/^\*\*\*+\s*$/gm, '')
+    .replace(/^___+\s*$/gm, '')
+    // Remove trailing dashes/artifacts
+    .replace(/\s*--\s*$/gm, '')
+    .replace(/\s*—\s*$/gm, '')
+    // Remove blockquotes
+    .replace(/^>\s*/gm, '')
+    // Clean up standalone asterisks
+    .replace(/^\*\s*$/gm, '')
+    .replace(/\s+\*\s*$/gm, '')
     // Remove extra whitespace
     .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
@@ -81,6 +98,9 @@ export function formatRecommendation(text: string | undefined | null): string {
   if (!text) return 'No recommendation available.';
 
   let cleaned = text
+    // Remove section headers that might appear
+    .replace(/^RECOMMENDATION:\s*/gim, '')
+    .replace(/^SUMMARY:\s*/gim, '')
     // Remove "Rationale:" or similar labels
     .replace(/\bRationale:\s*/gi, '')
     .replace(/\bExplanation:\s*/gi, '')
@@ -88,16 +108,31 @@ export function formatRecommendation(text: string | undefined | null): string {
     // Remove trailing dashes and other artifacts
     .replace(/\s*--\s*$/g, '')
     .replace(/\s*-+\s*$/g, '')
+    .replace(/\s*—\s*$/g, '')
     // Remove multiple asterisks (often used as separators)
     .replace(/\*{2,}/g, '')
     // Clean up any remaining single asterisks at word boundaries
     .replace(/\s*\*\s*/g, ' ')
     // Remove colons after recommendation types that are already formatted
-    .replace(/(PASS|BUY|HOLD|CONDITIONAL PASS|STRONG BUY):\s*/gi, '$1 - ')
+    .replace(/(PASS|BUY|HOLD|CONDITIONAL PASS|CONDITIONAL BUY|STRONG BUY):\s*/gi, '$1 - ')
+    // Fix double dashes in recommendations
+    .replace(/(PASS|BUY|HOLD)\s*-\s*-\s*/gi, '$1 - ')
     // Clean up double spaces
     .replace(/\s{2,}/g, ' ')
     // Clean up line breaks with proper spacing
-    .replace(/\n{3,}/g, '\n\n');
+    .replace(/\n{3,}/g, '\n\n')
+    // Remove any lingering underscores used for emphasis
+    .replace(/__/g, '')
+    .replace(/_([^_]+)_/g, '$1')
+    // Remove any [brackets] that might appear
+    .replace(/\[([^\]]+)\]/g, '$1')
+    // Fix common grammatical issues
+    .replace(/\s+,/g, ',')
+    .replace(/\s+\./g, '.')
+    .replace(/,,/g, ',')
+    .replace(/\.\./g, '.')
+    // Clean up any numbers stuck to words
+    .replace(/(\d)([A-Za-z])/g, '$1 $2');
 
   // Apply markdown stripping
   cleaned = stripMarkdown(cleaned);
@@ -105,6 +140,11 @@ export function formatRecommendation(text: string | undefined | null): string {
   // Ensure proper sentence ending
   if (cleaned && !cleaned.match(/[.!?]$/)) {
     cleaned = cleaned + '.';
+  }
+
+  // Capitalize first letter
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   }
 
   return cleaned.trim();

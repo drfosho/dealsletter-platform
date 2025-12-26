@@ -119,6 +119,9 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
               {getInvestmentScore(analysis)}
             </span>
             <span className="text-muted">/100</span>
+            <span className={`ml-2 text-xs ${getScoreColor(getInvestmentScore(analysis))}`}>
+              ({getScoreLabel(getInvestmentScore(analysis))})
+            </span>
           </p>
         </div>
 
@@ -164,9 +167,19 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
   );
 
   function getScoreColor(score: number): string {
-    if (score >= 75) return 'text-green-600';
-    if (score >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return 'text-green-600';   // Excellent deal
+    if (score >= 60) return 'text-lime-600';    // Good deal
+    if (score >= 40) return 'text-yellow-600';  // Marginal deal
+    if (score >= 20) return 'text-orange-600';  // Poor deal
+    return 'text-red-600';                      // Very poor deal
+  }
+
+  function getScoreLabel(score: number): string {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Marginal';
+    if (score >= 20) return 'Poor';
+    return 'Very Poor';
   }
 
   function getInvestmentScore(analysis: AnalysisOverviewProps['analysis']): number {
@@ -176,66 +189,164 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
                (analysis as any).analysis_data?.roi ||
                0;
 
-    let score = 50; // Base score
+    let score = 0; // Start at 0 and build up based on metrics
+    let maxScore = 100;
+
+    console.log('[InvestmentScore] Calculating for strategy:', analysis.strategy);
 
     if (analysis.strategy === 'flip') {
-      // Fix & Flip scoring based on ROI and profit margin
+      // Fix & Flip scoring (out of 100)
       // CRITICAL FIX: Check multiple locations for net profit
       const netProfit = (analysis as any).profit ||
                        analysis.ai_analysis?.financial_metrics?.net_profit ||
                        analysis.ai_analysis?.financial_metrics?.total_profit ||
                        (analysis as any).analysis_data?.profit ||
                        0;
+      const purchasePrice = analysis.purchase_price || 0;
+      const profitMargin = purchasePrice > 0 ? (netProfit / purchasePrice) * 100 : 0;
       const timeline = (analysis as any).strategy_details?.timeline ||
-                      (analysis as any).strategyDetails?.timeline || 6;
+                      (analysis as any).strategyDetails?.timeline ||
+                      (analysis as any).analysis_data?.strategy_details?.timeline || 6;
+      const rehabCosts = analysis.rehab_costs || 0;
 
-      // ROI contribution (0-35 points for flips)
-      if (roi > 30) score += 35;
-      else if (roi > 25) score += 30;
-      else if (roi > 20) score += 25;
-      else if (roi > 15) score += 20;
-      else if (roi > 10) score += 15;
-      else if (roi > 5) score += 10;
+      console.log('[InvestmentScore] Flip metrics:', { roi, netProfit, profitMargin, timeline, purchasePrice, rehabCosts });
 
-      // Profit contribution (0-10 points)
-      if (netProfit > 100000) score += 10;
-      else if (netProfit > 75000) score += 8;
-      else if (netProfit > 50000) score += 6;
-      else if (netProfit > 25000) score += 4;
-      else if (netProfit > 10000) score += 2;
+      // ROI Component (40 points max)
+      if (roi >= 50) score += 40;
+      else if (roi >= 30) score += 32;
+      else if (roi >= 20) score += 24;
+      else if (roi >= 10) score += 16;
+      else if (roi >= 5) score += 8;
+      else if (roi >= 0) score += 4;
+      else score += 0; // Negative ROI = 0 points
 
-      // Timeline bonus (0-5 points)
-      if (timeline <= 6) score += 5;
-      else if (timeline <= 9) score += 3;
-      else if (timeline <= 12) score += 1;
-    } else {
-      // Rental property scoring
+      // Profit Margin Component (30 points max)
+      if (profitMargin >= 20) score += 30;
+      else if (profitMargin >= 15) score += 25;
+      else if (profitMargin >= 10) score += 18;
+      else if (profitMargin >= 5) score += 10;
+      else if (profitMargin >= 0) score += 5;
+      else score += 0; // Negative margin = 0 points
+
+      // Timeline Component (20 points max) - shorter is better
+      if (timeline <= 4) score += 20;
+      else if (timeline <= 6) score += 16;
+      else if (timeline <= 9) score += 10;
+      else if (timeline <= 12) score += 5;
+      else score += 0; // Over a year = 0 points
+
+      // Risk Assessment (10 points max) - deduct for risk factors
+      let riskDeductions = 0;
+      // High renovation costs relative to purchase
+      if (purchasePrice > 0 && rehabCosts / purchasePrice > 0.3) riskDeductions += 2;
+      // Low profit margin is risky
+      if (profitMargin < 10) riskDeductions += 2;
+      // Long timeline is risky
+      if (timeline > 9) riskDeductions += 2;
+      // Negative or very low ROI
+      if (roi < 10) riskDeductions += 3;
+      // Low absolute profit
+      if (netProfit < 25000) riskDeductions += 1;
+
+      score += Math.max(0, 10 - riskDeductions);
+
+      console.log('[InvestmentScore] Flip score breakdown:', { score, riskDeductions });
+
+    } else if (analysis.strategy === 'brrrr') {
+      // BRRRR scoring (combines flip + rental aspects)
       const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
       const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
+      const cashOnCash = analysis.ai_analysis?.financial_metrics?.cash_on_cash_return || 0;
 
-      // ROI contribution (0-25 points)
-      if (roi > 20) score += 25;
-      else if (roi > 15) score += 20;
-      else if (roi > 10) score += 15;
-      else if (roi > 5) score += 10;
-      else if (roi > 0) score += 5;
+      console.log('[InvestmentScore] BRRRR metrics:', { roi, capRate, cashFlow, cashOnCash });
 
-      // Cap rate contribution (0-15 points)
-      if (capRate > 10) score += 15;
-      else if (capRate > 8) score += 12;
-      else if (capRate > 6) score += 9;
-      else if (capRate > 4) score += 6;
-      else if (capRate > 2) score += 3;
+      // ROI Component (30 points max)
+      if (roi >= 30) score += 30;
+      else if (roi >= 20) score += 24;
+      else if (roi >= 15) score += 18;
+      else if (roi >= 10) score += 12;
+      else if (roi >= 5) score += 6;
+      else if (roi >= 0) score += 3;
+      else score += 0;
 
-      // Cash flow contribution (0-10 points)
-      if (cashFlow > 1000) score += 10;
-      else if (cashFlow > 500) score += 8;
-      else if (cashFlow > 250) score += 6;
-      else if (cashFlow > 100) score += 4;
-      else if (cashFlow > 0) score += 2;
+      // Cap Rate Component (25 points max)
+      if (capRate >= 8) score += 25;
+      else if (capRate >= 6) score += 20;
+      else if (capRate >= 5) score += 15;
+      else if (capRate >= 4) score += 10;
+      else if (capRate >= 2) score += 5;
+      else score += 0;
+
+      // Cash Flow Component (25 points max)
+      if (cashFlow >= 500) score += 25;
+      else if (cashFlow >= 300) score += 20;
+      else if (cashFlow >= 200) score += 15;
+      else if (cashFlow >= 100) score += 10;
+      else if (cashFlow >= 0) score += 5;
+      else score += 0; // Negative cash flow = 0
+
+      // Cash-on-Cash (20 points max)
+      if (cashOnCash >= 15) score += 20;
+      else if (cashOnCash >= 12) score += 16;
+      else if (cashOnCash >= 10) score += 12;
+      else if (cashOnCash >= 8) score += 8;
+      else if (cashOnCash >= 5) score += 4;
+      else score += 0;
+
+    } else {
+      // Buy & Hold / Rental property scoring (out of 100)
+      const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
+      const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
+      const cashOnCash = analysis.ai_analysis?.financial_metrics?.cash_on_cash_return || 0;
+
+      console.log('[InvestmentScore] Rental metrics:', { roi, capRate, cashFlow, cashOnCash });
+
+      // Cap Rate Component (30 points max)
+      if (capRate >= 10) score += 30;
+      else if (capRate >= 8) score += 26;
+      else if (capRate >= 6) score += 20;
+      else if (capRate >= 5) score += 15;
+      else if (capRate >= 4) score += 10;
+      else if (capRate >= 2) score += 5;
+      else score += 0; // Below 2% = poor
+
+      // Cash-on-Cash Return Component (30 points max)
+      if (cashOnCash >= 15) score += 30;
+      else if (cashOnCash >= 12) score += 25;
+      else if (cashOnCash >= 10) score += 20;
+      else if (cashOnCash >= 8) score += 15;
+      else if (cashOnCash >= 6) score += 10;
+      else if (cashOnCash >= 0) score += 5;
+      else score += 0; // Negative = 0
+
+      // Monthly Cash Flow Component (25 points max)
+      if (cashFlow >= 500) score += 25;
+      else if (cashFlow >= 300) score += 20;
+      else if (cashFlow >= 200) score += 15;
+      else if (cashFlow >= 100) score += 10;
+      else if (cashFlow >= 0) score += 5;
+      else score += 0; // Negative cash flow = 0 points
+
+      // Market Position (15 points max)
+      // Based on price relative to market median
+      const medianPrice = analysis.market_data?.medianSalePrice || 0;
+      const purchasePrice = analysis.purchase_price || 0;
+      if (medianPrice > 0 && purchasePrice > 0) {
+        const priceRatio = purchasePrice / medianPrice;
+        if (priceRatio < 0.85) score += 15; // 15%+ below market
+        else if (priceRatio < 0.95) score += 12; // 5-15% below
+        else if (priceRatio < 1.05) score += 8; // At market
+        else if (priceRatio < 1.15) score += 4; // 5-15% above
+        else score += 0; // 15%+ above market
+      } else {
+        score += 7; // Default if no market data
+      }
     }
 
-    return Math.min(100, Math.max(0, score));
+    const finalScore = Math.min(maxScore, Math.max(0, Math.round(score)));
+    console.log('[InvestmentScore] Final score:', finalScore);
+
+    return finalScore;
   }
 
   function getTimelineEstimate(strategy: string): string {
