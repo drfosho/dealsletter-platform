@@ -18,6 +18,16 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    id: '10',
+    title: 'End of 2025 Bay Area Housing Deep Dive: All 9 Counties Analyzed',
+    excerpt: 'Our comprehensive end-of-year Bay Area analysis with actual numbers across all 9 counties. The Bay is not one market — it\'s 9 different markets. Combined median at $1.275M (-3.2% YoY), but SF is up 12.6% while Marin dropped 9.5%. Here\'s what it means for investors.',
+    date: 'December 2025',
+    readTime: '15 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/bay area article header.png',
+    slug: 'bay-area-housing-eoy-2025'
+  },
+  {
     id: '9',
     title: 'San Francisco Office Market: Signs of Life in a Struggling Sector',
     excerpt: 'SF office vacancy at 31.6% but finally stabilizing. AI firms have leased 5M+ SF with positive absorption for 3 quarters. Trophy assets thrive at $73-103 PSF while Class B/C face 40%+ vacancy. The bifurcated recovery is real.',
@@ -368,6 +378,13 @@ export default function BlogPage() {
                     <Image
                       src="/logos/SF BLOG HEADER.png"
                       alt="San Francisco Office Market 2025"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'bay-area-housing-eoy-2025' ? (
+                    <Image
+                      src="/logos/bay area article header.png"
+                      alt="Bay Area Housing End of 2025 Deep Dive"
                       fill
                       className="object-cover"
                     />
