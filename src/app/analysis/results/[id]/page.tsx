@@ -290,12 +290,15 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                     </button>
                   )}
                   {isEditMode ? (
-                    <EditableFinancialMetrics 
-                      analysis={analysis} 
+                    <EditableFinancialMetrics
+                      analysis={analysis}
                       onUpdate={(updatedAnalysis) => setAnalysis(updatedAnalysis)}
                     />
                   ) : (
-                    <FinancialMetrics analysis={analysis} />
+                    <FinancialMetrics
+                      analysis={analysis}
+                      onUpdate={(updatedAnalysis) => setAnalysis(updatedAnalysis)}
+                    />
                   )}
                 </div>
                 {/* Show strategy-specific components */}

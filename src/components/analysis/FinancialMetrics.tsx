@@ -1,17 +1,131 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import type { Analysis } from '@/types';
 import { calculateFlipReturns, type FlipCalculationInputs } from '@/utils/financial-calculations';
 
 interface FinancialMetricsProps {
   analysis: Analysis;
+  onUpdate?: (updatedAnalysis: Analysis) => void;
 }
 
-export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
+export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetricsProps) {
   const isFlipStrategy = analysis.strategy === 'flip';
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
+
+  // Inline rent editing state
+  const [isEditingRent, setIsEditingRent] = useState(false);
+  const [isEditingRentPerUnit, setIsEditingRentPerUnit] = useState(false);
+  const [editedRent, setEditedRent] = useState('');
+  const [editedRentPerUnit, setEditedRentPerUnit] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Get initial rent value
+  const initialMonthlyRent = analysis.ai_analysis?.financial_metrics?.monthly_rent ||
+                            analysis.rental_estimate?.rent ||
+                            (analysis.rental_estimate as any)?.rentEstimate ||
+                            (analysis.analysis_data as any)?.monthlyRent ||
+                            0;
+  const [currentRent, setCurrentRent] = useState(initialMonthlyRent);
+
+  // Get units for multi-family
+  const getUnits = (): number => {
+    if ((analysis.analysis_data as any)?.units && (analysis.analysis_data as any).units > 0) {
+      return (analysis.analysis_data as any).units;
+    }
+    const property = (analysis.property_data as any)?.property;
+    if (property?.units && property.units > 0) return property.units;
+    if (property?.numberOfUnits && property.numberOfUnits > 0) return property.numberOfUnits;
+    const propertyType = property?.propertyType?.toLowerCase() || '';
+    if (propertyType.includes('duplex')) return 2;
+    if (propertyType.includes('triplex')) return 3;
+    if (propertyType.includes('fourplex') || propertyType.includes('quadplex')) return 4;
+    if (propertyType.includes('multi') || propertyType.includes('apartment')) {
+      const beds = property?.bedrooms || 0;
+      if (beds > 1) return beds;
+      return 2;
+    }
+    return 1;
+  };
+
+  const units = getUnits();
+  const isMultiFamily = units > 1;
+  const currentRentPerUnit = isMultiFamily ? currentRent / units : currentRent;
+
+  // Save rent to database
+  const saveRent = useCallback(async (newRent: number, newRentPerUnit?: number) => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/analysis/${analysis.id}/update-rent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          monthlyRent: newRent,
+          rentPerUnit: newRentPerUnit || (isMultiFamily ? newRent / units : newRent)
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save rent');
+        return false;
+      }
+
+      // Update parent if callback provided
+      if (onUpdate) {
+        const updatedAnalysis = {
+          ...analysis,
+          ai_analysis: {
+            ...analysis.ai_analysis,
+            financial_metrics: {
+              ...analysis.ai_analysis?.financial_metrics,
+              monthly_rent: newRent
+            }
+          },
+          analysis_data: {
+            ...analysis.analysis_data,
+            monthlyRent: newRent,
+            rentPerUnit: newRentPerUnit || (isMultiFamily ? newRent / units : newRent)
+          }
+        };
+        onUpdate(updatedAnalysis);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving rent:', error);
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [analysis, onUpdate, isMultiFamily, units]);
+
+  // Handle rent edit
+  const handleRentSave = async () => {
+    const newRent = parseFloat(editedRent) || 0;
+    if (newRent > 0) {
+      const success = await saveRent(newRent);
+      if (success) {
+        setCurrentRent(newRent);
+      }
+    }
+    setIsEditingRent(false);
+    setEditedRent('');
+  };
+
+  // Handle rent per unit edit
+  const handleRentPerUnitSave = async () => {
+    const newRentPerUnit = parseFloat(editedRentPerUnit) || 0;
+    if (newRentPerUnit > 0) {
+      const newTotalRent = newRentPerUnit * units;
+      const success = await saveRent(newTotalRent, newRentPerUnit);
+      if (success) {
+        setCurrentRent(newTotalRent);
+      }
+    }
+    setIsEditingRentPerUnit(false);
+    setEditedRentPerUnit('');
+  };
 
   const metrics = useMemo(() => {
     const loanAmount = purchasePrice - downPayment;
@@ -206,28 +320,11 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
       (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
       (Math.pow(1 + monthlyRate, numPayments) - 1);
 
-    // Get rental income - check multiple possible locations
-    // Debug logging to track the issue
-    console.log('[FinancialMetrics] Looking for monthly rent:', {
-      aiAnalysisRent: analysis.ai_analysis?.financial_metrics?.monthly_rent,
-      rentalEstimateRent: analysis.rental_estimate?.rent,
-      rentalEstimateRentEstimate: (analysis.rental_estimate as any)?.rentEstimate,
-      analysisDataRent: (analysis.analysis_data as any)?.monthlyRent,
-      fullRentalEstimate: analysis.rental_estimate,
-      fullAiMetrics: analysis.ai_analysis?.financial_metrics
-    });
-    
-    const monthlyRent = analysis.ai_analysis?.financial_metrics?.monthly_rent ||
-                       analysis.rental_estimate?.rent || 
-                       (analysis.rental_estimate as any)?.rentEstimate || 
-                       (analysis.analysis_data as any)?.monthlyRent ||
-                       0;
-    
-    // Get units for multi-family properties
-    const units = (analysis.analysis_data as any)?.units || 
-                 (analysis.property_data as any)?.property?.units || 
-                 1;
-    const rentPerUnit = units > 1 ? monthlyRent / units : monthlyRent;
+    // Use currentRent (which can be edited) instead of the original value
+    const monthlyRent = currentRent;
+    const rentPerUnit = isMultiFamily ? monthlyRent / units : monthlyRent;
+
+    console.log('[FinancialMetrics] Using rent:', { monthlyRent, units, rentPerUnit, isMultiFamily });
 
     // Calculate expenses (simplified)
     const propertyTax = (purchasePrice * 0.012) / 12; // 1.2% annual
@@ -280,10 +377,9 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
       maintenance,
       vacancy,
       propertyManagement,
-      units,
       rentPerUnit
     };
-  }, [analysis, isFlipStrategy, purchasePrice, downPayment]);
+  }, [analysis, isFlipStrategy, purchasePrice, downPayment, currentRent, isMultiFamily, units]);
 
   function calculateFirstYearPrincipal(
     loanAmount: number, 
@@ -450,18 +546,106 @@ export default function FinancialMetrics({ analysis }: FinancialMetricsProps) {
               <div className="flex justify-between items-center py-2 border-b border-border/50">
                 <span className="text-muted">
                   Rental Income
-                  {metrics.units > 1 && (
-                    <span className="text-xs ml-1">({metrics.units} units)</span>
+                  {isMultiFamily && (
+                    <span className="text-xs ml-1">({units} units)</span>
                   )}
                 </span>
-                <span className="font-medium text-green-600">
-                  +{formatCurrency(metrics.monthlyRent)}
-                </span>
+                <div className="flex items-center gap-2">
+                  {isEditingRent ? (
+                    <>
+                      <span className="text-muted">$</span>
+                      <input
+                        type="number"
+                        value={editedRent}
+                        onChange={(e) => setEditedRent(e.target.value)}
+                        className="w-24 px-2 py-1 border border-primary rounded text-right text-sm"
+                        autoFocus
+                        onKeyDown={(e) => e.key === 'Enter' && handleRentSave()}
+                      />
+                      <button
+                        onClick={handleRentSave}
+                        disabled={isSaving}
+                        className="text-green-600 hover:text-green-700 disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => { setIsEditingRent(false); setEditedRent(''); }}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium text-green-600">
+                        +{formatCurrency(metrics.monthlyRent)}
+                      </span>
+                      <button
+                        onClick={() => { setEditedRent(metrics.monthlyRent.toString()); setIsEditingRent(true); }}
+                        className="text-muted hover:text-primary p-1 rounded hover:bg-muted/20"
+                        title="Edit rent"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              {metrics.units > 1 && (
-                <div className="flex justify-between items-center py-1 text-sm text-muted">
-                  <span>Per Unit</span>
-                  <span>{formatCurrency(Math.round(metrics.rentPerUnit))}</span>
+              {isMultiFamily && (
+                <div className="flex justify-between items-center py-1 text-sm">
+                  <span className="text-muted">Per Unit</span>
+                  <div className="flex items-center gap-2">
+                    {isEditingRentPerUnit ? (
+                      <>
+                        <span className="text-muted text-xs">$</span>
+                        <input
+                          type="number"
+                          value={editedRentPerUnit}
+                          onChange={(e) => setEditedRentPerUnit(e.target.value)}
+                          className="w-20 px-2 py-1 border border-primary rounded text-right text-xs"
+                          autoFocus
+                          onKeyDown={(e) => e.key === 'Enter' && handleRentPerUnitSave()}
+                        />
+                        <button
+                          onClick={handleRentPerUnitSave}
+                          disabled={isSaving}
+                          className="text-green-600 hover:text-green-700 disabled:opacity-50"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => { setIsEditingRentPerUnit(false); setEditedRentPerUnit(''); }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-primary">{formatCurrency(Math.round(metrics.rentPerUnit))}</span>
+                        <button
+                          onClick={() => { setEditedRentPerUnit(Math.round(metrics.rentPerUnit).toString()); setIsEditingRentPerUnit(true); }}
+                          className="text-muted hover:text-primary p-0.5 rounded hover:bg-muted/20"
+                          title="Edit rent per unit"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="flex justify-between items-center py-2 font-semibold">
