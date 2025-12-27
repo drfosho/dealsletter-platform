@@ -44,13 +44,13 @@ const blogPosts: BlogPost[] = [
     date: 'December 2024',
     readTime: '10 min read',
     category: 'Market Analysis',
-    imageUrl: '/logos/san diego blog header.png',
+    imageUrl: '/logos/SAN DIEGO BLOG HEADER.png',
     slug: 'san-diego-market-2025'
   },
   {
     id: '6',
     title: 'Buying, investing, or just curious? Here is a no BS breakdown for the LA real estate market',
-    excerpt: 'Median home price at $876K, inventory climbing, and nearly half of homes selling below asking. The LA market has shifted from panic-buying to buyer leverage. Here&apos;s your complete neighborhood breakdown and investment playbook.',
+    excerpt: 'Median home price at $876K, inventory climbing, and nearly half of homes selling below asking. The LA market has shifted from panic-buying to buyer leverage. Here\'s your complete neighborhood breakdown and investment playbook.',
     date: 'January 3, 2025',
     readTime: '10 min read',
     category: 'Market Analysis',
@@ -60,7 +60,7 @@ const blogPosts: BlogPost[] = [
   {
     id: '7',
     title: 'CRE Market Deep Dive: Office is a bloodbath, industrial holding strong, retail surprisingly stable',
-    excerpt: 'The most fragmented CRE market in 15+ years. Office vacancy hits 20.8%, $957B in loans maturing, but industrial and data centers are printing money. Here&apos;s our complete sector-by-sector breakdown with the numbers that matter.',
+    excerpt: 'The most fragmented CRE market in 15+ years. Office vacancy hits 20.8%, $957B in loans maturing, but industrial and data centers are printing money. Here\'s our complete sector-by-sector breakdown with the numbers that matter.',
     date: 'January 11, 2025',
     readTime: '12 min read',
     category: 'Market Analysis',
@@ -69,7 +69,7 @@ const blogPosts: BlogPost[] = [
   },
   {
     id: '1',
-    title: 'Missouri Just Changed the Game for Investors &mdash; Here&apos;s What It Means for You',
+    title: 'Missouri Just Changed the Game for Investors — Here\'s What It Means for You',
     excerpt: 'Missouri is about to become the first state in the nation to completely eliminate capital gains tax for individuals. This massive shift will impact how smart investors think about where they do business.',
     date: 'November 18, 2024',
     readTime: '4 min read',
@@ -79,8 +79,8 @@ const blogPosts: BlogPost[] = [
   },
   {
     id: '2',
-    title: 'The &quot;One Big, Beautiful Bill&quot; Just Passed &mdash; What It Means for Investors, Founders, and People',
-    excerpt: 'A sweeping tax reform that could reshape the game for entrepreneurs, investors, and working-class families alike. Here&apos;s what actually matters for your bottom line.',
+    title: 'The "One Big, Beautiful Bill" Just Passed — What It Means for Investors, Founders, and People',
+    excerpt: 'A sweeping tax reform that could reshape the game for entrepreneurs, investors, and working-class families alike. Here\'s what actually matters for your bottom line.',
     date: 'November 19, 2024',
     readTime: '6 min read',
     category: 'Policy Update',
@@ -89,8 +89,8 @@ const blogPosts: BlogPost[] = [
   },
   {
     id: '3',
-    title: 'June Property Recap &mdash; 12 Killer Real Estate Deals We Broke Down',
-    excerpt: 'What&apos;s sold, what&apos;s pending, what&apos;s still available, and what this tells us about where the market is headed. A deep dive into 12 deals across multiple markets.',
+    title: 'June Property Recap — 12 Killer Real Estate Deals We Broke Down',
+    excerpt: 'What\'s sold, what\'s pending, what\'s still available, and what this tells us about where the market is headed. A deep dive into 12 deals across multiple markets.',
     date: 'December 28, 2024',
     readTime: '8 min read',
     category: 'Deal Recap',
@@ -99,8 +99,8 @@ const blogPosts: BlogPost[] = [
   },
   {
     id: '4',
-    title: 'The Real State of Housing in 2025 (And Why We&apos;re Still Buying)',
-    excerpt: 'The inflation-adjusted home price index hit 299.9 &mdash; higher than 2006. Everyone&apos;s saying &quot;bubble,&quot; but here&apos;s why this correction will unlock the best buying opportunities in over a decade.',
+    title: 'The Real State of Housing in 2025 (And Why We\'re Still Buying)',
+    excerpt: 'The inflation-adjusted home price index hit 299.9 — higher than 2006. Everyone\'s saying "bubble," but here\'s why this correction will unlock the best buying opportunities in over a decade.',
     date: 'December 27, 2024',
     readTime: '7 min read',
     category: 'Market Analysis',
@@ -110,7 +110,7 @@ const blogPosts: BlogPost[] = [
   {
     id: '5',
     title: 'Bay Area Real Estate: The Market Shift Every Investor Must Know',
-    excerpt: 'The Bay Area real estate market is experiencing its most significant transformation since the pandemic. After years of frenzied seller&apos;s markets, we&apos;re seeing increased inventory, moderate price corrections, and genuine buyer leverage.',
+    excerpt: 'The Bay Area real estate market is experiencing its most significant transformation since the pandemic. After years of frenzied seller\'s markets, we\'re seeing increased inventory, moderate price corrections, and genuine buyer leverage.',
     date: 'October 15, 2025',
     readTime: '8 min read',
     category: 'Market Analysis',
@@ -369,7 +369,7 @@ export default function BlogPage() {
                     />
                   ) : post.slug === 'san-diego-market-2025' ? (
                     <Image
-                      src="/logos/san diego blog header.png"
+                      src="/logos/SAN DIEGO BLOG HEADER.png"
                       alt="San Diego Real Estate Market 2025"
                       fill
                       className="object-cover"
