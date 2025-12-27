@@ -24,7 +24,7 @@ const blogPosts: BlogPost[] = [
     date: 'December 2025',
     readTime: '15 min read',
     category: 'Market Analysis',
-    imageUrl: '/logos/bay area article header.png',
+    imageUrl: '/logos/bay area deep dive.png',
     slug: 'bay-area-housing-eoy-2025'
   },
   {
@@ -383,7 +383,7 @@ export default function BlogPage() {
                     />
                   ) : post.slug === 'bay-area-housing-eoy-2025' ? (
                     <Image
-                      src="/logos/bay area article header.png"
+                      src="/logos/bay area deep dive.png"
                       alt="Bay Area Housing End of 2025 Deep Dive"
                       fill
                       className="object-cover"

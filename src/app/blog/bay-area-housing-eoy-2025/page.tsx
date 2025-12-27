@@ -42,7 +42,7 @@ export default function BayAreaHousingEOY2025Article() {
             <div className="mb-8 rounded-xl overflow-hidden">
               <div className="relative aspect-[5/3] bg-muted/10">
                 <Image
-                  src="/logos/bay area article header.png"
+                  src="/logos/bay area deep dive.png"
                   alt="Bay Area Housing Market End of 2025 Analysis"
                   fill
                   className="object-cover rounded-xl"
