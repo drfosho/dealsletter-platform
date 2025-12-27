@@ -35,13 +35,11 @@ export default function ComparisonModal({ currentAnalysis, onClose }: Comparison
 
   const handleCompare = () => {
     if (selectedAnalyses.length === 0) return;
-    
-    // Store comparison data and navigate
-    const comparisonData = {
-      analyses: [currentAnalysis.id, ...selectedAnalyses]
-    };
-    sessionStorage.setItem('comparison-data', JSON.stringify(comparisonData));
-    window.open('/analysis/compare', '_blank');
+
+    // Navigate with IDs in query string (more reliable than sessionStorage)
+    const allIds = [currentAnalysis.id, ...selectedAnalyses];
+    const idsParam = allIds.join(',');
+    window.open(`/analysis/compare?ids=${idsParam}`, '_blank');
     onClose();
   };
 

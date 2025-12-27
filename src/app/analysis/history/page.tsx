@@ -167,6 +167,20 @@ export default function AnalysisHistoryPage() {
     alert('Bulk export functionality coming soon!');
   };
 
+  const handleCompare = () => {
+    if (selectedIds.length < 2) {
+      alert('Please select at least 2 properties to compare');
+      return;
+    }
+    if (selectedIds.length > 4) {
+      alert('You can compare up to 4 properties at a time');
+      return;
+    }
+    // Navigate to comparison page with IDs in query string
+    const idsParam = selectedIds.join(',');
+    router.push(`/analysis/compare?ids=${idsParam}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -196,12 +210,14 @@ export default function AnalysisHistoryPage() {
             <UsageStats usage={usage} />
 
             {/* Filters */}
-            <AnalysisFilters 
+            <AnalysisFilters
               filters={filters}
               onFilterChange={setFilters}
               selectedCount={selectedIds.length}
+              selectedIds={selectedIds}
               onBulkDelete={handleBulkDelete}
               onBulkExport={handleBulkExport}
+              onCompare={handleCompare}
             />
 
             {/* Results Count */}
