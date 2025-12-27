@@ -236,8 +236,8 @@ export default function AccountPage() {
                 </div>
                 <p className="text-muted">
                   {subscriptionTier === 'basic'
-                    ? '20 property analyses per month'
-                    : 'Unlimited property analyses'}
+                    ? `${SUBSCRIPTION_LIMITS.basic} property analyses per month`
+                    : `${SUBSCRIPTION_LIMITS[subscriptionTier] === -1 ? 'Unlimited' : SUBSCRIPTION_LIMITS[subscriptionTier]} property analyses per month`}
                 </p>
               </div>
               {subscriptionTier === 'basic' ? (
@@ -265,9 +265,9 @@ export default function AccountPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <div>
-                    <div className="font-medium text-primary mb-1">Upgrade to Pro for 50 analyses/month</div>
+                    <div className="font-medium text-primary mb-1">Upgrade to Pro for {SUBSCRIPTION_LIMITS.pro} analyses/month</div>
                     <p className="text-sm text-muted">
-                      Get 50 property analyses per month, priority support, and detailed projections for just $29/month.
+                      Get {SUBSCRIPTION_LIMITS.pro} property analyses per month, priority support, and detailed projections for just $29/month.
                     </p>
                   </div>
                 </div>
@@ -326,7 +326,7 @@ export default function AccountPage() {
                 </div>
                 {getUsagePercentage() >= 100 && (
                   <p className="text-sm text-red-600 mt-2">
-                    You&apos;ve reached your monthly limit. Upgrade to Pro for 50 analyses/month.
+                    You&apos;ve reached your monthly limit. Upgrade to Pro for {SUBSCRIPTION_LIMITS.pro} analyses/month.
                   </p>
                 )}
               </div>
