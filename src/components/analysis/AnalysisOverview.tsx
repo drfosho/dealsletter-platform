@@ -17,7 +17,8 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
     flip: 'Fix & Flip',
     brrrr: 'BRRRR Strategy',
     rental: 'Buy & Hold',
-    commercial: 'House Hack'
+    'house-hack': 'House Hack',
+    commercial: 'Commercial'
   };
 
   const getStrategyIcon = (strategy: string) => {
@@ -25,7 +26,8 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       case 'flip': return '🔨';
       case 'brrrr': return '♻️';
       case 'rental': return '🏘️';
-      case 'commercial': return '🏡';
+      case 'house-hack': return '🏡';
+      case 'commercial': return '🏢';
       default: return '📊';
     }
   };

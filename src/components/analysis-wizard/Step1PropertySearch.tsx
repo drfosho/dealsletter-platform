@@ -123,6 +123,16 @@ function PropertyDataReview({
 
   return (
     <div>
+      {/* Valuation Disclaimer */}
+      <div className="flex gap-3 bg-yellow-500/10 border-l-4 border-yellow-500 p-4 mb-6 rounded-r-lg">
+        <div className="text-2xl flex-shrink-0">ℹ️</div>
+        <div className="text-sm text-primary/90 leading-relaxed">
+          <strong className="text-yellow-600">Note:</strong> Property valuations are estimates from public records and market data.
+          They may differ from the active list price or your intended purchase price.
+          Please verify and adjust the purchase price in the Financial step if needed.
+        </div>
+      </div>
+
       {/* Property Header */}
       <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 mb-4">
         <div className="flex items-start justify-between">
