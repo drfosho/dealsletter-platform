@@ -64,7 +64,7 @@ const strategies = [
     borderColor: 'border-green-500/50'
   },
   {
-    id: 'commercial',
+    id: 'house-hack',
     title: 'House Hack',
     icon: '🏡',
     description: 'Live in one unit, rent out others',
@@ -73,9 +73,9 @@ const strategies = [
     returnPotential: 'Medium',
     keyPoints: [
       'Reduce living expenses',
-      'FHA loan eligible',
+      'FHA loan eligible (3.5% down)',
       'Learn landlording',
-      'Tax benefits'
+      'Build equity while living free'
     ],
     color: 'from-blue-500/20 to-cyan-500/20',
     borderColor: 'border-blue-500/50'

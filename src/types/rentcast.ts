@@ -164,7 +164,7 @@ export interface SearchResults<T> {
 
 export interface PropertyAnalysisRequest {
   address: string;
-  strategy: 'rental' | 'flip' | 'brrrr' | 'airbnb' | 'commercial';
+  strategy: 'rental' | 'flip' | 'brrrr' | 'airbnb' | 'commercial' | 'house-hack';
   purchasePrice?: number;
   downPayment?: number;
   loanTerms?: {

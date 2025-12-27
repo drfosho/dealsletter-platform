@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate strategy
-    const validStrategies = ['rental', 'flip', 'brrrr', 'commercial'];
+    const validStrategies = ['rental', 'flip', 'brrrr', 'commercial', 'house-hack'];
     if (!validStrategies.includes(body.strategy)) {
       return NextResponse.json(
         { error: 'Invalid investment strategy' },
@@ -328,7 +328,8 @@ export async function POST(request: NextRequest) {
       'rental': 'Buy & Hold',
       'flip': 'Fix & Flip',
       'brrrr': 'BRRRR',
-      'commercial': 'Buy & Hold'
+      'commercial': 'Buy & Hold',
+      'house-hack': 'House Hack'
     };
     
     // Ensure property data is properly structured
@@ -796,6 +797,41 @@ RISKS: [3-5 specific risks as complete sentences]
 
 NEXT STEPS: [2-3 specific, actionable items]
 
+Format monetary values with commas. Write in plain text without any formatting symbols.`,
+
+      'house-hack': `You are a professional real estate investment analyst providing clear, actionable analysis for house hacking strategies.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "HOUSE HACK ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Focus on the key house hack benefit: reducing or eliminating housing costs
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the house hack opportunity and potential to live rent-free or at reduced cost]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on out-of-pocket housing cost]
+
+KEY METRICS: Out-of-Pocket Housing Cost: [value]/month, Monthly Savings vs Renting: [value], Housing ROI: [value]%, Annual Savings: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation focusing on landlord responsibilities and vacancy risk]
+
+HOUSE HACK BENEFITS:
+- Monthly savings compared to renting
+- Equity building potential
+- Tax benefits from rental portion
+- FHA financing advantages
+
+LANDLORD CONSIDERATIONS: [2-3 sentences on living with tenants and property management]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items for getting started with house hacking]
+
 Format monetary values with commas. Write in plain text without any formatting symbols.`
     };
 
@@ -1066,7 +1102,150 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       capitalRecoveryPercent: phase2.capitalRecoveryPercent,
       isInfiniteReturn: summary.isInfiniteReturn
     };
-    
+
+  } else if (request.strategy === 'house-hack') {
+    // House Hack specific calculations
+    console.log('[House Hack] Starting house hack calculations');
+
+    // Get number of units (must be at least 2 for house hack)
+    const units = parseInteger(request.units) ||
+                  parseInteger((property as any)?.units) ||
+                  parseInteger((property as any)?.numberOfUnits) ||
+                  2; // Default to 2 for house hack
+
+    // User occupies 1 unit, rents the rest
+    const occupiedUnits = 1;
+    const rentableUnits = Math.max(units - occupiedUnits, 1);
+
+    // Get rent per unit
+    const rentPerUnit = parsePrice(request.rentPerUnit) ||
+                        parsePrice((rentalEstimate as any)?.rentEstimate) ||
+                        parsePrice((rentalEstimate as any)?.rent) ||
+                        0;
+
+    // Rental income (only from rented units, not owner-occupied)
+    const monthlyRentalIncome = rentPerUnit * rentableUnits;
+
+    // House hack financing (FHA eligible - 3.5% down for owner-occupied)
+    const houseHackDownPaymentPercent = (downPayment / effectivePurchasePrice) * 100;
+    const isFHAEligible = houseHackDownPaymentPercent <= 5;
+    const loanAmount = effectivePurchasePrice - downPayment;
+
+    // Calculate mortgage payment
+    const interestRate = request.loanTerms?.interestRate || 6.5; // Lower rate for owner-occupied
+    const loanTermYears = request.loanTerms?.loanTerm || 30;
+    const monthlyRate = interestRate / 100 / 12;
+    const numPayments = loanTermYears * 12;
+    const monthlyMortgagePI = loanAmount *
+      (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
+      (Math.pow(1 + monthlyRate, numPayments) - 1);
+
+    // FHA MIP (if applicable)
+    const monthlyMIP = isFHAEligible ? (loanAmount * 0.0055 / 12) : 0; // 0.55% annual MIP for FHA
+
+    // Monthly expenses (owner pays ALL expenses, offset by rental income)
+    const monthlyPropertyTax = Math.round((effectivePurchasePrice * 0.012) / 12);
+    const monthlyInsurance = Math.round((effectivePurchasePrice * 0.0035) / 12);
+    const monthlyMaintenance = Math.round((rentPerUnit * units) * 0.08); // 8% of potential rent for maintenance
+    const monthlyVacancy = Math.round((rentPerUnit * rentableUnits) * 0.05); // 5% vacancy on rentable units only
+
+    const totalMonthlyExpenses =
+      monthlyMortgagePI +
+      monthlyMIP +
+      monthlyPropertyTax +
+      monthlyInsurance +
+      monthlyMaintenance +
+      monthlyVacancy;
+
+    // Key house hack metric: Out-of-pocket housing cost
+    const outOfPocketHousingCost = totalMonthlyExpenses - monthlyRentalIncome;
+
+    // Compare to market rent (what you'd pay to rent similar housing)
+    const marketRentEquivalent = rentPerUnit; // Assume similar unit would cost same
+    const monthlyHousingSavings = marketRentEquivalent - outOfPocketHousingCost;
+    const annualHousingSavings = monthlyHousingSavings * 12;
+
+    // Cash to close
+    const closingCosts = effectivePurchasePrice * 0.03;
+    const cashToClose = downPayment + closingCosts;
+
+    // Housing ROI (savings relative to investment)
+    const housingROI = cashToClose > 0 ? (annualHousingSavings / cashToClose) * 100 : 0;
+
+    // Traditional cash flow (for comparison)
+    const monthlyCashFlow = monthlyRentalIncome - totalMonthlyExpenses;
+
+    console.log('[House Hack] Calculation Results:', {
+      units,
+      rentableUnits,
+      rentPerUnit,
+      monthlyRentalIncome,
+      totalMonthlyExpenses,
+      outOfPocketHousingCost,
+      monthlyHousingSavings,
+      housingROI
+    });
+
+    context += `\n\nHOUSE HACK ANALYSIS:
+
+PROPERTY SETUP:
+- Total Units: ${units}
+- Owner-Occupied Unit: ${occupiedUnits}
+- Rentable Units: ${rentableUnits}
+- Rent Per Unit: $${rentPerUnit.toLocaleString()}/month
+
+FINANCING (${isFHAEligible ? 'FHA Eligible' : 'Conventional'}):
+- Purchase Price: $${effectivePurchasePrice.toLocaleString()}
+- Down Payment: $${downPayment.toLocaleString()} (${houseHackDownPaymentPercent.toFixed(1)}%)
+- Loan Amount: $${loanAmount.toLocaleString()}
+- Interest Rate: ${interestRate}%
+- Loan Term: ${loanTermYears} years
+
+MONTHLY INCOME:
+- Rental Income (${rentableUnits} units): $${monthlyRentalIncome.toLocaleString()}/month
+- Annual Rental Income: $${(monthlyRentalIncome * 12).toLocaleString()}/year
+
+MONTHLY EXPENSES:
+- Mortgage (P&I): $${Math.round(monthlyMortgagePI).toLocaleString()}${isFHAEligible ? `
+- FHA MIP: $${Math.round(monthlyMIP).toLocaleString()}` : ''}
+- Property Taxes: $${monthlyPropertyTax.toLocaleString()}
+- Insurance: $${monthlyInsurance.toLocaleString()}
+- Maintenance (8%): $${monthlyMaintenance.toLocaleString()}
+- Vacancy Reserve (5%): $${monthlyVacancy.toLocaleString()}
+- TOTAL EXPENSES: $${Math.round(totalMonthlyExpenses).toLocaleString()}/month
+
+HOUSE HACK ADVANTAGE:
+- Total Monthly Expenses: $${Math.round(totalMonthlyExpenses).toLocaleString()}
+- Less: Rental Income: $${monthlyRentalIncome.toLocaleString()}
+- OUT-OF-POCKET HOUSING COST: $${Math.round(outOfPocketHousingCost).toLocaleString()}/month ${outOfPocketHousingCost <= 0 ? '(LIVE FREE OR GET PAID!)' : ''}
+
+SAVINGS ANALYSIS:
+- Market Rent for Similar Unit: $${rentPerUnit.toLocaleString()}/month
+- Your Out-of-Pocket Cost: $${Math.round(outOfPocketHousingCost).toLocaleString()}/month
+- MONTHLY SAVINGS: $${Math.round(monthlyHousingSavings).toLocaleString()} ${monthlyHousingSavings > 0 ? '(POSITIVE!)' : ''}
+- ANNUAL SAVINGS: $${Math.round(annualHousingSavings).toLocaleString()}/year
+
+INVESTMENT METRICS:
+- Cash to Close: $${Math.round(cashToClose).toLocaleString()}
+- Housing ROI: ${housingROI.toFixed(1)}% (return on your down payment via housing savings)
+${outOfPocketHousingCost <= 0 ? '- INFINITE RETURN: You are getting paid to live here!' : ''}
+
+Provide a house hack analysis focusing on the out-of-pocket housing cost reduction and comparison to renting.`;
+
+    calculatedMetrics = {
+      totalInvestment: cashToClose,
+      cashFlow: monthlyCashFlow, // Traditional cash flow for comparison
+      capRate: 0, // Not applicable for house hack
+      cocReturn: housingROI, // Use housing ROI instead
+      roi: housingROI,
+      annualNOI: monthlyRentalIncome * 12 - (monthlyPropertyTax + monthlyInsurance + monthlyMaintenance) * 12,
+      totalProfit: annualHousingSavings * 5, // 5-year savings
+      monthlyRent: monthlyRentalIncome,
+      // House hack specific
+      outOfPocketHousingCost: outOfPocketHousingCost,
+      monthlyHousingSavings: monthlyHousingSavings
+    };
+
   } else if (isFlipStrategy) {
     // Fix & Flip specific calculations using CENTRALIZED calculator
     console.log('[Fix & Flip] Using centralized calculateFlipReturns function');
@@ -1609,6 +1788,9 @@ interface FinancialData {
   cashLeftInDeal?: number;
   capitalRecoveryPercent?: number;
   isInfiniteReturn?: boolean;
+  // House Hack-specific metrics
+  outOfPocketHousingCost?: number;
+  monthlyHousingSavings?: number;
 }
 
 function extractFinancialData(text: string): FinancialData {

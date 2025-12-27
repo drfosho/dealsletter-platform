@@ -57,16 +57,27 @@ export default function NewAnalysisPage() {
   });
   const [_canProceed, setCanProceed] = useState(false);
 
-  // Load draft from localStorage
+  // Load draft from localStorage only if explicitly resuming
   useEffect(() => {
-    const draft = localStorage.getItem('analysis-wizard-draft');
-    if (draft) {
-      try {
-        const parsedDraft = JSON.parse(draft);
-        setWizardData(parsedDraft);
-      } catch (error) {
-        console.error('Failed to load draft:', error);
+    // Check if we should load a draft (via URL param) or start fresh
+    const urlParams = new URLSearchParams(window.location.search);
+    const resumeDraft = urlParams.get('resume') === 'true';
+
+    if (resumeDraft) {
+      const draft = localStorage.getItem('analysis-wizard-draft');
+      if (draft) {
+        try {
+          const parsedDraft = JSON.parse(draft);
+          setWizardData(parsedDraft);
+          console.log('[NewAnalysis] Resumed draft from localStorage');
+        } catch (error) {
+          console.error('Failed to load draft:', error);
+        }
       }
+    } else {
+      // Clear any existing draft when starting fresh
+      localStorage.removeItem('analysis-wizard-draft');
+      console.log('[NewAnalysis] Starting fresh analysis, cleared draft');
     }
   }, []);
 
