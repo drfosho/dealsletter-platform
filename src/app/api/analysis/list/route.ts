@@ -38,20 +38,35 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const offset = (page - 1) * limit;
 
-    // Fetch user analyses
-    const { data: analyses, error, count } = await supabase
-      .from('user_analyses')
+    // Fetch user analyses from analyzed_properties table
+    const { data: rawAnalyses, error, count } = await supabase
+      .from('analyzed_properties')
       .select('*', { count: 'exact' })
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+      .order('analysis_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) {
+      console.error('Error fetching analyses:', error);
       throw error;
     }
 
+    // Map the data to match the expected format
+    const analyses = (rawAnalyses || []).map(record => ({
+      id: record.id,
+      user_id: record.user_id,
+      address: record.address,
+      strategy: record.analysis_data?.strategy || record.deal_type?.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-') || 'rental',
+      created_at: record.analysis_date || record.created_at,
+      roi: record.roi,
+      profit: record.profit,
+      deal_type: record.deal_type,
+      property_data: record.analysis_data?.property_data || null,
+      analysis_data: record.analysis_data
+    }));
+
     return NextResponse.json({
-      analyses: analyses || [],
+      analyses,
       total: count || 0,
       page,
       limit
