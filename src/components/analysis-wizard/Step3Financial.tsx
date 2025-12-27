@@ -17,6 +17,84 @@ import {
   calculateMonthlyMortgage
 } from '@/utils/financial-calculations';
 
+// Interest Rate Input Component - properly handles decimal input
+function InterestRateInput({
+  value,
+  onChange,
+  loanType
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  loanType: 'conventional' | 'hardMoney';
+}) {
+  // Use string state for controlled input to allow proper decimal typing
+  const [inputValue, setInputValue] = useState(value.toString());
+
+  // Sync with parent value when it changes externally
+  useEffect(() => {
+    // Only update if the parsed values are different (avoid overwriting during typing)
+    const currentParsed = parseFloat(inputValue) || 0;
+    if (Math.abs(currentParsed - value) > 0.001 && inputValue !== '') {
+      setInputValue(value.toString());
+    }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+
+    // Allow empty, numbers, and ONE decimal point with up to 2 decimal places
+    if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+      setInputValue(val);
+
+      // Convert to number for parent component
+      const numValue = parseFloat(val);
+      if (!isNaN(numValue) && numValue >= 0 && numValue <= 25) {
+        onChange(numValue);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    // Format on blur - ensure proper display
+    const numValue = parseFloat(inputValue);
+    if (!isNaN(numValue)) {
+      // Keep as-is if it's a clean number, otherwise format
+      const formatted = numValue.toString();
+      setInputValue(formatted);
+      onChange(numValue);
+    } else {
+      // Reset to previous valid value or default
+      setInputValue(value.toString());
+    }
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-primary mb-2">
+        Interest Rate
+      </label>
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          inputMode="decimal"
+          value={inputValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          className="flex-1 px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+          placeholder="7.0"
+        />
+        <span className="text-muted">%</span>
+      </div>
+      <p className="text-xs text-muted mt-1">
+        {loanType === 'hardMoney'
+          ? 'Hard money: typically 10-14%'
+          : 'Conventional: typically 6.5-7.5%'
+        }
+      </p>
+    </div>
+  );
+}
+
 // Map UI renovation levels to RehabLevel enum
 function mapRenovationLevelToRehabLevel(renovationLevel?: string): RehabLevel {
   const mapping: Record<string, RehabLevel> = {
@@ -1057,7 +1135,7 @@ export default function Step3Financial({
                     </div>
                   </div>
                   
-                  {/* Total Monthly Rent (Read-only) */}
+                  {/* Total Monthly Rent (Editable) */}
                   <div>
                     <label className="block text-xs font-medium text-muted mb-1">Total Monthly Rent</label>
                     <div className="relative">
@@ -1074,10 +1152,15 @@ export default function Step3Financial({
                             handleFieldChange('rentPerUnit', totalRent / units);
                           }
                         }}
-                        className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-muted/20"
+                        className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="Total monthly rent"
                       />
                     </div>
+                    {financial.rentPerUnit && unitCount > 1 && (
+                      <p className="text-xs text-muted mt-1">
+                        Calculated: {unitCount} units × ${financial.rentPerUnit.toLocaleString()} = ${(financial.rentPerUnit * unitCount).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -1536,35 +1619,11 @@ export default function Step3Financial({
 
         {/* Interest Rate & Loan Term */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">
-              Interest Rate
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                inputMode="decimal"
-                value={financial.interestRate ?? ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  // Allow empty string, numbers, and decimals
-                  if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
-                    const numValue = value === '' ? 0 : parseFloat(value);
-                    if (!isNaN(numValue) && numValue <= 20) {
-                      handleFieldChange('interestRate', numValue);
-                    } else if (value === '' || value === '.') {
-                      // Allow typing just a decimal point
-                      const newFinancial = { ...financial, interestRate: value === '' ? 0 : financial.interestRate };
-                      setFinancial(newFinancial);
-                    }
-                  }
-                }}
-                className="flex-1 px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="7.0"
-              />
-              <span className="text-muted">%</span>
-            </div>
-          </div>
+          <InterestRateInput
+            value={financial.interestRate ?? 7.0}
+            onChange={(value) => handleFieldChange('interestRate', value)}
+            loanType={loanType}
+          />
           <div>
             <label className="block text-sm font-medium text-primary mb-2">
               Loan Term

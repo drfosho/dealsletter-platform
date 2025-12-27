@@ -11,11 +11,362 @@ interface Step1PropertySearchProps {
   setCanProceed: (can: boolean) => void;
 }
 
-export default function Step1PropertySearch({ 
-  data, 
-  updateData, 
+// Property types for the dropdown
+const PROPERTY_TYPES = [
+  { value: 'Single Family', label: 'Single Family' },
+  { value: 'Multi-Family', label: 'Multi-Family' },
+  { value: 'Duplex', label: 'Duplex (2 units)' },
+  { value: 'Triplex', label: 'Triplex (3 units)' },
+  { value: 'Fourplex', label: 'Fourplex (4 units)' },
+  { value: 'Apartment', label: 'Apartment Building' },
+  { value: 'Condo', label: 'Condo/Townhouse' },
+  { value: 'Commercial', label: 'Commercial' },
+];
+
+// Component for reviewing and editing property data
+function PropertyDataReview({
+  data,
+  updateData,
+  setCanProceed
+}: {
+  data: WizardData;
+  updateData: (data: Partial<WizardData>) => void;
+  setCanProceed: (can: boolean) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Extract property data
+  const prop = Array.isArray(data.propertyData?.property)
+    ? data.propertyData.property[0]
+    : data.propertyData?.property;
+
+  const rental = data.propertyData?.rental as Record<string, unknown> | undefined;
+  const comparables = data.propertyData?.comparables as Record<string, unknown> | undefined;
+
+  // Local state for editing
+  const [editedData, setEditedData] = useState({
+    propertyType: prop?.propertyType || 'Single Family',
+    bedrooms: prop?.bedrooms || prop?.beds || 0,
+    bathrooms: prop?.bathrooms || prop?.baths || 0,
+    squareFootage: prop?.squareFootage || 0,
+    yearBuilt: prop?.yearBuilt || 0,
+    units: prop?.units || prop?.numberOfUnits || 1,
+    rentEstimate: (rental?.rentEstimate || rental?.rent || 0) as number,
+  });
+
+  // Update units when property type changes
+  const handlePropertyTypeChange = (newType: string) => {
+    setEditedData(prev => {
+      let units = prev.units;
+      if (newType === 'Duplex') units = 2;
+      else if (newType === 'Triplex') units = 3;
+      else if (newType === 'Fourplex') units = 4;
+      else if (newType === 'Single Family' || newType === 'Condo') units = 1;
+      return { ...prev, propertyType: newType, units };
+    });
+  };
+
+  // Save edits to parent data
+  const handleSaveEdits = () => {
+    // Update the property data with edited values
+    const updatedPropertyData = {
+      ...data.propertyData,
+      property: {
+        ...(prop || {}),
+        propertyType: editedData.propertyType,
+        bedrooms: editedData.bedrooms,
+        bathrooms: editedData.bathrooms,
+        squareFootage: editedData.squareFootage,
+        yearBuilt: editedData.yearBuilt,
+        units: editedData.units,
+        numberOfUnits: editedData.units,
+      },
+      rental: {
+        ...(rental || {}),
+        rentEstimate: editedData.rentEstimate,
+        rent: editedData.rentEstimate,
+      }
+    };
+
+    // Also update financial data with the new rent estimate
+    const updatedFinancial = {
+      ...data.financial,
+      monthlyRent: editedData.units > 1 ? editedData.rentEstimate * editedData.units : editedData.rentEstimate,
+      rentPerUnit: editedData.units > 1 ? editedData.rentEstimate : undefined,
+      units: editedData.units,
+    };
+
+    updateData({
+      propertyData: updatedPropertyData,
+      financial: updatedFinancial
+    });
+
+    setIsEditing(false);
+  };
+
+  const handleCancelEdits = () => {
+    // Reset to original values
+    setEditedData({
+      propertyType: prop?.propertyType || 'Single Family',
+      bedrooms: prop?.bedrooms || prop?.beds || 0,
+      bathrooms: prop?.bathrooms || prop?.baths || 0,
+      squareFootage: prop?.squareFootage || 0,
+      yearBuilt: prop?.yearBuilt || 0,
+      units: prop?.units || prop?.numberOfUnits || 1,
+      rentEstimate: (rental?.rentEstimate || rental?.rent || 0) as number,
+    });
+    setIsEditing(false);
+  };
+
+  const comparablesValue = (comparables?.value || 0) as number;
+  const isMultiFamily = ['Multi-Family', 'Duplex', 'Triplex', 'Fourplex', 'Apartment'].includes(editedData.propertyType);
+
+  return (
+    <div>
+      {/* Property Header */}
+      <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 mb-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-semibold text-primary text-lg">{data.address}</h3>
+            <p className="text-muted mt-1">
+              {isEditing ? 'Edit property details below' : `${editedData.bedrooms} bed • ${editedData.bathrooms} bath • ${editedData.squareFootage.toLocaleString()} sq ft`}
+            </p>
+            {!isEditing && (
+              <div className="flex items-center gap-4 mt-3 text-sm">
+                <span className="text-primary font-medium">
+                  Est. Value: ${comparablesValue.toLocaleString()}
+                </span>
+                <span className="text-muted">
+                  Built: {editedData.yearBuilt || 'N/A'}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {!isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-sm text-accent hover:text-accent/80 font-medium"
+              >
+                Edit Details
+              </button>
+            )}
+            <button
+              onClick={() => {
+                updateData({ address: '', propertyData: undefined });
+                setCanProceed(false);
+              }}
+              className="text-sm text-muted hover:text-primary"
+            >
+              Change Property
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Editing Mode */}
+      {isEditing ? (
+        <div className="bg-card border border-border/60 rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-semibold text-primary">Edit Property Details</h4>
+            <p className="text-xs text-muted">Fix any incorrect data from the listing</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Property Type */}
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Property Type
+              </label>
+              <select
+                value={editedData.propertyType}
+                onChange={(e) => handlePropertyTypeChange(e.target.value)}
+                className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-background"
+              >
+                {PROPERTY_TYPES.map(type => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+              {editedData.propertyType !== (prop?.propertyType || 'Single Family') && (
+                <p className="text-xs text-yellow-600 mt-1">
+                  Changed from "{prop?.propertyType || 'Single Family'}"
+                </p>
+              )}
+            </div>
+
+            {/* Number of Units (for multi-family) */}
+            {isMultiFamily && (
+              <div>
+                <label className="block text-sm font-medium text-primary mb-2">
+                  Number of Units
+                </label>
+                <input
+                  type="number"
+                  value={editedData.units}
+                  onChange={(e) => setEditedData(prev => ({ ...prev, units: parseInt(e.target.value) || 1 }))}
+                  min="1"
+                  max="500"
+                  className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+              </div>
+            )}
+
+            {/* Bedrooms */}
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Bedrooms
+              </label>
+              <input
+                type="number"
+                value={editedData.bedrooms}
+                onChange={(e) => setEditedData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
+                min="0"
+                className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+
+            {/* Bathrooms */}
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Bathrooms
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                value={editedData.bathrooms}
+                onChange={(e) => setEditedData(prev => ({ ...prev, bathrooms: parseFloat(e.target.value) || 0 }))}
+                min="0"
+                className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+
+            {/* Square Footage */}
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Square Footage
+              </label>
+              <input
+                type="number"
+                value={editedData.squareFootage}
+                onChange={(e) => setEditedData(prev => ({ ...prev, squareFootage: parseInt(e.target.value) || 0 }))}
+                min="0"
+                className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+
+            {/* Year Built */}
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                Year Built
+              </label>
+              <input
+                type="number"
+                value={editedData.yearBuilt || ''}
+                onChange={(e) => setEditedData(prev => ({ ...prev, yearBuilt: parseInt(e.target.value) || 0 }))}
+                min="1800"
+                max={new Date().getFullYear()}
+                placeholder="Year"
+                className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+            </div>
+
+            {/* Rent Estimate */}
+            <div>
+              <label className="block text-sm font-medium text-primary mb-2">
+                {isMultiFamily ? 'Rent Per Unit' : 'Monthly Rent Estimate'}
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
+                <input
+                  type="number"
+                  value={editedData.rentEstimate}
+                  onChange={(e) => setEditedData(prev => ({ ...prev, rentEstimate: parseFloat(e.target.value) || 0 }))}
+                  min="0"
+                  className="w-full pl-8 pr-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="0"
+                />
+              </div>
+              {isMultiFamily && editedData.rentEstimate > 0 && (
+                <p className="text-xs text-muted mt-1">
+                  Total: ${(editedData.rentEstimate * editedData.units).toLocaleString()}/mo ({editedData.units} units)
+                </p>
+              )}
+              {(() => {
+                const originalRent = (rental?.rentEstimate || rental?.rent) as number | undefined;
+                if (originalRent && editedData.rentEstimate !== originalRent) {
+                  return (
+                    <p className="text-xs text-yellow-600 mt-1">
+                      RentCast estimate: ${originalRent.toLocaleString()}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
+            </div>
+          </div>
+
+          {/* Edit Actions */}
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border/40">
+            <button
+              onClick={handleCancelEdits}
+              className="px-4 py-2 text-muted hover:text-primary transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveEdits}
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Property Preview Cards */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {editedData.rentEstimate > 0 && (
+            <div className="bg-muted/10 rounded-lg p-4">
+              <p className="text-sm text-muted mb-1">
+                {isMultiFamily ? 'Rent Per Unit' : 'Estimated Rent'}
+              </p>
+              <p className="text-xl font-bold text-primary">
+                ${editedData.rentEstimate.toLocaleString()}/mo
+              </p>
+              {isMultiFamily && editedData.units > 1 && (
+                <p className="text-xs text-muted mt-1">
+                  Total: ${(editedData.rentEstimate * editedData.units).toLocaleString()}/mo
+                </p>
+              )}
+            </div>
+          )}
+          {comparablesValue > 0 && editedData.squareFootage > 0 && (
+            <div className="bg-muted/10 rounded-lg p-4">
+              <p className="text-sm text-muted mb-1">Price per Sq Ft</p>
+              <p className="text-xl font-bold text-primary">
+                ${Math.round(comparablesValue / editedData.squareFootage)}
+              </p>
+            </div>
+          )}
+          <div className="bg-muted/10 rounded-lg p-4">
+            <p className="text-sm text-muted mb-1">Property Type</p>
+            <p className="text-xl font-bold text-primary capitalize">
+              {editedData.propertyType}
+            </p>
+            {isMultiFamily && editedData.units > 1 && (
+              <p className="text-xs text-muted mt-1">{editedData.units} units</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Step1PropertySearch({
+  data,
+  updateData,
   onNext,
-  setCanProceed 
+  setCanProceed
 }: Step1PropertySearchProps) {
   const [usageData, setUsageData] = useState<{
     analyses_used: number;
@@ -319,86 +670,11 @@ export default function Step1PropertySearch({
           {!data.propertyData ? (
             <PropertySearch onPropertySelect={handlePropertySelect} />
           ) : (
-            <div>
-              <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl p-6 mb-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-primary text-lg">{data.address}</h3>
-                    <p className="text-muted mt-1">
-                      {(() => {
-                        const prop = Array.isArray(data.propertyData.property) 
-                          ? data.propertyData.property[0] 
-                          : data.propertyData.property;
-                        return `${prop?.bedrooms || 0} bed • ${prop?.bathrooms || 0} bath • ${(prop?.squareFootage || 0).toLocaleString()} sq ft`;
-                      })()}
-                    </p>
-                    <div className="flex items-center gap-4 mt-3 text-sm">
-                      <span className="text-primary font-medium">
-                        Est. Value: ${((data.propertyData.comparables as any)?.value || 0).toLocaleString()}
-                      </span>
-                      <span className="text-muted">
-                        Built: {(() => {
-                          const prop = Array.isArray(data.propertyData.property) 
-                            ? data.propertyData.property[0] 
-                            : data.propertyData.property;
-                          return prop?.yearBuilt || 'N/A';
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      updateData({ address: '', propertyData: undefined });
-                      setCanProceed(false);
-                    }}
-                    className="text-sm text-muted hover:text-primary"
-                  >
-                    Change
-                  </button>
-                </div>
-              </div>
-
-              {/* Property Preview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {((data.propertyData.rental as any)?.rent || (data.propertyData.rental as any)?.rentEstimate) && (
-                  <div className="bg-muted/10 rounded-lg p-4">
-                    <p className="text-sm text-muted mb-1">Estimated Rent</p>
-                    <p className="text-xl font-bold text-primary">
-                      ${((data.propertyData.rental as any)?.rent || (data.propertyData.rental as any)?.rentEstimate || 0).toLocaleString()}/mo
-                    </p>
-                  </div>
-                )}
-                {(() => {
-                  const prop = Array.isArray(data.propertyData.property) 
-                    ? data.propertyData.property[0] 
-                    : data.propertyData.property;
-                  const comparablesValue = (data.propertyData.comparables as any)?.value;
-                  
-                  if (comparablesValue && prop?.squareFootage) {
-                    return (
-                      <div className="bg-muted/10 rounded-lg p-4">
-                        <p className="text-sm text-muted mb-1">Price per Sq Ft</p>
-                        <p className="text-xl font-bold text-primary">
-                          ${Math.round(comparablesValue / prop.squareFootage)}
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-                <div className="bg-muted/10 rounded-lg p-4">
-                  <p className="text-sm text-muted mb-1">Property Type</p>
-                  <p className="text-xl font-bold text-primary capitalize">
-                    {(() => {
-                      const prop = Array.isArray(data.propertyData.property) 
-                        ? data.propertyData.property[0] 
-                        : data.propertyData.property;
-                      return prop?.propertyType || 'Unknown';
-                    })()}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <PropertyDataReview
+              data={data}
+              updateData={updateData}
+              setCanProceed={setCanProceed}
+            />
           )}
 
           {/* Continue Button */}
