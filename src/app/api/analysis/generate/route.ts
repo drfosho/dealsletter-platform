@@ -1363,6 +1363,9 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
       totalProfit: flipResults.netProfit,
       roi: flipResults.roi,
       holdingCosts: flipResults.holdingCosts,
+      // Fix & Flip specific metrics
+      arv: estimatedARV,
+      profitMargin: flipResults.profitMargin,
       // Set rental-focused metrics to 0 or undefined for flips
       cashFlow: 0,
       capRate: 0,
@@ -1516,6 +1519,9 @@ interface ParsedAnalysisResponse {
     net_profit?: number; // Alias for total_profit (compatibility)
     holding_costs?: number;
     monthly_rent?: number;
+    // Fix & Flip specific metrics
+    arv?: number;
+    profit_margin?: number;
     // BRRRR-specific metrics
     cash_returned?: number;
     cash_left_in_deal?: number;
@@ -1563,6 +1569,9 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
     totalProfit: calculatedMetrics?.totalProfit ?? getBestValue(financialData.totalProfit, calculatedMetrics?.totalProfit), // Use calculated for profit
     holdingCosts: calculatedMetrics?.holdingCosts ?? getBestValue(financialData.holdingCosts, calculatedMetrics?.holdingCosts),
     monthlyRent: calculatedMetrics?.monthlyRent ?? getBestValue(financialData.monthlyRent, calculatedMetrics?.monthlyRent),
+    // Fix & Flip specific metrics - always use calculated
+    arv: calculatedMetrics?.arv,
+    profitMargin: calculatedMetrics?.profitMargin,
     // BRRRR-specific metrics - always use calculated
     cashReturned: calculatedMetrics?.cashReturned,
     cashLeftInDeal: calculatedMetrics?.cashLeftInDeal,
@@ -1607,6 +1616,9 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
       net_profit: finalMetrics.totalProfit, // Alias for compatibility
       holding_costs: finalMetrics.holdingCosts,
       monthly_rent: finalMetrics.monthlyRent,
+      // Fix & Flip specific metrics
+      arv: finalMetrics.arv,
+      profit_margin: finalMetrics.profitMargin,
       // BRRRR-specific metrics
       cash_returned: finalMetrics.cashReturned,
       cash_left_in_deal: finalMetrics.cashLeftInDeal,
@@ -1783,6 +1795,9 @@ interface FinancialData {
   totalProfit?: number;
   holdingCosts?: number;
   monthlyRent?: number;
+  // Fix & Flip specific metrics
+  arv?: number;
+  profitMargin?: number;
   // BRRRR-specific metrics
   cashReturned?: number;
   cashLeftInDeal?: number;
