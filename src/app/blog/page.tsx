@@ -485,10 +485,14 @@ export default function BlogPage() {
 
       {/* Footer */}
       <footer className="bg-card border-t border-border/20 px-6 py-12">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-sm text-muted">
-            © 2024 Dealsletter Platform. All rights reserved.
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted">
+          <p>
+            © {new Date().getFullYear()} Dealsletter. All rights reserved.
           </p>
+          <div className="flex gap-4">
+            <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+            <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+          </div>
         </div>
       </footer>
     </div>

@@ -908,16 +908,20 @@ export default function Home() {
             </div>
 
             <div>
-              <h4 className="font-semibold text-primary mb-4">Account</h4>
+              <h4 className="font-semibold text-primary mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
-                <li><Link href="/auth/login" className="text-muted hover:text-primary transition-colors">Sign In</Link></li>
-                <li><Link href="/auth/signup" className="text-muted hover:text-primary transition-colors">Get Started</Link></li>
+                <li><Link href="/terms" className="text-muted hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="text-muted hover:text-primary transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-border/40 pt-8 text-center text-sm text-muted">
+          <div className="border-t border-border/40 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted">
             <p>&copy; {new Date().getFullYear()} Dealsletter. All rights reserved.</p>
+            <div className="flex gap-4">
+              <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+            </div>
           </div>
         </div>
       </footer>
