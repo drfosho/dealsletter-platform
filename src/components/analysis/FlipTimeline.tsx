@@ -19,11 +19,35 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
   
   // Get financial metrics from AI analysis
+  // CRITICAL FIX: Check multiple locations for financial metrics (data can be at various levels)
   const aiMetrics = analysis.ai_analysis?.financial_metrics;
-  const arv = (analysis as any).arv || 
-              (analysis.property_data as any)?.comparables?.value || 
+  const analysisData = (analysis as any).analysis_data || {};
+
+  // ARV: Check multiple sources
+  const arv = (aiMetrics as any)?.arv ||
+              (analysis as any).arv ||
+              analysisData?.arv ||
+              analysisData?.ai_analysis?.financial_metrics?.arv ||
+              (analysis.property_data as any)?.comparables?.value ||
               purchasePrice * 1.3;
-  const netProfit = aiMetrics?.net_profit || aiMetrics?.total_profit || 0;
+
+  // Net Profit: Check multiple sources (most critical fix)
+  const netProfit = (analysis as any).profit ||  // Top-level from database
+                   aiMetrics?.net_profit ||
+                   aiMetrics?.total_profit ||
+                   analysisData?.profit ||
+                   analysisData?.ai_analysis?.financial_metrics?.net_profit ||
+                   analysisData?.ai_analysis?.financial_metrics?.total_profit ||
+                   0;
+
+  console.log('[FlipTimeline] Financial data sources:', {
+    topLevelProfit: (analysis as any).profit,
+    aiMetricsNetProfit: aiMetrics?.net_profit,
+    aiMetricsTotalProfit: aiMetrics?.total_profit,
+    analysisDataProfit: analysisData?.profit,
+    finalNetProfit: netProfit,
+    arv
+  });
   // Calculate fallback holding costs accurately if not provided by AI
   // Using same formula as backend for consistency
   const loanAmount = purchasePrice * 0.9; // Assuming 10% down for hard money

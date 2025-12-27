@@ -33,23 +33,32 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
   };
 
   const getRiskLevel = () => {
-    // CRITICAL FIX: Check multiple locations for ROI
-    // Data can be at top level (from DB) or nested in ai_analysis.financial_metrics
+    // CRITICAL FIX: Check multiple locations for all financial metrics
+    const analysisData = (analysis as any).analysis_data || {};
+    const aiMetrics = analysis.ai_analysis?.financial_metrics || {};
+    const nestedAiMetrics = analysisData?.ai_analysis?.financial_metrics || {};
+
     const roi = (analysis as any).roi ||
-               analysis.ai_analysis?.financial_metrics?.roi ||
-               (analysis as any).analysis_data?.roi ||
+               aiMetrics?.roi ||
+               nestedAiMetrics?.roi ||
+               analysisData?.roi ||
                0;
 
-    if (analysis.strategy === 'flip') {
+    // Normalize strategy for comparison
+    const strategy = (analysis.strategy || analysisData?.strategy || '').toLowerCase();
+
+    if (strategy === 'flip') {
       // Fix & Flip risk assessment based on ROI and timeline
       const timeline = (analysis as any).strategy_details?.timeline ||
-                      (analysis as any).strategyDetails?.timeline || 6;
+                      (analysis as any).strategyDetails?.timeline ||
+                      analysisData?.strategy_details?.timeline ||
+                      analysisData?.strategyDetails?.timeline || 6;
       if (roi < 15 || timeline > 12) return { level: 'High', color: 'text-red-600', bg: 'bg-red-100' };
       if (roi < 25 || timeline > 9) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-100' };
       return { level: 'Low', color: 'text-green-600', bg: 'bg-green-100' };
     } else {
-      // Rental property risk assessment based on ROI and cash flow
-      const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
+      // Rental/BRRRR/House-hack risk assessment based on ROI and cash flow
+      const cashFlow = aiMetrics?.monthly_cash_flow || nestedAiMetrics?.monthly_cash_flow || analysisData?.monthlyCashFlow || 0;
       if (roi < 10 || cashFlow < 0) return { level: 'High', color: 'text-red-600', bg: 'bg-red-100' };
       if (roi < 15 || cashFlow < 200) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-100' };
       return { level: 'Low', color: 'text-green-600', bg: 'bg-green-100' };
@@ -185,31 +194,42 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
   }
 
   function getInvestmentScore(analysis: AnalysisOverviewProps['analysis']): number {
-    // CRITICAL FIX: Check multiple locations for ROI
+    // CRITICAL FIX: Check multiple locations for all financial metrics
+    const analysisData = (analysis as any).analysis_data || {};
+    const aiMetrics = analysis.ai_analysis?.financial_metrics || {};
+    const nestedAiMetrics = analysisData?.ai_analysis?.financial_metrics || {};
+
+    // ROI: Check all possible locations
     const roi = (analysis as any).roi ||
-               analysis.ai_analysis?.financial_metrics?.roi ||
-               (analysis as any).analysis_data?.roi ||
+               aiMetrics?.roi ||
+               nestedAiMetrics?.roi ||
+               analysisData?.roi ||
                0;
 
     let score = 0; // Start at 0 and build up based on metrics
     let maxScore = 100;
 
-    console.log('[InvestmentScore] Calculating for strategy:', analysis.strategy);
+    // Normalize strategy name for comparison
+    const strategy = (analysis.strategy || analysisData?.strategy || '').toLowerCase();
+    console.log('[InvestmentScore] Calculating for strategy:', strategy);
 
-    if (analysis.strategy === 'flip') {
+    if (strategy === 'flip') {
       // Fix & Flip scoring (out of 100)
       // CRITICAL FIX: Check multiple locations for net profit
       const netProfit = (analysis as any).profit ||
-                       analysis.ai_analysis?.financial_metrics?.net_profit ||
-                       analysis.ai_analysis?.financial_metrics?.total_profit ||
-                       (analysis as any).analysis_data?.profit ||
+                       aiMetrics?.net_profit ||
+                       aiMetrics?.total_profit ||
+                       nestedAiMetrics?.net_profit ||
+                       nestedAiMetrics?.total_profit ||
+                       analysisData?.profit ||
                        0;
-      const purchasePrice = analysis.purchase_price || 0;
+      const purchasePrice = analysis.purchase_price || analysisData?.purchase_price || 0;
       const profitMargin = purchasePrice > 0 ? (netProfit / purchasePrice) * 100 : 0;
       const timeline = (analysis as any).strategy_details?.timeline ||
                       (analysis as any).strategyDetails?.timeline ||
-                      (analysis as any).analysis_data?.strategy_details?.timeline || 6;
-      const rehabCosts = analysis.rehab_costs || 0;
+                      analysisData?.strategy_details?.timeline ||
+                      analysisData?.strategyDetails?.timeline || 6;
+      const rehabCosts = analysis.rehab_costs || analysisData?.rehab_costs || 0;
 
       console.log('[InvestmentScore] Flip metrics:', { roi, netProfit, profitMargin, timeline, purchasePrice, rehabCosts });
 
@@ -254,11 +274,11 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
 
       console.log('[InvestmentScore] Flip score breakdown:', { score, riskDeductions });
 
-    } else if (analysis.strategy === 'brrrr') {
+    } else if (strategy === 'brrrr') {
       // BRRRR scoring (combines flip + rental aspects)
-      const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
-      const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
-      const cashOnCash = analysis.ai_analysis?.financial_metrics?.cash_on_cash_return || 0;
+      const capRate = aiMetrics?.cap_rate || nestedAiMetrics?.cap_rate || analysisData?.capRate || 0;
+      const cashFlow = aiMetrics?.monthly_cash_flow || nestedAiMetrics?.monthly_cash_flow || analysisData?.monthlyCashFlow || 0;
+      const cashOnCash = aiMetrics?.cash_on_cash_return || nestedAiMetrics?.cash_on_cash_return || analysisData?.cashOnCash || 0;
 
       console.log('[InvestmentScore] BRRRR metrics:', { roi, capRate, cashFlow, cashOnCash });
 
@@ -296,12 +316,12 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       else score += 0;
 
     } else {
-      // Buy & Hold / Rental property scoring (out of 100)
-      const capRate = analysis.ai_analysis?.financial_metrics?.cap_rate || 0;
-      const cashFlow = analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0;
-      const cashOnCash = analysis.ai_analysis?.financial_metrics?.cash_on_cash_return || 0;
+      // Buy & Hold / Rental / House-hack property scoring (out of 100)
+      const capRate = aiMetrics?.cap_rate || nestedAiMetrics?.cap_rate || analysisData?.capRate || 0;
+      const cashFlow = aiMetrics?.monthly_cash_flow || nestedAiMetrics?.monthly_cash_flow || analysisData?.monthlyCashFlow || 0;
+      const cashOnCash = aiMetrics?.cash_on_cash_return || nestedAiMetrics?.cash_on_cash_return || analysisData?.cashOnCash || 0;
 
-      console.log('[InvestmentScore] Rental metrics:', { roi, capRate, cashFlow, cashOnCash });
+      console.log('[InvestmentScore] Rental/House-hack metrics:', { roi, capRate, cashFlow, cashOnCash, strategy });
 
       // Cap Rate Component (30 points max)
       if (capRate >= 10) score += 30;
