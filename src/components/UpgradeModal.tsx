@@ -9,13 +9,15 @@ interface UpgradeModalProps {
   onClose: () => void;
   feature?: string;
   message?: string;
+  showFreeTierInfo?: boolean;
 }
 
-export default function UpgradeModal({ 
-  isOpen, 
-  onClose, 
+export default function UpgradeModal({
+  isOpen,
+  onClose,
   feature: _feature = 'this feature',
-  message = 'Upgrade to Pro to unlock powerful analysis tools'
+  message = 'Upgrade to Pro to unlock powerful analysis tools',
+  showFreeTierInfo = false
 }: UpgradeModalProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +27,11 @@ export default function UpgradeModal({
   const handleUpgrade = async () => {
     setIsLoading(true);
     router.push('/pricing');
+  };
+
+  const handleContinueFree = () => {
+    onClose();
+    router.push('/analysis/new');
   };
 
   const features = [
@@ -53,13 +60,13 @@ export default function UpgradeModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
-      <div className="relative bg-background border border-border/60 rounded-2xl max-w-lg w-full mx-4 overflow-hidden shadow-2xl">
+      <div className="relative bg-background border border-border/60 rounded-2xl max-w-lg w-full mx-4 overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="relative bg-gradient-to-br from-accent/20 to-accent/5 p-6 pb-8">
           <button
@@ -68,7 +75,7 @@ export default function UpgradeModal({
           >
             <X className="w-5 h-5 text-muted" />
           </button>
-          
+
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-accent/20 rounded-full mb-4">
               <Zap className="w-8 h-8 text-accent" />
@@ -82,8 +89,30 @@ export default function UpgradeModal({
           </div>
         </div>
 
+        {/* Free Tier Info (if shown) */}
+        {showFreeTierInfo && (
+          <div className="px-6 pt-4">
+            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Check className="w-5 h-5 text-green-500" />
+                <span className="font-semibold text-primary">Free Plan Included</span>
+              </div>
+              <p className="text-sm text-muted">
+                Your account includes <strong>3 free property analyses per month</strong>. Start analyzing properties right away!
+              </p>
+              <button
+                onClick={handleContinueFree}
+                className="mt-3 w-full py-2 px-4 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Start Analyzing (Free)
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Features List */}
         <div className="p-6 space-y-4">
+          <p className="text-sm font-medium text-muted uppercase tracking-wide">Pro Features</p>
           {features.map((item, index) => (
             <div key={index} className="flex items-start gap-3">
               <div className="flex-shrink-0 w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center text-accent">
@@ -134,9 +163,13 @@ export default function UpgradeModal({
               onClick={onClose}
               className="w-full py-3 px-4 text-muted hover:text-primary transition-colors"
             >
-              Maybe Later
+              Continue with Free Plan
             </button>
           </div>
+
+          <p className="text-center text-xs text-muted mt-4">
+            You can upgrade anytime from your account settings.
+          </p>
         </div>
       </div>
     </div>

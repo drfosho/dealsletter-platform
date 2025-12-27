@@ -213,6 +213,9 @@ export async function canPerformAnalysis(userId?: string): Promise<{
   allowed: boolean;
   reason?: string;
   upgradeRequired?: boolean;
+  remaining?: number;
+  limit?: number;
+  used?: number;
 }> {
   if (!userId) {
     return {
@@ -221,29 +224,62 @@ export async function canPerformAnalysis(userId?: string): Promise<{
       upgradeRequired: false,
     };
   }
-  
+
   // Check if user is admin first
   const supabase = createClient();
   const { data: userData } = await supabase.auth.getUser();
   if (userData?.user?.email && isAdminUser(userData.user.email)) {
     return {
       allowed: true,
+      remaining: 9999,
+      limit: 9999,
+      used: 0,
     };
   }
-  
-  const tier = await getUserTier(userId);
-  
-  if (tier === 'free') {
+
+  // Use the database RPC function to check usage limits
+  try {
+    const { data: usageData, error: usageError } = await supabase
+      .rpc('can_user_analyze', { p_user_id: userId });
+
+    if (usageError) {
+      console.error('Error checking usage:', usageError);
+      // Default to allowing access if usage check fails
+      return {
+        allowed: true,
+        reason: 'Usage check unavailable',
+      };
+    }
+
+    // Handle the response from the RPC function
+    const result = Array.isArray(usageData) ? usageData[0] : usageData;
+
+    if (result?.can_analyze) {
+      return {
+        allowed: true,
+        remaining: result.remaining_analyses || result.remaining || 0,
+        limit: result.tier_limit || result.monthly_limit || 3,
+        used: result.analyses_used || 0,
+      };
+    } else {
+      // User has exceeded their limit
+      return {
+        allowed: false,
+        reason: result?.message || 'Monthly analysis limit reached',
+        upgradeRequired: true,
+        remaining: 0,
+        limit: result?.tier_limit || result?.monthly_limit || 3,
+        used: result?.analyses_used || result?.tier_limit || 3,
+      };
+    }
+  } catch (error) {
+    console.error('Error in canPerformAnalysis:', error);
+    // Default to allowing access if check fails
     return {
-      allowed: false,
-      reason: 'Property analysis is a Pro feature',
-      upgradeRequired: true,
+      allowed: true,
+      reason: 'Usage check unavailable',
     };
   }
-  
-  return {
-    allowed: true,
-  };
 }
 
 // Check if user can export data

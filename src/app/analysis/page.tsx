@@ -12,9 +12,13 @@ export default function AnalysisPage() {
     created_at: string;
   }>>([]);
   const [usage, setUsage] = useState<{
-    current_month_usage: number;
-    monthly_limit: number;
-    subscription_tier: string;
+    analyses_used?: number;
+    current_month_usage?: number;
+    tier_limit?: number;
+    monthly_limit?: number;
+    remaining?: number;
+    subscription_tier?: string;
+    can_analyze?: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -71,11 +75,19 @@ export default function AnalysisPage() {
                   <div className="mt-4 sm:mt-0 bg-card rounded-lg p-4 border border-border">
                     <div className="text-sm text-muted">Monthly Usage</div>
                     <div className="text-2xl font-bold text-primary">
-                      {usage.current_month_usage} / {usage.monthly_limit === -1 ? '∞' : usage.monthly_limit}
+                      {usage.analyses_used ?? usage.current_month_usage ?? 0} / {(usage.tier_limit ?? usage.monthly_limit) === -1 ? '∞' : (usage.tier_limit ?? usage.monthly_limit ?? 3)}
                     </div>
-                    <div className="text-xs text-muted mt-1">
-                      {usage.subscription_tier} plan
+                    <div className="text-xs text-muted mt-1 capitalize">
+                      {usage.subscription_tier || 'free'} plan
+                      {usage.remaining !== undefined && usage.remaining > 0 && (
+                        <span className="text-green-600 ml-2">• {usage.remaining} remaining</span>
+                      )}
                     </div>
+                    {usage.subscription_tier === 'free' && (
+                      <Link href="/pricing" className="text-xs text-accent hover:text-accent/80 mt-2 block">
+                        Upgrade for more analyses →
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
