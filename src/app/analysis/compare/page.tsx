@@ -1,12 +1,25 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import type { Analysis } from '@/types';
 
-export default function ComparisonPage() {
+// Loading fallback component
+function ComparisonLoading() {
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <LoadingSpinner text="Loading comparison data..." />
+      </main>
+    </div>
+  );
+}
+
+// Main comparison content component that uses useSearchParams
+function ComparisonContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
@@ -213,7 +226,7 @@ export default function ComparisonPage() {
           analyses.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
           'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
         }`}>
-          {analyses.map((analysis, idx) => {
+          {analyses.map((analysis) => {
             const details = getPropertyDetails(analysis);
             const profit = getMetric(analysis, 'profit') || getMetric(analysis, 'net_profit') || getMetric(analysis, 'total_profit');
             const roi = getMetric(analysis, 'roi');
@@ -649,5 +662,14 @@ function ComparisonTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Default export wraps content in Suspense boundary
+export default function ComparisonPage() {
+  return (
+    <Suspense fallback={<ComparisonLoading />}>
+      <ComparisonContent />
+    </Suspense>
   );
 }
