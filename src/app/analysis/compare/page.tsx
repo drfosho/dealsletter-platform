@@ -23,9 +23,35 @@ function normalizeAnalysis(raw: any): any {
   const analysisData = raw.analysis_data || {};
   const aiMetrics = raw.ai_analysis?.financial_metrics || {};
   const nestedAiMetrics = analysisData?.ai_analysis?.financial_metrics || {};
-  const propData = raw.property_data?.property?.[0] || analysisData?.property_data?.property?.[0] || {};
 
-  // Helper to get value from multiple sources
+  // Property data can be stored in multiple locations and formats
+  // It can be an array (from RentCast API) or a single object
+  const propertyDataContainer = raw.property_data || analysisData?.property_data || {};
+  const propertyDataProperty = propertyDataContainer?.property;
+
+  // Handle both array and object formats for property data
+  const propData = Array.isArray(propertyDataProperty)
+    ? propertyDataProperty[0] || {}
+    : propertyDataProperty || {};
+
+  // Also check for direct listing data
+  const listingData = propertyDataContainer?.listing || {};
+
+  // Comparables data for ARV extraction
+  const comparablesData = analysisData?.comparables || raw.comparables || propertyDataContainer?.comparables || {};
+
+  console.log('[Comparison] Raw data structure for', raw.address, {
+    hasAnalysisData: !!raw.analysis_data,
+    hasPropertyData: !!raw.property_data,
+    hasNestedPropertyData: !!analysisData?.property_data,
+    propertyDataKeys: Object.keys(propertyDataContainer),
+    propDataKeys: Object.keys(propData),
+    listingDataKeys: Object.keys(listingData),
+    aiMetricsKeys: Object.keys(aiMetrics),
+    nestedAiMetricsKeys: Object.keys(nestedAiMetrics)
+  });
+
+  // Helper to get value from multiple sources, skipping 0 for non-numeric defaults
   const getValue = (...sources: any[]): any => {
     for (const source of sources) {
       if (source !== undefined && source !== null && source !== '' && !Number.isNaN(source)) {
@@ -35,6 +61,180 @@ function normalizeAnalysis(raw: any): any {
     return undefined;
   };
 
+  // Helper specifically for numeric values where 0 is a valid value
+  const getNumericValue = (...sources: any[]): number | undefined => {
+    for (const source of sources) {
+      const num = Number(source);
+      if (!Number.isNaN(num) && source !== undefined && source !== null && source !== '') {
+        return num;
+      }
+    }
+    return undefined;
+  };
+
+  // Extract property details from all possible locations
+  const bedrooms = getNumericValue(
+    propData?.bedrooms,
+    listingData?.bedrooms,
+    analysisData?.bedrooms,
+    raw.bedrooms,
+    analysisData?.property_details?.bedrooms
+  );
+
+  const bathrooms = getNumericValue(
+    propData?.bathrooms,
+    listingData?.bathrooms,
+    analysisData?.bathrooms,
+    raw.bathrooms,
+    analysisData?.property_details?.bathrooms
+  );
+
+  const squareFeet = getNumericValue(
+    propData?.squareFootage,
+    propData?.sqft,
+    listingData?.squareFootage,
+    listingData?.sqft,
+    analysisData?.squareFootage,
+    analysisData?.sqft,
+    raw.square_feet,
+    analysisData?.property_details?.squareFootage
+  );
+
+  const yearBuilt = getNumericValue(
+    propData?.yearBuilt,
+    listingData?.yearBuilt,
+    analysisData?.yearBuilt,
+    raw.year_built,
+    analysisData?.property_details?.yearBuilt
+  );
+
+  const propertyType = getValue(
+    propData?.propertyType,
+    listingData?.propertyType,
+    analysisData?.propertyType,
+    raw.property_type,
+    analysisData?.property_details?.propertyType
+  );
+
+  const numberOfUnits = getNumericValue(
+    propData?.units,
+    listingData?.units,
+    analysisData?.units,
+    analysisData?.numberOfUnits,
+    raw.number_of_units
+  ) || 1;
+
+  // Financial inputs
+  const purchasePrice = getNumericValue(
+    raw.purchase_price,
+    analysisData?.purchase_price,
+    analysisData?.purchasePrice
+  );
+
+  const downPaymentPercent = getNumericValue(
+    raw.down_payment_percent,
+    analysisData?.down_payment_percent,
+    analysisData?.downPaymentPercent
+  ) || 20;
+
+  const interestRate = getNumericValue(
+    raw.interest_rate,
+    analysisData?.interest_rate,
+    analysisData?.interestRate
+  ) || 7;
+
+  const loanTerm = getNumericValue(
+    raw.loan_term,
+    analysisData?.loan_term,
+    analysisData?.loanTerm
+  ) || 30;
+
+  const rehabCosts = getNumericValue(
+    raw.rehab_costs,
+    analysisData?.rehab_costs,
+    analysisData?.rehabCosts,
+    analysisData?.renovationCosts
+  ) || 0;
+
+  // Financial metrics - check ALL possible locations
+  const roi = getNumericValue(
+    raw.roi,
+    aiMetrics?.roi,
+    nestedAiMetrics?.roi,
+    analysisData?.roi
+  );
+
+  const profit = getNumericValue(
+    raw.profit,
+    aiMetrics?.net_profit,
+    aiMetrics?.total_profit,
+    nestedAiMetrics?.net_profit,
+    nestedAiMetrics?.total_profit,
+    analysisData?.profit,
+    analysisData?.netProfit,
+    analysisData?.net_profit
+  );
+
+  const monthlyCashFlow = getNumericValue(
+    aiMetrics?.monthly_cash_flow,
+    nestedAiMetrics?.monthly_cash_flow,
+    analysisData?.monthly_cash_flow,
+    analysisData?.monthlyCashFlow
+  );
+
+  const capRate = getNumericValue(
+    aiMetrics?.cap_rate,
+    nestedAiMetrics?.cap_rate,
+    analysisData?.cap_rate,
+    analysisData?.capRate
+  );
+
+  const cashOnCash = getNumericValue(
+    aiMetrics?.cash_on_cash_return,
+    nestedAiMetrics?.cash_on_cash_return,
+    analysisData?.cash_on_cash_return,
+    analysisData?.cashOnCash,
+    analysisData?.cash_on_cash
+  );
+
+  const monthlyRent = getNumericValue(
+    aiMetrics?.monthly_rent,
+    nestedAiMetrics?.monthly_rent,
+    analysisData?.monthly_rent,
+    analysisData?.monthlyRent,
+    analysisData?.rentPerUnit ? analysisData.rentPerUnit * numberOfUnits : undefined
+  );
+
+  // Total investment - calculate if not available
+  let totalInvestment = getNumericValue(
+    aiMetrics?.total_investment,
+    nestedAiMetrics?.total_investment,
+    analysisData?.total_investment,
+    analysisData?.totalInvestment,
+    aiMetrics?.cash_required,
+    nestedAiMetrics?.cash_required,
+    analysisData?.cash_required
+  );
+
+  // Calculate total investment if not available
+  if (!totalInvestment && purchasePrice) {
+    const downPaymentAmount = purchasePrice * (downPaymentPercent / 100);
+    const closingCosts = purchasePrice * 0.03; // Estimate 3% closing costs
+    totalInvestment = downPaymentAmount + rehabCosts + closingCosts;
+  }
+
+  // ARV - check multiple locations including comparables
+  const arv = getNumericValue(
+    aiMetrics?.arv,
+    nestedAiMetrics?.arv,
+    analysisData?.arv,
+    comparablesData?.value,
+    comparablesData?.medianValue,
+    // For flips, ARV might be stored as after_repair_value
+    analysisData?.after_repair_value,
+    analysisData?.afterRepairValue
+  );
+
   const normalized = {
     // Basic info
     id: raw.id,
@@ -43,92 +243,48 @@ function normalizeAnalysis(raw: any): any {
     created_at: raw.created_at || raw.analysis_date,
 
     // Property details
-    bedrooms: getValue(propData?.bedrooms, analysisData?.bedrooms, raw.bedrooms),
-    bathrooms: getValue(propData?.bathrooms, analysisData?.bathrooms, raw.bathrooms),
-    squareFeet: getValue(propData?.squareFootage, analysisData?.squareFootage, analysisData?.sqft, raw.square_feet),
-    yearBuilt: getValue(propData?.yearBuilt, analysisData?.yearBuilt, raw.year_built),
-    propertyType: getValue(propData?.propertyType, analysisData?.propertyType, raw.property_type),
-    numberOfUnits: getValue(propData?.units, analysisData?.units, analysisData?.numberOfUnits, raw.number_of_units),
+    bedrooms,
+    bathrooms,
+    squareFeet,
+    yearBuilt,
+    propertyType,
+    numberOfUnits,
 
     // Financial inputs
-    purchasePrice: getValue(raw.purchase_price, analysisData?.purchase_price, analysisData?.purchasePrice),
-    downPaymentPercent: getValue(raw.down_payment_percent, analysisData?.down_payment_percent, analysisData?.downPaymentPercent, 20),
-    interestRate: getValue(raw.interest_rate, analysisData?.interest_rate, analysisData?.interestRate, 7),
-    loanTerm: getValue(raw.loan_term, analysisData?.loan_term, analysisData?.loanTerm, 30),
-    rehabCosts: getValue(raw.rehab_costs, analysisData?.rehab_costs, analysisData?.rehabCosts, analysisData?.renovationCosts, 0),
+    purchasePrice,
+    downPaymentPercent,
+    interestRate,
+    loanTerm,
+    rehabCosts,
 
-    // Financial metrics - check all possible locations
-    roi: getValue(
-      raw.roi,
-      aiMetrics?.roi,
-      nestedAiMetrics?.roi,
-      analysisData?.roi
-    ),
-    profit: getValue(
-      raw.profit,
-      aiMetrics?.net_profit,
-      aiMetrics?.total_profit,
-      nestedAiMetrics?.net_profit,
-      nestedAiMetrics?.total_profit,
-      analysisData?.profit,
-      analysisData?.netProfit
-    ),
-    netProfit: getValue(
-      raw.profit,
-      aiMetrics?.net_profit,
-      aiMetrics?.total_profit,
-      nestedAiMetrics?.net_profit,
-      nestedAiMetrics?.total_profit,
-      analysisData?.profit,
-      analysisData?.netProfit
-    ),
-    monthlyCashFlow: getValue(
-      aiMetrics?.monthly_cash_flow,
-      nestedAiMetrics?.monthly_cash_flow,
-      analysisData?.monthly_cash_flow,
-      analysisData?.monthlyCashFlow
-    ),
-    capRate: getValue(
-      aiMetrics?.cap_rate,
-      nestedAiMetrics?.cap_rate,
-      analysisData?.cap_rate,
-      analysisData?.capRate
-    ),
-    cashOnCash: getValue(
-      aiMetrics?.cash_on_cash_return,
-      nestedAiMetrics?.cash_on_cash_return,
-      analysisData?.cash_on_cash_return,
-      analysisData?.cashOnCash
-    ),
-    monthlyRent: getValue(
-      aiMetrics?.monthly_rent,
-      nestedAiMetrics?.monthly_rent,
-      analysisData?.monthly_rent,
-      analysisData?.monthlyRent
-    ),
-    totalInvestment: getValue(
-      aiMetrics?.total_investment,
-      nestedAiMetrics?.total_investment,
-      analysisData?.total_investment,
-      analysisData?.totalInvestment
-    ),
-    arv: getValue(
-      aiMetrics?.arv,
-      nestedAiMetrics?.arv,
-      analysisData?.arv
-    ),
+    // Financial metrics
+    roi,
+    profit,
+    netProfit: profit,
+    monthlyCashFlow,
+    capRate,
+    cashOnCash,
+    monthlyRent,
+    totalInvestment,
+    arv,
 
     // Keep original data for fallback access
     _raw: raw,
-    ai_analysis: raw.ai_analysis,
+    ai_analysis: raw.ai_analysis || analysisData?.ai_analysis,
     analysis_data: analysisData
   };
 
   console.log('[Comparison] Normalized analysis:', normalized.address, {
+    bedrooms: normalized.bedrooms,
+    bathrooms: normalized.bathrooms,
+    squareFeet: normalized.squareFeet,
+    propertyType: normalized.propertyType,
+    purchasePrice: normalized.purchasePrice,
     roi: normalized.roi,
     profit: normalized.profit,
-    purchasePrice: normalized.purchasePrice,
-    monthlyCashFlow: normalized.monthlyCashFlow
+    monthlyCashFlow: normalized.monthlyCashFlow,
+    totalInvestment: normalized.totalInvestment,
+    arv: normalized.arv
   });
 
   return normalized;
@@ -202,12 +358,13 @@ function ComparisonContent() {
   }, [loadAnalyses]);
 
   // Safe format functions that handle NaN and undefined
+  // Returns '—' for missing data (undefined/null) and actual formatted value for valid numbers including 0
   const formatCurrency = (value: number | undefined | null): string => {
-    if (value === undefined || value === null || Number.isNaN(value)) {
-      return '$0';
+    if (value === undefined || value === null) {
+      return '—'; // No data available
     }
     const num = Number(value);
-    if (Number.isNaN(num)) return '$0';
+    if (Number.isNaN(num)) return '—';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -217,20 +374,20 @@ function ComparisonContent() {
   };
 
   const formatPercent = (value: number | undefined | null, decimals = 1): string => {
-    if (value === undefined || value === null || Number.isNaN(value)) {
-      return '0%';
+    if (value === undefined || value === null) {
+      return '—'; // No data available
     }
     const num = Number(value);
-    if (Number.isNaN(num)) return '0%';
+    if (Number.isNaN(num)) return '—';
     return `${num.toFixed(decimals)}%`;
   };
 
   const formatNumber = (value: number | undefined | null): string => {
-    if (value === undefined || value === null || Number.isNaN(value)) {
-      return '0';
+    if (value === undefined || value === null) {
+      return '—'; // No data available
     }
     const num = Number(value);
-    if (Number.isNaN(num)) return '0';
+    if (Number.isNaN(num)) return '—';
     return num.toLocaleString();
   };
 
@@ -257,10 +414,24 @@ function ComparisonContent() {
   };
 
   // Find best value in array (higher is better by default)
+  // IMPORTANT: Excludes 0 values from being considered "best" - only positive values can win
   const getBestValue = (values: (number | undefined)[], higherIsBetter = true): number | undefined => {
-    const validValues = values.filter((v): v is number => v !== undefined && v !== null && !Number.isNaN(v));
+    // Filter out undefined, null, NaN, AND zero values for "best" determination
+    const validValues = values.filter((v): v is number =>
+      v !== undefined &&
+      v !== null &&
+      !Number.isNaN(v) &&
+      v !== 0 // Don't consider 0 as a valid "best" value
+    );
     if (validValues.length === 0) return undefined;
-    return higherIsBetter ? Math.max(...validValues) : Math.min(...validValues);
+    // For "higher is better", only consider positive values
+    // For "lower is better", we allow any non-zero value
+    if (higherIsBetter) {
+      const positiveValues = validValues.filter(v => v > 0);
+      if (positiveValues.length === 0) return undefined;
+      return Math.max(...positiveValues);
+    }
+    return Math.min(...validValues);
   };
 
   if (loading) {
@@ -434,31 +605,36 @@ function ComparisonContent() {
                 {
                   label: 'Net Profit',
                   getValue: (a) => formatCurrency(a.profit),
-                  isBest: (a) => a.profit !== undefined && a.profit === bestProfit,
+                  // Only mark as best if value is positive and matches best
+                  isBest: (a) => a.profit !== undefined && a.profit > 0 && a.profit === bestProfit,
                   highlight: true
                 },
                 {
                   label: 'ROI',
                   getValue: (a) => formatPercent(a.roi),
-                  isBest: (a) => a.roi !== undefined && a.roi === bestRoi,
+                  // Only mark as best if value is positive and matches best
+                  isBest: (a) => a.roi !== undefined && a.roi > 0 && a.roi === bestRoi,
                   highlight: true
                 },
                 {
                   label: 'Monthly Cash Flow',
                   getValue: (a) => formatCurrency(a.monthlyCashFlow),
-                  isBest: (a) => a.monthlyCashFlow !== undefined && a.monthlyCashFlow === bestCashFlow,
+                  // Only mark as best if value is positive and matches best
+                  isBest: (a) => a.monthlyCashFlow !== undefined && a.monthlyCashFlow > 0 && a.monthlyCashFlow === bestCashFlow,
                   highlight: true
                 },
                 {
                   label: 'Cap Rate',
                   getValue: (a) => formatPercent(a.capRate),
-                  isBest: (a) => a.capRate !== undefined && a.capRate === bestCapRate,
+                  // Only mark as best if value is positive and matches best
+                  isBest: (a) => a.capRate !== undefined && a.capRate > 0 && a.capRate === bestCapRate,
                   highlight: true
                 },
                 {
                   label: 'Cash-on-Cash Return',
                   getValue: (a) => formatPercent(a.cashOnCash),
-                  isBest: (a) => a.cashOnCash !== undefined && a.cashOnCash === bestCoC,
+                  // Only mark as best if value is positive and matches best
+                  isBest: (a) => a.cashOnCash !== undefined && a.cashOnCash > 0 && a.cashOnCash === bestCoC,
                   highlight: true
                 },
                 {
