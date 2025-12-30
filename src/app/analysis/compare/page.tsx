@@ -789,51 +789,65 @@ function ComparisonContent() {
               analyses.length === 3 ? 'grid-cols-1 md:grid-cols-3' :
               'grid-cols-1 md:grid-cols-2'
             }`}>
-              {analyses.map((analysis) => (
-                <div key={analysis.id} className="bg-card rounded-xl border border-border p-5">
-                  <h4 className="font-semibold text-primary mb-2 line-clamp-1">
-                    {analysis.address?.split(',')[0]}
-                  </h4>
+              {analyses.map((analysis) => {
+                // Get AI insights from multiple possible locations
+                const aiAnalysis = analysis.ai_analysis ||
+                  analysis.analysis_data?.ai_analysis ||
+                  analysis._raw?.ai_analysis ||
+                  analysis._raw?.analysis_data?.ai_analysis ||
+                  {};
 
-                  {analysis.ai_analysis?.summary && (
-                    <p className="text-sm text-muted mb-4 line-clamp-4">
-                      {analysis.ai_analysis.summary}
-                    </p>
-                  )}
+                const summary = aiAnalysis?.summary || '';
+                const risks = aiAnalysis?.risks || [];
+                const opportunities = aiAnalysis?.opportunities || [];
+                const hasInsights = summary || risks.length > 0 || opportunities.length > 0;
 
-                  {analysis.ai_analysis?.risks && analysis.ai_analysis.risks.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-xs font-medium text-red-500 mb-1">Key Risks:</p>
-                      <ul className="text-xs text-muted space-y-1">
-                        {analysis.ai_analysis.risks.slice(0, 2).map((risk: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-1">
-                            <span className="text-red-500">•</span>
-                            <span className="line-clamp-2">{risk}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                return (
+                  <div key={analysis.id} className="bg-card rounded-xl border border-border p-5">
+                    <h4 className="font-semibold text-primary mb-2 line-clamp-1">
+                      {analysis.address?.split(',')[0]}
+                    </h4>
 
-                  {analysis.ai_analysis?.opportunities && analysis.ai_analysis.opportunities.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-green-500 mb-1">Opportunities:</p>
-                      <ul className="text-xs text-muted space-y-1">
-                        {analysis.ai_analysis.opportunities.slice(0, 2).map((opp: string, idx: number) => (
-                          <li key={idx} className="flex items-start gap-1">
-                            <span className="text-green-500">•</span>
-                            <span className="line-clamp-2">{opp}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                    {summary && (
+                      <p className="text-sm text-muted mb-4 line-clamp-4">
+                        {summary}
+                      </p>
+                    )}
 
-                  {!analysis.ai_analysis?.summary && !analysis.ai_analysis?.risks?.length && !analysis.ai_analysis?.opportunities?.length && (
-                    <p className="text-sm text-muted">No AI insights available for this property.</p>
-                  )}
-                </div>
-              ))}
+                    {risks.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs font-medium text-red-500 mb-1">Key Risks:</p>
+                        <ul className="text-xs text-muted space-y-1">
+                          {risks.slice(0, 2).map((risk: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-1">
+                              <span className="text-red-500">•</span>
+                              <span className="line-clamp-2">{risk}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {opportunities.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-green-500 mb-1">Opportunities:</p>
+                        <ul className="text-xs text-muted space-y-1">
+                          {opportunities.slice(0, 2).map((opp: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-1">
+                              <span className="text-green-500">•</span>
+                              <span className="line-clamp-2">{opp}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {!hasInsights && (
+                      <p className="text-sm text-muted">No AI insights available for this property.</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </ComparisonSection>
         </div>

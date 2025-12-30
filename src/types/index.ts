@@ -18,6 +18,16 @@ export interface Analysis {
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
+  // Additional metrics from list API
+  roi?: number;
+  profit?: number;
+  monthly_cash_flow?: number;
+  cap_rate?: number;
+  cash_on_cash?: number;
+  arv?: number;
+  total_investment?: number;
+  monthly_rent?: number;
+  deal_type?: string;
 }
 
 export interface PropertyData {

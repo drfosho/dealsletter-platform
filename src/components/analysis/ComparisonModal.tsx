@@ -51,13 +51,86 @@ export default function ComparisonModal({ currentAnalysis, onClose }: Comparison
     );
   };
 
-  const formatCurrency = (value: number) => {
+  // Safe currency formatter that handles undefined, null, NaN
+  const formatCurrency = (value: number | undefined | null): string => {
+    if (value === undefined || value === null || Number.isNaN(value)) {
+      return '—';
+    }
+    const num = Number(value);
+    if (Number.isNaN(num)) return '—';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(num);
+  };
+
+  // Safe ROI formatter
+  const formatROI = (value: number | undefined | null): string => {
+    if (value === undefined || value === null || Number.isNaN(value)) {
+      return '0%';
+    }
+    const num = Number(value);
+    if (Number.isNaN(num)) return '0%';
+    return `${num.toFixed(1)}%`;
+  };
+
+  // Helper to get purchase price from various locations
+  const getPurchasePrice = (analysis: Analysis): number => {
+    // Check top-level first (from updated API)
+    if (analysis.purchase_price && !Number.isNaN(analysis.purchase_price)) {
+      return analysis.purchase_price;
+    }
+    // Check analysis_data
+    const analysisData = (analysis as any).analysis_data || {};
+    if (analysisData.purchase_price && !Number.isNaN(analysisData.purchase_price)) {
+      return analysisData.purchase_price;
+    }
+    if (analysisData.purchasePrice && !Number.isNaN(analysisData.purchasePrice)) {
+      return analysisData.purchasePrice;
+    }
+    return 0;
+  };
+
+  // Helper to get ROI from various locations
+  const getROI = (analysis: Analysis): number => {
+    // Check top-level first
+    if (analysis.roi !== undefined && analysis.roi !== null && !Number.isNaN(analysis.roi)) {
+      return analysis.roi;
+    }
+    // Check ai_analysis
+    const aiMetrics = (analysis as any).ai_analysis?.financial_metrics || {};
+    if (aiMetrics.roi !== undefined && !Number.isNaN(aiMetrics.roi)) {
+      return aiMetrics.roi;
+    }
+    // Check nested in analysis_data
+    const analysisData = (analysis as any).analysis_data || {};
+    const nestedMetrics = analysisData?.ai_analysis?.financial_metrics || {};
+    if (nestedMetrics.roi !== undefined && !Number.isNaN(nestedMetrics.roi)) {
+      return nestedMetrics.roi;
+    }
+    return 0;
+  };
+
+  // Helper to get monthly cash flow from various locations
+  const getCashFlow = (analysis: Analysis): number => {
+    // Check top-level first (from updated API)
+    if ((analysis as any).monthly_cash_flow !== undefined && !Number.isNaN((analysis as any).monthly_cash_flow)) {
+      return (analysis as any).monthly_cash_flow;
+    }
+    // Check ai_analysis
+    const aiMetrics = (analysis as any).ai_analysis?.financial_metrics || {};
+    if (aiMetrics.monthly_cash_flow !== undefined && !Number.isNaN(aiMetrics.monthly_cash_flow)) {
+      return aiMetrics.monthly_cash_flow;
+    }
+    // Check nested in analysis_data
+    const analysisData = (analysis as any).analysis_data || {};
+    const nestedMetrics = analysisData?.ai_analysis?.financial_metrics || {};
+    if (nestedMetrics.monthly_cash_flow !== undefined && !Number.isNaN(nestedMetrics.monthly_cash_flow)) {
+      return nestedMetrics.monthly_cash_flow;
+    }
+    return 0;
   };
 
   return (
@@ -132,19 +205,15 @@ export default function ComparisonModal({ currentAnalysis, onClose }: Comparison
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div>
                       <p className="text-muted">Price</p>
-                      <p className="font-medium">{formatCurrency(analysis.purchase_price)}</p>
+                      <p className="font-medium">{formatCurrency(getPurchasePrice(analysis))}</p>
                     </div>
                     <div>
                       <p className="text-muted">ROI</p>
-                      <p className="font-medium">
-                        {analysis.ai_analysis?.financial_metrics?.roi?.toFixed(1) || '0'}%
-                      </p>
+                      <p className="font-medium">{formatROI(getROI(analysis))}</p>
                     </div>
                     <div>
                       <p className="text-muted">Cash Flow</p>
-                      <p className="font-medium">
-                        {formatCurrency(analysis.ai_analysis?.financial_metrics?.monthly_cash_flow || 0)}
-                      </p>
+                      <p className="font-medium">{formatCurrency(getCashFlow(analysis))}</p>
                     </div>
                   </div>
                 </div>
