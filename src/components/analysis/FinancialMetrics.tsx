@@ -14,6 +14,18 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
 
+  // Calculate proper cash required for flips (down payment + closing costs)
+  // Hard money lenders fund 100% of rehab via holdback - NOT from investor cash
+  const calculateFlipCashRequired = () => {
+    const loanAmount = purchasePrice - downPayment;
+    const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
+    const pointsCost = (loanAmount * points) / 100;
+    const otherClosingCosts = purchasePrice * 0.005; // 0.5% title/escrow
+    const totalClosingCosts = pointsCost + otherClosingCosts;
+    return downPayment + totalClosingCosts;
+  };
+  const flipCashRequired = isFlipStrategy ? calculateFlipCashRequired() : 0;
+
   // Inline rent editing state
   const [isEditingRent, setIsEditingRent] = useState(false);
   const [isEditingRentPerUnit, setIsEditingRentPerUnit] = useState(false);
@@ -427,33 +439,75 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
       {/* Key Metrics Grid */}
       {isFlipStrategy ? (
-        // Fix & Flip Metrics
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4">
-            <p className="text-sm text-muted mb-1">Net Profit</p>
-            <p className={`text-2xl font-bold ${(metrics as any).netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency((metrics as any).netProfit)}
-            </p>
+        <>
+          {/* Warning for thin ARV spread / losing deal */}
+          {(metrics as any).netProfit < 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <h4 className="font-semibold text-red-800">Unprofitable Deal - ARV Spread Too Thin</h4>
+                  <p className="text-sm text-red-700 mt-1">
+                    This property has a <strong>negative profit</strong> because the ARV ({formatCurrency((metrics as any).estimatedARV)})
+                    is not high enough relative to total costs. After accounting for purchase price, rehab, closing costs,
+                    holding costs, and selling costs, this deal would result in a <strong>{formatCurrency(Math.abs((metrics as any).netProfit))} loss</strong>.
+                  </p>
+                  <p className="text-sm text-red-600 mt-2 font-medium">
+                    For this deal to break even, ARV would need to be approximately {formatCurrency((metrics as any).estimatedARV - (metrics as any).netProfit + 10000)}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Marginal deal warning */}
+          {(metrics as any).netProfit >= 0 && (metrics as any).netProfit < 20000 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <h4 className="font-semibold text-yellow-800">Marginal Deal - Low Profit Margin</h4>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Profit of only {formatCurrency((metrics as any).netProfit)} leaves little room for unexpected costs.
+                    Consider whether the ARV estimate is conservative and if rehab scope could expand.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fix & Flip Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4">
+              <p className="text-sm text-muted mb-1">Net Profit</p>
+              <p className={`text-2xl font-bold ${(metrics as any).netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency((metrics as any).netProfit)}
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
+              <p className="text-sm text-muted mb-1">ROI</p>
+              <p className={`text-2xl font-bold ${(metrics as any).roi >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                {formatPercent((metrics as any).roi)}
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg p-4">
+              <p className="text-sm text-muted mb-1">Profit Margin</p>
+              <p className={`text-2xl font-bold ${(metrics as any).profitMargin >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                {formatPercent((metrics as any).profitMargin)}
+              </p>
+            </div>
+            <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg p-4">
+              <p className="text-sm text-muted mb-1">ARV</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {formatCurrency((metrics as any).estimatedARV)}
+              </p>
+            </div>
           </div>
-          <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
-            <p className="text-sm text-muted mb-1">ROI</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {formatPercent((metrics as any).roi)}
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-lg p-4">
-            <p className="text-sm text-muted mb-1">Profit Margin</p>
-            <p className="text-2xl font-bold text-purple-600">
-              {formatPercent((metrics as any).profitMargin)}
-            </p>
-          </div>
-          <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-lg p-4">
-            <p className="text-sm text-muted mb-1">ARV</p>
-            <p className="text-2xl font-bold text-orange-600">
-              {formatCurrency((metrics as any).estimatedARV)}
-            </p>
-          </div>
-        </div>
+        </>
       ) : (
         // Rental Property Metrics
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -727,7 +781,10 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
             <div className="bg-muted/20 rounded-lg p-3">
               <p className="text-sm text-muted mb-1">Cash Required</p>
               <p className="font-semibold text-primary">
-                {formatCurrency(downPayment)}
+                {formatCurrency(flipCashRequired)}
+              </p>
+              <p className="text-xs text-muted mt-1">
+                Down payment + closing costs
               </p>
             </div>
             <div className="bg-muted/20 rounded-lg p-3">
@@ -735,11 +792,17 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
               <p className="font-semibold text-primary">
                 {formatCurrency((metrics as any).totalInvestment)}
               </p>
+              <p className="text-xs text-muted mt-1">
+                All-in project cost
+              </p>
             </div>
             <div className="bg-muted/20 rounded-lg p-3">
               <p className="text-sm text-muted mb-1">Expected ROI</p>
               <p className={`font-semibold ${(metrics as any).roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatPercent((metrics as any).roi)}
+              </p>
+              <p className="text-xs text-muted mt-1">
+                Return on cash invested
               </p>
             </div>
           </div>
