@@ -201,11 +201,28 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
     const aiMetrics = analysis.ai_analysis?.financial_metrics || {};
     const nestedAiMetrics = analysisData?.ai_analysis?.financial_metrics || {};
 
-    // Helper to get numeric value, avoiding 0 fallthrough issues
+    // DEBUG: Log the full data structure to understand where values are
+    console.log('[InvestmentScore] FULL DEBUG:', {
+      hasAiAnalysis: !!analysis.ai_analysis,
+      hasAnalysisData: !!analysisData,
+      aiAnalysisKeys: analysis.ai_analysis ? Object.keys(analysis.ai_analysis) : [],
+      analysisDataKeys: analysisData ? Object.keys(analysisData) : [],
+      topLevelKeys: Object.keys(analysis).filter(k => !['ai_analysis', 'analysis_data', 'property_data'].includes(k))
+    });
+
+    // Helper to get numeric value, skipping 0/null/undefined to find actual values
+    // CRITICAL FIX: Skip 0 values to check all sources for real data
     const getNumericValue = (...sources: (number | undefined | null)[]): number => {
+      // First pass: look for non-zero values
+      for (const source of sources) {
+        if (typeof source === 'number' && !Number.isNaN(source) && source !== 0) {
+          return source;
+        }
+      }
+      // Second pass: return 0 if all sources are 0, undefined, or null
       for (const source of sources) {
         if (typeof source === 'number' && !Number.isNaN(source)) {
-          return source;
+          return source; // Return 0 if that's all we have
         }
       }
       return 0;
@@ -216,8 +233,20 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       (analysis as any).roi,
       aiMetrics?.roi,
       nestedAiMetrics?.roi,
-      analysisData?.roi
+      analysisData?.roi,
+      analysisData?.calculatedMetrics?.roi,
+      (analysis as any).calculated_metrics?.roi
     );
+
+    // Debug: Log where ROI was found
+    console.log('[InvestmentScore] ROI source check:', {
+      topLevel: (analysis as any).roi,
+      aiMetrics: aiMetrics?.roi,
+      nestedAiMetrics: nestedAiMetrics?.roi,
+      analysisDataRoi: analysisData?.roi,
+      calculatedMetrics: analysisData?.calculatedMetrics?.roi,
+      finalRoi: roi
+    });
 
     let score = 0; // Start at 0 and build up based on metrics
     const maxScore = 100;
@@ -237,8 +266,21 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
         nestedAiMetrics?.net_profit,
         nestedAiMetrics?.total_profit,
         analysisData?.profit,
-        analysisData?.netProfit
+        analysisData?.netProfit,
+        analysisData?.calculatedMetrics?.totalProfit,
+        (analysis as any).calculated_metrics?.totalProfit
       );
+
+      // Debug: Log where profit was found
+      console.log('[InvestmentScore] Profit source check:', {
+        topLevel: (analysis as any).profit,
+        aiMetricsNetProfit: aiMetrics?.net_profit,
+        aiMetricsTotalProfit: aiMetrics?.total_profit,
+        nestedNetProfit: nestedAiMetrics?.net_profit,
+        nestedTotalProfit: nestedAiMetrics?.total_profit,
+        analysisDataProfit: analysisData?.profit,
+        finalNetProfit: netProfit
+      });
 
       const purchasePrice = getNumericValue(
         analysis.purchase_price,
@@ -246,8 +288,32 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
         analysisData?.purchasePrice
       );
 
-      // Calculate profit margin if we have the data
-      const profitMargin = purchasePrice > 0 ? (netProfit / purchasePrice) * 100 : 0;
+      // Get ARV for proper profit margin calculation
+      const arv = getNumericValue(
+        (aiMetrics as any)?.arv,
+        (nestedAiMetrics as any)?.arv,
+        analysisData?.arv,
+        (analysis as any).arv,
+        (analysis.property_data as any)?.comparables?.value
+      );
+
+      // CRITICAL FIX: For flips, profit margin = netProfit / ARV (industry standard)
+      // First try to get saved profitMargin, then calculate from ARV, then fallback to purchase price
+      const profitMargin = getNumericValue(
+        (aiMetrics as any)?.profitMargin,
+        (aiMetrics as any)?.profit_margin,
+        (nestedAiMetrics as any)?.profitMargin,
+        (nestedAiMetrics as any)?.profit_margin,
+        analysisData?.profitMargin
+      ) || (arv > 0 ? (netProfit / arv) * 100 : (purchasePrice > 0 ? (netProfit / purchasePrice) * 100 : 0));
+
+      console.log('[InvestmentScore] Profit margin calculation:', {
+        savedProfitMargin: (aiMetrics as any)?.profitMargin || (aiMetrics as any)?.profit_margin,
+        calculatedFromARV: arv > 0 ? (netProfit / arv) * 100 : null,
+        arv,
+        netProfit,
+        finalProfitMargin: profitMargin
+      });
 
       const timeline = getNumericValue(
         (analysis as any).strategy_details?.timeline,
@@ -263,7 +329,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
         analysisData?.rehabCosts
       );
 
-      console.log('[InvestmentScore] Flip metrics:', { roi, netProfit, profitMargin, timeline, purchasePrice, rehabCosts });
+      console.log('[InvestmentScore] Flip metrics:', { roi, netProfit, profitMargin, arv, timeline, purchasePrice, rehabCosts });
 
       // ROI Component (50 points max) - PRIMARY METRIC FOR FLIPS
       // Excellent returns should be heavily rewarded
