@@ -171,9 +171,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // CRITICAL: Check for existing active subscription to prevent duplicates
+    if (user) {
+      const { data: existingSub } = await supabase
+        .from('subscriptions')
+        .select('tier, status, stripe_subscription_id')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .single()
+
+      if (existingSub?.stripe_subscription_id) {
+        console.log('[Checkout] User already has active subscription:', existingSub)
+
+        // Check if trying to subscribe to same tier
+        const normalizedExistingTier = existingSub.tier?.toLowerCase().replace('-', '_')
+        const normalizedNewTier = tierName?.toLowerCase().replace('-', '_')
+
+        if (normalizedExistingTier === normalizedNewTier) {
+          return NextResponse.json(
+            { error: 'You are already subscribed to this plan. Visit your account page to manage your subscription.' },
+            { status: 400 }
+          )
+        } else {
+          return NextResponse.json(
+            { error: 'You have an active subscription. Please cancel it first before switching plans, or use the billing portal to change plans.' },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
     // Create checkout session configuration
+    // CRITICAL: Use proper success URL with session_id for verification
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://dealsletter.com'
-    const successUrl = `${baseUrl}/analysis?success=true&tier=${tierName}`
+    const successUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}/pricing?canceled=true`
 
     console.log('[Checkout] Success URL:', successUrl)
