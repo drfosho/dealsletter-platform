@@ -221,18 +221,30 @@ export async function POST(request: NextRequest) {
       }
 
       case 'checkout.session.completed': {
+        console.log('[Webhook] 🎉 Processing checkout.session.completed');
         const session = event.data.object as Stripe.Checkout.Session;
-        
+
+        console.log('[Webhook] Session ID:', session.id);
+        console.log('[Webhook] Session metadata:', session.metadata);
+        console.log('[Webhook] Mode:', session.mode);
+
         if (session.mode === 'subscription') {
           // Get the subscription details
           const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string
           ) as Stripe.Subscription;
 
+          console.log('[Webhook] Subscription ID:', subscription.id);
+          console.log('[Webhook] Subscription metadata:', subscription.metadata);
+          console.log('[Webhook] Subscription status:', subscription.status);
+
           // Get or create customer
           const customerId = session.customer as string;
           const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
-          
+
+          console.log('[Webhook] Customer ID:', customerId);
+          console.log('[Webhook] Customer email:', customer.email);
+
           // Get user ID from metadata or email
           let userId = subscription.metadata.supabaseUserId || session.metadata?.supabaseUserId;
           
@@ -248,13 +260,17 @@ export async function POST(request: NextRequest) {
           }
 
           if (userId) {
+            console.log('[Webhook] User ID found:', userId);
+
             // Get the price ID and tier
             const priceId = subscription.items.data[0].price.id;
             const stripeTierName = subscription.metadata.tierName || 'STARTER';
-              const tierName = mapTierName(stripeTierName);
-            
+            const tierName = mapTierName(stripeTierName);
+
+            console.log('[Webhook] Tier name:', stripeTierName, '→', tierName);
+
             // Create or update subscription record
-            await supabase
+            const { error: subError } = await supabase
               .from('subscriptions')
               .upsert({
                 user_id: userId,
@@ -273,10 +289,28 @@ export async function POST(request: NextRequest) {
                 onConflict: 'user_id'
               });
 
+            if (subError) {
+              console.error('[Webhook] ❌ Subscription upsert error:', subError);
+            } else {
+              console.log('[Webhook] ✅ Subscription record created/updated');
+            }
+
+            // Also update profiles table with stripe_customer_id for billing portal access
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ stripe_customer_id: customerId })
+              .eq('id', userId);
+
+            if (profileError) {
+              console.log('[Webhook] Profile update warning:', profileError.message);
+            } else {
+              console.log('[Webhook] ✅ Profile updated with customer ID');
+            }
+
             // Initialize usage tracking for the new period
             const periodStart = new Date((subscription as any).current_period_start * 1000);
             const periodEnd = new Date((subscription as any).current_period_end * 1000);
-            
+
             await supabase
               .from('usage_tracking')
               .upsert({
@@ -287,6 +321,10 @@ export async function POST(request: NextRequest) {
               }, {
                 onConflict: 'user_id,period_start'
               });
+
+            console.log('[Webhook] ✅ Usage tracking initialized');
+          } else {
+            console.error('[Webhook] ❌ No user ID found - cannot update database');
           }
         }
         break;

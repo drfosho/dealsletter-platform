@@ -202,11 +202,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create checkout session configuration
+    // CRITICAL: Validate base URL is set
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!baseUrl) {
+      console.error('[Checkout] ❌ NEXT_PUBLIC_APP_URL is not set!')
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      )
+    }
+
     // CRITICAL: Use proper success URL with session_id for verification
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://dealsletter.com'
     const successUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}/pricing?canceled=true`
 
+    console.log('[Checkout] Base URL:', baseUrl)
     console.log('[Checkout] Success URL:', successUrl)
     console.log('[Checkout] Cancel URL:', cancelUrl)
 
@@ -229,6 +239,13 @@ export async function POST(request: NextRequest) {
           ...(user && { supabaseUserId: user.id }),
         },
       },
+      // Add session-level metadata for webhook access
+      metadata: {
+        tierName: tierName || 'unknown',
+        billingPeriod: billingPeriod || 'monthly',
+        ...(user && { supabaseUserId: user.id }),
+      },
+      allow_promotion_codes: true,
     }
 
     // Add customer or email to session
