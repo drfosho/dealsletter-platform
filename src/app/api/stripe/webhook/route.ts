@@ -178,19 +178,25 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Create subscription record with existing user ID
+          console.log('[Webhook] subscription.created - User ID found:', userId);
+
           const priceId = subscription.items.data[0].price.id;
-          const stripeTierName = subscription.metadata.tierName || 'STARTER';
-              const tierName = mapTierName(stripeTierName);
-          
-          await supabase
+          const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
+          const tierName = mapTierName(stripeTierName);
+
+          console.log('[Webhook] subscription.created - Tier:', stripeTierName, '→', tierName);
+          console.log('[Webhook] subscription.created - Price ID:', priceId);
+          console.log('[Webhook] subscription.created - Subscription ID:', subscription.id);
+
+          const { error: subError } = await supabase
             .from('subscriptions')
             .upsert({
               user_id: userId,
               stripe_customer_id: subscription.customer as string,
               stripe_subscription_id: subscription.id,
               stripe_price_id: priceId,
-              status: subscription.status as any,
-              tier: tierName as any,
+              status: subscription.status as string,
+              tier: tierName,
               current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
               current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end,
@@ -201,11 +207,29 @@ export async function POST(request: NextRequest) {
               onConflict: 'user_id'
             });
 
+          if (subError) {
+            console.error('[Webhook] subscription.created - ❌ DB Error:', subError);
+          } else {
+            console.log('[Webhook] subscription.created - ✅ Subscription record created');
+          }
+
+          // Update profiles table with stripe_customer_id
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ stripe_customer_id: subscription.customer as string })
+            .eq('id', userId);
+
+          if (profileError) {
+            console.log('[Webhook] subscription.created - Profile update warning:', profileError.message);
+          } else {
+            console.log('[Webhook] subscription.created - ✅ Profile updated with customer ID');
+          }
+
           // Initialize usage tracking
           const periodStart = new Date((subscription as any).current_period_start * 1000);
           const periodEnd = new Date((subscription as any).current_period_end * 1000);
-          
-          await supabase
+
+          const { error: usageError } = await supabase
             .from('usage_tracking')
             .upsert({
               user_id: userId,
@@ -216,6 +240,12 @@ export async function POST(request: NextRequest) {
             }, {
               onConflict: 'user_id,period_start'
             });
+
+          if (usageError) {
+            console.error('[Webhook] subscription.created - ❌ Usage tracking error:', usageError);
+          } else {
+            console.log('[Webhook] subscription.created - ✅ Usage tracking initialized');
+          }
         }
         break;
       }
