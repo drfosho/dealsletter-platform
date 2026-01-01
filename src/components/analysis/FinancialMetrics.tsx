@@ -212,9 +212,13 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         const interestRate = analysis.interest_rate ||
                             (analysis as any).analysis_data?.interest_rate ||
                             10.45;
-        const holdingMonths = (analysis.loan_term && analysis.loan_term < 2)
-          ? Math.round(analysis.loan_term * 12)
-          : (analysis as any).analysis_data?.strategy_details?.timeline || 6;
+        // CRITICAL: Use timeline from strategy_details, NOT loan_term
+        // loan_term = loan maturity (1-2 years for hard money)
+        // timeline = actual project duration for holding costs (3-12 months)
+        const holdingMonths = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                              parseInt((analysis as any).strategy_details?.timeline) ||
+                              (analysis as any).analysis_data?.flip_timeline_months ||
+                              6;
         const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
         const loanType = (analysis as any).analysis_data?.loan_terms?.loanType || 'hardMoney';
 
@@ -291,7 +295,11 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         netProfit,
         roi,
         profitMargin,
-        holdingPeriod: analysis.loan_term || 0.5,
+        // CRITICAL: Use timeline from strategy_details, NOT loan_term
+        holdingPeriod: (parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                       parseInt((analysis as any).strategy_details?.timeline) ||
+                       (analysis as any).analysis_data?.flip_timeline_months ||
+                       6) / 12, // Convert months to years for display
         // Set rental metrics to 0 for flips
         monthlyRent: 0,
         monthlyPayment: 0,

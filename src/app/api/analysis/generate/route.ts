@@ -1269,18 +1269,21 @@ Provide a house hack analysis focusing on the out-of-pocket housing cost reducti
     }
 
     // Get holding period from strategy details
-    let holdingTimeInMonths = 6; // Default to 6 months
+    // CRITICAL: Use strategyDetails.timeline for project duration, NOT loanTerm
+    // loanTerm = loan maturity (1-2 years for hard money)
+    // timeline = actual project duration for holding costs (3-12 months)
+    let holdingTimeInMonths = 6; // Default to 6 months for flips
     const rawTimeline = (request as any).strategyDetails?.timeline;
     if (rawTimeline) {
       const parsedTimeline = parseInt(rawTimeline);
       if (!isNaN(parsedTimeline) && parsedTimeline > 0 && parsedTimeline <= 18) {
         holdingTimeInMonths = parsedTimeline;
       }
-    } else if (request.loanTerms?.loanTerm) {
-      holdingTimeInMonths = Math.min(Math.round(request.loanTerms.loanTerm * 12), 12);
     }
+    // NOTE: Removed fallback to loanTerm - it's loan maturity, not project timeline!
+    // loanTerm of 1 year does NOT mean 12 month project - typical flip is 3-6 months
     holdingTimeInMonths = Math.min(holdingTimeInMonths, 18);
-    console.log('[Fix & Flip] Final holding time:', holdingTimeInMonths, 'months');
+    console.log('[Fix & Flip] Holding time from strategyDetails.timeline:', holdingTimeInMonths, 'months');
 
     // Prepare inputs for centralized calculator
     const flipInputs: FlipCalculationInputs = {

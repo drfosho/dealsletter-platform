@@ -90,6 +90,14 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
       const estimatedARV = (analysis.property_data as any)?.comparables?.value || purchasePrice * 1.3;
       const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
       
+      // CRITICAL: Use timeline from strategy_details, NOT loan_term
+      // loan_term = loan maturity (1-2 years for hard money)
+      // timeline = actual project duration for holding costs (3-12 months)
+      const timelineMonths = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                             parseInt((analysis as any).strategy_details?.timeline) ||
+                             (analysis as any).analysis_data?.flip_timeline_months ||
+                             6;
+
       return {
         purchasePrice,
         rehabCosts,
@@ -98,7 +106,7 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
         netProfit,
         roi,
         profitMargin,
-        holdingPeriod: analysis.loan_term || 0.5,
+        holdingPeriod: timelineMonths / 12, // Convert months to years for display
         monthlyRent: 0,
         monthlyPayment: 0,
         totalExpenses: 0,

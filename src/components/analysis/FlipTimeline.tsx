@@ -7,8 +7,13 @@ interface FlipTimelineProps {
 }
 
 export default function FlipTimeline({ analysis }: FlipTimelineProps) {
-  const timeline = (analysis as any).strategy_details?.timeline || 
-                  (analysis as any).strategyDetails?.timeline || 6;
+  // CRITICAL: Use timeline from strategy_details, NOT loan_term
+  // Check multiple locations where timeline could be stored
+  const timeline = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                   parseInt((analysis as any).strategy_details?.timeline) ||
+                   parseInt((analysis as any).strategyDetails?.timeline) ||
+                   (analysis as any).analysis_data?.flip_timeline_months ||
+                   6;
   
   // Get rehab costs from multiple possible locations
   const rehabCosts = analysis.rehab_costs || 

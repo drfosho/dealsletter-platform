@@ -49,10 +49,12 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
 
     if (strategy === 'flip') {
       // Fix & Flip risk assessment based on ROI and timeline
-      const timeline = (analysis as any).strategy_details?.timeline ||
-                      (analysis as any).strategyDetails?.timeline ||
-                      analysisData?.strategy_details?.timeline ||
-                      analysisData?.strategyDetails?.timeline || 6;
+      // CRITICAL: Use timeline from strategy_details, NOT loan_term
+      const timeline = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                       parseInt((analysis as any).strategy_details?.timeline) ||
+                       parseInt((analysis as any).strategyDetails?.timeline) ||
+                       (analysis as any).analysis_data?.flip_timeline_months ||
+                       analysisData?.flip_timeline_months || 6;
       if (roi < 15 || timeline > 12) return { level: 'High', color: 'text-red-600', bg: 'bg-red-100' };
       if (roi < 25 || timeline > 9) return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-100' };
       return { level: 'Low', color: 'text-green-600', bg: 'bg-green-100' };
@@ -419,8 +421,11 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
     switch (strategy) {
       case 'flip': {
         // Use timeline from strategy details if available
-        const timeline = (analysis as any).strategy_details?.timeline ||
-                        (analysis as any).strategyDetails?.timeline;
+        // CRITICAL: Check multiple locations where timeline could be stored
+        const timeline = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                         parseInt((analysis as any).strategy_details?.timeline) ||
+                         parseInt((analysis as any).strategyDetails?.timeline) ||
+                         (analysis as any).analysis_data?.flip_timeline_months;
         return timeline ? `${timeline} months` : '6-12 months';
       }
       case 'brrrr': return '12-18 months';
