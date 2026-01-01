@@ -111,12 +111,7 @@ export default function SubscriptionCard() {
               </div>
             )}
 
-            {subscription.analysisLimit === -1 && (
-              <div className="flex items-center space-x-2 text-green-600">
-                <Zap className="w-4 h-4" />
-                <span className="text-sm font-medium">Unlimited Analyses</span>
-              </div>
-            )}
+            {/* Note: All plans now have fixed limits (Free: 3, Pro: 30) */}
           </div>
         )}
 
@@ -184,8 +179,7 @@ export default function SubscriptionCard() {
             <Zap className="w-5 h-5 text-muted mx-auto mb-1" />
             <p className="text-xs text-muted">Remaining</p>
             <p className="text-lg font-semibold text-primary">
-              {subscription.analysisLimit === -1 ? '∞' : 
-               subscription.remainingAnalyses}
+              {subscription.remainingAnalyses}
             </p>
           </div>
         </div>

@@ -17,8 +17,8 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (user && session) {
-      console.log('User already logged in, redirecting to dashboard')
-      router.push('/dashboard')
+      console.log('User already logged in, redirecting to analysis')
+      router.push('/analysis')
     }
   }, [user, session, router])
 
@@ -45,7 +45,7 @@ export default function LoginPage() {
       } else if (session) {
         console.log('Login successful, session created, redirecting...')
         // Use window.location for a hard redirect to ensure the session is picked up
-        window.location.href = '/dashboard'
+        window.location.href = '/analysis'
       } else {
         console.error('No error but no session either')
         setError('An unexpected error occurred. Please try again.')

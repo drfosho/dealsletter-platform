@@ -1,19 +1,113 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { WizardData } from '@/app/analysis/new/page';
 import { calculateRehabCosts, RehabLevel } from '@/utils/rehab-calculator';
+import {
+  getSimpleFinancingDefaults,
+  calculateClosingCosts,
+  type InvestmentStrategy,
+  type ClosingCostBreakdown
+} from '@/utils/financing-defaults';
+import { calculateARVFromComparables, extractComparableProperties, formatARVDetails, type ARVCalculationResult } from '@/utils/arv-calculator';
+import {
+  parsePrice,
+  parsePercentage,
+  parseInteger,
+  calculateMonthlyMortgage
+} from '@/utils/financial-calculations';
+
+// Interest Rate Input Component - properly handles decimal input
+function InterestRateInput({
+  value,
+  onChange,
+  loanType
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  loanType: 'conventional' | 'hardMoney';
+}) {
+  // Use string state for controlled input to allow proper decimal typing
+  const [inputValue, setInputValue] = useState(value.toString());
+
+  // Sync with parent value when it changes externally
+  useEffect(() => {
+    // Only update if the parsed values are different (avoid overwriting during typing)
+    const currentParsed = parseFloat(inputValue) || 0;
+    if (Math.abs(currentParsed - value) > 0.001 && inputValue !== '') {
+      setInputValue(value.toString());
+    }
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+
+    // Allow empty, numbers, and ONE decimal point with up to 2 decimal places
+    if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+      setInputValue(val);
+
+      // Convert to number for parent component
+      const numValue = parseFloat(val);
+      if (!isNaN(numValue) && numValue >= 0 && numValue <= 25) {
+        onChange(numValue);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    // Format on blur - ensure proper display
+    const numValue = parseFloat(inputValue);
+    if (!isNaN(numValue)) {
+      // Keep as-is if it's a clean number, otherwise format
+      const formatted = numValue.toString();
+      setInputValue(formatted);
+      onChange(numValue);
+    } else {
+      // Reset to previous valid value or default
+      setInputValue(value.toString());
+    }
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-primary mb-2">
+        Interest Rate
+      </label>
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          inputMode="decimal"
+          value={inputValue}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          className="flex-1 px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+          placeholder="7.0"
+        />
+        <span className="text-muted">%</span>
+      </div>
+      <p className="text-xs text-muted mt-1">
+        {loanType === 'hardMoney'
+          ? 'Hard money: typically 10-14%'
+          : 'Conventional: typically 6.5-7.5%'
+        }
+      </p>
+    </div>
+  );
+}
 
 // Map UI renovation levels to RehabLevel enum
 function mapRenovationLevelToRehabLevel(renovationLevel?: string): RehabLevel {
   const mapping: Record<string, RehabLevel> = {
     'cosmetic': RehabLevel.LIGHT,
+    'light': RehabLevel.LIGHT,
     'moderate': RehabLevel.MEDIUM,
+    'medium': RehabLevel.MEDIUM,
     'extensive': RehabLevel.HEAVY,
-    'gut': RehabLevel.HEAVY,
+    'heavy': RehabLevel.HEAVY,
+    'gut': RehabLevel.GUT,
   };
-  
-  return mapping[renovationLevel || ''] || RehabLevel.MEDIUM;
+
+  return mapping[renovationLevel?.toLowerCase() || ''] || RehabLevel.MEDIUM;
 }
 
 interface Step3FinancialProps {
@@ -62,12 +156,13 @@ export default function Step3Financial({
   });
   
   // Use the financial data passed from previous steps
-  const initialFinancial = {
+  const initialFinancial = useMemo(() => ({
     ...data.financial
-  };
-  
+  }), [data.financial]);
+
   const [financial, setFinancial] = useState(initialFinancial);
   const [isCalculatingARV, setIsCalculatingARV] = useState(false);
+  const [arvCalculationResult, setArvCalculationResult] = useState<ARVCalculationResult | null>(null);
   
   // Sync financial state with props when they change
   useEffect(() => {
@@ -90,24 +185,60 @@ export default function Step3Financial({
   // Initialize units based on property type
   useEffect(() => {
     if (financial.units === undefined && data.propertyData) {
-      const propertyType = (data.propertyData as any)?.property?.propertyType || '';
+      const property = (data.propertyData as any)?.property;
+      const propertyType = property?.propertyType || '';
+      const bedrooms = property?.bedrooms || property?.beds || 0;
       let defaultUnits = 1;
-      
+
+      console.log('[Step3Financial] Units auto-detection:', {
+        propertyType,
+        bedrooms,
+        explicitUnits: property?.units,
+        numberOfUnits: property?.numberOfUnits
+      });
+
       // First check if units are explicitly provided in the data
-      if ((data.propertyData as any)?.property?.units) {
-        defaultUnits = (data.propertyData as any).property.units;
-      } 
+      if (property?.units && property.units > 0) {
+        defaultUnits = property.units;
+        console.log('[Step3Financial] Using explicit units:', defaultUnits);
+      } else if (property?.numberOfUnits && property.numberOfUnits > 0) {
+        defaultUnits = property.numberOfUnits;
+        console.log('[Step3Financial] Using numberOfUnits:', defaultUnits);
+      }
       // Infer from property type name
       else if (propertyType.toLowerCase().includes('duplex')) {
         defaultUnits = 2;
       } else if (propertyType.toLowerCase().includes('triplex')) {
         defaultUnits = 3;
-      } else if (propertyType.toLowerCase().includes('fourplex')) {
+      } else if (propertyType.toLowerCase().includes('fourplex') || propertyType.toLowerCase().includes('quadplex')) {
         defaultUnits = 4;
       }
-      
-      // Only set units if it's different from default
-      if (defaultUnits !== 1) {
+      // CRITICAL: For Multi-Family properties, use bedrooms as unit count if > 1
+      // This is common for apartment buildings where each bedroom = 1 unit
+      else if (propertyType.toLowerCase().includes('multi') ||
+               propertyType.toLowerCase().includes('apartment') ||
+               propertyType.toLowerCase().includes('multifamily')) {
+        // For multi-family, bedrooms often = units (1br apartments)
+        // But also check bathrooms as a sanity check
+        const bathrooms = property?.bathrooms || property?.baths || 0;
+        if (bedrooms > 1 && bedrooms === bathrooms) {
+          // If bedrooms = bathrooms, likely each unit has 1br/1ba
+          defaultUnits = bedrooms;
+          console.log('[Step3Financial] Multi-family: Using bedrooms as units (beds=baths):', defaultUnits);
+        } else if (bedrooms > 4) {
+          // For larger properties, bedrooms likely = units
+          defaultUnits = bedrooms;
+          console.log('[Step3Financial] Multi-family: Using bedrooms as units (5+ beds):', defaultUnits);
+        } else {
+          // Default to 2 for generic multi-family
+          defaultUnits = 2;
+          console.log('[Step3Financial] Multi-family: Defaulting to 2 units');
+        }
+      }
+
+      // Set units if we detected more than 1
+      if (defaultUnits > 1) {
+        console.log('[Step3Financial] Setting default units to:', defaultUnits);
         handleFieldChange('units', defaultUnits);
       }
     }
@@ -115,96 +246,177 @@ export default function Step3Financial({
   
   // Auto-populate fields only when property data changes and values are missing
   useEffect(() => {
-    // Skip if we already have purchase price from props
-    if (data.financial.purchasePrice > 0) {
-      console.log('[Step3Financial] Purchase price already set from props:', data.financial.purchasePrice);
-      return;
-    }
-    
     const newListing = (data.propertyData as any)?.listing;
     const newListingPrice = newListing?.price || newListing?.listPrice || newListing?.askingPrice || 0;
     const newComparablesValue = (data.propertyData as any)?.comparables?.value || 0;
-    const newRentEstimate = (data.propertyData as any)?.rental?.rentEstimate || 
+    const newRentEstimate = (data.propertyData as any)?.rental?.rentEstimate ||
                            (data.propertyData as any)?.rental?.rent || 0;
-    
+
     // Use listing price for on-market properties, otherwise use AVM
     const newEffectivePrice = newListingPrice > 0 ? newListingPrice : newComparablesValue;
-    
-    console.log('[Step3Financial] Auto-populate check (no price from props):', {
+
+    // Determine current purchase price (from props or already in financial state)
+    const currentPurchasePrice = data.financial.purchasePrice > 0
+      ? data.financial.purchasePrice
+      : financial.purchasePrice;
+
+    console.log('[Step3Financial] Auto-populate check:', {
       strategy: data.strategy,
       newListingPrice,
       newComparablesValue,
       newEffectivePrice,
       newRentEstimate,
+      propsFinancialPurchasePrice: data.financial.purchasePrice,
       currentPurchasePrice: financial.purchasePrice,
       currentMonthlyRent: financial.monthlyRent,
       currentARV: financial.arv,
       isOnMarket: newListingPrice > 0
     });
-    
+
     let updatedFinancial = { ...financial };
     let hasChanges = false;
-    
-    // Auto-populate purchase price only if not already set and we have a new price
-    if (newEffectivePrice > 0 && financial.purchasePrice === 0) {
+
+    // Auto-populate purchase price only if not already set anywhere
+    if (newEffectivePrice > 0 && currentPurchasePrice === 0) {
       console.log('[Step3Financial] Auto-populating purchase price:', newEffectivePrice);
       updatedFinancial.purchasePrice = newEffectivePrice;
       hasChanges = true;
+
+      // CRITICAL FIX: Auto-calculate closing costs immediately when purchase price is set
+      if (!updatedFinancial.closingCosts || updatedFinancial.closingCosts === 0) {
+        const closingCostPercent = data.strategy === 'flip' || data.strategy === 'brrrr' ? 0.03 : 0.025;
+        updatedFinancial.closingCosts = Math.round(newEffectivePrice * closingCostPercent);
+        console.log('[Step3Financial] Auto-calculating closing costs:', updatedFinancial.closingCosts);
+      }
+    } else if (data.financial.purchasePrice > 0 && financial.purchasePrice === 0) {
+      // Sync purchase price from props if not in local state
+      console.log('[Step3Financial] Syncing purchase price from props:', data.financial.purchasePrice);
+      updatedFinancial.purchasePrice = data.financial.purchasePrice;
+      hasChanges = true;
+
+      // CRITICAL FIX: Auto-calculate closing costs when syncing purchase price
+      if (!updatedFinancial.closingCosts || updatedFinancial.closingCosts === 0) {
+        const closingCostPercent = data.strategy === 'flip' || data.strategy === 'brrrr' ? 0.03 : 0.025;
+        updatedFinancial.closingCosts = Math.round(data.financial.purchasePrice * closingCostPercent);
+        console.log('[Step3Financial] Auto-calculating closing costs from synced price:', updatedFinancial.closingCosts);
+      }
     }
     
     // Auto-populate monthly rent if not already set and strategy requires it
-    if (['rental', 'brrrr', 'commercial'].includes(data.strategy) && 
-        newRentEstimate > 0 && 
+    if (['rental', 'brrrr', 'commercial'].includes(data.strategy) &&
+        newRentEstimate > 0 &&
         (!financial.monthlyRent || financial.monthlyRent === 0)) {
-      console.log('[Step3Financial] Auto-populating monthly rent:', newRentEstimate);
-      updatedFinancial.monthlyRent = newRentEstimate;
+
+      // CRITICAL FIX: For multi-family properties, RentCast may return per-unit rent
+      // We need to multiply by number of units to get total property rent
+      const property = (data.propertyData as any)?.property;
+      const propertyType = property?.propertyType || '';
+      const isMultiFamily = propertyType.toLowerCase().includes('multi') ||
+                           propertyType.toLowerCase().includes('apartment') ||
+                           propertyType.toLowerCase().includes('duplex') ||
+                           propertyType.toLowerCase().includes('triplex') ||
+                           propertyType.toLowerCase().includes('fourplex');
+
+      // Detect number of units for multi-family
+      let detectedUnits = 1;
+      if (isMultiFamily) {
+        const bedrooms = property?.bedrooms || property?.beds || 0;
+        const bathrooms = property?.bathrooms || property?.baths || 0;
+
+        if (property?.units && property.units > 0) {
+          detectedUnits = property.units;
+        } else if (property?.numberOfUnits && property.numberOfUnits > 0) {
+          detectedUnits = property.numberOfUnits;
+        } else if (propertyType.toLowerCase().includes('duplex')) {
+          detectedUnits = 2;
+        } else if (propertyType.toLowerCase().includes('triplex')) {
+          detectedUnits = 3;
+        } else if (propertyType.toLowerCase().includes('fourplex') || propertyType.toLowerCase().includes('quadplex')) {
+          detectedUnits = 4;
+        } else if (bedrooms > 1 && bedrooms === bathrooms) {
+          // For multi-family where beds = baths, each is likely a 1br/1ba unit
+          detectedUnits = bedrooms;
+        } else if (bedrooms > 4) {
+          detectedUnits = bedrooms;
+        }
+      }
+
+      // Calculate total rent - multiply by units for multi-family
+      // RentCast typically returns per-unit rent estimate for multi-family properties
+      const totalMonthlyRent = isMultiFamily && detectedUnits > 1
+        ? newRentEstimate * detectedUnits
+        : newRentEstimate;
+
+      console.log('[Step3Financial] Auto-populating monthly rent:', {
+        rentCastEstimate: newRentEstimate,
+        isMultiFamily,
+        detectedUnits,
+        totalMonthlyRent,
+        calculation: isMultiFamily && detectedUnits > 1
+          ? `${newRentEstimate} × ${detectedUnits} = ${totalMonthlyRent}`
+          : `${newRentEstimate} (single unit)`
+      });
+
+      updatedFinancial.monthlyRent = totalMonthlyRent;
+
+      // Also set rent per unit for multi-family
+      if (detectedUnits > 1) {
+        updatedFinancial.rentPerUnit = newRentEstimate;
+        updatedFinancial.units = detectedUnits;
+      }
+
       hasChanges = true;
     }
     
     // Auto-calculate ARV for strategies that need it
-    // Use AVM value from comparables as base ARV, adjusted for renovation level
+    // Use comparable sales data for more accurate ARV calculation
     const needsARV = ['flip', 'brrrr'].includes(data.strategy);
     const comparablesAVM = newComparablesValue || newEffectivePrice;
-    
+
     if (needsARV && comparablesAVM > 0 && (!financial.arv || financial.arv === 0)) {
       setIsCalculatingARV(true);
-      
-      // Simulate API call delay for better UX
+
+      // Calculate ARV using comparable sales data
       setTimeout(() => {
-        const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-        let arvMultiplier = 1.0;
-        
-        // For BRRRR, ARV should be close to market value after rehab
-        // For Flip, ARV includes profit margin
-        if (data.strategy === 'brrrr') {
-          // BRRRR uses more conservative ARV (market value after rehab)
-          if (renovationLevel === 'cosmetic') arvMultiplier = 1.05;
-          else if (renovationLevel === 'moderate') arvMultiplier = 1.10;
-          else if (renovationLevel === 'extensive') arvMultiplier = 1.15;
-          else if (renovationLevel === 'gut') arvMultiplier = 1.20;
-        } else if (data.strategy === 'flip') {
-          // Flip includes profit margin in ARV
-          if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
-          else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
-          else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
-          else if (renovationLevel === 'gut') arvMultiplier = 1.45;
-        }
-        
-        const calculatedARV = Math.round(comparablesAVM * arvMultiplier);
-        console.log('[Step3Financial] Auto-calculating ARV:', {
-          currentValue: comparablesAVM,
-          strategy: data.strategy,
+        const renovationLevel = (data.strategyDetails?.renovationLevel || 'moderate') as 'cosmetic' | 'moderate' | 'extensive' | 'gut';
+        const squareFootage = (data.propertyData as any)?.property?.squareFootage ||
+                              (data.propertyData as any)?.listing?.squareFootage || 0;
+
+        // Extract comparable properties
+        const comparables = extractComparableProperties(data.propertyData || {});
+
+        console.log('[Step3Financial] Calculating ARV with comparables:', {
+          comparablesCount: comparables.length,
           renovationLevel,
-          multiplier: arvMultiplier,
-          calculatedARV
+          squareFootage,
+          strategy: data.strategy,
+          avmValue: comparablesAVM
         });
-        
-        updatedFinancial.arv = calculatedARV;
-        setFinancial({ ...financial, arv: calculatedARV });
-        updateData({ financial: { ...financial, arv: calculatedARV } });
+
+        // Calculate ARV using the improved calculator
+        const arvResult = calculateARVFromComparables({
+          subjectPropertySqFt: squareFootage,
+          purchasePrice: newEffectivePrice,
+          comparables: comparables,
+          avmValue: comparablesAVM,
+          renovationLevel,
+          strategy: data.strategy as 'flip' | 'brrrr'
+        });
+
+        console.log('[Step3Financial] ARV calculation result:', {
+          arv: arvResult.arv,
+          method: arvResult.method,
+          confidence: arvResult.confidence,
+          details: arvResult.details
+        });
+
+        setArvCalculationResult(arvResult);
+        updatedFinancial.arv = arvResult.arv;
+        setFinancial({ ...financial, arv: arvResult.arv });
+        updateData({ financial: { ...financial, arv: arvResult.arv } });
         setIsCalculatingARV(false);
       }, 800);
-      
+
       return; // Don't apply other changes yet
     }
     
@@ -217,10 +429,49 @@ export default function Step3Financial({
   const [_errors, setErrors] = useState<Record<string, string>>({});
   const [currentRates, _setCurrentRates] = useState({ min: 6.5, avg: 7.0, max: 7.5 });
   const [loanType, setLoanType] = useState<'conventional' | 'hardMoney'>(
-    (data.strategy === 'flip' || data.strategy === 'brrrr') ? 
-      (data.strategyDetails?.initialFinancing === 'conventional' ? 'conventional' : 'hardMoney') : 
+    (data.strategy === 'flip' || data.strategy === 'brrrr') ?
+      (data.strategyDetails?.initialFinancing === 'conventional' ? 'conventional' : 'hardMoney') :
       'conventional'
   );
+  const previousLoanType = useRef(loanType);
+  const hasInitializedHardMoney = useRef(false);
+  const previousStrategy = useRef(data.strategy); // Track strategy changes for forced defaults
+
+  // Initialize hard money defaults on first mount for flip/brrrr strategies
+  useEffect(() => {
+    // Only run once on mount
+    if (hasInitializedHardMoney.current) return;
+
+    const isHardMoneyStrategy = (data.strategy === 'flip' || data.strategy === 'brrrr');
+    const shouldUseHardMoney = isHardMoneyStrategy && data.strategyDetails?.initialFinancing !== 'conventional';
+
+    if (shouldUseHardMoney) {
+      console.log('[Step3Financial] Initializing hard money defaults on mount:', {
+        strategy: data.strategy,
+        currentInterestRate: financial.interestRate,
+        hardMoneyRate: hardMoneyDefaults.interestRate,
+        currentLoanTerm: financial.loanTerm,
+        hardMoneyTerm: hardMoneyDefaults.loanTerm
+      });
+
+      // Calculate closing costs if not set (3% for hard money)
+      const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.03) : 0);
+
+      const newFinancial = {
+        ...financial,
+        interestRate: hardMoneyDefaults.interestRate,
+        loanTerm: hardMoneyDefaults.loanTerm,
+        downPaymentPercent: hardMoneyDefaults.downPaymentPercent,
+        points: hardMoneyDefaults.points,
+        closingCosts: closingCosts,
+        loanType: 'hardMoney' as const
+      };
+
+      setFinancial(newFinancial);
+      updateData({ financial: newFinancial });
+      hasInitializedHardMoney.current = true;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debug log on component mount
   useEffect(() => {
@@ -242,57 +493,178 @@ export default function Step3Financial({
     });
   }, [data, initialFinancial]);
 
-  // Quick select options for down payment
-  const downPaymentOptions = loanType === 'hardMoney' ? [
-    { value: 10, label: '10%', description: 'Hard money minimum' },
-    { value: 15, label: '15%', description: 'Standard hard money' },
-    { value: 20, label: '20%', description: 'Lower risk' },
-    { value: 25, label: '25%', description: 'Best terms' }
-  ] : [
-    { value: 5, label: '5%', description: 'FHA minimum' },
-    { value: 10, label: '10%', description: 'Low down payment' },
-    { value: 20, label: '20%', description: 'Conventional' },
-    { value: 25, label: '25%', description: 'Investment property' }
-  ];
+  // Quick select options for down payment (strategy-aware)
+  const downPaymentOptions = useMemo(() => {
+    if (loanType === 'hardMoney') {
+      return [
+        { value: 10, label: '10%', description: 'Hard money minimum' },
+        { value: 15, label: '15%', description: 'Standard hard money' },
+        { value: 20, label: '20%', description: 'Lower risk' },
+        { value: 25, label: '25%', description: 'Best terms' }
+      ];
+    }
 
-  // Hard money loan defaults
-  const hardMoneyDefaults = {
-    interestRate: 10.45,
-    loanTerm: 1, // 12 months
-    downPaymentPercent: 10,
-    points: 2.5, // 2-3 points average
-    rehabFunding: 100 // 100% rehab funding
-  };
+    // Strategy-specific options
+    if (data.strategy === 'house-hack') {
+      return [
+        { value: 3.5, label: '3.5%', description: 'FHA minimum' },
+        { value: 5, label: '5%', description: 'Low down' },
+        { value: 10, label: '10%', description: 'Conventional' },
+        { value: 20, label: '20%', description: 'No PMI' }
+      ];
+    }
+
+    // Investment property options
+    return [
+      { value: 20, label: '20%', description: 'Minimum investment' },
+      { value: 25, label: '25%', description: 'Standard investment' },
+      { value: 30, label: '30%', description: 'Better terms' },
+      { value: 35, label: '35%', description: 'Best terms' }
+    ];
+  }, [loanType, data.strategy]);
+
+  // Get strategy-based financing defaults
+  const strategyFinancingDefaults = useMemo(() => {
+    // Map strategy to InvestmentStrategy type
+    const strategyMap: Record<string, InvestmentStrategy> = {
+      'flip': 'flip',
+      'brrrr': 'brrrr',
+      'rental': 'rental',
+      'buy-and-hold': 'buy-and-hold',
+      'house-hack': 'house-hack',
+      'commercial': 'commercial',
+      'short-term-rental': 'short-term-rental'
+    };
+    const mappedStrategy = strategyMap[data.strategy] || 'rental';
+    return getSimpleFinancingDefaults(mappedStrategy);
+  }, [data.strategy]);
+
+  // Hard money loan defaults (now sourced from strategy defaults)
+  const hardMoneyDefaults = useMemo(() => {
+    if (data.strategy === 'flip' || data.strategy === 'brrrr') {
+      return {
+        interestRate: strategyFinancingDefaults.interestRate,
+        loanTerm: strategyFinancingDefaults.loanTermYears,
+        downPaymentPercent: strategyFinancingDefaults.downPaymentPercent,
+        points: strategyFinancingDefaults.lenderPointsPercent,
+        rehabFunding: 100, // 100% rehab funding
+        totalClosingCostsPercent: strategyFinancingDefaults.totalClosingCostsPercent
+      };
+    }
+    // Default hard money settings
+    return {
+      interestRate: 10.0,         // 10% minimum hard money rate
+      loanTerm: 1,
+      downPaymentPercent: 10,
+      points: 2.5,
+      rehabFunding: 100,
+      totalClosingCostsPercent: 3.0
+    };
+  }, [data.strategy, strategyFinancingDefaults]);
+
+  // Closing costs breakdown state
+  const [closingCostsBreakdown, setClosingCostsBreakdown] = useState<ClosingCostBreakdown | null>(null);
+
+  // Update closing costs breakdown when relevant values change
+  useEffect(() => {
+    if (financial.purchasePrice > 0) {
+      const points = financial.points || (loanType === 'hardMoney' ? hardMoneyDefaults.points : 1.0);
+      const otherCosts = loanType === 'hardMoney' ? 0.5 : 2.0;
+      const breakdown = calculateClosingCosts(financial.purchasePrice, points, otherCosts);
+      setClosingCostsBreakdown(breakdown);
+    }
+  }, [financial.purchasePrice, financial.points, loanType, hardMoneyDefaults.points]);
 
   // Determine if renovation costs should be shown
   const showRenovationCosts = ['flip', 'brrrr'].includes(data.strategy);
+
+  // Apply strategy-based financing defaults when strategy changes
+  // CRITICAL: This ensures proper defaults for each strategy type
+  // Defaults MUST apply when switching strategies, not just on first load
+  useEffect(() => {
+    // Check if strategy actually changed
+    const strategyChanged = data.strategy !== previousStrategy.current;
+    const needsInitialDefaults = !financial.interestRate || financial.interestRate === 0;
+
+    // Apply defaults if:
+    // 1. Strategy changed (user switched strategies)
+    // 2. OR we haven't initialized defaults yet
+    if (!strategyChanged && !needsInitialDefaults) return;
+
+    if (strategyChanged) {
+      console.log('[Step3Financial] STRATEGY CHANGED - Applying new defaults:', {
+        previousStrategy: previousStrategy.current,
+        newStrategy: data.strategy,
+        defaults: strategyFinancingDefaults
+      });
+      previousStrategy.current = data.strategy; // Update ref
+    } else {
+      console.log('[Step3Financial] Initial defaults application:', {
+        strategy: data.strategy,
+        defaults: strategyFinancingDefaults
+      });
+    }
+
+    const newFinancial = {
+      ...financial,
+      downPaymentPercent: strategyFinancingDefaults.downPaymentPercent,
+      interestRate: strategyFinancingDefaults.interestRate,
+      loanTerm: strategyFinancingDefaults.loanTermYears,
+      points: strategyFinancingDefaults.lenderPointsPercent,
+      loanType: strategyFinancingDefaults.financingType === 'hard-money' ? 'hardMoney' as const : 'conventional' as const
+    };
+
+    setFinancial(newFinancial);
+    updateData({ financial: newFinancial });
+
+    // Update loan type state to match
+    if (strategyFinancingDefaults.financingType === 'hard-money') {
+      setLoanType('hardMoney');
+    } else {
+      setLoanType('conventional');
+    }
+
+    // Log verification after short delay to confirm defaults applied
+    setTimeout(() => {
+      console.log('[Step3Financial] Defaults verification:', {
+        expectedDownPayment: strategyFinancingDefaults.downPaymentPercent,
+        expectedInterestRate: strategyFinancingDefaults.interestRate,
+        expectedLoanType: strategyFinancingDefaults.financingType
+      });
+    }, 100);
+  }, [data.strategy]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
+  // Track previous renovation level to detect changes
+  const previousRenovationLevel = useRef<string | undefined>(data.strategyDetails?.renovationLevel);
 
   // Calculate rehab costs based on property size and renovation level
   useEffect(() => {
     const propertyData = data.propertyData as any;
     const renovationLevelString = data.strategyDetails?.renovationLevel;
-    
+
     // Try multiple locations for square footage
-    const squareFootage = propertyData?.property?.squareFootage || 
+    const squareFootage = propertyData?.property?.squareFootage ||
                          propertyData?.listing?.squareFootage ||
                          propertyData?.comparables?.property?.squareFootage ||
                          (Array.isArray(propertyData?.property) ? propertyData.property[0]?.squareFootage : undefined) ||
                          0;
-    
+
     console.log('[Step3Financial] Renovation cost calculation check:', {
       showRenovationCosts,
       squareFootage,
       renovationLevelString,
       strategy: data.strategy,
       currentRenovationCosts: financial.renovationCosts,
+      previousLevel: previousRenovationLevel.current,
       propertyDataStructure: propertyData ? Object.keys(propertyData) : 'null'
     });
-    
+
     // Calculate and set rehab costs if we have the necessary data
     if (squareFootage > 0 && renovationLevelString && showRenovationCosts) {
       const mappedLevel = mapRenovationLevelToRehabLevel(renovationLevelString);
-      const { lowEstimate, highEstimate, averageEstimate } = calculateRehabCosts(squareFootage, mappedLevel);
-      
+      const { lowEstimate, highEstimate, averageEstimate, costPerSqft } = calculateRehabCosts(squareFootage, mappedLevel);
+
       console.log('[Step3Financial] Calculated renovation costs:', {
         squareFootage,
         renovationLevelString,
@@ -300,83 +672,99 @@ export default function Step3Financial({
         lowEstimate,
         highEstimate,
         averageEstimate,
-        perSqFt: averageEstimate / squareFootage
+        perSqFt: costPerSqft
       });
-      
-      // Only update if the value hasn't been set yet or is 0
-      if (!financial.renovationCosts || financial.renovationCosts === 0) {
+
+      // Check if renovation level changed
+      const levelChanged = renovationLevelString !== previousRenovationLevel.current;
+      previousRenovationLevel.current = renovationLevelString;
+
+      // Auto-populate if:
+      // 1. Value hasn't been set yet (0 or undefined)
+      // 2. Renovation level was just changed (recalculate)
+      const shouldAutoPopulate = !financial.renovationCosts ||
+                                 financial.renovationCosts === 0 ||
+                                 levelChanged;
+
+      if (shouldAutoPopulate) {
         const newFinancial = {
           ...financial,
           renovationCosts: averageEstimate
         };
         setFinancial(newFinancial);
         updateData({ financial: newFinancial });
-        console.log('[Step3Financial] Set renovation costs to:', averageEstimate);
+        console.log('[Step3Financial] Auto-populated renovation costs to:', averageEstimate,
+          levelChanged ? '(renovation level changed)' : '(initial population)');
       }
     }
   }, [data.propertyData, data.strategyDetails?.renovationLevel, showRenovationCosts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-populate ARV for flip strategy from RentCast AVM data
+  // Auto-populate ARV for flip/brrrr strategy using improved calculator
   useEffect(() => {
     // Add a small delay to ensure all data is properly loaded
     const timer = setTimeout(() => {
+      const needsARV = ['flip', 'brrrr'].includes(data.strategy);
+      if (!needsARV) return;
+
       console.log('[Step3Financial] ARV Auto-populate Check:', {
         strategy: data.strategy,
         currentARV: financial.arv,
-        propertyData: data.propertyData,
-        comparables: data.propertyData?.comparables,
+        hasPropertyData: !!data.propertyData,
         renovationLevel: data.strategyDetails?.renovationLevel
       });
 
-      if (data.strategy === 'flip') {
-        const comparables = data.propertyData?.comparables as any;
-        const currentValue = comparables?.value || 0;
-        
-        console.log('[Step3Financial] Current property value from comparables:', currentValue);
-        
-        if (currentValue > 0 && (!financial.arv || financial.arv === 0)) {
-          // For flip strategy, estimate ARV as current value + percentage based on renovation level
-          const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-          let arvMultiplier = 1.25; // Default 25% increase for moderate
-          
-          if (renovationLevel === 'cosmetic') {
-            arvMultiplier = 1.15; // 15% for cosmetic
-          } else if (renovationLevel === 'moderate') {
-            arvMultiplier = 1.25; // 25% for moderate
-          } else if (renovationLevel === 'extensive') {
-            arvMultiplier = 1.35; // 35% for extensive
-          } else if (renovationLevel === 'gut') {
-            arvMultiplier = 1.45; // 45% for gut rehab
-          }
-          
-          const estimatedARV = Math.round(currentValue * arvMultiplier);
-          
-          console.log('[Step3Financial] Calculated ARV:', {
-            currentValue,
-            renovationLevel,
-            arvMultiplier,
-            estimatedARV
-          });
-          
-          const newFinancial = {
-            ...financial,
-            arv: estimatedARV
-          };
-          setFinancial(newFinancial);
-          updateData({ financial: newFinancial });
-        }
+      const comparablesData = data.propertyData?.comparables as any;
+      const currentValue = comparablesData?.value || 0;
+      const squareFootage = (data.propertyData as any)?.property?.squareFootage ||
+                            (data.propertyData as any)?.listing?.squareFootage || 0;
+
+      if (currentValue > 0 && (!financial.arv || financial.arv === 0)) {
+        const renovationLevel = (data.strategyDetails?.renovationLevel || 'moderate') as 'cosmetic' | 'moderate' | 'extensive' | 'gut';
+        const comparables = extractComparableProperties(data.propertyData || {});
+
+        // Use improved ARV calculator
+        const arvResult = calculateARVFromComparables({
+          subjectPropertySqFt: squareFootage,
+          purchasePrice: currentValue,
+          comparables: comparables,
+          avmValue: currentValue,
+          renovationLevel,
+          strategy: data.strategy as 'flip' | 'brrrr'
+        });
+
+        console.log('[Step3Financial] ARV calculated:', {
+          arv: arvResult.arv,
+          method: arvResult.method,
+          confidence: arvResult.confidence
+        });
+
+        setArvCalculationResult(arvResult);
+        const newFinancial = {
+          ...financial,
+          arv: arvResult.arv
+        };
+        setFinancial(newFinancial);
+        updateData({ financial: newFinancial });
       }
-    }, 100); // 100ms delay to ensure data is loaded
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [data.strategy, data.propertyData?.comparables, data.strategyDetails?.renovationLevel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle loan type changes
+  // Handle loan type changes - only apply defaults when user explicitly changes loan type
   useEffect(() => {
+    // Skip if loan type hasn't actually changed
+    if (loanType === previousLoanType.current) {
+      return;
+    }
+
+    // Track that this is a user-initiated change
+    previousLoanType.current = loanType;
+
     if (loanType === 'hardMoney' && (data.strategy === 'flip' || data.strategy === 'brrrr')) {
       // Auto-calculate closing costs if not set (3% for hard money)
       const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.03) : 0);
-      
+
       const newFinancial = {
         ...financial,
         interestRate: hardMoneyDefaults.interestRate,
@@ -391,7 +779,7 @@ export default function Step3Financial({
     } else if (loanType === 'conventional') {
       // Auto-calculate closing costs if not set (2-3% for conventional)
       const closingCosts = financial.closingCosts || (financial.purchasePrice > 0 ? Math.round(financial.purchasePrice * 0.025) : 0);
-      
+
       const newFinancial = {
         ...financial,
         closingCosts: closingCosts,
@@ -424,8 +812,36 @@ export default function Step3Financial({
   }, [financial, setCanProceed, data.strategy]);
 
   const handleFieldChange = (field: keyof typeof financial, value: string | number) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
+    // Use centralized parsePrice for consistent parsing across all monetary fields
+    // This handles commas, dollar signs, and prevents parsing errors
+    let numValue: number;
+
+    // Percentage fields need different handling
+    const percentageFields = ['downPaymentPercent', 'interestRate', 'points'];
+    if (percentageFields.includes(field)) {
+      numValue = parsePercentage(value);
+    } else if (field === 'units' || field === 'loanTerm') {
+      numValue = parseInteger(value);
+    } else {
+      // Monetary fields: purchasePrice, monthlyRent, rentPerUnit, arv, etc.
+      numValue = parsePrice(value);
+    }
+
     const newFinancial = { ...financial, [field]: numValue };
+
+    // CRITICAL FIX: Auto-recalculate closing costs when purchase price changes
+    // Only if closing costs haven't been manually edited (closingCostsManuallySet flag)
+    if (field === 'purchasePrice' && numValue > 0 && !newFinancial.closingCostsManuallySet) {
+      const closingCostPercent = data.strategy === 'flip' || data.strategy === 'brrrr' ? 0.03 : 0.025;
+      newFinancial.closingCosts = Math.round(numValue * closingCostPercent);
+      console.log('[Step3Financial] Auto-recalculating closing costs on price change:', newFinancial.closingCosts);
+    }
+
+    // Mark closing costs as manually set if user edits them directly
+    if (field === 'closingCosts') {
+      newFinancial.closingCostsManuallySet = true;
+    }
+
     setFinancial(newFinancial);
     updateData({ financial: newFinancial });
 
@@ -439,52 +855,91 @@ export default function Step3Financial({
     return financial.purchasePrice - downPayment;
   };
 
-  const calculateMonthlyPayment = () => {
+  const calculateMonthlyPaymentLocal = () => {
     const principal = calculateLoanAmount();
     if (!principal || !financial.interestRate || !financial.loanTerm) return 0;
-    const monthlyRate = financial.interestRate / 100 / 12;
-    const numPayments = financial.loanTerm * 12;
-    
-    // Hard money loans are typically interest-only
-    if (loanType === 'hardMoney') {
-      // Interest-only payment calculation
-      const interestOnlyPayment = principal * monthlyRate;
-      
-      // Add monthly portion of rehab costs if 100% funded
-      if (showRenovationCosts && financial.renovationCosts) {
-        const rehabMonthlyRate = monthlyRate; // Same rate for rehab funding
-        const rehabInterest = financial.renovationCosts * rehabMonthlyRate;
-        return interestOnlyPayment + rehabInterest;
-      }
-      
-      return interestOnlyPayment;
+
+    // Use centralized mortgage calculation utility for consistency
+    const payment = calculateMonthlyMortgage(
+      principal,
+      financial.interestRate,
+      financial.loanTerm,
+      loanType,
+      loanType === 'hardMoney' && showRenovationCosts ? financial.renovationCosts : 0
+    );
+
+    // Sanity check - flag if payment seems unreasonable
+    const paymentPercent = (payment / principal) * 100;
+    if (paymentPercent > 5) {
+      console.error('[Step3Financial] MORTGAGE CALCULATION ERROR:', {
+        principal,
+        interestRate: financial.interestRate,
+        loanTerm: financial.loanTerm,
+        loanType,
+        payment,
+        paymentPercent: paymentPercent.toFixed(2) + '%',
+        expected: '0.5% - 3% of principal'
+      });
     }
-    
-    // Traditional amortized loan calculation for conventional loans
-    if (monthlyRate === 0) return principal / numPayments;
-    
-    const payment = principal * 
-      (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
-      (Math.pow(1 + monthlyRate, numPayments) - 1);
-    
+
     return payment;
   };
 
-  const calculateTotalInvestment = () => {
+  /**
+   * Calculate Cash Required (what investor brings to closing)
+   * For hard money: Down payment + Closing costs (rehab is lender funded)
+   * For conventional: Down payment + Closing costs + Rehab costs
+   */
+  const calculateCashRequired = () => {
     if (!financial.purchasePrice || financial.downPaymentPercent === undefined) return 0;
     const downPayment = (financial.purchasePrice * financial.downPaymentPercent) / 100;
     const loanAmount = financial.purchasePrice - downPayment;
     const pointsCost = loanType === 'hardMoney' ? (loanAmount * (financial.points || 0)) / 100 : 0;
-    
+
     // For hard money loans, renovation costs are 100% funded by lender
     // so they should NOT be included in the upfront investment
     const renovationContribution = loanType === 'hardMoney' ? 0 : (financial.renovationCosts || 0);
-    
-    return downPayment + 
-      (financial.closingCosts || 0) + 
-      renovationContribution + 
-      (financial.holdingCosts || 0) +
+
+    return downPayment +
+      (financial.closingCosts || 0) +
+      renovationContribution +
       pointsCost;
+  };
+
+  // Alias for backward compatibility
+  const calculateTotalInvestment = calculateCashRequired;
+
+  /**
+   * Calculate Total Project Cost (all-in cost for the project)
+   * This includes ALL costs regardless of financing source:
+   * Purchase + Rehab + Closing + Holding + Selling
+   */
+  const calculateTotalProjectCost = () => {
+    if (!financial.purchasePrice) return 0;
+    const rehabCosts = financial.renovationCosts || 0;
+    const closingCosts = financial.closingCosts || 0;
+    const holdingCosts = financial.holdingCosts || 0;
+    const arv = financial.arv || financial.purchasePrice;
+    const sellingCosts = arv * 0.08; // 8% selling costs
+
+    return financial.purchasePrice + rehabCosts + closingCosts + holdingCosts + sellingCosts;
+  };
+
+  /**
+   * Calculate estimated net profit
+   */
+  const calculateEstimatedProfit = () => {
+    if (!financial.arv) return 0;
+    return financial.arv - calculateTotalProjectCost();
+  };
+
+  /**
+   * Calculate ROI based on cash required (proper leverage calculation)
+   */
+  const calculateROI = () => {
+    const cashRequired = calculateCashRequired();
+    const profit = calculateEstimatedProfit();
+    return cashRequired > 0 ? (profit / cashRequired) * 100 : 0;
   };
 
   const handleContinue = () => {
@@ -583,26 +1038,43 @@ export default function Step3Financial({
           
           {/* Multi-family property detection */}
           {(() => {
-            const propertyType = (data.propertyData as any)?.property?.propertyType || '';
-            const isMultiFamily = propertyType.toLowerCase().includes('multi') || 
-                                  propertyType.toLowerCase().includes('duplex') || 
+            const property = (data.propertyData as any)?.property;
+            const propertyType = property?.propertyType || '';
+            const isMultiFamily = propertyType.toLowerCase().includes('multi') ||
+                                  propertyType.toLowerCase().includes('apartment') ||
+                                  propertyType.toLowerCase().includes('duplex') ||
                                   propertyType.toLowerCase().includes('triplex') ||
-                                  propertyType.toLowerCase().includes('fourplex');
-            
+                                  propertyType.toLowerCase().includes('fourplex') ||
+                                  propertyType.toLowerCase().includes('quadplex');
+
             // Extract unit count from property data or infer from property type
-            const extractUnits = () => {
+            const extractUnits = (): number => {
               // First check if units are explicitly provided in the data
-              if ((data.propertyData as any)?.property?.units) {
-                return (data.propertyData as any).property.units;
+              if (property?.units && property.units > 0) {
+                return property.units;
+              }
+              if (property?.numberOfUnits && property.numberOfUnits > 0) {
+                return property.numberOfUnits;
               }
               // Infer from property type name
               if (propertyType.toLowerCase().includes('duplex')) return 2;
               if (propertyType.toLowerCase().includes('triplex')) return 3;
-              if (propertyType.toLowerCase().includes('fourplex')) return 4;
+              if (propertyType.toLowerCase().includes('fourplex') || propertyType.toLowerCase().includes('quadplex')) return 4;
+              // For Multi-Family, use bedrooms as unit count
+              if (propertyType.toLowerCase().includes('multi') || propertyType.toLowerCase().includes('apartment')) {
+                const bedrooms = property?.bedrooms || property?.beds || 0;
+                const bathrooms = property?.bathrooms || property?.baths || 0;
+                // If bedrooms = bathrooms, likely each unit has 1br/1ba
+                if (bedrooms > 1 && bedrooms === bathrooms) return bedrooms;
+                // For larger properties (5+ beds), bedrooms likely = units
+                if (bedrooms > 4) return bedrooms;
+                // Default to 2 for generic multi-family
+                return 2;
+              }
               // Default to 1 for single family homes
               return 1;
             };
-            
+
             const unitCount = financial.units || extractUnits();
             
             if (isMultiFamily || unitCount > 1) {
@@ -613,18 +1085,27 @@ export default function Step3Financial({
                     <label className="block text-xs font-medium text-muted mb-1">Number of Units</label>
                     <input
                       type="number"
-                      value={financial.units ?? ''}
+                      value={financial.units || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        if (value === '') {
-                          handleFieldChange('units', 1);
-                        } else {
-                          const units = parseInt(value) || 1;
+                        // CRITICAL FIX: Allow empty value during editing
+                        // Parse and only update if valid number, otherwise let the field be empty
+                        const units = parseInt(value);
+                        if (!isNaN(units) && units > 0) {
                           handleFieldChange('units', units);
                           // Update total rent when units change
                           if (financial.rentPerUnit) {
                             handleFieldChange('monthlyRent', financial.rentPerUnit * units);
                           }
+                        } else if (value === '') {
+                          // Allow empty field - will be validated on blur
+                          handleFieldChange('units', 0);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        // Reset to 1 if left empty or zero on blur
+                        if (!e.target.value || financial.units === 0) {
+                          handleFieldChange('units', 1);
                         }
                       }}
                       className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -654,7 +1135,7 @@ export default function Step3Financial({
                     </div>
                   </div>
                   
-                  {/* Total Monthly Rent (Read-only) */}
+                  {/* Total Monthly Rent (Editable) */}
                   <div>
                     <label className="block text-xs font-medium text-muted mb-1">Total Monthly Rent</label>
                     <div className="relative">
@@ -671,10 +1152,15 @@ export default function Step3Financial({
                             handleFieldChange('rentPerUnit', totalRent / units);
                           }
                         }}
-                        className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-muted/20"
+                        className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder="Total monthly rent"
                       />
                     </div>
+                    {financial.rentPerUnit && unitCount > 1 && (
+                      <p className="text-xs text-muted mt-1">
+                        Calculated: {unitCount} units × ${financial.rentPerUnit.toLocaleString()} = ${(financial.rentPerUnit * unitCount).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -932,7 +1418,7 @@ export default function Step3Financial({
               )}
             </div>
             
-            {/* Always show ARV calculation section */}
+            {/* ARV calculation section with confidence indicator */}
             <div className="space-y-2 mt-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-muted">
@@ -943,59 +1429,90 @@ export default function Step3Financial({
                   onClick={(e) => {
                     e.preventDefault();
                     console.log('[Step3Financial] ARV Button clicked');
-                    
+
                     const purchasePrice = financial.purchasePrice || 0;
-                    
-                    if (purchasePrice === 0) {
+                    const avmValue = (data.propertyData as any)?.comparables?.value || purchasePrice;
+                    const squareFootage = (data.propertyData as any)?.property?.squareFootage || 0;
+
+                    if (purchasePrice === 0 && avmValue === 0) {
                       alert('Please enter a purchase price first.');
                       return;
                     }
-                    
-                    const renovationLevel = data.strategyDetails?.renovationLevel || 'moderate';
-                    let arvMultiplier = 1.25;
-                    
-                    if (renovationLevel === 'cosmetic') arvMultiplier = 1.15;
-                    else if (renovationLevel === 'moderate') arvMultiplier = 1.25;
-                    else if (renovationLevel === 'extensive') arvMultiplier = 1.35;
-                    else if (renovationLevel === 'gut') arvMultiplier = 1.45;
-                    
-                    const calculatedARV = Math.round(purchasePrice * arvMultiplier);
-                    console.log('[Step3Financial] Calculated ARV:', {
-                      purchasePrice,
-                      renovationLevel,
-                      multiplier: arvMultiplier,
-                      calculatedARV
-                    });
-                    
+
                     // Set calculating state
                     setIsCalculatingARV(true);
-                    
-                    // Simulate calculation delay for better UX
+
+                    // Use improved ARV calculator
                     setTimeout(() => {
-                      handleFieldChange('arv', calculatedARV);
+                      const renovationLevel = (data.strategyDetails?.renovationLevel || 'moderate') as 'cosmetic' | 'moderate' | 'extensive' | 'gut';
+                      const comparables = extractComparableProperties(data.propertyData || {});
+
+                      const arvResult = calculateARVFromComparables({
+                        subjectPropertySqFt: squareFootage,
+                        purchasePrice: purchasePrice || avmValue,
+                        comparables: comparables,
+                        avmValue: avmValue,
+                        renovationLevel,
+                        strategy: data.strategy as 'flip' | 'brrrr'
+                      });
+
+                      setArvCalculationResult(arvResult);
+                      handleFieldChange('arv', arvResult.arv);
                       setIsCalculatingARV(false);
                     }, 500);
                   }}
-                    className="text-xs text-primary hover:underline font-medium"
-                  >
-                    {financial.arv ? 'Recalculate' : 'Calculate'} ARV
-                  </button>
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  {financial.arv ? 'Recalculate' : 'Calculate'} ARV
+                </button>
+              </div>
+
+              {/* ARV calculation method and confidence display */}
+              {arvCalculationResult && financial.arv && (
+                <div className={`p-2 rounded-lg border ${
+                  arvCalculationResult.confidence === 'high' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' :
+                  arvCalculationResult.confidence === 'medium' ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800' :
+                  'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'
+                }`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-medium ${
+                      arvCalculationResult.confidence === 'high' ? 'text-green-700 dark:text-green-300' :
+                      arvCalculationResult.confidence === 'medium' ? 'text-yellow-700 dark:text-yellow-300' :
+                      'text-orange-700 dark:text-orange-300'
+                    }`}>
+                      {arvCalculationResult.method === 'comparables' ? '📊 Based on Comparable Sales' : '📈 Estimated from Market Data'}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      arvCalculationResult.confidence === 'high' ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200' :
+                      arvCalculationResult.confidence === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-800 dark:text-yellow-200' :
+                      'bg-orange-100 text-orange-700 dark:bg-orange-800 dark:text-orange-200'
+                    }`}>
+                      {arvCalculationResult.confidence} confidence
+                    </span>
+                  </div>
+                  <p className={`text-xs ${
+                    arvCalculationResult.confidence === 'high' ? 'text-green-600 dark:text-green-400' :
+                    arvCalculationResult.confidence === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-orange-600 dark:text-orange-400'
+                  }`}>
+                    {formatARVDetails(arvCalculationResult)}
+                  </p>
                 </div>
-                {(() => {
-                  const renovationLevel = data.strategyDetails?.renovationLevel;
-                  
-                  let expectedIncrease = '20%';
-                  if (renovationLevel === 'cosmetic') expectedIncrease = '15%';
-                  else if (renovationLevel === 'moderate') expectedIncrease = '25%';
-                  else if (renovationLevel === 'extensive') expectedIncrease = '35%';
-                  else if (renovationLevel === 'gut') expectedIncrease = '45%';
-                  
-                  return (
-                    <p className="text-xs text-muted">
-                      Based on {renovationLevel || 'moderate'} renovation, expecting {expectedIncrease} value increase
-                    </p>
-                  );
-                })()}
+              )}
+
+              {!arvCalculationResult && (
+                <p className="text-xs text-muted">
+                  {(() => {
+                    const renovationLevel = data.strategyDetails?.renovationLevel;
+                    let expectedIncrease = '15-18%';
+                    if (renovationLevel === 'cosmetic') expectedIncrease = '8-12%';
+                    else if (renovationLevel === 'moderate') expectedIncrease = '12-18%';
+                    else if (renovationLevel === 'extensive') expectedIncrease = '18-25%';
+                    else if (renovationLevel === 'gut') expectedIncrease = '25-32%';
+                    return `Based on ${renovationLevel || 'moderate'} renovation, expecting ${expectedIncrease} value increase`;
+                  })()}
+                </p>
+              )}
             </div>
             {financial.arv && financial.purchasePrice && financial.arv <= financial.purchasePrice && (
               <p className="text-xs text-red-500 mt-1">
@@ -1029,18 +1546,27 @@ export default function Step3Financial({
           </label>
           <input
             type="number"
-            value={financial.units ?? ''}
+            value={financial.units || ''}
             onChange={(e) => {
               const value = e.target.value;
-              if (value === '') {
-                handleFieldChange('units', 1);
-              } else {
-                const units = parseInt(value) || 1;
+              // CRITICAL FIX: Allow empty value during editing
+              // Parse and only update if valid number, otherwise let the field be empty
+              const units = parseInt(value);
+              if (!isNaN(units) && units > 0) {
                 handleFieldChange('units', units);
                 // Update rent calculations if we have rent per unit
                 if (financial.rentPerUnit) {
                   handleFieldChange('monthlyRent', financial.rentPerUnit * units);
                 }
+              } else if (value === '') {
+                // Allow empty field - will be validated on blur
+                handleFieldChange('units', 0);
+              }
+            }}
+            onBlur={(e) => {
+              // Reset to 1 if left empty or zero on blur
+              if (!e.target.value || financial.units === 0) {
+                handleFieldChange('units', 1);
               }
             }}
             className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1093,23 +1619,11 @@ export default function Step3Financial({
 
         {/* Interest Rate & Loan Term */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-primary mb-2">
-              Interest Rate
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={financial.interestRate}
-                onChange={(e) => handleFieldChange('interestRate', e.target.value)}
-                className="flex-1 px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                min="0"
-                max="20"
-                step="0.125"
-              />
-              <span className="text-muted">%</span>
-            </div>
-          </div>
+          <InterestRateInput
+            value={financial.interestRate ?? 7.0}
+            onChange={(value) => handleFieldChange('interestRate', value)}
+            loanType={loanType}
+          />
           <div>
             <label className="block text-sm font-medium text-primary mb-2">
               Loan Term
@@ -1167,6 +1681,7 @@ export default function Step3Financial({
             <div>
               <label className="block text-sm font-medium text-primary mb-2">
                 Closing Costs
+                <span className="text-xs text-muted font-normal ml-2">(includes lender points)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
@@ -1178,14 +1693,36 @@ export default function Step3Financial({
                   placeholder="0"
                 />
               </div>
+              {/* Closing Costs Breakdown */}
+              {closingCostsBreakdown && financial.purchasePrice > 0 && (
+                <div className="mt-2 p-2 bg-muted/10 rounded-lg border border-border/50 text-xs">
+                  <div className="flex justify-between text-muted">
+                    <span>Lender Points ({closingCostsBreakdown.lenderPointsPercent}%):</span>
+                    <span>${closingCostsBreakdown.lenderPoints.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-muted">
+                    <span>Title/Escrow/Other ({closingCostsBreakdown.otherClosingCostsPercent}%):</span>
+                    <span>${closingCostsBreakdown.otherClosingCosts.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between font-medium text-primary border-t border-border/30 pt-1 mt-1">
+                    <span>Total ({closingCostsBreakdown.totalClosingCostsPercent}%):</span>
+                    <span>${closingCostsBreakdown.totalClosingCosts.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-muted mt-1">
-                Typical: {loanType === 'hardMoney' ? '3%' : '2-3%'} of purchase price
+                Typical: {loanType === 'hardMoney' ? '3%' : '3%'} of purchase price
                 {financial.purchasePrice > 0 && !financial.closingCosts && (
                   <button
                     type="button"
                     onClick={() => {
-                      const rate = loanType === 'hardMoney' ? 0.03 : 0.025;
-                      handleFieldChange('closingCosts', Math.round(financial.purchasePrice * rate));
+                      // Use closing costs breakdown which properly combines points + other fees
+                      if (closingCostsBreakdown) {
+                        handleFieldChange('closingCosts', closingCostsBreakdown.totalClosingCosts);
+                      } else {
+                        // Fallback to 3% if breakdown not available
+                        handleFieldChange('closingCosts', Math.round(financial.purchasePrice * 0.03));
+                      }
                     }}
                     className="ml-2 text-primary hover:underline"
                   >
@@ -1234,31 +1771,51 @@ export default function Step3Financial({
                     return null;
                   })()}
                 </div>
-                <p className="text-xs text-muted mt-1">
-                  {(() => {
-                    const propertyData = data.propertyData as any;
-                    const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
-                    const squareFootage = propertyData?.property?.squareFootage;
-                    
-                    if (squareFootage && renovationLevel) {
-                      const { lowEstimate, highEstimate } = calculateRehabCosts(squareFootage, renovationLevel);
-                      const levelLabel = renovationLevel === RehabLevel.LIGHT ? 'Light' :
-                                       renovationLevel === RehabLevel.MEDIUM ? 'Medium' :
-                                       renovationLevel === RehabLevel.HEAVY ? 'Heavy' : 'None';
-                      
-                      const baseText = `${levelLabel} renovation estimate: $${lowEstimate.toLocaleString()} - $${highEstimate.toLocaleString()} (${squareFootage?.toLocaleString() || 'N/A'} sqft)`;
-                      
-                      if (loanType === 'hardMoney') {
-                        return `${baseText} - 100% funded by lender`;
-                      }
-                      return baseText;
-                    }
-                    
-                    return loanType === 'hardMoney' 
-                      ? '100% funded by hard money lender (no upfront cost)' 
-                      : `Based on ${data.strategyDetails?.renovationLevel || 'moderate'} renovation`;
-                  })()}
-                </p>
+                {/* Detailed Rehab Estimate Display */}
+                {(() => {
+                  const propertyData = data.propertyData as any;
+                  const renovationLevel = mapRenovationLevelToRehabLevel(data.strategyDetails?.renovationLevel);
+                  const squareFootage = propertyData?.property?.squareFootage ||
+                                       propertyData?.listing?.squareFootage || 0;
+
+                  if (squareFootage > 0 && renovationLevel !== RehabLevel.NONE) {
+                    const { lowEstimate, highEstimate, averageEstimate, costPerSqft } = calculateRehabCosts(squareFootage, renovationLevel);
+                    const levelLabel = renovationLevel === RehabLevel.LIGHT ? 'Cosmetic' :
+                                     renovationLevel === RehabLevel.MEDIUM ? 'Moderate' :
+                                     renovationLevel === RehabLevel.HEAVY ? 'Heavy' :
+                                     renovationLevel === RehabLevel.GUT ? 'Gut' : 'None';
+
+                    return (
+                      <div className="mt-2 p-2 bg-accent/5 rounded-lg border border-accent/20 text-xs">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-primary">{levelLabel} Renovation</span>
+                          <span className="text-accent">${costPerSqft}/sqft</span>
+                        </div>
+                        <div className="flex justify-between text-muted">
+                          <span>Estimated ({squareFootage.toLocaleString()} sqft):</span>
+                          <span className="font-medium">${averageEstimate.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-muted">
+                          <span>Typical range:</span>
+                          <span>${lowEstimate.toLocaleString()} - ${highEstimate.toLocaleString()}</span>
+                        </div>
+                        {loanType === 'hardMoney' && (
+                          <div className="mt-1 pt-1 border-t border-accent/20 text-green-600">
+                            100% funded by lender (no upfront cost)
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <p className="text-xs text-muted mt-1">
+                      {loanType === 'hardMoney'
+                        ? '100% funded by hard money lender (no upfront cost)'
+                        : `Based on ${data.strategyDetails?.renovationLevel || 'moderate'} renovation`}
+                    </p>
+                  );
+                })()}
               </div>
             )}
           </div>
@@ -1277,7 +1834,7 @@ export default function Step3Financial({
             <div>
               <p className="text-muted mb-1">Monthly Payment</p>
               <p className="text-xl font-bold text-primary">
-                ${Math.round(calculateMonthlyPayment())?.toLocaleString() || '0'}
+                ${Math.round(calculateMonthlyPaymentLocal())?.toLocaleString() || '0'}
               </p>
               {loanType === 'hardMoney' && (
                 <p className="text-xs text-muted mt-1">Interest-only</p>
@@ -1292,25 +1849,30 @@ export default function Step3Financial({
                   ${financial.renovationCosts?.toLocaleString() || '0'}
                 </p>
                 {loanType === 'hardMoney' && (
-                  <p className="text-xs text-green-600 mt-1">Lender funded</p>
+                  <p className="text-xs text-green-600 mt-1">Lender funded via holdback</p>
                 )}
               </div>
             ) : (
               <div>
-                <p className="text-muted mb-1">Total Investment</p>
+                <p className="text-muted mb-1">Total Project Cost</p>
                 <p className="text-xl font-bold text-primary">
-                  ${calculateTotalInvestment()?.toLocaleString() || '0'}
+                  ${calculateTotalProjectCost()?.toLocaleString() || '0'}
                 </p>
+                <p className="text-xs text-muted mt-1">All-in cost</p>
               </div>
             )}
             <div>
-              <p className="text-muted mb-1">Cash to Close</p>
+              <p className="text-muted mb-1">Cash Required</p>
               <p className="text-xl font-bold text-accent">
-                ${calculateTotalInvestment()?.toLocaleString() || '0'}
+                ${calculateCashRequired()?.toLocaleString() || '0'}
               </p>
-              {loanType === 'hardMoney' && (
+              {loanType === 'hardMoney' ? (
                 <p className="text-xs text-muted mt-1">
-                  Down + closing + points
+                  What you bring to closing
+                </p>
+              ) : (
+                <p className="text-xs text-muted mt-1">
+                  Down + closing + rehab
                 </p>
               )}
             </div>
@@ -1319,7 +1881,7 @@ export default function Step3Financial({
             <>
               <div className="mt-4 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                 <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">
-                  ✓ Cash to Close Breakdown
+                  ✓ Cash Required (What You Bring)
                 </p>
                 <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
                   <div className="flex justify-between">
@@ -1331,31 +1893,69 @@ export default function Step3Financial({
                     <span className="font-medium">${(financial.closingCosts || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Points ({financial.points || hardMoneyDefaults.points}%):</span>
-                    <span className="font-medium">${Math.round((calculateLoanAmount() * (financial.points || hardMoneyDefaults.points)) / 100).toLocaleString()}</span>
+                    <span>Rehab:</span>
+                    <span className="font-medium text-green-500">$0 (lender funded)</span>
                   </div>
                   <div className="flex justify-between border-t border-green-500/20 pt-1 font-semibold">
                     <span>Total Cash Required:</span>
-                    <span>${calculateTotalInvestment().toLocaleString()}</span>
+                    <span>${calculateCashRequired().toLocaleString()}</span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                 <p className="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">
-                  💰 Lender Funded (No Upfront Cost)
+                  💰 Financing Structure
                 </p>
                 <div className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
                   <div className="flex justify-between">
-                    <span>Renovation Budget:</span>
+                    <span>Acquisition Loan:</span>
+                    <span className="font-medium">${calculateLoanAmount().toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rehab Holdback:</span>
                     <span className="font-medium">${(financial.renovationCosts || 0).toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between border-t border-blue-500/20 pt-1 font-semibold">
+                    <span>Total Loan Amount:</span>
+                    <span>${(calculateLoanAmount() + (financial.renovationCosts || 0)).toLocaleString()}</span>
+                  </div>
                   <div className="text-xs mt-2 italic">
-                    * Drawn as needed during construction
+                    * Rehab drawn as needed during construction
                   </div>
                 </div>
               </div>
-              
+
+              {showRenovationCosts && financial.arv && financial.arv > 0 && (
+                <div className="mt-3 p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
+                  <p className="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">
+                    📊 Projected Returns
+                  </p>
+                  <div className="space-y-1 text-sm text-purple-700 dark:text-purple-300">
+                    <div className="flex justify-between">
+                      <span>ARV:</span>
+                      <span className="font-medium">${financial.arv.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total Project Cost:</span>
+                      <span className="font-medium">${calculateTotalProjectCost().toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-purple-500/20 pt-1">
+                      <span>Est. Net Profit:</span>
+                      <span className={`font-semibold ${calculateEstimatedProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ${calculateEstimatedProfit().toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Est. ROI:</span>
+                      <span className={calculateROI() >= 0 ? 'text-green-600' : 'text-red-600'}>
+                        {calculateROI().toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-3 p-3 bg-yellow-500/10 rounded-lg">
                 <p className="text-sm text-yellow-700 dark:text-yellow-300">
                   <strong>Hard Money Loan Features:</strong>

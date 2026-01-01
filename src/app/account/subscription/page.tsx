@@ -45,19 +45,19 @@ export default function SubscriptionPage() {
           </div>
           
           <nav className="flex items-center gap-4">
-            <Link 
-              href="/dashboard" 
+            <Link
+              href="/analysis"
               className="flex items-center gap-2 text-sm text-muted hover:text-primary transition-colors"
             >
               <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Dashboard</span>
+              <span className="hidden sm:inline">Analysis</span>
             </Link>
-            <Link 
-              href="/profile" 
+            <Link
+              href="/account"
               className="flex items-center gap-2 text-sm text-muted hover:text-primary transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Profile</span>
+              <span className="hidden sm:inline">Back to Account</span>
             </Link>
           </nav>
         </div>

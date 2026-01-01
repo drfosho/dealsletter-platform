@@ -81,31 +81,33 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
-  const isDashboard = request.nextUrl.pathname.startsWith('/dashboard')
+  const isAnalysisPage = request.nextUrl.pathname.startsWith('/analysis')
   const isAdminUsers = request.nextUrl.pathname.startsWith('/auth/admin-users')
   const isHomePage = request.nextUrl.pathname === '/'
   const isApiRoute = request.nextUrl.pathname.startsWith('/api')
-  const isTestApiPage = request.nextUrl.pathname === '/test-api'
-  const isPropertySearchDemo = request.nextUrl.pathname === '/property-search-demo'
   const isContactPage = request.nextUrl.pathname === '/contact'
   const isFAQPage = request.nextUrl.pathname === '/faq'
   const isBlogPage = request.nextUrl.pathname.startsWith('/blog')
   const isPricingPage = request.nextUrl.pathname === '/pricing'
+  const isAccountPage = request.nextUrl.pathname.startsWith('/account')
 
   // Allow API routes to pass through without authentication
   if (isApiRoute) {
     return supabaseResponse
   }
 
+  // Public routes that don't require authentication
+  const isPublicRoute = isHomePage || isAuthPage || isContactPage || isFAQPage || isBlogPage || isPricingPage
+
   // If user is not logged in and trying to access protected routes
-  if (!user && !isAuthPage && !isHomePage && !isContactPage && !isFAQPage && !isBlogPage && !isPricingPage && !isTestApiPage && !isPropertySearchDemo) {
+  if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
-  // If user is logged in but email not verified and trying to access dashboard
-  if (user && !user.email_confirmed_at && isDashboard) {
+  // If user is logged in but email not verified and trying to access analysis or account
+  if (user && !user.email_confirmed_at && (isAnalysisPage || isAccountPage)) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/verify-email'
     url.searchParams.set('email', user.email!)
@@ -115,13 +117,13 @@ export async function middleware(request: NextRequest) {
   // If user is logged in and verified, redirect away from auth pages (except admin and verification pages)
   if (user && user.email_confirmed_at && isAuthPage && !isAdminUsers) {
     // Don't redirect from verification pages if user just verified
-    if (request.nextUrl.pathname.includes('verify-success') || 
+    if (request.nextUrl.pathname.includes('verify-success') ||
         request.nextUrl.pathname.includes('callback') ||
         request.nextUrl.pathname.includes('verify-email')) {
       return supabaseResponse
     }
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/analysis'
     return NextResponse.redirect(url)
   }
 

@@ -210,7 +210,7 @@ export default function TestSubscriptionFlow() {
         body: JSON.stringify({
           type: 'payment.succeeded',
           userId: user.id,
-          amount: 4900 // $49 for pro tier
+          amount: 2900 // $29 for pro tier
         })
       });
 

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Navigation from '@/components/Navigation';
-import DashboardSidebar from '@/components/DashboardSidebar';
 import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import FinancialMetrics from '@/components/analysis/FinancialMetrics';
 import EditableFinancialMetrics from '@/components/analysis/EditableFinancialMetrics';
@@ -118,52 +118,43 @@ export default function AnalysisResultsPage({ params }: PageParams) {
 
   if (loading) {
     return (
-      <>
-        <Navigation variant="dashboard" />
-        <div className="flex">
-          <DashboardSidebar />
-          <main className="flex-1 p-4 lg:p-6">
-            <LoadingSpinner text="Loading analysis..." />
-          </main>
-        </div>
-      </>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <LoadingSpinner text="Loading analysis..." />
+        </main>
+      </div>
     );
   }
 
   if (error || !analysis) {
     return (
-      <>
-        <Navigation variant="dashboard" />
-        <div className="flex">
-          <DashboardSidebar />
-          <main className="flex-1 p-4 lg:p-6">
-            <div className="max-w-4xl mx-auto text-center py-12">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h2 className="text-xl font-semibold text-primary mb-2">{error || 'Analysis not found'}</h2>
-              <button
-                onClick={() => router.push('/analysis')}
-                className="mt-4 px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90"
-              >
-                Back to Analysis Dashboard
-              </button>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <div className="max-w-4xl mx-auto text-center py-12">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </div>
-          </main>
-        </div>
-      </>
+            <h2 className="text-xl font-semibold text-primary mb-2">{error || 'Analysis not found'}</h2>
+            <button
+              onClick={() => router.push('/analysis')}
+              className="mt-4 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-md shadow-purple-500/20"
+            >
+              Back to Analysis
+            </button>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <>
-      <Navigation variant="dashboard" />
-      <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-6 py-8">
             {/* Header */}
             <div className="mb-6">
               <button
@@ -209,16 +200,20 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                     
                     if (imageUrl) {
                       return (
-                        <img 
-                          src={imageUrl} 
-                          alt={analysis.address}
-                          className="w-24 h-24 object-cover rounded-lg shadow-md"
-                          onError={(e) => {
-                            const img = e.target as HTMLImageElement;
-                            // Use the no image placeholder
-                            img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"%3E%3Crect width="200" height="200" fill="%23f3f4f6"/%3E%3Cg transform="translate(100,100)"%3E%3Crect x="-40" y="-40" width="80" height="80" fill="none" stroke="%239ca3af" stroke-width="2" rx="4"/%3E%3Cpath d="M-30,-20 L-10,0 L0,-10 L10,0 L30,-20" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="-10" cy="-15" r="4" fill="none" stroke="%239ca3af" stroke-width="2"/%3E%3Ctext y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="%236b7280"%3ENo Image%3C/text%3E%3C/g%3E%3C/svg%3E';
-                          }}
-                        />
+                        <div className="relative w-24 h-24">
+                          <Image
+                            src={imageUrl}
+                            alt={analysis.address}
+                            fill
+                            className="object-cover rounded-lg shadow-md"
+                            sizes="96px"
+                            onError={(e) => {
+                              const img = e.target as HTMLImageElement;
+                              // Use the no image placeholder
+                              img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"%3E%3Crect width="200" height="200" fill="%23f3f4f6"/%3E%3Cg transform="translate(100,100)"%3E%3Crect x="-40" y="-40" width="80" height="80" fill="none" stroke="%239ca3af" stroke-width="2" rx="4"/%3E%3Cpath d="M-30,-20 L-10,0 L0,-10 L10,0 L30,-20" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="-10" cy="-15" r="4" fill="none" stroke="%239ca3af" stroke-width="2"/%3E%3Ctext y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="%236b7280"%3ENo Image%3C/text%3E%3C/g%3E%3C/svg%3E';
+                            }}
+                          />
+                        </div>
                       );
                     }
                     
@@ -278,7 +273,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                   {!isEditMode && analysis.strategy !== 'flip' && (
                     <button
                       onClick={() => setIsEditMode(true)}
-                      className="absolute top-6 right-6 z-50 px-3 py-1 text-sm bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center gap-1 transition-all"
+                      className="absolute top-6 right-6 z-50 px-3 py-1 text-sm bg-purple-500/10 text-purple-600 rounded-lg hover:bg-purple-500/20 flex items-center gap-1 transition-all"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -289,18 +284,21 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                   {isEditMode && (
                     <button
                       onClick={() => setIsEditMode(false)}
-                      className="absolute top-6 right-6 z-10 px-3 py-1 text-sm bg-primary text-secondary rounded-lg hover:bg-primary/90"
+                      className="absolute top-6 right-6 z-10 px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                     >
                       Done
                     </button>
                   )}
                   {isEditMode ? (
-                    <EditableFinancialMetrics 
-                      analysis={analysis} 
+                    <EditableFinancialMetrics
+                      analysis={analysis}
                       onUpdate={(updatedAnalysis) => setAnalysis(updatedAnalysis)}
                     />
                   ) : (
-                    <FinancialMetrics analysis={analysis} />
+                    <FinancialMetrics
+                      analysis={analysis}
+                      onUpdate={(updatedAnalysis) => setAnalysis(updatedAnalysis)}
+                    />
                   )}
                 </div>
                 {/* Show strategy-specific components */}
@@ -314,7 +312,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
               {/* Right Column - Property Details & Strategy */}
               <div className="space-y-6">
                 {/* Property Details */}
-                <div className="bg-card rounded-xl border border-border p-6">
+                <div className="bg-card rounded-xl border border-border/60 hover:border-purple-500/40 transition-colors p-6">
                   <h3 className="text-lg font-semibold text-primary mb-4">Property Details</h3>
                   <div className="space-y-3">
                     {(() => {
@@ -382,7 +380,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 </div>
 
                 {/* Investment Parameters */}
-                <div className="bg-card rounded-xl border border-border p-6">
+                <div className="bg-card rounded-xl border border-border/60 hover:border-purple-500/40 transition-colors p-6">
                   <h3 className="text-lg font-semibold text-primary mb-4">Investment Parameters</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between">
@@ -421,7 +419,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 </div>
 
                 {/* Market Data */}
-                <div className="bg-card rounded-xl border border-border p-6">
+                <div className="bg-card rounded-xl border border-border/60 hover:border-blue-500/40 transition-colors p-6">
                   <h3 className="text-lg font-semibold text-primary mb-4">Market Analysis</h3>
                   {(() => {
                     const marketData = analysis.market_data || (analysis.property_data as any)?.market;
@@ -512,9 +510,6 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 </div>
               )}
             </div>
-          </div>
-        </main>
-      </div>
 
       {/* Share Modal */}
       {showShareModal && (
@@ -531,6 +526,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
           onClose={() => setShowComparisonModal(false)}
         />
       )}
-    </>
+      </main>
+    </div>
   );
 }

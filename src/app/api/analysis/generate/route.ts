@@ -8,6 +8,16 @@ import { logError } from '@/utils/error-utils';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAdminConfig } from '@/lib/admin-config';
 import { calculateBRRRR, type BRRRRInputs } from '@/utils/brrrr-calculator';
+import {
+  parsePrice,
+  parsePercentage,
+  parseInteger,
+  calculateMonthlyMortgage as calculateMortgagePayment,
+  calculateMonthlyRevenue,
+  validateInputs as validateFinancialInputs,
+  calculateFlipReturns,
+  type FlipCalculationInputs
+} from '@/utils/financial-calculations';
 
 console.log('[Generate] Module loaded, Anthropic SDK available:', !!Anthropic);
 
@@ -175,12 +185,57 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate strategy
-    const validStrategies = ['rental', 'flip', 'brrrr', 'commercial'];
+    const validStrategies = ['rental', 'flip', 'brrrr', 'commercial', 'house-hack'];
     if (!validStrategies.includes(body.strategy)) {
       return NextResponse.json(
         { error: 'Invalid investment strategy' },
         { status: 400 }
       );
+    }
+
+    // Validate financial inputs using centralized validation
+    const parsedPurchasePrice = parsePrice(body.purchasePrice);
+    const parsedDownPayment = parsePrice(body.downPayment);
+    const parsedInterestRate = parsePercentage(body.loanTerms?.interestRate);
+    const parsedLoanTerm = parseInteger(body.loanTerms?.loanTerm);
+    const parsedUnits = parseInteger(body.units) || 1;
+    const parsedMonthlyRent = parsePrice(body.monthlyRent);
+
+    console.log('\n--- STEP 4.1: Financial Input Validation ---');
+    console.log('Parsed financial values:', {
+      purchasePrice: parsedPurchasePrice,
+      downPayment: parsedDownPayment,
+      downPaymentPercent: parsedPurchasePrice > 0 ? (parsedDownPayment / parsedPurchasePrice * 100).toFixed(1) + '%' : 'N/A',
+      interestRate: parsedInterestRate,
+      loanTerm: parsedLoanTerm,
+      units: parsedUnits,
+      monthlyRent: parsedMonthlyRent
+    });
+
+    // Validate using centralized utility
+    const validationResult = validateFinancialInputs({
+      purchasePrice: parsedPurchasePrice,
+      downPaymentPercent: parsedPurchasePrice > 0 ? (parsedDownPayment / parsedPurchasePrice) * 100 : 20,
+      interestRate: parsedInterestRate || 7,
+      loanTermYears: parsedLoanTerm || 30,
+      numberOfUnits: parsedUnits,
+      rentPerUnit: parsedMonthlyRent / Math.max(1, parsedUnits)
+    });
+
+    if (!validationResult.isValid) {
+      console.error('[Validation] Input validation failed:', validationResult.errors);
+      return NextResponse.json(
+        {
+          error: 'Invalid financial inputs',
+          details: validationResult.errors.join('; '),
+          warnings: validationResult.warnings
+        },
+        { status: 400 }
+      );
+    }
+
+    if (validationResult.warnings.length > 0) {
+      console.warn('[Validation] Input warnings:', validationResult.warnings);
     }
 
     console.log('\n--- STEP 5: Property Cache Check ---');
@@ -273,7 +328,8 @@ export async function POST(request: NextRequest) {
       'rental': 'Buy & Hold',
       'flip': 'Fix & Flip',
       'brrrr': 'BRRRR',
-      'commercial': 'Buy & Hold'
+      'commercial': 'Buy & Hold',
+      'house-hack': 'House Hack'
     };
     
     // Ensure property data is properly structured
@@ -484,26 +540,57 @@ export async function POST(request: NextRequest) {
       
       // Update analyzed_properties table with AI results
       console.log('Updating analyzed_properties table with AI analysis...');
-      
+
+      // CRITICAL: Extract ROI and profit from AI analysis with explicit logging
+      const extractedRoi = aiAnalysis.financial_metrics?.roi;
+      const extractedProfit = aiAnalysis.financial_metrics?.total_profit ||
+                              aiAnalysis.financial_metrics?.net_profit;
+
+      console.log('[Generate] Extracted financial metrics for DB update:', {
+        roi: extractedRoi,
+        roiType: typeof extractedRoi,
+        profit: extractedProfit,
+        profitType: typeof extractedProfit,
+        fullFinancialMetrics: aiAnalysis.financial_metrics
+      });
+
+      // Use the extracted values, defaulting to 0 only if undefined/null
+      const finalRoi = extractedRoi ?? 0;
+      const finalProfit = extractedProfit ?? 0;
+
+      console.log('[Generate] Final values for DB:', { finalRoi, finalProfit });
+
       const updateData = {
         analysis_data: {
           ...analysisRecord.analysis_data,
           ai_analysis: aiAnalysis,
           status: 'completed'
         },
-        roi: aiAnalysis.financial_metrics?.roi || 0,
-        profit: aiAnalysis.financial_metrics?.total_profit || 0
+        roi: finalRoi,
+        profit: finalProfit
       };
-      
-      console.log('Update data:', JSON.stringify(updateData, null, 2));
-      
-      const { error: updateError } = await supabase
+
+      console.log('[Generate] Update data ROI/Profit:', {
+        roi: updateData.roi,
+        profit: updateData.profit
+      });
+
+      const { data: updateResult, error: updateError } = await supabase
         .from('analyzed_properties')
         .update(updateData)
-        .eq('id', analysisRecord.id);
+        .eq('id', analysisRecord.id)
+        .select('roi, profit')
+        .single();
 
       if (updateError) {
-        console.error('Failed to update analysis:', updateError);
+        console.error('[Generate] CRITICAL: Failed to update analysis:', updateError);
+        console.error('[Generate] Update error details:', {
+          code: updateError.code,
+          message: updateError.message,
+          details: updateError.details
+        });
+      } else {
+        console.log('[Generate] Successfully updated analysis. Verified values:', updateResult);
       }
 
       // Update user's usage count (including admin tracking)
@@ -611,84 +698,148 @@ async function generatePropertyAnalysis(propertyData: PropertyData, request: Pro
     
     // Generate analysis using Claude
     console.log('[generatePropertyAnalysis] Calling Claude API...');
+    // Optimized system prompt - strategy-specific to reduce token usage
+    // QUALITY GUIDELINES for all prompts:
+    // - Professional, grammatically correct English
+    // - No markdown formatting (**, *, --, #, etc.)
+    // - Clear, complete sentences
+    // - Concise and actionable recommendations
+    const systemPrompts: Record<string, string> = {
+      brrrr: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT numerical values from "BRRRR STRATEGY ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Be concise but thorough
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the investment opportunity and capital recovery potential]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why]
+
+BRRRR PHASES:
+Phase 1 (Acquisition): Cash required: [exact value]
+Phase 2 (Refinance): Cash returned: [exact value]
+Phase 3 (Rental): Monthly cash flow: [exact value]
+
+KEY METRICS: Total Investment: [value], Cash Returned: [value], Cash Remaining: [value], Monthly Cash Flow: [value], Cash-on-Cash Return: [value], 5-Year ROI: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation of main risk factors including ARV accuracy, refinance approval likelihood, and potential delays]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items]
+
+Use provided values verbatim. Write naturally without any formatting symbols.`,
+
+      flip: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "FIX & FLIP ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Focus on flip-specific metrics only (no rental metrics)
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the profit potential and project scope]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on the numbers]
+
+KEY METRICS: ARV: [value], Total Investment: [value], Net Profit: [value], ROI: [value]%, Profit Margin: [value]%, Holding Period: [value] months
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation covering renovation risk, market timing, and ARV accuracy]
+
+MARKET ANALYSIS: [2-3 sentences on buyer demand and comparable sales in the area]
+
+RENOVATION STRATEGY: [2-3 sentences on the recommended approach based on renovation level]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+EXIT STRATEGY: [Recommended exit approach and 2-3 action items]
+
+Write naturally in plain text. No markdown, bullets, or special formatting.`,
+
+      rental: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "CASH FLOW ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Be concise but thorough
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the rental investment opportunity]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on cash flow and returns]
+
+KEY METRICS: Monthly Cash Flow: [value], Cap Rate: [value]%, Cash-on-Cash Return: [value]%, Total ROI: [value]%, Annual NOI: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation of main risk factors]
+
+MARKET ANALYSIS: [2-3 sentences on rental market conditions and demand]
+
+INVESTMENT STRATEGY: [2-3 sentences on recommended approach for this property]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items]
+
+Format monetary values with commas. Write in plain text without any formatting symbols.`,
+
+      'house-hack': `You are a professional real estate investment analyst providing clear, actionable analysis for house hacking strategies.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "HOUSE HACK ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Focus on the key house hack benefit: reducing or eliminating housing costs
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the house hack opportunity and potential to live rent-free or at reduced cost]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on out-of-pocket housing cost]
+
+KEY METRICS: Out-of-Pocket Housing Cost: [value]/month, Monthly Savings vs Renting: [value], Housing ROI: [value]%, Annual Savings: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation focusing on landlord responsibilities and vacancy risk]
+
+HOUSE HACK BENEFITS:
+- Monthly savings compared to renting
+- Equity building potential
+- Tax benefits from rental portion
+- FHA financing advantages
+
+LANDLORD CONSIDERATIONS: [2-3 sentences on living with tenants and property management]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items for getting started with house hacking]
+
+Format monetary values with commas. Write in plain text without any formatting symbols.`
+    };
+
     const claudeRequest = {
-      model: "claude-3-5-sonnet-20241022", // Using latest available model
-      max_tokens: 4000,
+      model: "claude-sonnet-4-5-20250929", // Using Claude Sonnet 4.5
+      max_tokens: 3000, // Reduced from 4000 - analysis doesn't need that much
       temperature: 0.3,
-      system: `You are a professional real estate investment analyst. Create a comprehensive, data-driven analysis for real estate investments. 
-
-IMPORTANT: Tailor your analysis based on the investment strategy:
-
-FOR BRRRR PROPERTIES:
-
-CRITICAL INSTRUCTION: You MUST use the EXACT numerical values provided in the "BRRRR STRATEGY ANALYSIS" section below. DO NOT recalculate or modify these numbers. Copy them EXACTLY as shown.
-
-Your analysis must include:
-1. Executive Summary (Focus on capital recovery through refinance)
-2. Investment Recommendation (Buy/Hold/Pass based on refinance potential)
-3. BRRRR Phase Analysis - USE EXACT VALUES FROM CALCULATIONS:
-   - Phase 1: Total Cash Invested (COPY EXACT VALUE from calculations)
-   - Phase 2: Cash Returned at Refinance (COPY EXACT VALUE)
-   - Phase 3: Monthly Cash Flow post-refinance (COPY EXACT VALUE)
-4. Key Financial Metrics (COPY these EXACTLY from BRRRR STRATEGY ANALYSIS section):
-   - Total Cash Invested: USE EXACT VALUE PROVIDED
-   - Cash Returned at Refinance: USE EXACT VALUE PROVIDED
-   - Cash Left in Deal: USE EXACT VALUE PROVIDED
-   - Monthly Cash Flow: USE EXACT VALUE PROVIDED
-   - Cash-on-Cash Return: USE EXACT VALUE PROVIDED (may be "INFINITE")
-   - 5-Year Total ROI: USE EXACT VALUE PROVIDED
-5. Risk Assessment (Focus on ARV accuracy, refinance approval, renovation delays)
-6. Market Analysis (Focus on rental demand and refinance appraisal risk)
-7. Capital Recovery Strategy (State the EXACT capital recovery percentage provided)
-8. 3-5 Key Opportunities
-9. 3-5 Key Risks
-10. Action Items
-
-MANDATORY: When you see values in the BRRRR STRATEGY ANALYSIS section like:
-- "Total Cash Invested: $50,000" → You MUST write "$50,000" not any other number
-- "Cash-on-Cash Return: INFINITE" → You MUST write "INFINITE" not calculate a percentage
-- "Monthly Cash Flow: $500" → You MUST write "$500" not any other amount
-
-DO NOT perform your own calculations. USE THE PROVIDED VALUES EXACTLY.
-
-FOR FIX & FLIP PROPERTIES:
-Your analysis must include:
-1. Executive Summary (2-3 sentences focusing on profit potential)
-2. Investment Recommendation (Buy/Hold/Pass based on profit margin and ARV)
-3. Key Financial Metrics (Use EXACT values from FIX & FLIP ANALYSIS):
-   - After Repair Value (ARV): $[exact value]
-   - Total Investment: $[exact value]
-   - Net Profit: $[exact value]
-   - Return on Investment: [exact percentage]%
-   - Profit Margin: [exact percentage]%
-   - Holding Period: [months]
-4. Risk Assessment (Focus on renovation risks, market timing, ARV accuracy)
-5. Market Analysis (Focus on buyer demand and comparable sales)
-6. Renovation Strategy (Timeline, scope, budget allocation)
-7. 3-5 Key Opportunities (Value-add improvements, market trends)
-8. 3-5 Key Risks (Construction delays, budget overruns, market shifts)
-9. Exit Strategy & Action Items
-
-DO NOT include monthly cash flow, cap rates, or rental income for fix & flip properties.
-
-FOR RENTAL PROPERTIES:
-Your analysis must include:
-1. Executive Summary (2-3 sentences)
-2. Investment Recommendation (Buy/Hold/Pass with clear reasoning)
-3. Key Financial Metrics (Use EXACT values from CASH FLOW ANALYSIS):
-   - Monthly Cash Flow: $[exact value]
-   - Cap Rate: [exact percentage]%
-   - Cash-on-Cash Return: [exact percentage]%
-   - Total ROI: [calculated percentage]%
-   - Annual NOI: $[calculated value]
-4. Risk Assessment (Low/Medium/High with specific factors)
-5. Market Analysis
-6. Investment Strategy Details
-7. 3-5 Key Opportunities
-8. 3-5 Key Risks
-9. Action Items for investor
-
-CRITICAL: Use the EXACT numerical values from the calculations section provided. Do not recalculate or modify these numbers. Format monetary values with proper commas but preserve the exact amounts.`,
+      system: systemPrompts[request.strategy] || systemPrompts.rental,
       messages: [
         {
           role: "user" as const,
@@ -734,29 +885,25 @@ CRITICAL: Use the EXACT numerical values from the calculations section provided.
 }
 
 function calculateMonthlyPayment(principal: number, interestRate: number, termYears: number, loanType?: string, rehabAmount?: number): number {
-  const monthlyRate = interestRate / 100 / 12;
-  const numPayments = termYears * 12;
-  
-  // Hard money loans are typically interest-only
-  if (loanType === 'hardMoney') {
-    // Interest-only payment on purchase loan
-    let payment = principal * monthlyRate;
-    
-    // Add interest on rehab loan if applicable
-    if (rehabAmount && rehabAmount > 0) {
-      payment += rehabAmount * monthlyRate;
-    }
-    
-    return Math.round(payment);
-  }
-  
-  // Traditional amortized loan calculation
-  if (monthlyRate === 0) return principal / numPayments;
-  
-  const payment = principal * 
-    (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
-    (Math.pow(1 + monthlyRate, numPayments) - 1);
-  
+  // Use centralized calculation utility for consistency
+  const payment = calculateMortgagePayment(
+    parsePrice(principal),
+    parsePercentage(interestRate),
+    parseInteger(termYears) || 30,
+    loanType as 'conventional' | 'hardMoney',
+    parsePrice(rehabAmount || 0)
+  );
+
+  // Log calculation for debugging
+  console.log('[calculateMonthlyPayment] Calculation:', {
+    principal: parsePrice(principal),
+    interestRate: parsePercentage(interestRate),
+    termYears: parseInteger(termYears),
+    loanType,
+    rehabAmount: parsePrice(rehabAmount || 0),
+    payment: Math.round(payment)
+  });
+
   return Math.round(payment);
 }
 
@@ -856,7 +1003,7 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
       purchasePrice: effectivePurchasePrice,
       downPaymentPercent: (downPayment / effectivePurchasePrice) * 100,
       renovationCosts: request.rehabCosts || 0,
-      monthlyRent: request.monthlyRent || (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0,
+      monthlyRent: request.monthlyRent || (rentalEstimate as any)?.rentEstimate || 0,
       arv: request.arv || (comparables as any)?.value || undefined,
       refinanceLTV: parseInt((request as any).strategyDetails?.exitStrategy || '75') / 100,
       initialLoanType: request.loanTerms?.loanType as 'hardMoney' | 'conventional' | undefined,
@@ -955,12 +1102,157 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       capitalRecoveryPercent: phase2.capitalRecoveryPercent,
       isInfiniteReturn: summary.isInfiniteReturn
     };
-    
+
+  } else if (request.strategy === 'house-hack') {
+    // House Hack specific calculations
+    console.log('[House Hack] Starting house hack calculations');
+
+    // Get number of units (must be at least 2 for house hack)
+    const units = parseInteger(request.units) ||
+                  parseInteger((property as any)?.units) ||
+                  parseInteger((property as any)?.numberOfUnits) ||
+                  2; // Default to 2 for house hack
+
+    // User occupies 1 unit, rents the rest
+    const occupiedUnits = 1;
+    const rentableUnits = Math.max(units - occupiedUnits, 1);
+
+    // Get rent per unit
+    const rentPerUnit = parsePrice(request.rentPerUnit) ||
+                        parsePrice((rentalEstimate as any)?.rentEstimate) ||
+                        parsePrice((rentalEstimate as any)?.rent) ||
+                        0;
+
+    // Rental income (only from rented units, not owner-occupied)
+    const monthlyRentalIncome = rentPerUnit * rentableUnits;
+
+    // House hack financing (FHA eligible - 3.5% down for owner-occupied)
+    const houseHackDownPaymentPercent = (downPayment / effectivePurchasePrice) * 100;
+    const isFHAEligible = houseHackDownPaymentPercent <= 5;
+    const loanAmount = effectivePurchasePrice - downPayment;
+
+    // Calculate mortgage payment
+    const interestRate = request.loanTerms?.interestRate || 6.5; // Lower rate for owner-occupied
+    const loanTermYears = request.loanTerms?.loanTerm || 30;
+    const monthlyRate = interestRate / 100 / 12;
+    const numPayments = loanTermYears * 12;
+    const monthlyMortgagePI = loanAmount *
+      (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
+      (Math.pow(1 + monthlyRate, numPayments) - 1);
+
+    // FHA MIP (if applicable)
+    const monthlyMIP = isFHAEligible ? (loanAmount * 0.0055 / 12) : 0; // 0.55% annual MIP for FHA
+
+    // Monthly expenses (owner pays ALL expenses, offset by rental income)
+    const monthlyPropertyTax = Math.round((effectivePurchasePrice * 0.012) / 12);
+    const monthlyInsurance = Math.round((effectivePurchasePrice * 0.0035) / 12);
+    const monthlyMaintenance = Math.round((rentPerUnit * units) * 0.08); // 8% of potential rent for maintenance
+    const monthlyVacancy = Math.round((rentPerUnit * rentableUnits) * 0.05); // 5% vacancy on rentable units only
+
+    const totalMonthlyExpenses =
+      monthlyMortgagePI +
+      monthlyMIP +
+      monthlyPropertyTax +
+      monthlyInsurance +
+      monthlyMaintenance +
+      monthlyVacancy;
+
+    // Key house hack metric: Out-of-pocket housing cost
+    const outOfPocketHousingCost = totalMonthlyExpenses - monthlyRentalIncome;
+
+    // Compare to market rent (what you'd pay to rent similar housing)
+    const marketRentEquivalent = rentPerUnit; // Assume similar unit would cost same
+    const monthlyHousingSavings = marketRentEquivalent - outOfPocketHousingCost;
+    const annualHousingSavings = monthlyHousingSavings * 12;
+
+    // Cash to close
+    const closingCosts = effectivePurchasePrice * 0.03;
+    const cashToClose = downPayment + closingCosts;
+
+    // Housing ROI (savings relative to investment)
+    const housingROI = cashToClose > 0 ? (annualHousingSavings / cashToClose) * 100 : 0;
+
+    // Traditional cash flow (for comparison)
+    const monthlyCashFlow = monthlyRentalIncome - totalMonthlyExpenses;
+
+    console.log('[House Hack] Calculation Results:', {
+      units,
+      rentableUnits,
+      rentPerUnit,
+      monthlyRentalIncome,
+      totalMonthlyExpenses,
+      outOfPocketHousingCost,
+      monthlyHousingSavings,
+      housingROI
+    });
+
+    context += `\n\nHOUSE HACK ANALYSIS:
+
+PROPERTY SETUP:
+- Total Units: ${units}
+- Owner-Occupied Unit: ${occupiedUnits}
+- Rentable Units: ${rentableUnits}
+- Rent Per Unit: $${rentPerUnit.toLocaleString()}/month
+
+FINANCING (${isFHAEligible ? 'FHA Eligible' : 'Conventional'}):
+- Purchase Price: $${effectivePurchasePrice.toLocaleString()}
+- Down Payment: $${downPayment.toLocaleString()} (${houseHackDownPaymentPercent.toFixed(1)}%)
+- Loan Amount: $${loanAmount.toLocaleString()}
+- Interest Rate: ${interestRate}%
+- Loan Term: ${loanTermYears} years
+
+MONTHLY INCOME:
+- Rental Income (${rentableUnits} units): $${monthlyRentalIncome.toLocaleString()}/month
+- Annual Rental Income: $${(monthlyRentalIncome * 12).toLocaleString()}/year
+
+MONTHLY EXPENSES:
+- Mortgage (P&I): $${Math.round(monthlyMortgagePI).toLocaleString()}${isFHAEligible ? `
+- FHA MIP: $${Math.round(monthlyMIP).toLocaleString()}` : ''}
+- Property Taxes: $${monthlyPropertyTax.toLocaleString()}
+- Insurance: $${monthlyInsurance.toLocaleString()}
+- Maintenance (8%): $${monthlyMaintenance.toLocaleString()}
+- Vacancy Reserve (5%): $${monthlyVacancy.toLocaleString()}
+- TOTAL EXPENSES: $${Math.round(totalMonthlyExpenses).toLocaleString()}/month
+
+HOUSE HACK ADVANTAGE:
+- Total Monthly Expenses: $${Math.round(totalMonthlyExpenses).toLocaleString()}
+- Less: Rental Income: $${monthlyRentalIncome.toLocaleString()}
+- OUT-OF-POCKET HOUSING COST: $${Math.round(outOfPocketHousingCost).toLocaleString()}/month ${outOfPocketHousingCost <= 0 ? '(LIVE FREE OR GET PAID!)' : ''}
+
+SAVINGS ANALYSIS:
+- Market Rent for Similar Unit: $${rentPerUnit.toLocaleString()}/month
+- Your Out-of-Pocket Cost: $${Math.round(outOfPocketHousingCost).toLocaleString()}/month
+- MONTHLY SAVINGS: $${Math.round(monthlyHousingSavings).toLocaleString()} ${monthlyHousingSavings > 0 ? '(POSITIVE!)' : ''}
+- ANNUAL SAVINGS: $${Math.round(annualHousingSavings).toLocaleString()}/year
+
+INVESTMENT METRICS:
+- Cash to Close: $${Math.round(cashToClose).toLocaleString()}
+- Housing ROI: ${housingROI.toFixed(1)}% (return on your down payment via housing savings)
+${outOfPocketHousingCost <= 0 ? '- INFINITE RETURN: You are getting paid to live here!' : ''}
+
+Provide a house hack analysis focusing on the out-of-pocket housing cost reduction and comparison to renting.`;
+
+    calculatedMetrics = {
+      totalInvestment: cashToClose,
+      cashFlow: monthlyCashFlow, // Traditional cash flow for comparison
+      capRate: 0, // Not applicable for house hack
+      cocReturn: housingROI, // Use housing ROI instead
+      roi: housingROI,
+      annualNOI: monthlyRentalIncome * 12 - (monthlyPropertyTax + monthlyInsurance + monthlyMaintenance) * 12,
+      totalProfit: annualHousingSavings * 5, // 5-year savings
+      monthlyRent: monthlyRentalIncome,
+      // House hack specific
+      outOfPocketHousingCost: outOfPocketHousingCost,
+      monthlyHousingSavings: monthlyHousingSavings
+    };
+
   } else if (isFlipStrategy) {
-    // Fix & Flip specific calculations
+    // Fix & Flip specific calculations using CENTRALIZED calculator
+    console.log('[Fix & Flip] Using centralized calculateFlipReturns function');
+
     // Use provided ARV if available, otherwise use comparables or estimate
     const estimatedARV = request.arv || (comparables as any)?.value || effectivePurchasePrice * 1.3;
-    
+
     // Calculate rehab costs if not provided
     let rehabCosts = request.rehabCosts || 0;
     if (rehabCosts === 0) {
@@ -975,166 +1267,175 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       rehabCosts = squareFootage > 0 ? squareFootage * (rehabMultipliers[renovationLevel] || 40) : effectivePurchasePrice * 0.15;
       console.log('[Context] Calculated rehab costs:', { squareFootage, renovationLevel, rehabCosts });
     }
-    const closingCosts = effectivePurchasePrice * 0.03; // 3% closing costs
-    
-    // For flip strategies, we need to get the actual flip timeline
-    // The strategyDetails.timeline is in months (3, 6, 9, 12)
-    // The loanTerm for hard money is typically 1 year but the flip might be shorter
-    let holdingTimeInMonths = 6; // Default to 6 months
-    
-    // Check if we have a specific timeline in strategyDetails
-    if ((request as any).strategyDetails?.timeline) {
-      holdingTimeInMonths = parseInt((request as any).strategyDetails.timeline) || 6;
-      console.log('[Fix & Flip] Using timeline from strategyDetails:', holdingTimeInMonths, 'months');
-    } else if (request.loanTerms?.loanTerm) {
-      // If no specific timeline, use loan term but cap at 12 months for flips
-      holdingTimeInMonths = Math.min(Math.round(request.loanTerms.loanTerm * 12), 12);
-      console.log('[Fix & Flip] Using loanTerm as timeline:', holdingTimeInMonths, 'months');
-    }
-    
-    const holdingTimeInYears = holdingTimeInMonths / 12;
-    
-    // Calculate accurate monthly holding costs
-    // Property taxes: typically 1.2% annually in most areas
-    const annualPropertyTaxes = effectivePurchasePrice * 0.012; // 1.2% of purchase price
-    const monthlyPropertyTaxes = Math.round(annualPropertyTaxes / 12);
-    
-    // Insurance: typically 0.35% annually for investment properties
-    const annualInsurance = effectivePurchasePrice * 0.0035; // 0.35% of purchase price
-    const monthlyInsurance = Math.round(annualInsurance / 12);
-    
-    // Utilities during renovation (higher during construction)
-    const monthlyUtilities = 200; // $200/month average during renovation
-    
-    // Maintenance/Security during renovation
-    const monthlyMaintenance = 150; // $150/month for security, misc maintenance
-    
-    // Calculate monthly loan interest payment
-    // For hard money loans: interest-only on both purchase and rehab loans
-    const interestRate = request.loanTerms?.interestRate || 10.45;
-    const monthlyInterestRate = interestRate / 100 / 12;
-    
-    let monthlyLoanPayment = 0;
-    if (request.loanTerms?.loanType === 'hardMoney') {
-      // Interest-only payment on purchase loan
-      monthlyLoanPayment = Math.round(loanAmount * monthlyInterestRate);
-      
-      // Add interest on rehab loan if 100% financed
-      if (rehabCosts > 0) {
-        monthlyLoanPayment += Math.round(rehabCosts * monthlyInterestRate);
+
+    // Get holding period from strategy details
+    // CRITICAL: Use strategyDetails.timeline for project duration, NOT loanTerm
+    // loanTerm = loan maturity (1-2 years for hard money)
+    // timeline = actual project duration for holding costs (3-12 months)
+    let holdingTimeInMonths = 6; // Default to 6 months for flips
+    const rawTimeline = (request as any).strategyDetails?.timeline;
+    if (rawTimeline) {
+      const parsedTimeline = parseInt(rawTimeline);
+      if (!isNaN(parsedTimeline) && parsedTimeline > 0 && parsedTimeline <= 18) {
+        holdingTimeInMonths = parsedTimeline;
       }
-    } else {
-      // Traditional loan payment calculation
-      monthlyLoanPayment = calculateMonthlyPayment(
-        loanAmount,
-        interestRate,
-        holdingTimeInYears,
-        request.loanTerms?.loanType
-      );
     }
-    
-    // Total monthly holding costs = loan payment + taxes + insurance + utilities + maintenance
-    const monthlyHoldingCosts = monthlyLoanPayment + monthlyPropertyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
-    
-    // Log detailed holding costs calculation for debugging and transparency
-    console.log('[Fix & Flip] DETAILED Holding Costs Calculation:', {
+    // NOTE: Removed fallback to loanTerm - it's loan maturity, not project timeline!
+    // loanTerm of 1 year does NOT mean 12 month project - typical flip is 3-6 months
+    holdingTimeInMonths = Math.min(holdingTimeInMonths, 18);
+    console.log('[Fix & Flip] Holding time from strategyDetails.timeline:', holdingTimeInMonths, 'months');
+
+    // Prepare inputs for centralized calculator
+    const flipInputs: FlipCalculationInputs = {
       purchasePrice: effectivePurchasePrice,
-      loanAmount,
-      rehabCosts,
-      interestRate: interestRate,
-      holdingTimeInYears,
-      holdingTimeInMonths,
-      monthlyBreakdown: {
-        loanInterest: monthlyLoanPayment,
-        propertyTaxes: monthlyPropertyTaxes,
-        insurance: monthlyInsurance,
-        utilities: monthlyUtilities,
-        maintenance: monthlyMaintenance,
-        totalMonthly: monthlyHoldingCosts
-      },
-      annualRates: {
-        propertyTaxRate: '1.2%',
-        insuranceRate: '0.35%',
-        interestRate: `${interestRate}%`
-      },
-      totalHoldingCosts: monthlyHoldingCosts * holdingTimeInMonths,
-      calculation: `$${monthlyHoldingCosts}/month × ${holdingTimeInMonths} months = $${monthlyHoldingCosts * holdingTimeInMonths}`
-    });
-    
-    // Total holding costs for the entire project duration
-    const totalHoldingCosts = monthlyHoldingCosts * holdingTimeInMonths;
-    
-    // Validation: Ensure holding costs are reasonable (typically 3-10% of purchase price for 6-month flip)
-    const holdingCostPercentage = (totalHoldingCosts / effectivePurchasePrice) * 100;
-    if (holdingCostPercentage < 1 || holdingCostPercentage > 20) {
-      console.warn('[Fix & Flip] WARNING: Holding costs may be incorrect:', {
-        totalHoldingCosts,
-        purchasePrice: effectivePurchasePrice,
-        percentage: holdingCostPercentage.toFixed(2) + '%',
-        expected: '3-10% for 6-month flip, 6-20% for 12-month flip'
-      });
+      downPaymentPercent: (downPayment / effectivePurchasePrice) * 100,
+      interestRate: request.loanTerms?.interestRate || 10.45,
+      loanTermYears: 1,
+      renovationCosts: rehabCosts,
+      arv: estimatedARV,
+      holdingPeriodMonths: holdingTimeInMonths,
+      loanType: request.loanTerms?.loanType as 'conventional' | 'hardMoney' || 'hardMoney',
+      points: request.loanTerms?.points || 2.5,
+      isHardMoney: request.loanTerms?.loanType === 'hardMoney' ||
+                   (request.loanTerms?.points !== undefined && request.loanTerms.points >= 2)
+    };
+
+    console.log('[Fix & Flip] Calculator inputs:', flipInputs);
+
+    // Use centralized calculator with full validation
+    const flipResults = calculateFlipReturns(flipInputs);
+
+    // Check for validation errors
+    if (!flipResults.validation.isValid) {
+      console.error('[Fix & Flip] VALIDATION ERRORS:', flipResults.validation.errors);
     }
-    const sellingCosts = estimatedARV * 0.08; // 8% for realtor fees, closing costs
-    const totalInvestment = downPayment + rehabCosts + closingCosts + pointsCost;
-    const totalProjectCost = effectivePurchasePrice + rehabCosts + closingCosts + totalHoldingCosts + sellingCosts + pointsCost;
-    const netProfit = estimatedARV - totalProjectCost;
-    const roi = totalInvestment > 0 ? (netProfit / totalInvestment) * 100 : 0;
-    
+    if (flipResults.validation.warnings.length > 0) {
+      console.warn('[Fix & Flip] VALIDATION WARNINGS:', flipResults.validation.warnings);
+    }
+
+    // Build context string using validated results
     context += `\n\nFIX & FLIP ANALYSIS:
-    
+
 PURCHASE & FINANCING:
 - Purchase Price: $${effectivePurchasePrice.toLocaleString()}
-- Down Payment: $${downPayment.toLocaleString()} (${effectivePurchasePrice > 0 ? ((downPayment/effectivePurchasePrice) * 100).toFixed(1) : '20.0'}%)
-- Loan Amount: $${loanAmount.toLocaleString()}
-- Interest Rate: ${request.loanTerms?.interestRate || 10.45}%
+- Down Payment: $${Math.round(flipResults.downPayment).toLocaleString()} (${((flipResults.downPayment/effectivePurchasePrice) * 100).toFixed(1)}%)
+- Acquisition Loan: $${Math.round(flipResults.acquisitionLoan).toLocaleString()}
+- Interest Rate: ${flipInputs.interestRate}%
 - Loan Term: ${holdingTimeInMonths} months
-- Loan Type: ${request.loanTerms?.loanType === 'hardMoney' ? 'Hard Money' : 'Conventional'}${request.loanTerms?.points ? `
-- Points/Fees: ${request.loanTerms.points} points ($${Math.round(pointsCost).toLocaleString()})` : ''}
+- Loan Type: ${flipResults.isHardMoney ? 'Hard Money (with rehab holdback)' : 'Conventional'}${flipInputs.points ? `
+- Points/Fees: ${flipInputs.points} points ($${Math.round(flipResults.closingCostsBreakdown.lenderPoints).toLocaleString()})` : ''}
 
 RENOVATION & COSTS:
-- Rehab Budget: $${rehabCosts.toLocaleString()}
-- Closing Costs (Purchase): $${Math.round(closingCosts).toLocaleString()}
+- Rehab Budget: $${rehabCosts.toLocaleString()}${flipResults.isHardMoney ? ' (100% funded via lender holdback)' : ' (investor cash)'}
+- Closing Costs (Purchase): $${Math.round(flipResults.closingCosts).toLocaleString()}
 
-HOLDING COSTS BREAKDOWN:
-- Monthly Loan Interest: $${monthlyLoanPayment.toLocaleString()}
-- Monthly Property Taxes: $${monthlyPropertyTaxes.toLocaleString()} (1.2% annually)
-- Monthly Insurance: $${monthlyInsurance.toLocaleString()} (0.35% annually)
-- Monthly Utilities: $${monthlyUtilities.toLocaleString()}
-- Monthly Maintenance/Security: $${monthlyMaintenance.toLocaleString()}
-- Total Monthly Holding: $${monthlyHoldingCosts.toLocaleString()}
-- Project Duration: ${holdingTimeInMonths} months
-- Total Holding Costs: $${Math.round(totalHoldingCosts).toLocaleString()}
+${flipResults.isHardMoney ? `FINANCING STRUCTURE:
+- Down Payment (${((flipResults.downPayment/effectivePurchasePrice) * 100).toFixed(1)}%): $${Math.round(flipResults.downPayment).toLocaleString()}
+- Acquisition Loan: $${Math.round(flipResults.acquisitionLoan).toLocaleString()}
+- Rehab Holdback: $${Math.round(flipResults.rehabHoldback).toLocaleString()} (lender funds)
+- Total Loan Amount: $${Math.round(flipResults.totalLoan).toLocaleString()}
+
+` : ''}HOLDING COSTS:
+- Total Holding Costs: $${Math.round(flipResults.holdingCosts).toLocaleString()} (${holdingTimeInMonths} months)
 
 SELLING COSTS:
-- Realtor Fees & Closing (8%): $${Math.round(sellingCosts).toLocaleString()}
+- Realtor Fees & Closing (8%): $${Math.round(flipResults.sellingCosts).toLocaleString()}
+
+INVESTMENT SUMMARY:
+- Cash Required: $${Math.round(flipResults.cashRequired).toLocaleString()} (what investor brings)
+- Total Investment: $${Math.round(flipResults.totalInvestment).toLocaleString()} (all-in cost)
+- Total Project Cost: $${Math.round(flipResults.totalProjectCost).toLocaleString()} (including selling)
 
 EXIT STRATEGY:
 - After Repair Value (ARV): $${Math.round(estimatedARV).toLocaleString()}
-- Total Project Cost: $${Math.round(totalProjectCost).toLocaleString()}
-- Net Profit: $${Math.round(netProfit).toLocaleString()} ${netProfit < 0 ? '(LOSS)' : '(PROFIT)'}
-- Cash Investment: $${Math.round(totalInvestment).toLocaleString()}
-- Return on Investment: ${roi.toFixed(2)}%
-- Profit Margin: ${estimatedARV > 0 ? ((netProfit / estimatedARV) * 100).toFixed(2) : '0.00'}%
+- Net Profit: $${Math.round(flipResults.netProfit).toLocaleString()} ${flipResults.netProfit < 0 ? '(LOSS)' : '(PROFIT)'}
+- Return on Investment (ROI): ${flipResults.roi.toFixed(2)}% (on cash invested)
+- Profit Margin: ${flipResults.profitMargin.toFixed(2)}% (of ARV)
 
+${flipResults.validation.errors.length > 0 ? `
+VALIDATION ERRORS:
+${flipResults.validation.errors.map(e => `- ${e}`).join('\n')}
+` : ''}${flipResults.validation.warnings.length > 0 ? `
+VALIDATION WARNINGS:
+${flipResults.validation.warnings.map(w => `- ${w}`).join('\n')}
+` : ''}
 Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, holding costs, and profit margins. Do NOT include rental income or cash flow calculations.`;
 
     calculatedMetrics = {
-      totalInvestment: totalInvestment,
-      totalProfit: netProfit,
-      roi: roi,
-      holdingCosts: totalHoldingCosts,
+      totalInvestment: flipResults.cashRequired, // Use cash required for investment metric
+      totalProfit: flipResults.netProfit,
+      roi: flipResults.roi,
+      holdingCosts: flipResults.holdingCosts,
+      // Fix & Flip specific metrics
+      arv: estimatedARV,
+      profitMargin: flipResults.profitMargin,
       // Set rental-focused metrics to 0 or undefined for flips
       cashFlow: 0,
       capRate: 0,
-      cocReturn: roi, // Use ROI instead
+      cocReturn: flipResults.roi, // Use ROI instead
       annualNOI: 0
     };
-    
+
+    // Log the final validated results
+    console.log('[Fix & Flip] FINAL VALIDATED RESULTS:', {
+      isValid: flipResults.validation.isValid,
+      netProfit: flipResults.netProfit,
+      roi: flipResults.roi,
+      profitMargin: flipResults.profitMargin,
+      cashRequired: flipResults.cashRequired,
+      errors: flipResults.validation.errors,
+      warnings: flipResults.validation.warnings
+    });
+
   } else {
     // Rental property calculations - use user-specified rent if available
-    const monthlyRent = request.monthlyRent || (rentalEstimate as any)?.rent || (rentalEstimate as any)?.rentEstimate || 0;
-    const units = request.units || 1;
-    const rentPerUnit = request.rentPerUnit || (units > 1 ? monthlyRent / units : monthlyRent);
+    // CRITICAL: Properly handle multi-family properties by multiplying rent by units
+
+    // Get property type for multi-family detection
+    const propertyType = (property?.propertyType as string) || '';
+
+    // Get number of units (from request or property data)
+    const units = parseInteger(request.units) ||
+                  parseInteger((property as any)?.units) ||
+                  parseInteger((property as any)?.numberOfUnits) ||
+                  1;
+
+    // Get rent per unit from various sources
+    const rentPerUnitFromRequest = parsePrice(request.rentPerUnit);
+    const rentFromRentCast = parsePrice((rentalEstimate as any)?.rentEstimate || (rentalEstimate as any)?.rent || 0);
+
+    // Determine rent per unit
+    const rentPerUnit = rentPerUnitFromRequest > 0 ? rentPerUnitFromRequest : rentFromRentCast;
+
+    // Calculate total monthly rent using centralized utility
+    // This ensures proper multiplication for multi-family properties
+    let monthlyRent: number;
+
+    // If request.monthlyRent is provided and matches expected total, use it
+    const requestMonthlyRent = parsePrice(request.monthlyRent);
+    if (requestMonthlyRent > 0) {
+      // Verify it's the total (not per-unit)
+      if (units > 1 && requestMonthlyRent < rentPerUnit * 2) {
+        // Looks like per-unit rent was passed - multiply by units
+        console.log('[prepareAnalysisContext] monthlyRent appears to be per-unit, multiplying by units');
+        monthlyRent = calculateMonthlyRevenue(requestMonthlyRent, units, propertyType);
+      } else {
+        monthlyRent = requestMonthlyRent;
+      }
+    } else {
+      // Calculate from rent per unit
+      monthlyRent = calculateMonthlyRevenue(rentPerUnit, units, propertyType);
+    }
+
+    console.log('[prepareAnalysisContext] Rental revenue calculation:', {
+      propertyType,
+      units,
+      rentPerUnit,
+      requestMonthlyRent,
+      calculatedMonthlyRent: monthlyRent,
+      calculation: `$${rentPerUnit.toLocaleString()} × ${units} = $${monthlyRent.toLocaleString()}`
+    });
+
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
     
     // Calculate additional metrics for better analysis
@@ -1218,8 +1519,17 @@ interface ParsedAnalysisResponse {
     total_investment?: number;
     annual_noi?: number;
     total_profit?: number;
+    net_profit?: number; // Alias for total_profit (compatibility)
     holding_costs?: number;
     monthly_rent?: number;
+    // Fix & Flip specific metrics
+    arv?: number;
+    profit_margin?: number;
+    // BRRRR-specific metrics
+    cash_returned?: number;
+    cash_left_in_deal?: number;
+    capital_recovery_percent?: number;
+    is_infinite_return?: boolean;
   };
   market_analysis: string;
   investment_strategy: {
@@ -1230,20 +1540,46 @@ interface ParsedAnalysisResponse {
 }
 
 function parseAnalysisResponse(analysisText: string, strategy: string, calculatedMetrics?: FinancialData): ParsedAnalysisResponse {
-  // Extract financial metrics
+  // Extract financial metrics from AI response text
   const financialData = extractFinancialData(analysisText);
-  
-  // Use calculated metrics as fallback if extraction fails
+
+  // CRITICAL FIX: Helper function to get best value
+  // Use extracted value only if it's a valid non-zero number
+  // Otherwise use calculated metrics (which are always accurate)
+  const getBestValue = (extracted: number | undefined, calculated: number | undefined): number | undefined => {
+    // If extracted value is a valid positive number, use it
+    if (typeof extracted === 'number' && extracted > 0 && isFinite(extracted)) {
+      return extracted;
+    }
+    // Otherwise use calculated value (even if 0, as 0 can be valid for cash flow)
+    if (typeof calculated === 'number' && isFinite(calculated)) {
+      return calculated;
+    }
+    // For special cases like infinite return, keep the calculated value
+    return calculated;
+  };
+
+  // Merge extracted and calculated metrics - prefer calculated for accuracy
+  // CRITICAL: calculatedMetrics are computed server-side and always accurate
+  // AI extraction can miss or misparse values, so use calculatedMetrics as primary
   const finalMetrics = {
-    cashFlow: financialData.cashFlow !== undefined ? financialData.cashFlow : calculatedMetrics?.cashFlow,
-    capRate: financialData.capRate !== undefined ? financialData.capRate : calculatedMetrics?.capRate,
-    cocReturn: financialData.cocReturn !== undefined ? financialData.cocReturn : calculatedMetrics?.cocReturn,
-    roi: financialData.roi !== undefined ? financialData.roi : calculatedMetrics?.roi,
-    totalInvestment: financialData.totalInvestment !== undefined ? financialData.totalInvestment : calculatedMetrics?.totalInvestment,
-    annualNOI: financialData.annualNOI !== undefined ? financialData.annualNOI : calculatedMetrics?.annualNOI,
-    totalProfit: financialData.totalProfit !== undefined ? financialData.totalProfit : calculatedMetrics?.totalProfit,
-    holdingCosts: financialData.holdingCosts !== undefined ? financialData.holdingCosts : calculatedMetrics?.holdingCosts,
-    monthlyRent: financialData.monthlyRent !== undefined ? financialData.monthlyRent : calculatedMetrics?.monthlyRent
+    cashFlow: getBestValue(financialData.cashFlow, calculatedMetrics?.cashFlow),
+    capRate: getBestValue(financialData.capRate, calculatedMetrics?.capRate),
+    cocReturn: calculatedMetrics?.cocReturn ?? financialData.cocReturn, // Use calculated first for CoC
+    roi: calculatedMetrics?.roi ?? getBestValue(financialData.roi, calculatedMetrics?.roi), // Use calculated for ROI
+    totalInvestment: calculatedMetrics?.totalInvestment ?? getBestValue(financialData.totalInvestment, calculatedMetrics?.totalInvestment),
+    annualNOI: getBestValue(financialData.annualNOI, calculatedMetrics?.annualNOI),
+    totalProfit: calculatedMetrics?.totalProfit ?? getBestValue(financialData.totalProfit, calculatedMetrics?.totalProfit), // Use calculated for profit
+    holdingCosts: calculatedMetrics?.holdingCosts ?? getBestValue(financialData.holdingCosts, calculatedMetrics?.holdingCosts),
+    monthlyRent: calculatedMetrics?.monthlyRent ?? getBestValue(financialData.monthlyRent, calculatedMetrics?.monthlyRent),
+    // Fix & Flip specific metrics - always use calculated
+    arv: calculatedMetrics?.arv,
+    profitMargin: calculatedMetrics?.profitMargin,
+    // BRRRR-specific metrics - always use calculated
+    cashReturned: calculatedMetrics?.cashReturned,
+    cashLeftInDeal: calculatedMetrics?.cashLeftInDeal,
+    capitalRecoveryPercent: calculatedMetrics?.capitalRecoveryPercent,
+    isInfiniteReturn: calculatedMetrics?.isInfiniteReturn
   };
   
   // Extract sections more reliably
@@ -1280,8 +1616,17 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
       total_investment: finalMetrics.totalInvestment,
       annual_noi: finalMetrics.annualNOI,
       total_profit: finalMetrics.totalProfit,
+      net_profit: finalMetrics.totalProfit, // Alias for compatibility
       holding_costs: finalMetrics.holdingCosts,
-      monthly_rent: finalMetrics.monthlyRent
+      monthly_rent: finalMetrics.monthlyRent,
+      // Fix & Flip specific metrics
+      arv: finalMetrics.arv,
+      profit_margin: finalMetrics.profitMargin,
+      // BRRRR-specific metrics
+      cash_returned: finalMetrics.cashReturned,
+      cash_left_in_deal: finalMetrics.cashLeftInDeal,
+      capital_recovery_percent: finalMetrics.capitalRecoveryPercent,
+      is_infinite_return: finalMetrics.isInfiniteReturn
     },
     market_analysis: marketAnalysis,
     investment_strategy: {
@@ -1295,50 +1640,152 @@ function parseAnalysisResponse(analysisText: string, strategy: string, calculate
 
 function extractSectionByHeader(text: string, headers: string[]): string {
   for (const header of headers) {
-    const regex = new RegExp(`(?:^|\\n)(?:\\d+\\.\\s*)?${header}[:\\s]+(.+?)(?=\\n\\d+\\.|\\n[A-Z][A-Z\\s]+:|$)`, 'is');
-    const match = text.match(regex);
-    if (match) {
-      return match[1].trim();
+    // Try multiple regex patterns to match various Claude output formats
+    const patterns = [
+      // Pattern 1: Numbered sections like "1. Executive Summary:" or "## 1. Executive Summary"
+      new RegExp(`(?:^|\\n)(?:#{1,3}\\s*)?(?:\\d+\\.\\s*)?${header}[:\\s]*\\n?([\\s\\S]+?)(?=\\n(?:#{1,3}\\s*)?\\d+\\.|\\n#{1,3}\\s|\\n[A-Z][A-Z\\s]{3,}:|$)`, 'i'),
+      // Pattern 2: Markdown headers like "## Executive Summary"
+      new RegExp(`(?:^|\\n)#{1,3}\\s*${header}\\s*\\n([\\s\\S]+?)(?=\\n#{1,3}\\s|\\n\\d+\\.|$)`, 'i'),
+      // Pattern 3: Bold headers like "**Executive Summary**" or "**Executive Summary:**"
+      new RegExp(`(?:^|\\n)\\*\\*${header}\\*\\*:?\\s*\\n?([\\s\\S]+?)(?=\\n\\*\\*|\\n#{1,3}\\s|\\n\\d+\\.|$)`, 'i'),
+      // Pattern 4: Simple colon-delimited headers
+      new RegExp(`(?:^|\\n)${header}:\\s*\\n?([^\\n]+(?:\\n(?![A-Z][A-Z\\s]{3,}:|\\d+\\.|#{1,3}\\s|\\*\\*)[^\\n]+)*)`, 'i')
+    ];
+
+    for (const regex of patterns) {
+      const match = text.match(regex);
+      if (match && match[1]) {
+        // Clean up the extracted text
+        let result = match[1].trim();
+        // Remove leading/trailing markdown formatting
+        result = result.replace(/^\s*[-*]\s*/, '');
+        result = result.replace(/\n\s*\n\s*\n/g, '\n\n'); // Normalize multiple newlines
+        // Limit to first meaningful paragraph for summary
+        if (headers.includes('executive summary') || headers.includes('summary')) {
+          const paragraphs = result.split(/\n\n+/);
+          if (paragraphs[0] && paragraphs[0].length > 50) {
+            return paragraphs[0].trim();
+          }
+        }
+        return result;
+      }
     }
   }
   return '';
 }
 
 function extractRecommendation(text: string): string {
-  const match = text.match(/recommendation[:\s]+(.*?)(?:\n\d\.|$)/is);
-  return match ? match[1].trim() : '';
+  // Try multiple patterns to find the recommendation
+  const patterns = [
+    /(?:investment\s+)?recommendation[:\s]*\n?([^\n]+(?:\n(?!#{1,3}|\d+\.|key\s+risks?|opportunities)[^\n]+)*)/i,
+    /\*\*(?:investment\s+)?recommendation\*\*[:\s]*\n?([^\n]+(?:\n(?!\*\*)[^\n]+)*)/i,
+    /#{1,3}\s*(?:investment\s+)?recommendation[:\s]*\n([^\n]+(?:\n(?!#{1,3})[^\n]+)*)/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      let result = match[1].trim();
+      // Clean up markdown formatting
+      result = result.replace(/\*\*/g, '');
+      result = result.replace(/^[-•*]\s*/, '');
+      // Get first meaningful sentence/paragraph
+      const firstParagraph = result.split(/\n\n+/)[0];
+      if (firstParagraph && firstParagraph.length > 20) {
+        return firstParagraph.trim();
+      }
+      return result;
+    }
+  }
+
+  // Fallback: look for buy/hold/pass keywords
+  const buyMatch = text.match(/\b(buy|proceed|invest|recommended|strong\s+buy)\b[^.]*\./i);
+  const passMatch = text.match(/\b(pass|avoid|not\s+recommended|skip)\b[^.]*\./i);
+
+  if (buyMatch) return buyMatch[0].trim();
+  if (passMatch) return passMatch[0].trim();
+
+  return '';
 }
 
 function extractRisks(text: string): string[] {
   const risks: string[] = [];
-  const riskSection = text.match(/risk.*?:(.*?)(?:\n\d\.|$)/is);
-  
+
+  // Try multiple patterns to find the risks section
+  const patterns = [
+    /(?:key\s+)?risks?(?:\s+assessment)?[:\s]*\n([\s\S]+?)(?=\n(?:#{1,3}|\\d+\.|opportunities|action|market|$))/i,
+    /\*\*(?:key\s+)?risks?\*\*[:\s]*\n([\s\S]+?)(?=\n\*\*|$)/i,
+    /#{1,3}\s*(?:key\s+)?risks?[:\s]*\n([\s\S]+?)(?=\n#{1,3}|$)/i
+  ];
+
+  let riskSection = null;
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      riskSection = match[1];
+      break;
+    }
+  }
+
   if (riskSection) {
-    const lines = riskSection[1].split('\n');
+    const lines = riskSection.split('\n');
     for (const line of lines) {
-      if (line.match(/^[-•*]\s*/) && line.length > 10) {
-        risks.push(line.replace(/^[-•*]\s*/, '').trim());
+      const trimmedLine = line.trim();
+      // Match bullet points, numbered items, or lines starting with dash/asterisk
+      if (trimmedLine.match(/^[-•*]\s*/) || trimmedLine.match(/^\d+\.\s*/)) {
+        const cleanedLine = trimmedLine
+          .replace(/^[-•*]\s*/, '')
+          .replace(/^\d+\.\s*/, '')
+          .replace(/\*\*/g, '') // Remove bold markdown
+          .trim();
+        if (cleanedLine.length > 10) {
+          risks.push(cleanedLine);
+        }
       }
     }
   }
-  
-  return risks;
+
+  return risks.slice(0, 5); // Limit to 5 risks
 }
 
 function extractOpportunities(text: string): string[] {
   const opportunities: string[] = [];
-  const oppSection = text.match(/opportunit.*?:(.*?)(?:\n\d\.|$)/is);
-  
+
+  // Try multiple patterns to find the opportunities section
+  const patterns = [
+    /(?:key\s+)?opportunities?[:\s]*\n([\s\S]+?)(?=\n(?:#{1,3}|\\d+\.|risks?|action|market|$))/i,
+    /\*\*(?:key\s+)?opportunities?\*\*[:\s]*\n([\s\S]+?)(?=\n\*\*|$)/i,
+    /#{1,3}\s*(?:key\s+)?opportunities?[:\s]*\n([\s\S]+?)(?=\n#{1,3}|$)/i
+  ];
+
+  let oppSection = null;
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      oppSection = match[1];
+      break;
+    }
+  }
+
   if (oppSection) {
-    const lines = oppSection[1].split('\n');
+    const lines = oppSection.split('\n');
     for (const line of lines) {
-      if (line.match(/^[-•*]\s*/) && line.length > 10) {
-        opportunities.push(line.replace(/^[-•*]\s*/, '').trim());
+      const trimmedLine = line.trim();
+      // Match bullet points, numbered items, or lines starting with dash/asterisk
+      if (trimmedLine.match(/^[-•*]\s*/) || trimmedLine.match(/^\d+\.\s*/)) {
+        const cleanedLine = trimmedLine
+          .replace(/^[-•*]\s*/, '')
+          .replace(/^\d+\.\s*/, '')
+          .replace(/\*\*/g, '') // Remove bold markdown
+          .trim();
+        if (cleanedLine.length > 10) {
+          opportunities.push(cleanedLine);
+        }
       }
     }
   }
-  
-  return opportunities;
+
+  return opportunities.slice(0, 5); // Limit to 5 opportunities
 }
 
 interface FinancialData {
@@ -1351,11 +1798,17 @@ interface FinancialData {
   totalProfit?: number;
   holdingCosts?: number;
   monthlyRent?: number;
+  // Fix & Flip specific metrics
+  arv?: number;
+  profitMargin?: number;
   // BRRRR-specific metrics
   cashReturned?: number;
   cashLeftInDeal?: number;
   capitalRecoveryPercent?: number;
   isInfiniteReturn?: boolean;
+  // House Hack-specific metrics
+  outOfPocketHousingCost?: number;
+  monthlyHousingSavings?: number;
 }
 
 function extractFinancialData(text: string): FinancialData {

@@ -130,8 +130,9 @@ export default function AnalysisHistoryTable({
                           <div className="flex items-center gap-3">
                             {/* Property Image */}
                             {(analysis.property_data as any)?.property?.[0]?.primaryImageUrl ? (
-                              <img 
-                                src={(analysis.property_data as any).property[0].primaryImageUrl} 
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={(analysis.property_data as any).property[0].primaryImageUrl}
                                 alt={analysis.address}
                                 className="w-12 h-12 object-cover rounded"
                                 onError={(e) => {

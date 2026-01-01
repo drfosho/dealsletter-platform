@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import DashboardSidebar from '@/components/DashboardSidebar';
 import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import AnalysisHistoryTable from '@/components/analysis/AnalysisHistoryTable';
 import AnalysisFilters from '@/components/analysis/AnalysisFilters';
@@ -168,27 +167,35 @@ export default function AnalysisHistoryPage() {
     alert('Bulk export functionality coming soon!');
   };
 
+  const handleCompare = () => {
+    if (selectedIds.length < 2) {
+      alert('Please select at least 2 properties to compare');
+      return;
+    }
+    if (selectedIds.length > 4) {
+      alert('You can compare up to 4 properties at a time');
+      return;
+    }
+    // Navigate to comparison page with IDs in query string
+    const idsParam = selectedIds.join(',');
+    router.push(`/analysis/compare?ids=${idsParam}`);
+  };
+
   if (loading) {
     return (
-      <>
-        <Navigation variant="dashboard" />
-        <div className="flex">
-          <DashboardSidebar />
-          <main className="flex-1 p-4 lg:p-6">
-            <LoadingSpinner text="Loading analysis history..." />
-          </main>
-        </div>
-      </>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <LoadingSpinner text="Loading analysis history..." />
+        </main>
+      </div>
     );
   }
 
   return (
-    <>
-      <Navigation variant="dashboard" />
-      <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-6 py-8">
             {/* Header */}
             <div className="mb-6">
               <h1 className="text-2xl lg:text-3xl font-bold text-primary mb-2">
@@ -203,12 +210,14 @@ export default function AnalysisHistoryPage() {
             <UsageStats usage={usage} />
 
             {/* Filters */}
-            <AnalysisFilters 
+            <AnalysisFilters
               filters={filters}
               onFilterChange={setFilters}
               selectedCount={selectedIds.length}
+              selectedIds={selectedIds}
               onBulkDelete={handleBulkDelete}
               onBulkExport={handleBulkExport}
+              onCompare={handleCompare}
             />
 
             {/* Results Count */}
@@ -262,9 +271,7 @@ export default function AnalysisHistoryPage() {
                 }}
               />
             )}
-          </div>
-        </main>
-      </div>
-    </>
+      </main>
+    </div>
   );
 }

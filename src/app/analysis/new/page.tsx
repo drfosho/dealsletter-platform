@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import DashboardSidebar from '@/components/DashboardSidebar';
 import ProRouteGuard from '@/components/ProRouteGuard';
 import WizardContainer from '@/components/analysis-wizard/WizardContainer';
 import Step1PropertySearch from '@/components/analysis-wizard/Step1PropertySearch';
@@ -37,6 +36,7 @@ export interface WizardData {
     monthlyRent?: number; // Monthly rent for rental strategies
     rentPerUnit?: number; // Rent per unit for multi-family properties
     units?: number; // Number of units for multi-family properties
+    closingCostsManuallySet?: boolean; // Track if user manually edited closing costs
   };
   analysis?: Record<string, unknown>;
   analysisId?: string;
@@ -57,16 +57,27 @@ export default function NewAnalysisPage() {
   });
   const [_canProceed, setCanProceed] = useState(false);
 
-  // Load draft from localStorage
+  // Load draft from localStorage only if explicitly resuming
   useEffect(() => {
-    const draft = localStorage.getItem('analysis-wizard-draft');
-    if (draft) {
-      try {
-        const parsedDraft = JSON.parse(draft);
-        setWizardData(parsedDraft);
-      } catch (error) {
-        console.error('Failed to load draft:', error);
+    // Check if we should load a draft (via URL param) or start fresh
+    const urlParams = new URLSearchParams(window.location.search);
+    const resumeDraft = urlParams.get('resume') === 'true';
+
+    if (resumeDraft) {
+      const draft = localStorage.getItem('analysis-wizard-draft');
+      if (draft) {
+        try {
+          const parsedDraft = JSON.parse(draft);
+          setWizardData(parsedDraft);
+          console.log('[NewAnalysis] Resumed draft from localStorage');
+        } catch (error) {
+          console.error('Failed to load draft:', error);
+        }
       }
+    } else {
+      // Clear any existing draft when starting fresh
+      localStorage.removeItem('analysis-wizard-draft');
+      console.log('[NewAnalysis] Starting fresh analysis, cleared draft');
     }
   }, []);
 
@@ -184,28 +195,25 @@ export default function NewAnalysisPage() {
 
   return (
     <ProRouteGuard feature="Property Analysis Calculator">
-      <Navigation variant="dashboard" />
-      <div className="flex">
-        <DashboardSidebar />
-        <main className="flex-1 p-4 lg:p-6">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold text-primary">Property Analysis</h1>
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 text-sm text-muted hover:text-primary border border-border rounded-lg hover:border-primary/50 transition-colors"
-              >
-                {currentStep === 1 ? 'Clear Data' : 'Start Over'}
-              </button>
-            </div>
-            <WizardContainer
-              currentStep={currentStep}
-              totalSteps={5}
-              onStepClick={(step) => step < currentStep && setCurrentStep(step)}
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main className="max-w-5xl mx-auto px-6 py-8">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-primary">Property Analysis</h1>
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 text-sm text-muted hover:text-primary border border-border rounded-lg hover:border-primary/50 transition-colors"
             >
-              {renderStep()}
-            </WizardContainer>
+              {currentStep === 1 ? 'Clear Data' : 'Start Over'}
+            </button>
           </div>
+          <WizardContainer
+            currentStep={currentStep}
+            totalSteps={5}
+            onStepClick={(step) => step < currentStep && setCurrentStep(step)}
+          >
+            {renderStep()}
+          </WizardContainer>
         </main>
       </div>
     </ProRouteGuard>

@@ -720,7 +720,7 @@ export async function POST(request: NextRequest) {
     let totalAttempts = 0;
     const models = [
       'claude-opus-4-20250514',  // Primary model for best quality
-      'claude-3-5-sonnet-20241022'  // Fallback model if Opus is overloaded
+      'claude-sonnet-4-5-20250929'  // Fallback model if Opus is overloaded
     ];
     
     // Try each model with retries

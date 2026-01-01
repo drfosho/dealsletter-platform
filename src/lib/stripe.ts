@@ -28,7 +28,7 @@ export const stripe = new Proxy({} as Stripe, {
       
       try {
         stripeInstance = new Stripe(key, {
-          apiVersion: '2024-11-20.acacia',
+          apiVersion: '2025-07-30.basil',
         })
         console.log('[Stripe Init] ✅ Stripe client initialized successfully')
       } catch (error: any) {
@@ -41,35 +41,41 @@ export const stripe = new Proxy({} as Stripe, {
 })
 
 // Subscription tiers configuration
+// NEW PRICING STRUCTURE (December 2024):
+// - FREE: $0/month, 3 analyses/month
+// - PRO: $29/month, 50 analyses/month
+// - PRO PLUS: $59/month, 200 analyses/month
 export const SUBSCRIPTION_TIERS = {
   FREE: {
     name: 'Free',
     priceId: null,
-    analysisLimit: 0,
-    features: [
-      'view_deals',
-      'basic_comparison',
-      'archive_access_30days',
-    ],
-  },
-  STARTER: {
-    name: 'Starter',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
-    analysisLimit: 12,
+    analysisLimit: 3,
     features: [
       'view_deals',
       'basic_comparison',
       'archive_access_30days',
       'personal_analysis',
-      'deal_alerts',
+      'pdf_exports',
+      'email_support',
+    ],
+  },
+  STARTER: {
+    name: 'Starter',
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
+    analysisLimit: 3,  // Legacy - maps to Free
+    features: [
+      'view_deals',
+      'basic_comparison',
+      'archive_access_30days',
+      'personal_analysis',
       'pdf_exports',
       'email_support',
     ],
   },
   PRO: {
     name: 'Pro',
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
-    analysisLimit: 35,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,  // $29/month
+    analysisLimit: 50,
     features: [
       'view_deals',
       'basic_comparison',
@@ -82,12 +88,33 @@ export const SUBSCRIPTION_TIERS = {
       'early_access',
       'priority_support',
       'market_reports',
+      'analysis_history',
+    ],
+  },
+  'PRO-PLUS': {
+    name: 'Pro Plus',
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_PLUS,  // $59/month
+    analysisLimit: 200,
+    features: [
+      'view_deals',
+      'basic_comparison',
+      'archive_access_30days',
+      'personal_analysis',
+      'deal_alerts',
+      'pdf_exports',
+      'email_support',
+      'advanced_analytics',
+      'early_access',
+      'priority_support',
+      'market_reports',
+      'analysis_history',
+      'advanced_dashboard',
     ],
   },
   PREMIUM: {
     name: 'Premium',
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
-    analysisLimit: -1, // -1 represents unlimited
+    analysisLimit: 50,  // Legacy - grandfathered users
     features: [
       'view_deals',
       'basic_comparison',
@@ -100,11 +127,7 @@ export const SUBSCRIPTION_TIERS = {
       'early_access',
       'priority_support',
       'market_reports',
-      'weekly_sessions',
-      'custom_sourcing',
-      'phone_support',
-      'api_access',
-      'team_tools',
+      'analysis_history',
     ],
   },
 }

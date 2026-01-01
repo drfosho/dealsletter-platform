@@ -1,7 +1,7 @@
 'use client'
 
 import { useSubscription } from '@/hooks/useSubscription'
-import { BarChart3, TrendingUp, Zap } from 'lucide-react'
+import { BarChart3, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 export default function UsageTracker() {
@@ -53,7 +53,7 @@ export default function UsageTracker() {
         </div>
       </div>
 
-      {subscription.tier === 'free' ? (
+      {subscription.tier === 'free' && subscription.analysisLimit === 0 ? (
         <div className="text-center py-8">
           <Zap className="w-12 h-12 text-muted/30 mx-auto mb-3" />
           <p className="text-muted mb-4">
@@ -65,16 +65,6 @@ export default function UsageTracker() {
           >
             View Plans
           </Link>
-        </div>
-      ) : subscription.analysisLimit === -1 ? (
-        <div className="text-center py-4">
-          <div className="flex items-center justify-center space-x-2 mb-2">
-            <TrendingUp className="w-8 h-8 text-green-500" />
-            <span className="text-2xl font-bold text-primary">Unlimited</span>
-          </div>
-          <p className="text-sm text-muted">
-            {subscription.analysisUsed} analyses this month
-          </p>
         </div>
       ) : (
         <>

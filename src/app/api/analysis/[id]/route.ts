@@ -66,13 +66,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
 
     // Transform the data to match the expected format
+    // CRITICAL: Preserve all original analysis_data for component access
+    const aiAnalysis = analysis.analysis_data?.ai_analysis || {};
+    const financialMetrics = aiAnalysis?.financial_metrics || {};
+
     const transformedAnalysis = {
       id: analysis.id,
       user_id: analysis.user_id,
       address: analysis.address,
       analysis_date: analysis.analysis_date,
-      roi: analysis.roi,
-      profit: analysis.profit,
+      // CRITICAL: Use saved roi/profit from database (updated after AI analysis)
+      roi: analysis.roi || financialMetrics?.roi || 0,
+      profit: analysis.profit || financialMetrics?.total_profit || financialMetrics?.net_profit || 0,
       deal_type: analysis.deal_type,
       is_favorite: analysis.is_favorite,
       created_at: analysis.created_at,
@@ -89,9 +94,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       rental_estimate: analysis.analysis_data?.rental_estimate || analysis.rental_estimate || {},
       comparables: analysis.analysis_data?.comparables || analysis.comparables || {},
       market_data: analysis.analysis_data?.market_data || analysis.market_data || {},
-      ai_analysis: analysis.analysis_data?.ai_analysis || analysis.ai_analysis || {},
+      // CRITICAL: Include full ai_analysis with financial_metrics
+      ai_analysis: {
+        ...aiAnalysis,
+        financial_metrics: {
+          ...financialMetrics,
+          // Ensure key values are present
+          monthly_rent: financialMetrics?.monthly_rent || analysis.analysis_data?.monthlyRent || 0,
+          monthly_cash_flow: financialMetrics?.monthly_cash_flow || 0,
+          cap_rate: financialMetrics?.cap_rate || 0,
+          cash_on_cash_return: financialMetrics?.cash_on_cash_return || 0,
+          roi: financialMetrics?.roi || analysis.roi || 0,
+          total_profit: financialMetrics?.total_profit || analysis.profit || 0,
+          net_profit: financialMetrics?.net_profit || financialMetrics?.total_profit || analysis.profit || 0,
+          arv: financialMetrics?.arv || analysis.analysis_data?.arv || 0
+        }
+      },
+      // CRITICAL: Include full analysis_data so components can access all original values
+      analysis_data: analysis.analysis_data || {},
       status: analysis.analysis_data?.status || 'completed'
     };
+
+    console.log('[Analysis GET] Financial metrics in response:', {
+      roi: transformedAnalysis.roi,
+      profit: transformedAnalysis.profit,
+      aiAnalysisFinancialMetrics: transformedAnalysis.ai_analysis?.financial_metrics
+    });
     
     console.log('[Analysis GET] Transformed analysis:', {
       hasPropertyData: !!transformedAnalysis.property_data,

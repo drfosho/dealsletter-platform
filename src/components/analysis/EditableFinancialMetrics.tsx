@@ -20,18 +20,56 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
   
   // Get initial monthly rent from various sources
   const initialMonthlyRent = analysis.ai_analysis?.financial_metrics?.monthly_rent ||
-                            analysis.rental_estimate?.rent || 
-                            (analysis.rental_estimate as any)?.rentEstimate || 
+                            analysis.rental_estimate?.rent ||
+                            (analysis.rental_estimate as any)?.rentEstimate ||
                             (analysis.analysis_data as any)?.monthlyRent ||
                             0;
-  
+
   const [monthlyRent, setMonthlyRent] = useState(initialMonthlyRent);
-  
-  // Get units for multi-family properties
-  const units = (analysis.analysis_data as any)?.units || 
-               (analysis.property_data as any)?.property?.units || 
-               1;
-  const rentPerUnit = units > 1 ? monthlyRent / units : monthlyRent;
+
+  // Get units for multi-family properties - check multiple locations
+  const getUnits = (): number => {
+    // Check analysis_data first (most reliable)
+    if ((analysis.analysis_data as any)?.units && (analysis.analysis_data as any).units > 0) {
+      return (analysis.analysis_data as any).units;
+    }
+    // Check property_data (RentCast API)
+    const property = (analysis.property_data as any)?.property;
+    if (property?.units && property.units > 0) return property.units;
+    if (property?.numberOfUnits && property.numberOfUnits > 0) return property.numberOfUnits;
+
+    // Infer from property type
+    const propertyType = property?.propertyType?.toLowerCase() || '';
+    if (propertyType.includes('duplex')) return 2;
+    if (propertyType.includes('triplex')) return 3;
+    if (propertyType.includes('fourplex') || propertyType.includes('quadplex')) return 4;
+    if (propertyType.includes('multi') || propertyType.includes('apartment')) {
+      // For multi-family, use bedrooms as approximation if available
+      const beds = property?.bedrooms || 0;
+      if (beds > 1) return beds;
+      return 2; // Default to 2 for multi-family
+    }
+
+    return 1;
+  };
+
+  const units = getUnits();
+  const isMultiFamily = units > 1;
+  const rentPerUnit = isMultiFamily ? monthlyRent / units : monthlyRent;
+
+  // Store rentPerUnit separately for multi-family editing
+  const [editableRentPerUnit, setEditableRentPerUnit] = useState(
+    (analysis.analysis_data as any)?.rentPerUnit || rentPerUnit
+  );
+
+  console.log('[EditableFinancialMetrics] Units detection:', {
+    analysisDataUnits: (analysis.analysis_data as any)?.units,
+    propertyUnits: (analysis.property_data as any)?.property?.units,
+    detectedUnits: units,
+    isMultiFamily,
+    monthlyRent,
+    rentPerUnit
+  });
   
   const metrics = useMemo(() => {
     const loanAmount = purchasePrice - downPayment;
@@ -52,6 +90,14 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
       const estimatedARV = (analysis.property_data as any)?.comparables?.value || purchasePrice * 1.3;
       const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
       
+      // CRITICAL: Use timeline from strategy_details, NOT loan_term
+      // loan_term = loan maturity (1-2 years for hard money)
+      // timeline = actual project duration for holding costs (3-12 months)
+      const timelineMonths = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                             parseInt((analysis as any).strategy_details?.timeline) ||
+                             (analysis as any).analysis_data?.flip_timeline_months ||
+                             6;
+
       return {
         purchasePrice,
         rehabCosts,
@@ -60,7 +106,7 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
         netProfit,
         roi,
         profitMargin,
-        holdingPeriod: analysis.loan_term || 0.5,
+        holdingPeriod: timelineMonths / 12, // Convert months to years for display
         monthlyRent: 0,
         monthlyPayment: 0,
         totalExpenses: 0,
@@ -141,7 +187,7 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
       units,
       rentPerUnit
     };
-  }, [analysis, isFlipStrategy, purchasePrice, downPayment, monthlyRent]);
+  }, [analysis, isFlipStrategy, purchasePrice, downPayment, monthlyRent, units, rentPerUnit]);
 
   function calculateFirstYearPrincipal(
     loanAmount: number, 
@@ -349,8 +395,8 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
               <div className="flex justify-between items-center py-2 border-b border-border/50">
                 <span className="text-muted">
                   Rental Income
-                  {metrics.units > 1 && (
-                    <span className="text-xs ml-1">({metrics.units} units)</span>
+                  {isMultiFamily && (
+                    <span className="text-xs ml-1">({units} units)</span>
                   )}
                 </span>
                 <div className="flex items-center gap-2">
@@ -398,7 +444,7 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
                   )}
                 </div>
               </div>
-              {metrics.units > 1 && (
+              {isMultiFamily && (
                 <div className="flex justify-between items-center py-1 text-sm">
                   <span className="text-muted">Per Unit</span>
                   <div className="flex items-center gap-2">
@@ -431,7 +477,7 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
                     ) : (
                       <>
                         <span className="text-primary">
-                          {formatCurrency(Math.round(metrics.rentPerUnit))}
+                          {formatCurrency(Math.round(rentPerUnit))}
                         </span>
                         <button
                           onClick={handleRentPerUnitEdit}

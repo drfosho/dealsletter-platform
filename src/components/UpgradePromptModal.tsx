@@ -18,33 +18,50 @@ export default function UpgradePromptModal({
   if (!isOpen) return null;
 
   const getUpgradeContent = () => {
-    if (subscriptionTier === 'basic') {
+    if (subscriptionTier === 'free' || subscriptionTier === 'basic') {
       return {
-        title: 'Unlock Property Analysis',
-        description: 'Your Basic plan doesn&apos;t include property analysis. Upgrade to start analyzing deals and finding profitable investments.',
+        title: 'Monthly Limit Reached',
+        description: 'You&apos;ve used your 3 free analyses this month. Upgrade to Pro for 50 analyses per month.',
         features: [
-          '15 property analyses per month with Pro',
-          'Unlimited analyses with Premium',
-          'Advanced ROI calculations',
-          'Deal comparison tools',
-          'Priority support'
+          '50 property analyses per month',
+          'Detailed investment projections',
+          'Analysis history & comparison',
+          'PDF export functionality',
+          'Priority email support'
         ],
-        primaryCTA: 'Upgrade to Pro',
-        secondaryCTA: 'View All Plans'
+        primaryCTA: 'Upgrade to Pro - $29/month',
+        secondaryCTA: 'View Pricing',
+        price: '$29'
+      };
+    } else if (subscriptionTier === 'pro') {
+      return {
+        title: 'Monthly Limit Reached',
+        description: 'You&apos;ve used all 50 analyses for this month. Upgrade to Pro Plus for 200 analyses per month.',
+        features: [
+          '200 property analyses per month',
+          'Everything in Pro',
+          'Advanced analytics dashboard',
+          'Highest priority support',
+          'Early access to new features'
+        ],
+        primaryCTA: 'Upgrade to Pro Plus - $59/month',
+        secondaryCTA: 'View Pricing',
+        price: '$59'
       };
     } else {
       return {
         title: 'Monthly Limit Reached',
-        description: 'You&apos;ve used all 15 analyses for this month. Upgrade to Premium for unlimited access.',
+        description: 'You&apos;ve used all your analyses for this month. Need more? Contact us for enterprise pricing.',
         features: [
-          'Unlimited property analyses',
-          'No monthly restrictions',
-          'Bulk analysis tools',
-          'Export analysis reports',
-          'Priority support'
+          'Custom analysis limits',
+          'Dedicated support',
+          'Team collaboration tools',
+          'API access',
+          'Custom integrations'
         ],
-        primaryCTA: 'Upgrade to Premium',
-        secondaryCTA: 'View All Plans'
+        primaryCTA: 'Contact Us',
+        secondaryCTA: 'View Pricing',
+        price: 'Custom'
       };
     }
   };
@@ -91,14 +108,24 @@ export default function UpgradePromptModal({
           {/* Pricing Preview */}
           <div className="bg-accent/5 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted">Starting at</span>
-              <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded">SAVE 20%</span>
+              <span className="text-sm text-muted">
+                {subscriptionTier === 'free' || subscriptionTier === 'basic'
+                  ? 'Just $0.58 per analysis'
+                  : subscriptionTier === 'pro'
+                  ? 'Just $0.30 per analysis'
+                  : 'Enterprise pricing'}
+              </span>
+              {(subscriptionTier === 'free' || subscriptionTier === 'basic' || subscriptionTier === 'pro') && (
+                <span className="text-xs bg-accent/20 text-accent px-2 py-1 rounded">BEST VALUE</span>
+              )}
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-bold text-primary">
-                {subscriptionTier === 'basic' ? '$29' : '$49'}
+                {content.price}
               </span>
-              <span className="text-muted">/month</span>
+              {(subscriptionTier === 'free' || subscriptionTier === 'basic' || subscriptionTier === 'pro') && (
+                <span className="text-muted">/month</span>
+              )}
             </div>
           </div>
 

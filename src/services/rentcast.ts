@@ -491,9 +491,22 @@ class RentCastService {
         price: (data as any)?.price,
         fullData: JSON.stringify(data, null, 2)
       });
-      
-      this.updateCache(cacheKey, { rentEstimate: data });
-      return data;
+
+      // Normalize the response to ensure consistent field names
+      // RentCast API returns 'rent' but our types expect 'rentEstimate'
+      const normalizedData: RentCastRentalEstimate = {
+        rentEstimate: (data as any)?.rent || (data as any)?.rentEstimate || (data as any)?.price || 0,
+        rentRangeLow: (data as any)?.rentRangeLow || 0,
+        rentRangeHigh: (data as any)?.rentRangeHigh || 0,
+        confidenceScore: (data as any)?.confidenceScore || 0,
+        lastUpdated: (data as any)?.lastUpdated || new Date().toISOString(),
+        comparables: (data as any)?.comparables
+      };
+
+      console.log('[RentCast] Normalized rental estimate:', normalizedData);
+
+      this.updateCache(cacheKey, { rentEstimate: normalizedData });
+      return normalizedData;
     } catch (error) {
       console.error('[RentCast] Error getting rental estimate:', error);
       logError('RentCast Get Rental Estimate', error);
@@ -568,18 +581,31 @@ class RentCastService {
       console.log('[RentCast] Fetching sale comparables from API:', endpoint);
       const data = await this.makeRequest<RentCastSaleComps>(endpoint);
       
-      console.log('[RentCast] Sale comparables response structure:', {
-        hasData: !!data,
-        dataType: typeof data,
-        isArray: Array.isArray(data),
-        keys: data ? Object.keys(data) : [],
-        value: (data as any)?.value,
-        price: (data as any)?.price,
-        fullData: JSON.stringify(data, null, 2)
+      // CRITICAL: Normalize the API response to match expected structure
+      // RentCast API returns 'price' but we expect 'value'
+      const normalizedData: RentCastSaleComps = {
+        value: (data as any).price || (data as any).value || 0,
+        valueRangeLow: (data as any).priceRangeLow || (data as any).valueRangeLow || 0,
+        valueRangeHigh: (data as any).priceRangeHigh || (data as any).valueRangeHigh || 0,
+        latitude: (data as any).latitude,
+        longitude: (data as any).longitude,
+        comparables: (data as any).comparables || []
+      };
+
+      console.log('\n=== RENTCAST AVM/COMPARABLES API RESPONSE ===');
+      console.log('Endpoint called:', endpoint);
+      console.log('Raw response keys:', data ? Object.keys(data) : 'null');
+      console.log('Raw price field:', (data as any)?.price);
+      console.log('Normalized value:', normalizedData.value);
+      console.log('Value range:', {
+        low: normalizedData.valueRangeLow,
+        high: normalizedData.valueRangeHigh
       });
-      
-      this.updateCache(cacheKey, { saleComps: data });
-      return data;
+      console.log('Comparables count:', normalizedData.comparables?.length || 0);
+      console.log('=== END AVM RESPONSE ===\n');
+
+      this.updateCache(cacheKey, { saleComps: normalizedData });
+      return normalizedData;
     } catch (error) {
       console.error('[RentCast] Error getting sale comparables:', error);
       logError('RentCast Get Sale Comparables', error);

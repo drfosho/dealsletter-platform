@@ -110,8 +110,9 @@ export default function PropertyPreview({ data }: PropertyPreviewProps) {
           <div className="grid grid-cols-4 gap-2">
             {property.images.slice(0, 4).map((image: string, index: number) => (
               <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-                <img 
-                  src={image} 
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image}
                   alt={`Property view ${index + 1}`}
                   className="w-full h-full object-cover"
                   onError={(e) => {

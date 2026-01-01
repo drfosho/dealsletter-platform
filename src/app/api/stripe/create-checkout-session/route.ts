@@ -1,185 +1,128 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
-import { getOrCreatePrice } from '@/lib/stripe-helpers'
+
+// Force Node.js runtime to ensure env vars are accessible
+export const runtime = 'nodejs'
+
+// Explicit price ID mapping - Vercel requires explicit references (no dynamic access)
+function getPriceId(tier: string, billingPeriod: string): string | undefined {
+  console.log('[getPriceId] ========== PRICE LOOKUP START ==========')
+  console.log('[getPriceId] Input tier:', JSON.stringify(tier))
+  console.log('[getPriceId] Input billingPeriod:', JSON.stringify(billingPeriod))
+
+  // Log ALL Stripe env vars (explicit references required for Vercel)
+  const envVars = {
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? `SET (${process.env.STRIPE_SECRET_KEY.substring(0, 10)}...)` : 'MISSING',
+    STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY || 'MISSING',
+    STRIPE_PRICE_PRO_YEARLY: process.env.STRIPE_PRICE_PRO_YEARLY || 'MISSING',
+    STRIPE_PRICE_PRO_PLUS_MONTHLY: process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 'MISSING',
+    STRIPE_PRICE_PRO_PLUS_YEARLY: process.env.STRIPE_PRICE_PRO_PLUS_YEARLY || 'MISSING',
+  }
+  console.log('[getPriceId] Environment variables:', JSON.stringify(envVars, null, 2))
+
+  // Normalize inputs
+  const normalizedTier = (tier || '').toUpperCase().replace(/-/g, '_').trim()
+  const normalizedPeriod = (billingPeriod || 'monthly').toLowerCase().trim()
+  const isYearly = normalizedPeriod === 'yearly' || normalizedPeriod === 'annual'
+
+  console.log('[getPriceId] Normalized tier:', normalizedTier)
+  console.log('[getPriceId] Normalized period:', normalizedPeriod)
+  console.log('[getPriceId] Is yearly:', isYearly)
+
+  let priceId: string | undefined
+
+  // Explicit mapping to match Vercel environment variable names exactly
+  if (normalizedTier === 'PRO' || normalizedTier === 'PROFESSIONAL') {
+    priceId = isYearly
+      ? process.env.STRIPE_PRICE_PRO_YEARLY
+      : process.env.STRIPE_PRICE_PRO_MONTHLY
+    console.log('[getPriceId] Matched PRO tier, priceId:', priceId || 'NOT FOUND')
+  } else if (normalizedTier === 'PRO_PLUS' || normalizedTier === 'PROPLUS') {
+    priceId = isYearly
+      ? process.env.STRIPE_PRICE_PRO_PLUS_YEARLY
+      : process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY
+    console.log('[getPriceId] Matched PRO_PLUS tier, priceId:', priceId || 'NOT FOUND')
+  } else if (normalizedTier === 'STARTER' || normalizedTier === 'BASIC' || normalizedTier === 'FREE') {
+    console.log('[getPriceId] Free tier - no price ID needed')
+    priceId = undefined
+  } else if (normalizedTier === 'PREMIUM') {
+    // Premium uses same prices as Pro (legacy tier)
+    priceId = isYearly
+      ? process.env.STRIPE_PRICE_PRO_YEARLY
+      : process.env.STRIPE_PRICE_PRO_MONTHLY
+    console.log('[getPriceId] Matched PREMIUM tier (using Pro prices), priceId:', priceId || 'NOT FOUND')
+  } else {
+    console.log('[getPriceId] ❌ Unknown tier:', normalizedTier)
+    console.log('[getPriceId] Expected one of: PRO, PRO_PLUS, PROFESSIONAL, PROPLUS, STARTER, BASIC, FREE, PREMIUM')
+    priceId = undefined
+  }
+
+  console.log('[getPriceId] ========== RESULT:', priceId || 'undefined', '==========')
+  return priceId
+}
 
 export async function POST(request: NextRequest) {
-  console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG START ======')
+  console.log('[Checkout] ====== CREATE CHECKOUT SESSION START ======')
   console.log('[Checkout] Timestamp:', new Date().toISOString())
-  console.log('[Checkout] Environment:', process.env.NODE_ENV)
-  
+
   // Debug: Check environment variables
-  console.log('[Checkout] Environment Variables Check:')
+  console.log('[Checkout] Environment Check:')
   console.log('[Checkout] - STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY)
-  console.log('[Checkout] - STRIPE_SECRET_KEY length:', process.env.STRIPE_SECRET_KEY?.length)
   console.log('[Checkout] - STRIPE_SECRET_KEY prefix:', process.env.STRIPE_SECRET_KEY?.substring(0, 7))
   console.log('[Checkout] - NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
-  console.log('[Checkout] - Is Test Mode:', process.env.STRIPE_SECRET_KEY?.includes('sk_test'))
-  
+
   try {
     const body = await request.json()
     console.log('[Checkout] Request Body:', JSON.stringify(body, null, 2))
-    
+
     let { priceId, tierName, email, billingPeriod } = body
-    
+
     // Default to monthly if not specified
     billingPeriod = billingPeriod || 'monthly'
-    console.log('[Checkout] Billing Period:', billingPeriod)
+    console.log('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
 
-    // Fallback: If priceId is missing, try to map from tierName
+    // Get price ID from tier name if not provided
     if (!priceId && tierName) {
-      console.log('[Checkout] Price ID missing, attempting to map from tier name:', tierName)
-      console.log('[Checkout] Billing Period:', billingPeriod)
-      
-      // Try all possible environment variable naming conventions
-      const upperTier = tierName.toUpperCase()
-      const billingPeriodUpper = billingPeriod.toUpperCase()
-      
-      // Log all available environment variables for debugging
-      console.log('[Checkout] Checking environment variables for tier:', upperTier, 'period:', billingPeriodUpper)
-      
-      if (billingPeriod === 'yearly') {
-        console.log('[Checkout] - STRIPE_PRICE_' + upperTier + '_YEARLY:', process.env[`STRIPE_PRICE_${upperTier}_YEARLY`])
-        console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + '_YEARLY:', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_YEARLY`])
-      }
-      
-      console.log('[Checkout] - STRIPE_PRICE_' + upperTier + '_MONTHLY:', process.env[`STRIPE_PRICE_${upperTier}_MONTHLY`])
-      console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + '_MONTHLY:', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`])
-      console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_' + upperTier + ':', process.env[`NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`])
-      console.log('[Checkout] - NEXT_PUBLIC_STRIPE_PRICE_ID_' + upperTier + ':', process.env[`NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`])
-      
-      // Try multiple naming conventions in priority order
-      const possibleEnvVars = billingPeriod === 'yearly' ? [
-        `STRIPE_PRICE_${upperTier}_YEARLY`,              // Server-side env var format for yearly
-        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_YEARLY`,  // Client-side with YEARLY
-        `STRIPE_PRICE_${upperTier}_ANNUAL`,              // Alternative naming for yearly
-        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_ANNUAL`,  // Client-side with ANNUAL
-      ] : [
-        `STRIPE_PRICE_${upperTier}_MONTHLY`,             // Server-side env var format
-        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`, // Client-side with MONTHLY
-        `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`,         // Client-side without MONTHLY
-        `NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`,      // Client-side with ID
-        `STRIPE_PRICE_${upperTier}`,                     // Server-side without MONTHLY
-      ]
-      
-      for (const envVar of possibleEnvVars) {
-        const value = process.env[envVar]
-        console.log(`[Checkout] Checking ${envVar}: ${value ? 'FOUND' : 'not found'}`)
-        if (value) {
-          priceId = value
-          console.log(`[Checkout] ✅ Found price ID in ${envVar}: ${priceId}`)
-          break
-        }
-      }
-      
-      // Also try the hardcoded mapping as fallback
-      if (!priceId) {
-        const tierToPriceMap: Record<string, string | undefined> = billingPeriod === 'yearly' ? {
-          'STARTER': process.env.STRIPE_PRICE_STARTER_YEARLY || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY ||
-                     process.env.STRIPE_PRICE_STARTER_ANNUAL || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_ANNUAL,
-          'PRO': process.env.STRIPE_PRICE_PRO_YEARLY || 
-                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY ||
-                 process.env.STRIPE_PRICE_PRO_ANNUAL || 
-                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANNUAL,
-          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_YEARLY || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_YEARLY ||
-                     process.env.STRIPE_PRICE_PREMIUM_ANNUAL || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_ANNUAL,
-        } : {
-          'STARTER': process.env.STRIPE_PRICE_STARTER_MONTHLY || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY ||
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_STARTER,
-          'PRO': process.env.STRIPE_PRICE_PRO_MONTHLY || 
-                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY ||
-                 process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 
-                 process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO,
-          'PREMIUM': process.env.STRIPE_PRICE_PREMIUM_MONTHLY || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM_MONTHLY ||
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 
-                     process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PREMIUM,
-        }
-        
-        priceId = tierToPriceMap[upperTier]
-        console.log('[Checkout] Hardcoded mapping result for', billingPeriod, ':', tierToPriceMap)
-      }
-      
-      console.log('[Checkout] Final mapped price ID:', priceId || 'NOT FOUND')
-      
-      if (!priceId && billingPeriod === 'yearly') {
-        console.warn('[Checkout] WARNING: No yearly price found, falling back to monthly')
-        
-        // Fallback to monthly price if yearly not found
-        const monthlyEnvVars = [
-          `STRIPE_PRICE_${upperTier}_MONTHLY`,
-          `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}_MONTHLY`,
-          `NEXT_PUBLIC_STRIPE_PRICE_${upperTier}`,
-          `NEXT_PUBLIC_STRIPE_PRICE_ID_${upperTier}`,
-          `STRIPE_PRICE_${upperTier}`,
-        ]
-        
-        for (const envVar of monthlyEnvVars) {
-          const value = process.env[envVar]
-          if (value) {
-            priceId = value
-            console.log(`[Checkout] ⚠️ Using monthly price as fallback: ${envVar}`)
-            break
-          }
-        }
-      }
-      
-      if (!priceId) {
-        console.error('[Checkout] ERROR: Could not map tier to price ID')
-        console.error('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
-        console.error('[Checkout] All Stripe env vars:', Object.keys(process.env).filter(k => k.includes('STRIPE')))
-      }
+      priceId = getPriceId(tierName, billingPeriod)
+      console.log('[Checkout] Resolved Price ID:', priceId || 'NOT FOUND')
     }
 
     if (!priceId) {
-      console.log('[Checkout] No price ID from environment, attempting to get/create dynamically...')
-      
-      // Try to dynamically create or find the price
-      priceId = await getOrCreatePrice(tierName || 'pro', billingPeriod as 'monthly' | 'yearly');
-      
-      if (!priceId) {
-        console.error('[Checkout] ERROR: Could not get or create price')
-        console.error('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
-        return NextResponse.json(
-          { 
-            error: 'Could not determine or create price. Please ensure STRIPE_SECRET_KEY is set in environment variables.',
-            debug: { 
-              tierName,
-              billingPeriod, 
-              email,
-              stripeKeyExists: !!process.env.STRIPE_SECRET_KEY,
-              stripeKeyPrefix: process.env.STRIPE_SECRET_KEY?.substring(0, 7)
-            }
-          },
-          { status: 400 }
-        )
-      }
-      
-      console.log('[Checkout] Successfully got/created price:', priceId)
+      console.error('[Checkout] ERROR: No price ID found')
+      console.error('[Checkout] Tier:', tierName, 'Billing Period:', billingPeriod)
+
+      // List all STRIPE env vars for debugging
+      const stripeEnvVars = Object.keys(process.env)
+        .filter(k => k.includes('STRIPE'))
+        .map(k => `${k}: ${k.includes('SECRET') ? '[HIDDEN]' : (process.env[k] ? 'SET' : 'NOT SET')}`)
+      console.error('[Checkout] All STRIPE env vars:', stripeEnvVars)
+
+      return NextResponse.json(
+        {
+          error: 'No price configured for this tier. Please contact support.',
+          debug: {
+            tierName,
+            billingPeriod,
+            availableEnvVars: stripeEnvVars
+          }
+        },
+        { status: 400 }
+      )
     }
 
-    console.log('[Checkout] Price ID:', priceId)
-    console.log('[Checkout] Tier Name:', tierName)
-    console.log('[Checkout] Billing Period:', billingPeriod)
-    console.log('[Checkout] Email:', email)
+    console.log('[Checkout] Using Price ID:', priceId)
 
     // Get the current user (if logged in)
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError) {
       console.log('[Checkout] Auth Error (non-fatal):', authError.message)
     }
-    
+
     console.log('[Checkout] User:', user ? `${user.id} (${user.email})` : 'Not authenticated')
 
-    // Allow both authenticated and unauthenticated users
     let customerId = null
     let customerEmail = user?.email || email
 
@@ -216,32 +159,75 @@ export async function POST(request: NextRequest) {
             .from('profiles')
             .update({ stripe_customer_id: customerId })
             .eq('id', user.id)
-          
+
           if (updateError) {
             console.error('[Checkout] Failed to update profile with customer ID:', updateError)
           }
-        } catch (stripeError: any) {
-          console.error('[Checkout] Stripe customer creation error:', {
-            message: stripeError.message,
-            type: stripeError.type,
-            code: stripeError.code,
-            statusCode: stripeError.statusCode,
-            raw: stripeError.raw
-          })
+        } catch (stripeError: unknown) {
+          const err = stripeError as { message?: string; type?: string; code?: string; statusCode?: number }
+          console.error('[Checkout] Stripe customer creation error:', err.message)
           throw stripeError
         }
       }
     }
 
-    // Create checkout session configuration
-    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard?success=true&tier=${tierName}`
-    const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing?canceled=true`
-    
-    console.log('[Checkout] URLs:')
-    console.log('[Checkout] - Success URL:', successUrl)
-    console.log('[Checkout] - Cancel URL:', cancelUrl)
+    // CRITICAL: Check for existing active subscription to prevent duplicates
+    if (user) {
+      const { data: existingSub } = await supabase
+        .from('subscriptions')
+        .select('tier, status, stripe_subscription_id')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .single()
 
-    const sessionConfig: any = {
+      if (existingSub?.stripe_subscription_id) {
+        console.log('[Checkout] User already has active subscription:', existingSub)
+
+        // Check if trying to subscribe to same tier
+        const normalizedExistingTier = existingSub.tier?.toLowerCase().replace('-', '_')
+        const normalizedNewTier = tierName?.toLowerCase().replace('-', '_')
+
+        if (normalizedExistingTier === normalizedNewTier) {
+          return NextResponse.json(
+            { error: 'You are already subscribed to this plan. Visit your account page to manage your subscription.' },
+            { status: 400 }
+          )
+        } else {
+          return NextResponse.json(
+            { error: 'You have an active subscription. Please cancel it first before switching plans, or use the billing portal to change plans.' },
+            { status: 400 }
+          )
+        }
+      }
+    }
+
+    // Create checkout session configuration
+    // Use NEXT_PUBLIC_APP_URL or fallback to Vercel URL for preview deployments
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') // Remove trailing slash
+
+    // Fallback to Vercel URL for preview deployments
+    if (!baseUrl && process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`
+      console.log('[Checkout] Using VERCEL_URL:', baseUrl)
+    }
+
+    if (!baseUrl) {
+      console.error('[Checkout] ❌ No base URL available!')
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      )
+    }
+
+    // CRITICAL: Use proper success URL with session_id for verification
+    const successUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${baseUrl}/pricing?canceled=true`
+
+    console.log('[Checkout] Base URL:', baseUrl)
+    console.log('[Checkout] Success URL:', successUrl)
+    console.log('[Checkout] Cancel URL:', cancelUrl)
+
+    const sessionConfig: Record<string, unknown> = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -253,131 +239,88 @@ export async function POST(request: NextRequest) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       subscription_data: {
-        trial_period_days: 14, // 14-day free trial
+        trial_period_days: 14,
         metadata: {
           tierName: tierName || 'unknown',
           billingPeriod: billingPeriod || 'monthly',
+          ...(user && { supabaseUserId: user.id }),
         },
       },
+      // Add session-level metadata for webhook access
+      metadata: {
+        tierName: tierName || 'unknown',
+        billingPeriod: billingPeriod || 'monthly',
+        ...(user && { supabaseUserId: user.id }),
+      },
+      allow_promotion_codes: true,
     }
 
     // Add customer or email to session
     if (customerId) {
       sessionConfig.customer = customerId
-      if (user) {
-        sessionConfig.subscription_data.metadata.supabaseUserId = user.id
-      }
       console.log('[Checkout] Using existing customer:', customerId)
     } else {
-      // For unauthenticated users, collect email during checkout
       sessionConfig.customer_email = customerEmail
       console.log('[Checkout] Using customer email:', customerEmail)
     }
-
-    console.log('[Checkout] Session Config:', JSON.stringify(sessionConfig, null, 2))
 
     // Create the checkout session
     console.log('[Checkout] Creating Stripe checkout session...')
     let session
     try {
-      session = await stripe.checkout.sessions.create(sessionConfig)
-      console.log('[Checkout] Session created successfully:', session.id)
-      console.log('[Checkout] Session URL:', session.url)
-    } catch (stripeError: any) {
-      console.error('[Checkout] ❌ STRIPE SESSION CREATION ERROR:')
-      console.error('[Checkout] Error Type:', stripeError.type)
-      console.error('[Checkout] Error Code:', stripeError.code)
-      console.error('[Checkout] Error Message:', stripeError.message)
-      console.error('[Checkout] Status Code:', stripeError.statusCode)
-      console.error('[Checkout] Request ID:', stripeError.requestId)
-      
-      if (stripeError.raw) {
-        console.error('[Checkout] Raw Error:', JSON.stringify(stripeError.raw, null, 2))
+      session = await stripe.checkout.sessions.create(sessionConfig as Parameters<typeof stripe.checkout.sessions.create>[0])
+      console.log('[Checkout] Session created:', session.id)
+    } catch (stripeError: unknown) {
+      const err = stripeError as {
+        message?: string;
+        type?: string;
+        code?: string;
+        statusCode?: number;
+        param?: string;
+        requestId?: string;
       }
-      
-      // Check for specific error types
-      if (stripeError.code === 'resource_missing') {
-        console.error('[Checkout] RESOURCE MISSING - Price ID may not exist:', priceId)
+      console.error('[Checkout] Stripe error:', err.message)
+      console.error('[Checkout] Error type:', err.type)
+      console.error('[Checkout] Error code:', err.code)
+
+      if (err.code === 'resource_missing') {
         return NextResponse.json(
-          { 
+          {
             error: 'Invalid price ID - the price does not exist in Stripe',
-            details: {
-              priceId,
-              message: stripeError.message,
-              code: stripeError.code
-            }
+            details: { priceId, message: err.message }
           },
           { status: 400 }
         )
       }
-      
-      if (stripeError.type === 'StripeInvalidRequestError') {
-        console.error('[Checkout] INVALID REQUEST - Check parameters')
+
+      if (err.type === 'StripeAuthenticationError') {
         return NextResponse.json(
-          { 
-            error: 'Invalid request to Stripe API',
-            details: {
-              message: stripeError.message,
-              param: stripeError.param,
-              code: stripeError.code,
-              type: stripeError.type
-            }
-          },
-          { status: 400 }
-        )
-      }
-      
-      if (stripeError.type === 'StripeAuthenticationError') {
-        console.error('[Checkout] AUTHENTICATION ERROR - Check API key')
-        return NextResponse.json(
-          { 
-            error: 'Stripe authentication failed - check API key configuration',
-            details: {
-              message: stripeError.message,
-              code: stripeError.code
-            }
-          },
+          { error: 'Stripe authentication failed - check API key configuration' },
           { status: 401 }
         )
       }
-      
-      // Generic error response with details
+
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to create checkout session',
-          details: {
-            message: stripeError.message,
-            type: stripeError.type,
-            code: stripeError.code,
-            statusCode: stripeError.statusCode
-          }
+          details: { message: err.message, code: err.code }
         },
-        { status: stripeError.statusCode || 500 }
+        { status: err.statusCode || 500 }
       )
     }
 
-    console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG END (SUCCESS) ======')
-    return NextResponse.json({ 
+    console.log('[Checkout] ====== SUCCESS ======')
+    return NextResponse.json({
       sessionId: session.id,
-      debug: process.env.NODE_ENV === 'development' ? {
-        url: session.url,
-        customerId: customerId || 'none',
-        email: customerEmail
-      } : undefined
+      url: session.url
     })
-  } catch (error: any) {
-    console.error('[Checkout] ❌ UNEXPECTED ERROR:', error)
-    console.error('[Checkout] Error Stack:', error.stack)
-    console.log('[Checkout] ====== CREATE CHECKOUT SESSION DEBUG END (ERROR) ======')
-    
+  } catch (error: unknown) {
+    const err = error as { message?: string; stack?: string }
+    console.error('[Checkout] Unexpected error:', err.message)
+    console.error('[Checkout] Stack:', err.stack)
+
     return NextResponse.json(
-      { 
-        error: 'Unexpected error occurred',
-        details: {
-          message: error.message,
-          type: error.constructor.name
-        }
-      },
+      { error: 'Unexpected error occurred', details: { message: err.message } },
       { status: 500 }
     )
   }

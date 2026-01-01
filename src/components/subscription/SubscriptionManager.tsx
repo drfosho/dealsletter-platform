@@ -35,17 +35,19 @@ export default function SubscriptionManager() {
     }
 
     setActionLoading(true);
+    console.log('[SubscriptionManager] Canceling subscription...');
     try {
       const success = await cancelSubscription();
+      console.log('[SubscriptionManager] Cancel result:', success);
       if (success) {
         await loadSubscriptionData();
         alert('Subscription canceled successfully. You will still have access until the end of your billing period.');
       } else {
-        alert('Failed to cancel subscription. Please try again.');
+        alert('Failed to cancel subscription. Please try again or contact support.');
       }
     } catch (error) {
-      console.error('Error canceling subscription:', error);
-      alert('An error occurred. Please try again.');
+      console.error('[SubscriptionManager] Error canceling subscription:', error);
+      alert('An error occurred while canceling. Please try again or contact support.');
     } finally {
       setActionLoading(false);
     }
@@ -53,17 +55,19 @@ export default function SubscriptionManager() {
 
   const handleResumeSubscription = async () => {
     setActionLoading(true);
+    console.log('[SubscriptionManager] Resuming subscription...');
     try {
       const success = await resumeSubscription();
+      console.log('[SubscriptionManager] Resume result:', success);
       if (success) {
         await loadSubscriptionData();
-        alert('Subscription resumed successfully!');
+        alert('Subscription resumed successfully! Your plan will continue without interruption.');
       } else {
-        alert('Failed to resume subscription. Please try again.');
+        alert('Failed to resume subscription. Please try again or contact support.');
       }
     } catch (error) {
-      console.error('Error resuming subscription:', error);
-      alert('An error occurred. Please try again.');
+      console.error('[SubscriptionManager] Error resuming subscription:', error);
+      alert('An error occurred while resuming. Please try again or contact support.');
     } finally {
       setActionLoading(false);
     }
@@ -72,19 +76,36 @@ export default function SubscriptionManager() {
   const handleUpdatePayment = async () => {
     setActionLoading(true);
     try {
+      console.log('[SubscriptionManager] Opening billing portal...');
       const response = await fetch('/api/stripe/billing-portal', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
+      const data = await response.json();
+      console.log('[SubscriptionManager] Billing portal response:', response.status, data);
+
+      if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 400 && data.error?.includes('No billing account')) {
+          alert('You need to subscribe to a plan before accessing the billing portal. Redirecting to pricing...');
+          window.location.href = '/pricing';
+          return;
+        }
+        throw new Error(data.error || 'Failed to open billing portal');
+      }
+
+      if (data.url) {
+        console.log('[SubscriptionManager] Redirecting to:', data.url);
+        window.location.href = data.url;
       } else {
         alert('Failed to open billing portal. Please try again.');
       }
     } catch (error) {
-      console.error('Error opening billing portal:', error);
-      alert('An error occurred. Please try again.');
+      console.error('[SubscriptionManager] Error opening billing portal:', error);
+      alert('An error occurred while opening the billing portal. Please try again or contact support.');
     } finally {
       setActionLoading(false);
     }
