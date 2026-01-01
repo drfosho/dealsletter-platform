@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
 
       try {
         subscriptionData = await stripe.subscriptions.retrieve(subscriptionId)
-        tier = subscriptionData.metadata?.tierName?.toLowerCase() || 'pro'
+        // Handle both old (tier) and new (tierName) metadata keys
+        tier = (subscriptionData.metadata?.tierName || subscriptionData.metadata?.tier || 'pro').toLowerCase()
         console.log('[VerifySession] Subscription retrieved:', {
           id: subscriptionData.id,
           status: subscriptionData.status,

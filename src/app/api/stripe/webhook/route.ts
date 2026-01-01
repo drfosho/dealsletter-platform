@@ -262,9 +262,9 @@ export async function POST(request: NextRequest) {
           if (userId) {
             console.log('[Webhook] User ID found:', userId);
 
-            // Get the price ID and tier
+            // Get the price ID and tier (handle both old and new metadata keys)
             const priceId = subscription.items.data[0].price.id;
-            const stripeTierName = subscription.metadata.tierName || 'STARTER';
+            const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || session.metadata?.tierName || 'PRO';
             const tierName = mapTierName(stripeTierName);
 
             console.log('[Webhook] Tier name:', stripeTierName, '→', tierName);
