@@ -23,6 +23,43 @@ function mapTierName(stripeTier: string): string {
   return tierMap[upperTier] || 'free';  // Default to free if not found
 }
 
+// Helper to safely get period dates from subscription (handles different Stripe API versions)
+function getSubscriptionPeriodDates(subscription: Stripe.Subscription): { periodStart: Date; periodEnd: Date } {
+  // Try subscription level first (older API versions)
+  let periodStartTs = (subscription as any).current_period_start;
+  let periodEndTs = (subscription as any).current_period_end;
+
+  // Try subscription item level (newer API versions like 2025-05-28.basil)
+  if (!periodStartTs && subscription.items?.data?.[0]) {
+    const item = subscription.items.data[0] as any;
+    periodStartTs = item.current_period_start;
+    periodEndTs = item.current_period_end;
+  }
+
+  // Fallback to trial dates if available
+  if (!periodStartTs && subscription.trial_start) {
+    periodStartTs = subscription.trial_start;
+  }
+  if (!periodEndTs && subscription.trial_end) {
+    periodEndTs = subscription.trial_end;
+  }
+
+  // Final fallback to now + 30 days
+  if (!periodStartTs) {
+    periodStartTs = Math.floor(Date.now() / 1000);
+    console.log('[Webhook] Warning: Using current time for period start');
+  }
+  if (!periodEndTs) {
+    periodEndTs = periodStartTs + (30 * 24 * 60 * 60); // 30 days
+    console.log('[Webhook] Warning: Using 30 days from start for period end');
+  }
+
+  return {
+    periodStart: new Date(periodStartTs * 1000),
+    periodEnd: new Date(periodEndTs * 1000)
+  };
+}
+
 async function getRawBody(request: NextRequest): Promise<Buffer> {
   const chunks = [];
   const reader = request.body?.getReader();
@@ -140,6 +177,8 @@ export async function POST(request: NextRequest) {
               const stripeTierName = subscription.metadata.tierName || 'STARTER';
               const tierName = mapTierName(stripeTierName);
               
+              const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+
               await supabase
                 .from('subscriptions')
                 .upsert({
@@ -147,10 +186,10 @@ export async function POST(request: NextRequest) {
                   stripe_customer_id: subscription.customer as string,
                   stripe_subscription_id: subscription.id,
                   stripe_price_id: priceId,
-                  status: subscription.status as any,
-                  tier: tierName as any,
-                  current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-                  current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+                  status: subscription.status as string,
+                  tier: tierName,
+                  current_period_start: periodStart.toISOString(),
+                  current_period_end: periodEnd.toISOString(),
                   cancel_at_period_end: subscription.cancel_at_period_end,
                   trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
                   trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
@@ -160,9 +199,6 @@ export async function POST(request: NextRequest) {
                 });
 
               // Initialize usage tracking
-              const periodStart = new Date((subscription as any).current_period_start * 1000);
-              const periodEnd = new Date((subscription as any).current_period_end * 1000);
-              
               await supabase
                 .from('usage_tracking')
                 .upsert({
@@ -188,6 +224,9 @@ export async function POST(request: NextRequest) {
           console.log('[Webhook] subscription.created - Price ID:', priceId);
           console.log('[Webhook] subscription.created - Subscription ID:', subscription.id);
 
+          const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+          console.log('[Webhook] subscription.created - Period:', periodStart.toISOString(), 'to', periodEnd.toISOString());
+
           const { error: subError } = await supabase
             .from('subscriptions')
             .upsert({
@@ -197,8 +236,8 @@ export async function POST(request: NextRequest) {
               stripe_price_id: priceId,
               status: subscription.status as string,
               tier: tierName,
-              current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-              current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+              current_period_start: periodStart.toISOString(),
+              current_period_end: periodEnd.toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end,
               trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
               trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
@@ -226,9 +265,6 @@ export async function POST(request: NextRequest) {
           }
 
           // Initialize usage tracking
-          const periodStart = new Date((subscription as any).current_period_start * 1000);
-          const periodEnd = new Date((subscription as any).current_period_end * 1000);
-
           const { error: usageError } = await supabase
             .from('usage_tracking')
             .upsert({
@@ -299,6 +335,10 @@ export async function POST(request: NextRequest) {
 
             console.log('[Webhook] Tier name:', stripeTierName, '→', tierName);
 
+            // Get period dates safely
+            const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+            console.log('[Webhook] Period:', periodStart.toISOString(), 'to', periodEnd.toISOString());
+
             // Create or update subscription record
             const { error: subError } = await supabase
               .from('subscriptions')
@@ -307,10 +347,10 @@ export async function POST(request: NextRequest) {
                 stripe_customer_id: customerId,
                 stripe_subscription_id: subscription.id,
                 stripe_price_id: priceId,
-                status: subscription.status as any,
-                tier: tierName as any,
-                current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-                current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+                status: subscription.status as string,
+                tier: tierName,
+                current_period_start: periodStart.toISOString(),
+                current_period_end: periodEnd.toISOString(),
                 cancel_at_period_end: subscription.cancel_at_period_end,
                 trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
                 trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
@@ -338,9 +378,6 @@ export async function POST(request: NextRequest) {
             }
 
             // Initialize usage tracking for the new period
-            const periodStart = new Date((subscription as any).current_period_start * 1000);
-            const periodEnd = new Date((subscription as any).current_period_end * 1000);
-
             await supabase
               .from('usage_tracking')
               .upsert({
@@ -369,18 +406,19 @@ export async function POST(request: NextRequest) {
 
         if (userId) {
           const priceId = subscription.items.data[0].price.id;
-          const stripeTierName = subscription.metadata.tierName || 'STARTER';
-              const tierName = mapTierName(stripeTierName);
-          
+          const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
+          const tierName = mapTierName(stripeTierName);
+          const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+
           // Update subscription details
           await supabase
             .from('subscriptions')
             .update({
               stripe_price_id: priceId,
-              status: subscription.status as any,
-              tier: tierName as any,
-              current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-              current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+              status: subscription.status as string,
+              tier: tierName,
+              current_period_start: periodStart.toISOString(),
+              current_period_end: periodEnd.toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end,
               cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
               canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
@@ -441,9 +479,8 @@ export async function POST(request: NextRequest) {
               });
 
             // Reset usage for new billing period if needed
-            const periodStart = new Date((subscription as any).current_period_start * 1000);
-            const periodEnd = new Date((subscription as any).current_period_end * 1000);
-            
+            const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+
             await supabase
               .from('usage_tracking')
               .upsert({

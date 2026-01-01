@@ -1,9 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
+import Stripe from 'stripe'
 
 // Force Node.js runtime
 export const runtime = 'nodejs'
+
+// Helper to safely get period dates from subscription (handles different Stripe API versions)
+function getSubscriptionPeriodDates(subscription: Stripe.Subscription): { periodStart: Date; periodEnd: Date } {
+  // Try subscription level first (older API versions)
+  let periodStartTs = (subscription as any).current_period_start;
+  let periodEndTs = (subscription as any).current_period_end;
+
+  // Try subscription item level (newer API versions like 2025-05-28.basil)
+  if (!periodStartTs && subscription.items?.data?.[0]) {
+    const item = subscription.items.data[0] as any;
+    periodStartTs = item.current_period_start;
+    periodEndTs = item.current_period_end;
+  }
+
+  // Fallback to trial dates if available
+  if (!periodStartTs && subscription.trial_start) {
+    periodStartTs = subscription.trial_start;
+  }
+  if (!periodEndTs && subscription.trial_end) {
+    periodEndTs = subscription.trial_end;
+  }
+
+  // Final fallback to now + 30 days
+  if (!periodStartTs) {
+    periodStartTs = Math.floor(Date.now() / 1000);
+    console.log('[VerifySession] Warning: Using current time for period start');
+  }
+  if (!periodEndTs) {
+    periodEndTs = periodStartTs + (30 * 24 * 60 * 60); // 30 days
+    console.log('[VerifySession] Warning: Using 30 days from start for period end');
+  }
+
+  return {
+    periodStart: new Date(periodStartTs * 1000),
+    periodEnd: new Date(periodEndTs * 1000)
+  };
+}
 
 export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get('session_id')
@@ -81,6 +119,10 @@ export async function GET(request: NextRequest) {
         // Normalize tier name for database
         const normalizedTier = tier.toLowerCase().replace('_', '-')
 
+        // Get period dates safely (handles different Stripe API versions)
+        const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscriptionData)
+        console.log('[VerifySession] Period:', periodStart.toISOString(), 'to', periodEnd.toISOString())
+
         // Update or create subscription record
         const { error: upsertError } = await supabase
           .from('subscriptions')
@@ -91,8 +133,8 @@ export async function GET(request: NextRequest) {
             stripe_price_id: subscriptionData.items?.data?.[0]?.price?.id,
             status: subscriptionData.status,
             tier: normalizedTier,
-            current_period_start: new Date(subscriptionData.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(subscriptionData.current_period_end * 1000).toISOString(),
+            current_period_start: periodStart.toISOString(),
+            current_period_end: periodEnd.toISOString(),
             cancel_at_period_end: subscriptionData.cancel_at_period_end || false,
             trial_start: subscriptionData.trial_start
               ? new Date(subscriptionData.trial_start * 1000).toISOString()
@@ -125,8 +167,6 @@ export async function GET(request: NextRequest) {
         }
 
         // Initialize usage tracking for the new subscription period
-        const periodStart = new Date(subscriptionData.current_period_start * 1000)
-        const periodEnd = new Date(subscriptionData.current_period_end * 1000)
 
         await supabase
           .from('usage_tracking')
