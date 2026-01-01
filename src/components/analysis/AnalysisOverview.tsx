@@ -432,8 +432,66 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       else if (cashOnCash >= 8) score += 8;
       else if (cashOnCash >= 5) score += 4;
 
+    } else if (strategy === 'house-hack') {
+      // ===== HOUSE HACK SCORING =====
+      // For house hack, the key metric is housing savings, not traditional cash flow
+      const housingROI = getNumericValue(
+        (aiMetrics as any)?.housing_roi,
+        (nestedAiMetrics as any)?.housing_roi,
+        analysisData?.housingROI,
+        roi // Fall back to general ROI if housing-specific not available
+      );
+      const outOfPocket = getNumericValue(
+        (aiMetrics as any)?.out_of_pocket_housing_cost,
+        (nestedAiMetrics as any)?.out_of_pocket_housing_cost,
+        analysisData?.outOfPocketHousingCost
+      );
+      const housingSavings = getNumericValue(
+        (aiMetrics as any)?.monthly_housing_savings,
+        (nestedAiMetrics as any)?.monthly_housing_savings,
+        analysisData?.monthlyHousingSavings
+      );
+
+      console.log('[InvestmentScore] House Hack metrics:', { housingROI, outOfPocket, housingSavings, roi });
+
+      // Housing Savings Component (40 points max)
+      // Negative out-of-pocket = you're getting paid to live there!
+      if (outOfPocket <= 0) score += 40;           // Live free or get paid
+      else if (outOfPocket <= 300) score += 35;    // Very low housing cost
+      else if (outOfPocket <= 500) score += 30;    // Low housing cost
+      else if (outOfPocket <= 800) score += 25;    // Moderate housing cost
+      else if (outOfPocket <= 1200) score += 20;   // Below market housing cost
+      else if (outOfPocket <= 1500) score += 15;   // Slightly reduced housing cost
+      else score += 10;                            // Some benefit
+
+      // Housing ROI Component (35 points max)
+      if (housingROI >= 50) score += 35;
+      else if (housingROI >= 40) score += 30;
+      else if (housingROI >= 30) score += 25;
+      else if (housingROI >= 20) score += 20;
+      else if (housingROI >= 15) score += 15;
+      else if (housingROI >= 10) score += 10;
+      else if (housingROI >= 0) score += 5;
+
+      // Accessibility/FHA Eligibility (15 points max)
+      const downPaymentPercent = analysis.down_payment_percent || 20;
+      if (downPaymentPercent <= 5) score += 15;    // FHA eligible
+      else if (downPaymentPercent <= 10) score += 10;
+      else if (downPaymentPercent <= 15) score += 5;
+
+      // Market Position (10 points max)
+      const medianPrice = analysis.market_data?.medianSalePrice || 0;
+      const purchasePrice = analysis.purchase_price || 0;
+      if (medianPrice > 0 && purchasePrice > 0 && purchasePrice < medianPrice) {
+        score += 10;
+      } else if (medianPrice > 0 && purchasePrice > 0 && purchasePrice < medianPrice * 1.1) {
+        score += 5;
+      }
+
+      console.log('[InvestmentScore] House Hack score:', score);
+
     } else {
-      // ===== BUY & HOLD / RENTAL / HOUSE-HACK SCORING =====
+      // ===== BUY & HOLD / RENTAL SCORING =====
       const capRate = getNumericValue(aiMetrics?.cap_rate, nestedAiMetrics?.cap_rate, analysisData?.capRate);
       const cashFlow = getNumericValue(aiMetrics?.monthly_cash_flow, nestedAiMetrics?.monthly_cash_flow, analysisData?.monthlyCashFlow);
       const cashOnCash = getNumericValue(aiMetrics?.cash_on_cash_return, nestedAiMetrics?.cash_on_cash_return, analysisData?.cashOnCash);
