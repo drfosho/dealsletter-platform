@@ -248,13 +248,21 @@ export default function AccountPage() {
                   Upgrade to Pro
                 </Link>
               ) : (
-                <button
-                  onClick={handleManageBilling}
-                  disabled={isBillingLoading}
-                  className="px-6 py-2 border border-border rounded-lg hover:bg-muted/10 transition-colors font-medium disabled:opacity-50"
-                >
-                  {isBillingLoading ? 'Loading...' : 'Manage Billing'}
-                </button>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/account/subscription"
+                    className="px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-semibold shadow-md shadow-purple-500/20"
+                  >
+                    Manage Subscription
+                  </Link>
+                  <button
+                    onClick={handleManageBilling}
+                    disabled={isBillingLoading}
+                    className="px-6 py-2 border border-border rounded-lg hover:bg-muted/10 transition-colors font-medium disabled:opacity-50"
+                  >
+                    {isBillingLoading ? 'Loading...' : 'Billing Portal'}
+                  </button>
+                </div>
               )}
             </div>
 
@@ -372,6 +380,21 @@ export default function AccountPage() {
                 <div>
                   <div className="font-medium text-primary">Analysis History</div>
                   <div className="text-sm text-muted">View past analyses</div>
+                </div>
+              </Link>
+
+              <Link
+                href="/account/subscription"
+                className="flex items-center gap-3 p-4 border border-border/60 rounded-lg hover:bg-purple-500/5 hover:border-purple-500/40 transition-colors"
+              >
+                <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-medium text-primary">Subscription & Billing</div>
+                  <div className="text-sm text-muted">Manage your plan & payments</div>
                 </div>
               </Link>
 
