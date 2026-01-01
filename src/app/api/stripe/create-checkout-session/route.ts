@@ -202,10 +202,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create checkout session configuration
-    // CRITICAL: Validate base URL is set
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    // Use NEXT_PUBLIC_APP_URL or fallback to Vercel URL for preview deployments
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') // Remove trailing slash
+
+    // Fallback to Vercel URL for preview deployments
+    if (!baseUrl && process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`
+      console.log('[Checkout] Using VERCEL_URL:', baseUrl)
+    }
+
     if (!baseUrl) {
-      console.error('[Checkout] ❌ NEXT_PUBLIC_APP_URL is not set!')
+      console.error('[Checkout] ❌ No base URL available!')
       return NextResponse.json(
         { error: 'Server configuration error. Please contact support.' },
         { status: 500 }

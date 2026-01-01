@@ -83,10 +83,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build return URL - validate base URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    // Build return URL - use NEXT_PUBLIC_APP_URL or fallback to Vercel URL
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') // Remove trailing slash
+
+    // Fallback to Vercel URL for preview deployments
+    if (!baseUrl && process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`
+      console.log('[EmbeddedCheckout] Using VERCEL_URL:', baseUrl)
+    }
+
     if (!baseUrl) {
-      console.error('[EmbeddedCheckout] ❌ NEXT_PUBLIC_APP_URL is not set!')
+      console.error('[EmbeddedCheckout] ❌ No base URL available!')
       return NextResponse.json(
         { error: 'Server configuration error. Please contact support.' },
         { status: 500 }
