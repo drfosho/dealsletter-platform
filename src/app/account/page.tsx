@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile } from '@/lib/supabase/profiles';
 import { getCurrentMonthUsage, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
+import { createClient } from '@/lib/supabase/client';
 
 type SubscriptionTier = 'basic' | 'pro' | 'pro-plus' | 'premium';
 
@@ -28,10 +28,28 @@ export default function AccountPage() {
 
     setIsLoading(true);
     try {
-      // Fetch profile
-      const { data: profile } = await getUserProfile(user.id);
-      if (profile) {
-        setSubscriptionTier(profile.subscription_tier || 'basic');
+      const supabase = createClient();
+
+      // Fetch subscription from subscriptions table (source of truth for paid users)
+      const { data: subscription, error: subError } = await supabase
+        .from('subscriptions')
+        .select('tier, status')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .single();
+
+      if (subError && subError.code !== 'PGRST116') {
+        console.error('Error fetching subscription:', subError);
+      }
+
+      if (subscription?.tier) {
+        // Normalize tier name (e.g., 'pro' -> 'pro', 'pro-plus' -> 'pro-plus')
+        const normalizedTier = subscription.tier.toLowerCase().replace('_', '-') as SubscriptionTier;
+        setSubscriptionTier(normalizedTier);
+        console.log('[Account] Subscription tier from DB:', subscription.tier, '→', normalizedTier);
+      } else {
+        setSubscriptionTier('basic');
+        console.log('[Account] No active subscription found, using basic tier');
       }
 
       // Fetch usage

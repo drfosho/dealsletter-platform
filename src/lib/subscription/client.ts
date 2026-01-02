@@ -4,7 +4,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 
-export type SubscriptionTier = 'free' | 'starter' | 'professional' | 'premium';
+export type SubscriptionTier = 'free' | 'basic' | 'starter' | 'pro' | 'professional' | 'pro-plus' | 'premium';
 export type SubscriptionStatus = 
   | 'active' 
   | 'canceled' 
@@ -94,19 +94,34 @@ export async function getUserSubscription(): Promise<Subscription | null> {
   return data;
 }
 
+// Default limits by tier (fallback if not in database)
+const DEFAULT_LIMITS: Record<string, UsageLimit> = {
+  'free': { tier: 'free', analysis_limit: 3, features: { deal_alerts: false, pdf_export: true, priority_support: false } },
+  'basic': { tier: 'basic', analysis_limit: 3, features: { deal_alerts: false, pdf_export: true, priority_support: false } },
+  'starter': { tier: 'starter', analysis_limit: 3, features: { deal_alerts: false, pdf_export: true, priority_support: false } },
+  'pro': { tier: 'pro', analysis_limit: 50, features: { deal_alerts: true, pdf_export: true, priority_support: true, advanced_analysis: true } },
+  'professional': { tier: 'professional', analysis_limit: 50, features: { deal_alerts: true, pdf_export: true, priority_support: true, advanced_analysis: true } },
+  'pro-plus': { tier: 'pro-plus', analysis_limit: 200, features: { deal_alerts: true, pdf_export: true, priority_support: true, advanced_analysis: true, api_access: true } },
+  'premium': { tier: 'premium', analysis_limit: 50, features: { deal_alerts: true, pdf_export: true, priority_support: true, advanced_analysis: true } },
+};
+
 // Get usage limits for a tier
 export async function getUsageLimits(tier: SubscriptionTier): Promise<UsageLimit | null> {
   const supabase = createClient();
 
+  // Normalize tier name
+  const normalizedTier = tier.toLowerCase().replace('_', '-');
+
   const { data, error } = await supabase
     .from('usage_limits')
     .select('*')
-    .eq('tier', tier)
+    .eq('tier', normalizedTier)
     .single();
 
   if (error) {
-    console.error('Error fetching usage limits:', error);
-    return null;
+    console.log('[getUsageLimits] DB lookup failed for tier:', normalizedTier, '- using defaults');
+    // Return default limits if not found in database
+    return DEFAULT_LIMITS[normalizedTier] || DEFAULT_LIMITS['free'];
   }
 
   return data;
