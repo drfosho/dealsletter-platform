@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import Stripe from 'stripe';
 
 // Disable body parsing, we need the raw body for webhook signature verification
@@ -8,6 +8,8 @@ export const runtime = 'nodejs';
 
 // Map Stripe tier names to our database tier names
 function mapTierName(stripeTier: string): string {
+  console.log('[Webhook] mapTierName - Input:', stripeTier);
+
   const tierMap: Record<string, string> = {
     'STARTER': 'starter',
     'PRO': 'pro',  // Map PRO to pro
@@ -20,19 +22,22 @@ function mapTierName(stripeTier: string): string {
   };
 
   const upperTier = stripeTier.toUpperCase().replace('-', '_');
-  return tierMap[upperTier] || 'free';  // Default to free if not found
+  const result = tierMap[upperTier] || 'free';  // Default to free if not found
+  console.log('[Webhook] mapTierName - Normalized:', upperTier, '→', result);
+  return result;
 }
 
 // CRITICAL: Safely convert Stripe Unix timestamp (seconds) to ISO string
 // Stripe timestamps are in SECONDS, JavaScript Date expects MILLISECONDS
 function stripeTimestampToISO(timestamp: number | null | undefined): string | null {
   if (timestamp === null || timestamp === undefined) {
+    console.log('[Webhook] stripeTimestampToISO - No timestamp provided, returning null');
     return null;
   }
 
   // Ensure it's a valid number
   if (typeof timestamp !== 'number' || isNaN(timestamp)) {
-    console.error('[Webhook] Invalid timestamp value:', timestamp);
+    console.error('[Webhook] stripeTimestampToISO - Invalid timestamp value:', timestamp, 'type:', typeof timestamp);
     return null;
   }
 
@@ -42,11 +47,13 @@ function stripeTimestampToISO(timestamp: number | null | undefined): string | nu
 
   // Validate the resulting date
   if (isNaN(date.getTime())) {
-    console.error('[Webhook] Invalid date from timestamp:', timestamp);
+    console.error('[Webhook] stripeTimestampToISO - Invalid date from timestamp:', timestamp);
     return null;
   }
 
-  return date.toISOString();
+  const isoString = date.toISOString();
+  console.log('[Webhook] stripeTimestampToISO - Converted:', timestamp, '→', isoString);
+  return isoString;
 }
 
 // Helper to safely get period dates from subscription (handles different Stripe API versions)
@@ -172,7 +179,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Check for duplicate events (idempotency)
     const { data: existingEvent } = await supabase
@@ -622,7 +629,7 @@ export async function POST(request: NextRequest) {
     
     // Record error in webhook_events if we have the event ID
     if ((error as any).event?.id) {
-      const supabase = await createClient();
+      const supabase = createAdminClient();
       await supabase
         .from('webhook_events')
         .update({
