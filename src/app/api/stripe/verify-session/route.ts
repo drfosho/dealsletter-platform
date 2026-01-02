@@ -6,40 +6,93 @@ import Stripe from 'stripe'
 // Force Node.js runtime
 export const runtime = 'nodejs'
 
+// CRITICAL: Safely convert Stripe Unix timestamp (seconds) to ISO string
+// Stripe timestamps are in SECONDS, JavaScript Date expects MILLISECONDS
+function stripeTimestampToISO(timestamp: number | null | undefined): string | null {
+  if (timestamp === null || timestamp === undefined) {
+    return null;
+  }
+
+  // Ensure it's a valid number
+  if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+    console.error('[VerifySession] Invalid timestamp value:', timestamp);
+    return null;
+  }
+
+  // Convert seconds to milliseconds
+  const milliseconds = timestamp * 1000;
+  const date = new Date(milliseconds);
+
+  // Validate the resulting date
+  if (isNaN(date.getTime())) {
+    console.error('[VerifySession] Invalid date from timestamp:', timestamp);
+    return null;
+  }
+
+  return date.toISOString();
+}
+
 // Helper to safely get period dates from subscription (handles different Stripe API versions)
-function getSubscriptionPeriodDates(subscription: Stripe.Subscription): { periodStart: Date; periodEnd: Date } {
+function getSubscriptionPeriodDates(subscription: Stripe.Subscription): { periodStart: Date; periodEnd: Date; periodStartISO: string; periodEndISO: string } {
+  console.log('[VerifySession] Extracting period dates');
+
   // Try subscription level first (older API versions)
   let periodStartTs = (subscription as any).current_period_start;
   let periodEndTs = (subscription as any).current_period_end;
+
+  console.log('[VerifySession] Subscription level timestamps:', { periodStartTs, periodEndTs });
 
   // Try subscription item level (newer API versions like 2025-05-28.basil)
   if (!periodStartTs && subscription.items?.data?.[0]) {
     const item = subscription.items.data[0] as any;
     periodStartTs = item.current_period_start;
     periodEndTs = item.current_period_end;
+    console.log('[VerifySession] Item level timestamps:', { periodStartTs, periodEndTs });
   }
 
   // Fallback to trial dates if available
   if (!periodStartTs && subscription.trial_start) {
     periodStartTs = subscription.trial_start;
+    console.log('[VerifySession] Using trial_start:', periodStartTs);
   }
   if (!periodEndTs && subscription.trial_end) {
     periodEndTs = subscription.trial_end;
+    console.log('[VerifySession] Using trial_end:', periodEndTs);
   }
 
   // Final fallback to now + 30 days
-  if (!periodStartTs) {
+  if (!periodStartTs || typeof periodStartTs !== 'number') {
     periodStartTs = Math.floor(Date.now() / 1000);
-    console.log('[VerifySession] Warning: Using current time for period start');
+    console.log('[VerifySession] Warning: Using current time for period start:', periodStartTs);
   }
-  if (!periodEndTs) {
+  if (!periodEndTs || typeof periodEndTs !== 'number') {
     periodEndTs = periodStartTs + (30 * 24 * 60 * 60); // 30 days
-    console.log('[VerifySession] Warning: Using 30 days from start for period end');
+    console.log('[VerifySession] Warning: Using 30 days from start for period end:', periodEndTs);
+  }
+
+  // Convert to Date objects (timestamps are in seconds, need milliseconds)
+  const periodStart = new Date(periodStartTs * 1000);
+  const periodEnd = new Date(periodEndTs * 1000);
+
+  // Validate dates
+  if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
+    console.error('[VerifySession] CRITICAL: Invalid dates generated!', { periodStartTs, periodEndTs });
+    // Return safe defaults
+    const now = new Date();
+    const thirtyDaysLater = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+    return {
+      periodStart: now,
+      periodEnd: thirtyDaysLater,
+      periodStartISO: now.toISOString(),
+      periodEndISO: thirtyDaysLater.toISOString()
+    };
   }
 
   return {
-    periodStart: new Date(periodStartTs * 1000),
-    periodEnd: new Date(periodEndTs * 1000)
+    periodStart,
+    periodEnd,
+    periodStartISO: periodStart.toISOString(),
+    periodEndISO: periodEnd.toISOString()
   };
 }
 
@@ -120,8 +173,8 @@ export async function GET(request: NextRequest) {
         const normalizedTier = tier.toLowerCase().replace('_', '-')
 
         // Get period dates safely (handles different Stripe API versions)
-        const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscriptionData)
-        console.log('[VerifySession] Period:', periodStart.toISOString(), 'to', periodEnd.toISOString())
+        const { periodStartISO, periodEndISO } = getSubscriptionPeriodDates(subscriptionData)
+        console.log('[VerifySession] Period:', periodStartISO, 'to', periodEndISO)
 
         // Update or create subscription record
         const { error: upsertError } = await supabase
@@ -133,15 +186,11 @@ export async function GET(request: NextRequest) {
             stripe_price_id: subscriptionData.items?.data?.[0]?.price?.id,
             status: subscriptionData.status,
             tier: normalizedTier,
-            current_period_start: periodStart.toISOString(),
-            current_period_end: periodEnd.toISOString(),
+            current_period_start: periodStartISO,
+            current_period_end: periodEndISO,
             cancel_at_period_end: subscriptionData.cancel_at_period_end || false,
-            trial_start: subscriptionData.trial_start
-              ? new Date(subscriptionData.trial_start * 1000).toISOString()
-              : null,
-            trial_end: subscriptionData.trial_end
-              ? new Date(subscriptionData.trial_end * 1000).toISOString()
-              : null,
+            trial_start: stripeTimestampToISO(subscriptionData.trial_start),
+            trial_end: stripeTimestampToISO(subscriptionData.trial_end),
             metadata: subscriptionData.metadata || {},
             updated_at: new Date().toISOString()
           }, {
@@ -173,8 +222,8 @@ export async function GET(request: NextRequest) {
           .upsert({
             user_id: userId,
             subscription_id: subscriptionData.id,
-            period_start: periodStart.toISOString(),
-            period_end: periodEnd.toISOString(),
+            period_start: periodStartISO,
+            period_end: periodEndISO,
             analysis_count: 0
           }, {
             onConflict: 'user_id,period_start'
@@ -193,9 +242,7 @@ export async function GET(request: NextRequest) {
       paymentStatus: session.payment_status,
       customerEmail: session.customer_email || session.customer_details?.email,
       tier: tier,
-      trialEnd: subscriptionData?.trial_end
-        ? new Date(subscriptionData.trial_end * 1000).toISOString()
-        : null
+      trialEnd: stripeTimestampToISO(subscriptionData?.trial_end)
     })
   } catch (error: unknown) {
     const err = error as { message?: string }

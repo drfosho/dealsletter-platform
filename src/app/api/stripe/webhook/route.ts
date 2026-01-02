@@ -23,40 +23,93 @@ function mapTierName(stripeTier: string): string {
   return tierMap[upperTier] || 'free';  // Default to free if not found
 }
 
+// CRITICAL: Safely convert Stripe Unix timestamp (seconds) to ISO string
+// Stripe timestamps are in SECONDS, JavaScript Date expects MILLISECONDS
+function stripeTimestampToISO(timestamp: number | null | undefined): string | null {
+  if (timestamp === null || timestamp === undefined) {
+    return null;
+  }
+
+  // Ensure it's a valid number
+  if (typeof timestamp !== 'number' || isNaN(timestamp)) {
+    console.error('[Webhook] Invalid timestamp value:', timestamp);
+    return null;
+  }
+
+  // Convert seconds to milliseconds
+  const milliseconds = timestamp * 1000;
+  const date = new Date(milliseconds);
+
+  // Validate the resulting date
+  if (isNaN(date.getTime())) {
+    console.error('[Webhook] Invalid date from timestamp:', timestamp);
+    return null;
+  }
+
+  return date.toISOString();
+}
+
 // Helper to safely get period dates from subscription (handles different Stripe API versions)
-function getSubscriptionPeriodDates(subscription: Stripe.Subscription): { periodStart: Date; periodEnd: Date } {
+function getSubscriptionPeriodDates(subscription: Stripe.Subscription): { periodStart: Date; periodEnd: Date; periodStartISO: string; periodEndISO: string } {
+  console.log('[Webhook] getSubscriptionPeriodDates - Extracting period dates');
+
   // Try subscription level first (older API versions)
   let periodStartTs = (subscription as any).current_period_start;
   let periodEndTs = (subscription as any).current_period_end;
+
+  console.log('[Webhook] Subscription level timestamps:', { periodStartTs, periodEndTs });
 
   // Try subscription item level (newer API versions like 2025-05-28.basil)
   if (!periodStartTs && subscription.items?.data?.[0]) {
     const item = subscription.items.data[0] as any;
     periodStartTs = item.current_period_start;
     periodEndTs = item.current_period_end;
+    console.log('[Webhook] Item level timestamps:', { periodStartTs, periodEndTs });
   }
 
   // Fallback to trial dates if available
   if (!periodStartTs && subscription.trial_start) {
     periodStartTs = subscription.trial_start;
+    console.log('[Webhook] Using trial_start for period start:', periodStartTs);
   }
   if (!periodEndTs && subscription.trial_end) {
     periodEndTs = subscription.trial_end;
+    console.log('[Webhook] Using trial_end for period end:', periodEndTs);
   }
 
   // Final fallback to now + 30 days
-  if (!periodStartTs) {
+  if (!periodStartTs || typeof periodStartTs !== 'number') {
     periodStartTs = Math.floor(Date.now() / 1000);
-    console.log('[Webhook] Warning: Using current time for period start');
+    console.log('[Webhook] Warning: Using current time for period start:', periodStartTs);
   }
-  if (!periodEndTs) {
+  if (!periodEndTs || typeof periodEndTs !== 'number') {
     periodEndTs = periodStartTs + (30 * 24 * 60 * 60); // 30 days
-    console.log('[Webhook] Warning: Using 30 days from start for period end');
+    console.log('[Webhook] Warning: Using 30 days from start for period end:', periodEndTs);
+  }
+
+  // Convert to Date objects (timestamps are in seconds, need milliseconds)
+  const periodStart = new Date(periodStartTs * 1000);
+  const periodEnd = new Date(periodEndTs * 1000);
+
+  // Validate dates
+  if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime())) {
+    console.error('[Webhook] CRITICAL: Invalid dates generated!', { periodStartTs, periodEndTs });
+    // Return safe defaults
+    const now = new Date();
+    const thirtyDaysLater = new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000));
+    return {
+      periodStart: now,
+      periodEnd: thirtyDaysLater,
+      periodStartISO: now.toISOString(),
+      periodEndISO: thirtyDaysLater.toISOString()
+    };
   }
 
   return {
-    periodStart: new Date(periodStartTs * 1000),
-    periodEnd: new Date(periodEndTs * 1000)
+    periodStart,
+    periodEnd,
+    periodStartISO: periodStart.toISOString(),
+    periodEndISO: periodEnd.toISOString()
   };
 }
 
@@ -177,7 +230,7 @@ export async function POST(request: NextRequest) {
               const stripeTierName = subscription.metadata.tierName || 'STARTER';
               const tierName = mapTierName(stripeTierName);
               
-              const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+              const { periodStartISO, periodEndISO } = getSubscriptionPeriodDates(subscription);
 
               await supabase
                 .from('subscriptions')
@@ -188,11 +241,11 @@ export async function POST(request: NextRequest) {
                   stripe_price_id: priceId,
                   status: subscription.status as string,
                   tier: tierName,
-                  current_period_start: periodStart.toISOString(),
-                  current_period_end: periodEnd.toISOString(),
+                  current_period_start: periodStartISO,
+                  current_period_end: periodEndISO,
                   cancel_at_period_end: subscription.cancel_at_period_end,
-                  trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-                  trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+                  trial_start: stripeTimestampToISO(subscription.trial_start),
+                  trial_end: stripeTimestampToISO(subscription.trial_end),
                   metadata: subscription.metadata
                 }, {
                   onConflict: 'user_id'
@@ -204,8 +257,8 @@ export async function POST(request: NextRequest) {
                 .upsert({
                   user_id: authUser.id,
                   subscription_id: subscription.id,
-                  period_start: periodStart.toISOString(),
-                  period_end: periodEnd.toISOString(),
+                  period_start: periodStartISO,
+                  period_end: periodEndISO,
                   analysis_count: 0
                 }, {
                   onConflict: 'user_id,period_start'
@@ -224,8 +277,8 @@ export async function POST(request: NextRequest) {
           console.log('[Webhook] subscription.created - Price ID:', priceId);
           console.log('[Webhook] subscription.created - Subscription ID:', subscription.id);
 
-          const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
-          console.log('[Webhook] subscription.created - Period:', periodStart.toISOString(), 'to', periodEnd.toISOString());
+          const { periodStartISO, periodEndISO } = getSubscriptionPeriodDates(subscription);
+          console.log('[Webhook] subscription.created - Period:', periodStartISO, 'to', periodEndISO);
 
           const { error: subError } = await supabase
             .from('subscriptions')
@@ -236,11 +289,11 @@ export async function POST(request: NextRequest) {
               stripe_price_id: priceId,
               status: subscription.status as string,
               tier: tierName,
-              current_period_start: periodStart.toISOString(),
-              current_period_end: periodEnd.toISOString(),
+              current_period_start: periodStartISO,
+              current_period_end: periodEndISO,
               cancel_at_period_end: subscription.cancel_at_period_end,
-              trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-              trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+              trial_start: stripeTimestampToISO(subscription.trial_start),
+              trial_end: stripeTimestampToISO(subscription.trial_end),
               metadata: subscription.metadata
             }, {
               onConflict: 'user_id'
@@ -270,8 +323,8 @@ export async function POST(request: NextRequest) {
             .upsert({
               user_id: userId,
               subscription_id: subscription.id,
-              period_start: periodStart.toISOString(),
-              period_end: periodEnd.toISOString(),
+              period_start: periodStartISO,
+              period_end: periodEndISO,
               analysis_count: 0
             }, {
               onConflict: 'user_id,period_start'
@@ -336,8 +389,8 @@ export async function POST(request: NextRequest) {
             console.log('[Webhook] Tier name:', stripeTierName, '→', tierName);
 
             // Get period dates safely
-            const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
-            console.log('[Webhook] Period:', periodStart.toISOString(), 'to', periodEnd.toISOString());
+            const { periodStartISO, periodEndISO } = getSubscriptionPeriodDates(subscription);
+            console.log('[Webhook] Period:', periodStartISO, 'to', periodEndISO);
 
             // Create or update subscription record
             const { error: subError } = await supabase
@@ -349,11 +402,11 @@ export async function POST(request: NextRequest) {
                 stripe_price_id: priceId,
                 status: subscription.status as string,
                 tier: tierName,
-                current_period_start: periodStart.toISOString(),
-                current_period_end: periodEnd.toISOString(),
+                current_period_start: periodStartISO,
+                current_period_end: periodEndISO,
                 cancel_at_period_end: subscription.cancel_at_period_end,
-                trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-                trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+                trial_start: stripeTimestampToISO(subscription.trial_start),
+                trial_end: stripeTimestampToISO(subscription.trial_end),
                 metadata: subscription.metadata
               }, {
                 onConflict: 'user_id'
@@ -382,8 +435,8 @@ export async function POST(request: NextRequest) {
               .from('usage_tracking')
               .upsert({
                 user_id: userId,
-                period_start: periodStart.toISOString(),
-                period_end: periodEnd.toISOString(),
+                period_start: periodStartISO,
+                period_end: periodEndISO,
                 analysis_count: 0
               }, {
                 onConflict: 'user_id,period_start'
@@ -408,7 +461,7 @@ export async function POST(request: NextRequest) {
           const priceId = subscription.items.data[0].price.id;
           const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
           const tierName = mapTierName(stripeTierName);
-          const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+          const { periodStartISO, periodEndISO } = getSubscriptionPeriodDates(subscription);
 
           // Update subscription details
           await supabase
@@ -417,13 +470,13 @@ export async function POST(request: NextRequest) {
               stripe_price_id: priceId,
               status: subscription.status as string,
               tier: tierName,
-              current_period_start: periodStart.toISOString(),
-              current_period_end: periodEnd.toISOString(),
+              current_period_start: periodStartISO,
+              current_period_end: periodEndISO,
               cancel_at_period_end: subscription.cancel_at_period_end,
-              cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null,
-              canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
-              trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-              trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+              cancel_at: stripeTimestampToISO(subscription.cancel_at),
+              canceled_at: stripeTimestampToISO(subscription.canceled_at),
+              trial_start: stripeTimestampToISO(subscription.trial_start),
+              trial_end: stripeTimestampToISO(subscription.trial_end),
               metadata: subscription.metadata
             })
             .eq('stripe_subscription_id', subscription.id);
@@ -479,14 +532,14 @@ export async function POST(request: NextRequest) {
               });
 
             // Reset usage for new billing period if needed
-            const { periodStart, periodEnd } = getSubscriptionPeriodDates(subscription);
+            const { periodStartISO, periodEndISO } = getSubscriptionPeriodDates(subscription);
 
             await supabase
               .from('usage_tracking')
               .upsert({
                 user_id: userId,
-                period_start: periodStart.toISOString(),
-                period_end: periodEnd.toISOString(),
+                period_start: periodStartISO,
+                period_end: periodEndISO,
                 analysis_count: 0
               }, {
                 onConflict: 'user_id,period_start'
