@@ -3,11 +3,15 @@ import { supabase } from '@/lib/supabase/client';
 export interface UsageTracking {
   id: string;
   user_id: string;
-  month_year: string;
+  subscription_id?: string;
+  period_start: string;
+  period_end: string;
   analysis_count: number;
   last_analysis_at?: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
+  // For backwards compatibility in display functions
+  month_year?: string;
 }
 
 export interface UsageCheckResult {
@@ -105,13 +109,20 @@ export async function incrementAnalysisUsage(userId: string) {
  */
 export async function getCurrentMonthUsage(userId: string) {
   try {
-    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    const now = new Date();
+    const currentMonth = now.toISOString().slice(0, 7); // YYYY-MM format for display
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
+    // Query using period_start/period_end columns (matches database schema)
     const { data, error } = await supabase
       .from('usage_tracking')
       .select('*')
       .eq('user_id', userId)
-      .eq('month_year', currentMonth)
+      .gte('period_start', periodStart.toISOString())
+      .lt('period_end', periodEnd.toISOString())
+      .order('period_start', { ascending: false })
+      .limit(1)
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
@@ -125,13 +136,22 @@ export async function getCurrentMonthUsage(userId: string) {
         data: {
           analysis_count: 0,
           month_year: currentMonth,
+          period_start: periodStart.toISOString(),
+          period_end: periodEnd.toISOString(),
           remaining_analyses: 0
         },
         error: null
       };
     }
 
-    return { data, error: null };
+    // Add month_year for backwards compatibility
+    return {
+      data: {
+        ...data,
+        month_year: currentMonth
+      },
+      error: null
+    };
   } catch (error) {
     console.error('Error in getCurrentMonthUsage:', error);
     return { data: null, error };
@@ -150,16 +170,17 @@ export async function getUsageHistory(userId: string, months: number = 12) {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
-    const startMonth = startDate.toISOString().slice(0, 7);
-    const endMonth = endDate.toISOString().slice(0, 7);
+    // Use first day of start month and first day of month after end month
+    const periodStart = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const periodEnd = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 1);
 
     const { data, error } = await supabase
       .from('usage_tracking')
       .select('*')
       .eq('user_id', userId)
-      .gte('month_year', startMonth)
-      .lte('month_year', endMonth)
-      .order('month_year', { ascending: false });
+      .gte('period_start', periodStart.toISOString())
+      .lt('period_end', periodEnd.toISOString())
+      .order('period_start', { ascending: false });
 
     if (error) {
       console.error('Error fetching usage history:', error);

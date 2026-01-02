@@ -92,12 +92,19 @@ export async function POST(request: NextRequest) {
       console.log('[EmbeddedCheckout] Using VERCEL_URL:', baseUrl)
     }
 
+    // Fallback to localhost for local development
     if (!baseUrl) {
-      console.error('[EmbeddedCheckout] ❌ No base URL available!')
-      return NextResponse.json(
-        { error: 'Server configuration error. Please contact support.' },
-        { status: 500 }
-      )
+      const isDev = process.env.NODE_ENV === 'development'
+      if (isDev) {
+        baseUrl = 'http://localhost:3000'
+        console.log('[EmbeddedCheckout] Using localhost fallback for development')
+      } else {
+        console.error('[EmbeddedCheckout] ❌ No base URL available!')
+        return NextResponse.json(
+          { error: 'Server configuration error. Please contact support.' },
+          { status: 500 }
+        )
+      }
     }
     const returnUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`
 
