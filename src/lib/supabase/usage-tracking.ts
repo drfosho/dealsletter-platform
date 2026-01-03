@@ -51,7 +51,12 @@ export async function checkAnalysisUsage(userId: string): Promise<UsageCheckResu
       .single();
 
     if (error) {
-      console.error('Error checking analysis usage:', error);
+      console.error('Error checking analysis usage:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       return {
         can_analyze: false,
         remaining_analyses: 0,
@@ -71,7 +76,13 @@ export async function checkAnalysisUsage(userId: string): Promise<UsageCheckResu
       message: result.message || 'Unknown status'
     } as UsageCheckResult;
   } catch (error) {
-    console.error('Error in checkAnalysisUsage:', error);
+    const err = error as { message?: string; code?: string; details?: string; hint?: string };
+    console.error('Error in checkAnalysisUsage:', {
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      hint: err.hint
+    });
     return {
       can_analyze: false,
       remaining_analyses: 0,
@@ -126,7 +137,12 @@ export async function getCurrentMonthUsage(userId: string) {
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error fetching current month usage:', error);
+      console.error('Error fetching current month usage:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
 
@@ -153,7 +169,13 @@ export async function getCurrentMonthUsage(userId: string) {
       error: null
     };
   } catch (error) {
-    console.error('Error in getCurrentMonthUsage:', error);
+    const err = error as { message?: string; code?: string; details?: string; hint?: string };
+    console.error('Error in getCurrentMonthUsage:', {
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      hint: err.hint
+    });
     return { data: null, error };
   }
 }

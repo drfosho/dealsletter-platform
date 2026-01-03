@@ -29,13 +29,24 @@ export async function getUserProfile(userId: string) {
       .single();
 
     if (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error fetching user profile:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
       return { data: null, error };
     }
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error in getUserProfile:', error);
+    const err = error as { message?: string; code?: string; details?: string; hint?: string };
+    console.error('Error in getUserProfile:', {
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      hint: err.hint
+    });
     return { data: null, error };
   }
 }
