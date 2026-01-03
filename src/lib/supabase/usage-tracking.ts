@@ -51,12 +51,7 @@ export async function checkAnalysisUsage(userId: string): Promise<UsageCheckResu
       .single();
 
     if (error) {
-      console.error('Error checking analysis usage:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
-      });
+      console.error('Error checking analysis usage:', JSON.stringify(error, null, 2));
       return {
         can_analyze: false,
         remaining_analyses: 0,
@@ -76,13 +71,7 @@ export async function checkAnalysisUsage(userId: string): Promise<UsageCheckResu
       message: result.message || 'Unknown status'
     } as UsageCheckResult;
   } catch (error) {
-    const err = error as { message?: string; code?: string; details?: string; hint?: string };
-    console.error('Error in checkAnalysisUsage:', {
-      message: err.message,
-      code: err.code,
-      details: err.details,
-      hint: err.hint
-    });
+    console.error('Error in checkAnalysisUsage:', error instanceof Error ? error.message : JSON.stringify(error));
     return {
       can_analyze: false,
       remaining_analyses: 0,
@@ -137,12 +126,7 @@ export async function getCurrentMonthUsage(userId: string) {
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error fetching current month usage:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
-      });
+      console.error('Error fetching current month usage:', JSON.stringify(error, null, 2));
       throw error;
     }
 
@@ -169,13 +153,7 @@ export async function getCurrentMonthUsage(userId: string) {
       error: null
     };
   } catch (error) {
-    const err = error as { message?: string; code?: string; details?: string; hint?: string };
-    console.error('Error in getCurrentMonthUsage:', {
-      message: err.message,
-      code: err.code,
-      details: err.details,
-      hint: err.hint
-    });
+    console.error('Error in getCurrentMonthUsage:', error instanceof Error ? error.message : JSON.stringify(error));
     return { data: null, error };
   }
 }

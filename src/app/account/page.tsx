@@ -39,7 +39,7 @@ export default function AccountPage() {
         .single();
 
       if (subError && subError.code !== 'PGRST116') {
-        console.error('Error fetching subscription:', subError);
+        console.error('Error fetching subscription:', JSON.stringify(subError, null, 2));
       }
 
       if (subscription?.tier) {
@@ -61,7 +61,7 @@ export default function AccountPage() {
         });
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Error fetching user data:', error instanceof Error ? error.message : JSON.stringify(error));
     } finally {
       setIsLoading(false);
     }
