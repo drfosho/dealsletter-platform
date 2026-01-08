@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile } from '@/lib/supabase/profiles';
+import { getOrCreateUserProfile } from '@/lib/supabase/profiles';
 import { getCurrentMonthUsage, calculateRemainingAnalyses, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 
 interface NavigationProps {
@@ -23,8 +23,8 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
     if (!user?.id) return;
 
     try {
-      // Fetch user profile
-      const { data: profile } = await getUserProfile(user.id);
+      // Fetch user profile (creates one if it doesn't exist)
+      const { data: profile } = await getOrCreateUserProfile(user.id);
       if (profile) {
         setSubscriptionTier(profile.subscription_tier || 'basic');
       }

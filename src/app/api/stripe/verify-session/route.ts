@@ -191,7 +191,6 @@ export async function GET(request: NextRequest) {
             cancel_at_period_end: subscriptionData.cancel_at_period_end || false,
             trial_start: stripeTimestampToISO(subscriptionData.trial_start),
             trial_end: stripeTimestampToISO(subscriptionData.trial_end),
-            metadata: subscriptionData.metadata || {},
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'user_id'

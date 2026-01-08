@@ -162,22 +162,47 @@ export async function POST(request: NextRequest) {
     }
     console.log('[Webhook] ✓ Signature found');
 
+    // Support both production and local (Stripe CLI) webhook secrets
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      console.error('Webhook secret not configured');
+    const webhookSecretLocal = process.env.STRIPE_WEBHOOK_SECRET_LOCAL;
+
+    if (!webhookSecret && !webhookSecretLocal) {
+      console.error('[Webhook] ❌ No webhook secret configured');
       return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
     let event: Stripe.Event;
-    try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      console.log('[Webhook] ✓ Signature verified');
-      console.log('[Webhook] Event Type:', event.type);
-      console.log('[Webhook] Event ID:', event.id);
-    } catch (err) {
-      console.error('[Webhook] ❌ Signature verification failed:', err);
+    let verificationError: Error | null = null;
+
+    // Try production secret first
+    if (webhookSecret) {
+      try {
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+        console.log('[Webhook] ✓ Signature verified with production secret');
+      } catch (err) {
+        verificationError = err as Error;
+        console.log('[Webhook] Production secret failed, trying local...');
+      }
+    }
+
+    // If production failed, try local/CLI secret
+    if (!event! && webhookSecretLocal) {
+      try {
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecretLocal);
+        console.log('[Webhook] ✓ Signature verified with local/CLI secret');
+        verificationError = null;
+      } catch (err) {
+        verificationError = err as Error;
+      }
+    }
+
+    if (!event! || verificationError) {
+      console.error('[Webhook] ❌ Signature verification failed:', verificationError?.message);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
+
+    console.log('[Webhook] Event Type:', event.type);
+    console.log('[Webhook] Event ID:', event.id);
 
     const supabase = createAdminClient();
 
@@ -252,8 +277,7 @@ export async function POST(request: NextRequest) {
                   current_period_end: periodEndISO,
                   cancel_at_period_end: subscription.cancel_at_period_end,
                   trial_start: stripeTimestampToISO(subscription.trial_start),
-                  trial_end: stripeTimestampToISO(subscription.trial_end),
-                  metadata: subscription.metadata
+                  trial_end: stripeTimestampToISO(subscription.trial_end)
                 }, {
                   onConflict: 'user_id'
                 });
@@ -300,8 +324,7 @@ export async function POST(request: NextRequest) {
               current_period_end: periodEndISO,
               cancel_at_period_end: subscription.cancel_at_period_end,
               trial_start: stripeTimestampToISO(subscription.trial_start),
-              trial_end: stripeTimestampToISO(subscription.trial_end),
-              metadata: subscription.metadata
+              trial_end: stripeTimestampToISO(subscription.trial_end)
             }, {
               onConflict: 'user_id'
             });
@@ -413,8 +436,7 @@ export async function POST(request: NextRequest) {
                 current_period_end: periodEndISO,
                 cancel_at_period_end: subscription.cancel_at_period_end,
                 trial_start: stripeTimestampToISO(subscription.trial_start),
-                trial_end: stripeTimestampToISO(subscription.trial_end),
-                metadata: subscription.metadata
+                trial_end: stripeTimestampToISO(subscription.trial_end)
               }, {
                 onConflict: 'user_id'
               });
@@ -483,8 +505,7 @@ export async function POST(request: NextRequest) {
               cancel_at: stripeTimestampToISO(subscription.cancel_at),
               canceled_at: stripeTimestampToISO(subscription.canceled_at),
               trial_start: stripeTimestampToISO(subscription.trial_start),
-              trial_end: stripeTimestampToISO(subscription.trial_end),
-              metadata: subscription.metadata
+              trial_end: stripeTimestampToISO(subscription.trial_end)
             })
             .eq('stripe_subscription_id', subscription.id);
         }
