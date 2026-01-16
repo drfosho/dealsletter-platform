@@ -18,6 +18,16 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    id: '11',
+    title: 'San Diego County Real Estate Deep Dive: 2025 Actuals + 2026 Investor Playbook',
+    excerpt: 'San Diego normalized in 2025—not crashed, not moonshot. Median held at $900K, inventory climbed to 2.9 months, and 36-44% of listings took price cuts. Here\'s your complete submarket breakdown with cap rates, strategy analysis, and the investor playbook for 2026.',
+    date: 'January 2026',
+    readTime: '18 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/SAN DIEGO BLOG HEADER.png',
+    slug: 'san-diego-deep-dive-2026'
+  },
+  {
     id: '10',
     title: 'End of 2025 Bay Area Housing Deep Dive: All 9 Counties Analyzed',
     excerpt: 'Our comprehensive end-of-year Bay Area analysis with actual numbers across all 9 counties. The Bay is not one market — it\'s 9 different markets. Combined median at $1.275M (-3.2% YoY), but SF is up 12.6% while Marin dropped 9.5%. Here\'s what it means for investors.',
@@ -385,6 +395,13 @@ export default function BlogPage() {
                     <Image
                       src="/logos/BAY AREA DEEP DIVE.png"
                       alt="Bay Area Housing End of 2025 Deep Dive"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'san-diego-deep-dive-2026' ? (
+                    <Image
+                      src="/logos/SAN DIEGO BLOG HEADER.png"
+                      alt="San Diego Real Estate Deep Dive 2026"
                       fill
                       className="object-cover"
                     />
