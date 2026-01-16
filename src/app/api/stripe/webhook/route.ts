@@ -121,30 +121,38 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Check for duplicate events (idempotency)
-    const { data: existingEvent } = await supabase
+    // SEC-003: Atomic duplicate detection using upsert with conflict handling
+    // This prevents TOCTOU race conditions where concurrent requests could both pass a SELECT check
+    const { data: insertResult, error: insertError } = await supabase
       .from('webhook_events')
-      .select('id')
-      .eq('stripe_event_id', event.id)
-      .single();
-
-    if (existingEvent) {
-      console.log('[Webhook] ⚠️ Event already processed:', event.id);
-      console.log('[Webhook] Skipping duplicate processing');
-      console.log('[Webhook] ========================================');
-      return NextResponse.json({ received: true });
-    }
-    console.log('[Webhook] ✓ New event, processing...');
-
-    // Record the event
-    await supabase
-      .from('webhook_events')
-      .insert({
+      .upsert({
         stripe_event_id: event.id,
         type: event.type,
         data: event.data,
         processed: false
-      });
+      }, {
+        onConflict: 'stripe_event_id',
+        ignoreDuplicates: true  // Don't update if exists, just skip
+      })
+      .select('id, created_at')
+      .single();
+
+    // Check if this was a duplicate by seeing if we got a result
+    // If ignoreDuplicates is true and there was a conflict, no row is returned
+    if (insertError && insertError.code !== 'PGRST116') {
+      // PGRST116 = "JSON object requested, multiple (or no) rows returned"
+      // This is expected when ignoreDuplicates skips the insert
+      console.error('[Webhook] ❌ Error recording event:', insertError);
+    }
+
+    // If no result returned, it means the event already existed (duplicate)
+    if (!insertResult) {
+      console.log('[Webhook] ⚠️ Event already processed (atomic check):', event.id);
+      console.log('[Webhook] Skipping duplicate processing');
+      console.log('[Webhook] ========================================');
+      return NextResponse.json({ received: true });
+    }
+    console.log('[Webhook] ✓ New event recorded, processing...');
 
     // Handle the event
     switch (event.type) {
@@ -214,7 +222,8 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Create subscription record with existing user ID
-          console.log('[Webhook] subscription.created - User ID found:', userId);
+          // SEC-009: Don't log user IDs
+          console.log('[Webhook] subscription.created - User ID found: [REDACTED]');
 
           const priceId = subscription.items.data[0].price.id;
           const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
@@ -308,8 +317,9 @@ export async function POST(request: NextRequest) {
           const customerId = session.customer as string;
           const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
 
-          console.log('[Webhook] Customer ID:', customerId);
-          console.log('[Webhook] Customer email:', customer.email);
+          // SEC-009: Don't log customer PII - only log that we have valid data
+          console.log('[Webhook] Customer found:', !!customerId);
+          console.log('[Webhook] Customer has email:', !!customer.email);
 
           // Get user ID from metadata or email
           let userId = subscription.metadata.supabaseUserId || session.metadata?.supabaseUserId;
@@ -326,7 +336,8 @@ export async function POST(request: NextRequest) {
           }
 
           if (userId) {
-            console.log('[Webhook] User ID found:', userId);
+            // SEC-009: Log only that user was found, not the actual ID
+            console.log('[Webhook] User ID found: [REDACTED]');
 
             // Get the price ID and tier (handle both old and new metadata keys)
             const priceId = subscription.items.data[0].price.id;
@@ -539,7 +550,8 @@ export async function POST(request: NextRequest) {
 
         if (userId) {
           // You can send an email notification here
-          console.log(`Trial ending soon for user ${userId}`);
+          // SEC-009: Don't log user IDs
+          console.log('[Webhook] Trial ending soon for user [REDACTED]');
         }
         break;
       }

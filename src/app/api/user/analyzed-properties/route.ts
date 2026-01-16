@@ -3,11 +3,13 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
-  
+
   try {
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get('limit') || '4');
+    // SEC-006: Add bounds checking to prevent DoS via large limit values
+    const requestedLimit = parseInt(searchParams.get('limit') || '4');
+    const limit = Math.min(Math.max(requestedLimit, 1), 100); // Clamp between 1 and 100
     
     // Create Supabase client
     const cookieStore = await cookies();
@@ -78,22 +80,26 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    // SEC-008: Log detailed error server-side only, return generic message to client
     console.error('Fetch Analyzed Properties Error:', error);
-    
-    // Check if it's a table not found error
-    if ((error as any)?.code === '42P01' || (error as any)?.message?.includes('relation "analyzed_properties" does not exist')) {
+
+    // Check if it's a table not found error (handle gracefully without exposing schema)
+    const errorCode = (error as any)?.code;
+    const errorMessage = (error as any)?.message || '';
+    if (errorCode === '42P01' || errorMessage.includes('does not exist')) {
+      // SEC-008: Don't expose table names in response
       return NextResponse.json(
-        { 
-          error: 'Database table not found',
-          message: 'The analyzed_properties table has not been created yet. Please run the migration.',
+        {
+          error: 'Service temporarily unavailable',
           data: []
         },
-        { status: 200 } // Return 200 with empty data instead of 500
+        { status: 200 } // Return 200 with empty data for graceful degradation
       );
     }
-    
+
+    // SEC-008: Generic error message - don't expose internal details
     return NextResponse.json(
-      { error: 'Failed to fetch analyzed properties' },
+      { error: 'An error occurred while fetching your properties' },
       { status: 500 }
     );
   }

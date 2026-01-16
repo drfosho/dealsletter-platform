@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: PropertySearchRequest = await request.json();
-    
+
     if (!body.address || typeof body.address !== 'string') {
       return NextResponse.json(
         { error: 'Address is required' },
@@ -43,14 +43,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sanitize address
-    const address = body.address.trim();
-    if (address.length < 5 || address.length > 200) {
+    // SEC-005: Enhanced input validation and sanitization
+    // Remove control characters and normalize whitespace
+    const sanitizedAddress = body.address
+      .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+      .replace(/\s+/g, ' ')            // Normalize whitespace
+      .trim();
+
+    // Length validation
+    if (sanitizedAddress.length < 5 || sanitizedAddress.length > 200) {
       return NextResponse.json(
         { error: 'Invalid address format' },
         { status: 400 }
       );
     }
+
+    // SEC-005: Validate address contains expected characters for US addresses
+    // Allow letters, numbers, spaces, commas, periods, hyphens, apostrophes, and #
+    const addressPattern = /^[a-zA-Z0-9\s,.\-'#]+$/;
+    if (!addressPattern.test(sanitizedAddress)) {
+      return NextResponse.json(
+        { error: 'Address contains invalid characters' },
+        { status: 400 }
+      );
+    }
+
+    // SEC-005: Basic structure validation - should have at least a number and some letters
+    const hasNumber = /\d/.test(sanitizedAddress);
+    const hasLetters = /[a-zA-Z]{2,}/.test(sanitizedAddress);
+    if (!hasNumber || !hasLetters) {
+      return NextResponse.json(
+        { error: 'Please enter a valid street address' },
+        { status: 400 }
+      );
+    }
+
+    const address = sanitizedAddress;
 
     // Fetch property data based on requested fields
     const results: Record<string, unknown> = {
@@ -187,9 +215,19 @@ export async function POST(request: NextRequest) {
     } catch (propertyError) {
       // If we can't even get basic property details, it might not exist
       const errorMessage = propertyError instanceof Error ? propertyError.message : String(propertyError);
-      if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+      const lowerMessage = errorMessage.toLowerCase();
+
+      // Check for various "not found" error patterns from RentCast
+      if (lowerMessage.includes('not found') ||
+          lowerMessage.includes('no data found') ||
+          lowerMessage.includes('no results') ||
+          lowerMessage.includes('404') ||
+          lowerMessage.includes('property not in database')) {
         return NextResponse.json(
-          { error: 'Property not found at this address' },
+          {
+            error: 'Property not found',
+            details: 'This address was not found in the property database. Please verify the address and try again.'
+          },
           { status: 404 }
         );
       }
