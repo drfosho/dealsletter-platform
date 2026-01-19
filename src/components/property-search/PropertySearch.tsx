@@ -19,13 +19,18 @@ export default function PropertySearch({ onPropertySelect, className = '' }: Pro
   const [selectedAddress, setSelectedAddress] = useState<string>('');
 
   const handleAddressSelect = async (address: string, _placeId: string) => {
+    console.log('[PropertySearch] handleAddressSelect called with:', { address, _placeId });
+
     setIsLoading(true);
     setError(null);
     setPropertyData(null);
     setSelectedAddress(address);
 
+    console.log('[PropertySearch] State updated, starting API call...');
+
     try {
       // Search for property with all data
+      console.log('[PropertySearch] Calling propertyAPI.searchProperty...');
       const searchResults = await propertyAPI.searchProperty({
         address,
         includeRentEstimates: true,

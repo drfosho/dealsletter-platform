@@ -1,16 +1,25 @@
 // Admin configuration and utilities
 
-// IMPORTANT: Add your admin email here to get full access
-export const ADMIN_EMAILS = [
-  'kevin@dealsletter.io', // TODO: Replace with your actual admin email
-  // 'kevin@example.com', // Example: Add your email like this
-  // Add more admin emails as needed
-];
+/**
+ * SEC-010: Admin emails should ONLY be configured via environment variables
+ * Do not hard-code admin emails in source code as this:
+ * - Exposes admin identities in version control
+ * - Makes it harder to rotate/change admin access
+ * - Creates inconsistent configuration between environments
+ *
+ * Set ADMIN_EMAILS in your .env.local or Vercel environment:
+ * ADMIN_EMAILS=admin1@example.com,admin2@example.com
+ */
 
-// Alternative: Set these in your .env.local file:
-// ADMIN_EMAILS=email1@example.com,email2@example.com
-const envAdmins = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim()) || [];
-const allAdminEmails = [...ADMIN_EMAILS, ...envAdmins];
+// SEC-010: Load admin emails exclusively from environment variables
+const envAdmins = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(e => e.length > 0) || [];
+
+// Validate that admin emails are configured in production
+if (process.env.NODE_ENV === 'production' && envAdmins.length === 0) {
+  console.warn('[AdminConfig] ⚠️  No admin emails configured. Set ADMIN_EMAILS environment variable.');
+}
+
+const allAdminEmails = envAdmins;
 
 export interface AdminConfig {
   isAdmin: boolean;

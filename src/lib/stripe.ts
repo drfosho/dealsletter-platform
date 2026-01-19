@@ -7,32 +7,27 @@ export const stripe = new Proxy({} as Stripe, {
   get(target, prop, receiver) {
     if (!stripeInstance) {
       const key = process.env.STRIPE_SECRET_KEY
-      
-      console.log('[Stripe Init] Initializing Stripe client...')
-      console.log('[Stripe Init] Environment:', process.env.NODE_ENV)
-      console.log('[Stripe Init] Key exists:', !!key)
-      console.log('[Stripe Init] Key length:', key?.length)
-      console.log('[Stripe Init] Key prefix:', key?.substring(0, 7))
-      console.log('[Stripe Init] Is test mode:', key?.includes('sk_test'))
-      
+
+      // SEC-004: Removed logging of key details (length, prefix, mode) to prevent information leakage
       if (!key) {
-        console.error('[Stripe Init] ❌ STRIPE_SECRET_KEY is not configured!')
-        console.error('[Stripe Init] Available env vars:', Object.keys(process.env).filter(k => k.includes('STRIPE')))
-        throw new Error('STRIPE_SECRET_KEY is not configured - check environment variables in Vercel')
+        console.error('[Stripe Init] ❌ STRIPE_SECRET_KEY is not configured')
+        throw new Error('STRIPE_SECRET_KEY is not configured - check environment variables')
       }
-      
+
       if (key.length < 30) {
-        console.error('[Stripe Init] ❌ STRIPE_SECRET_KEY appears to be invalid (too short)')
+        console.error('[Stripe Init] ❌ STRIPE_SECRET_KEY appears to be invalid')
         throw new Error('STRIPE_SECRET_KEY appears to be invalid')
       }
-      
+
       try {
         stripeInstance = new Stripe(key, {
           apiVersion: '2025-07-30.basil',
         })
-        console.log('[Stripe Init] ✅ Stripe client initialized successfully')
-      } catch (error: any) {
-        console.error('[Stripe Init] ❌ Failed to initialize Stripe:', error.message)
+        // SEC-004: Only log initialization status, not key details
+        const mode = key.startsWith('sk_test') ? 'test' : 'live'
+        console.log(`[Stripe Init] ✅ Stripe client initialized (${mode} mode)`)
+      } catch (error: unknown) {
+        console.error('[Stripe Init] ❌ Failed to initialize Stripe client')
         throw error
       }
     }

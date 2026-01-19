@@ -3,11 +3,15 @@ import { createClient } from '@/lib/supabase/client';
 
 export type SubscriptionTier = 'free' | 'trial' | 'pro' | 'premium';
 
-// Admin email addresses with full access
-const ADMIN_EMAILS = [
-  'kevin@dealsletter.io',
-  // Add more admin emails here as needed
-];
+/**
+ * SEC-010: Admin emails loaded from environment variables only
+ * Set ADMIN_EMAILS in your .env.local or Vercel environment:
+ * ADMIN_EMAILS=admin1@example.com,admin2@example.com
+ */
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(e => e.length > 0);
 
 // Check if user is an admin
 export function isAdminUser(email?: string | null): boolean {

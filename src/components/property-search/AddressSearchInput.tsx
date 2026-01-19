@@ -9,19 +9,26 @@ interface AddressSearchInputProps {
   disabled?: boolean;
 }
 
-export default function AddressSearchInput({ 
-  onAddressSelect, 
+export default function AddressSearchInput({
+  onAddressSelect,
   placeholder = "Enter property address...",
-  disabled = false 
+  disabled = false
 }: AddressSearchInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const onAddressSelectRef = useRef(onAddressSelect);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Keep the ref updated with the latest callback
+  useEffect(() => {
+    onAddressSelectRef.current = onAddressSelect;
+  }, [onAddressSelect]);
 
   useEffect(() => {
     const initializeAutocomplete = async () => {
       try {
+        console.log('[AddressSearchInput] Initializing Google Maps...');
         const loader = new Loader({
           apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
           version: 'weekly',
@@ -29,8 +36,10 @@ export default function AddressSearchInput({
         });
 
         await loader.load();
+        console.log('[AddressSearchInput] Google Maps loaded');
 
         if (inputRef.current && !autocompleteRef.current) {
+          console.log('[AddressSearchInput] Creating Autocomplete instance...');
           const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
             types: ['address'],
             componentRestrictions: { country: 'us' },
@@ -39,17 +48,28 @@ export default function AddressSearchInput({
 
           autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
+            console.log('[AddressSearchInput] place_changed event fired:', {
+              formatted_address: place.formatted_address,
+              place_id: place.place_id,
+              hasPlace: !!place,
+              placeKeys: place ? Object.keys(place) : []
+            });
             if (place.formatted_address && place.place_id) {
-              onAddressSelect(place.formatted_address, place.place_id);
+              console.log('[AddressSearchInput] Calling onAddressSelect with:', place.formatted_address);
+              // Use the ref to always get the latest callback
+              onAddressSelectRef.current(place.formatted_address, place.place_id);
+            } else {
+              console.warn('[AddressSearchInput] Missing formatted_address or place_id:', place);
             }
           });
 
           autocompleteRef.current = autocomplete;
+          console.log('[AddressSearchInput] Autocomplete initialized');
         }
-        
+
         setIsLoading(false);
       } catch (err) {
-        console.error('Error loading Google Maps:', err);
+        console.error('[AddressSearchInput] Error loading Google Maps:', err);
         setError('Failed to load address search');
         setIsLoading(false);
       }
@@ -62,7 +82,7 @@ export default function AddressSearchInput({
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [onAddressSelect]);
+  }, []); // Remove onAddressSelect dependency - use ref instead
 
   return (
     <div className="relative">

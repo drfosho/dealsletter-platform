@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    console.log('[EmbeddedCheckout] User:', user?.email || 'Not authenticated')
+    // SEC-009: Don't log user email - log only authentication status
+    console.log('[EmbeddedCheckout] User authenticated:', !!user)
 
     // Check for existing active subscription to prevent duplicates
     if (user) {
@@ -174,10 +175,11 @@ export async function POST(request: NextRequest) {
       ...(!customerId && user?.email && { customer_email: user.email }),
     }
 
+    // SEC-009: Don't log customer IDs or emails in production logs
     if (customerId) {
-      console.log('[EmbeddedCheckout] Using existing customer:', customerId)
+      console.log('[EmbeddedCheckout] Using existing customer: [REDACTED]')
     } else if (user?.email) {
-      console.log('[EmbeddedCheckout] Using customer email:', user.email)
+      console.log('[EmbeddedCheckout] Using customer email for new customer')
     }
 
     const session = await stripe.checkout.sessions.create(sessionConfig)
