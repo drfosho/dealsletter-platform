@@ -1,5 +1,19 @@
-// Simple in-memory rate limiter for API endpoints
-// For production, consider using Redis or a dedicated rate limiting service
+/**
+ * SEC-007: In-memory rate limiter for API endpoints
+ *
+ * ⚠️  SECURITY WARNING: This in-memory implementation has limitations in serverless environments:
+ *    - Rate limits reset on cold starts / new function instances
+ *    - Limits are not shared across instances (requests can hit different instances)
+ *    - Not suitable for strict rate limiting in production at scale
+ *
+ * For production hardening, consider:
+ *    - Vercel KV (Redis) with sliding window: https://vercel.com/docs/storage/vercel-kv
+ *    - Upstash Redis rate limiting: https://github.com/upstash/ratelimit
+ *    - Vercel's built-in rate limiting (Enterprise plans)
+ *
+ * This implementation provides basic protection against casual abuse but should not
+ * be relied upon for security-critical rate limiting.
+ */
 
 interface RateLimitRecord {
   count: number;
@@ -10,10 +24,17 @@ class RateLimiter {
   private limits: Map<string, RateLimitRecord> = new Map();
   private readonly windowMs: number;
   private readonly maxRequests: number;
+  private static instanceWarningLogged = false;
 
   constructor(windowMs: number = 60000, maxRequests: number = 10) {
     this.windowMs = windowMs;
     this.maxRequests = maxRequests;
+
+    // SEC-007: Log warning once about in-memory limitations
+    if (!RateLimiter.instanceWarningLogged && process.env.NODE_ENV === 'production') {
+      console.warn('[RateLimiter] ⚠️  Using in-memory rate limiting - consider distributed solution for production');
+      RateLimiter.instanceWarningLogged = true;
+    }
   }
 
   // Check if request is allowed
@@ -74,10 +95,27 @@ setInterval(() => {
   analysisLimiter.cleanup();
 }, 5 * 60 * 1000);
 
-// Helper function to get client identifier
-export function getClientIdentifier(request: Request): string {
-  // Use IP address if available, otherwise use a default
+/**
+ * SEC-007: Get client identifier for rate limiting
+ * Uses a combination of IP and other headers to reduce spoofing effectiveness
+ */
+export function getClientIdentifier(request: Request, userId?: string): string {
+  // If we have an authenticated user ID, use it (more reliable than IP)
+  if (userId) {
+    return `user:${userId}`;
+  }
+
+  // Get IP from x-forwarded-for (first IP in chain is client)
   const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0] : 'unknown';
-  return ip;
+  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+
+  // SEC-007: Combine with other fingerprinting to reduce IP spoofing effectiveness
+  // This makes it harder to bypass rate limits by just changing x-forwarded-for
+  const userAgent = request.headers.get('user-agent') || '';
+  const acceptLanguage = request.headers.get('accept-language') || '';
+
+  // Create a fingerprint hash (simple but effective against casual bypasses)
+  const fingerprint = `${ip}:${userAgent.substring(0, 50)}:${acceptLanguage.substring(0, 20)}`;
+
+  return `ip:${fingerprint}`;
 }

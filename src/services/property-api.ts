@@ -65,7 +65,9 @@ class PropertyAPIService {
 
   // Search for property by address
   async searchProperty(request: PropertySearchRequest): Promise<PropertySearchResponse> {
+    console.log('[PropertyAPI] searchProperty called with:', request);
     try {
+      console.log('[PropertyAPI] Making fetch request to /api/property/search...');
       const response = await fetch('/api/property/search', {
         method: 'POST',
         headers: {
@@ -74,14 +76,27 @@ class PropertyAPIService {
         body: JSON.stringify(request),
       });
 
+      console.log('[PropertyAPI] Response received:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText
+      });
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to search property');
+        const errorData = await response.json();
+        // Include details in the error message for better debugging
+        const errorMessage = errorData.details
+          ? `${errorData.error}: ${errorData.details}`
+          : errorData.error || 'Failed to search property';
+        console.error('[PropertyAPI] API error:', errorData);
+        throw new Error(errorMessage);
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('[PropertyAPI] Response data:', data);
+      return data;
     } catch (error) {
-      console.error('Property search error:', error);
+      console.error('[PropertyAPI] Error:', error);
       throw error;
     }
   }

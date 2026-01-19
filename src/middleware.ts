@@ -1,22 +1,66 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { createHmac, randomBytes, timingSafeEqual } from 'crypto'
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'dealsletter2024!';
+// SEC-001: Require ADMIN_PASSWORD from environment - no fallback
+function getAdminPassword(): string {
+  const password = process.env.ADMIN_PASSWORD
+  if (!password) {
+    throw new Error('ADMIN_PASSWORD environment variable is required but not set')
+  }
+  if (password.length < 16) {
+    throw new Error('ADMIN_PASSWORD must be at least 16 characters')
+  }
+  return password
+}
+
+// SEC-002: Generate secure session token instead of storing password
+function generateSessionToken(): string {
+  return randomBytes(32).toString('hex')
+}
+
+// SEC-002: Create HMAC signature for session validation
+function signSessionToken(token: string, password: string): string {
+  return createHmac('sha256', password).update(token).digest('hex')
+}
+
+// SEC-002: Timing-safe password comparison
+function secureCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Still do a comparison to maintain constant time
+    const dummy = Buffer.from(a)
+    timingSafeEqual(dummy, dummy)
+    return false
+  }
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
 
 export async function middleware(request: NextRequest) {
   // Allow API routes to pass through without middleware auth (they handle their own auth)
   if (request.nextUrl.pathname.startsWith('/api')) {
     return NextResponse.next({ request });
   }
-  
+
   // Check if the request is for the admin area (non-API)
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    const authHeader = request.headers.get('authorization');
-    const cookie = request.cookies.get('admin-auth');
+    let adminPassword: string
+    try {
+      adminPassword = getAdminPassword()
+    } catch (error) {
+      console.error('[Admin Auth] Configuration error:', (error as Error).message)
+      return new NextResponse('Server configuration error', { status: 500 })
+    }
 
-    // Check if already authenticated via cookie
-    if (cookie?.value === ADMIN_PASSWORD) {
-      return NextResponse.next({ request });
+    const authHeader = request.headers.get('authorization');
+    const sessionCookie = request.cookies.get('admin-session');
+    const signatureCookie = request.cookies.get('admin-session-sig');
+
+    // SEC-002: Check if already authenticated via signed session cookie
+    if (sessionCookie?.value && signatureCookie?.value) {
+      const expectedSig = signSessionToken(sessionCookie.value, adminPassword)
+      if (secureCompare(signatureCookie.value, expectedSig)) {
+        return NextResponse.next({ request });
+      }
     }
 
     // Check basic auth header
@@ -25,14 +69,26 @@ export async function middleware(request: NextRequest) {
       if (type === 'Basic' && credentials) {
         const decoded = Buffer.from(credentials, 'base64').toString();
         const [, password] = decoded.split(':');
-        
-        if (password === ADMIN_PASSWORD) {
+
+        // SEC-002: Use timing-safe comparison for password
+        if (password && secureCompare(password, adminPassword)) {
           const response = NextResponse.next({ request });
-          response.cookies.set('admin-auth', ADMIN_PASSWORD, {
+
+          // SEC-002: Generate signed session token instead of storing password
+          const sessionToken = generateSessionToken()
+          const sessionSig = signSessionToken(sessionToken, adminPassword)
+
+          response.cookies.set('admin-session', sessionToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
+            maxAge: 60 * 60 * 4 // SEC-002: Reduced to 4 hours
+          });
+          response.cookies.set('admin-session-sig', sessionSig, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 60 * 60 * 4
           });
           return response;
         }
