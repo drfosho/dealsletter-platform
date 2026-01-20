@@ -169,66 +169,35 @@ export async function GET(request: NextRequest) {
       if (userId) {
         console.log('[VerifySession] Updating database for user:', userId)
 
-        // Normalize tier name for database
+        // Normalize tier name for database: 'PRO' -> 'pro', 'PRO_PLUS' -> 'pro-plus'
         const normalizedTier = tier.toLowerCase().replace('_', '-')
 
         // Get period dates safely (handles different Stripe API versions)
-        const { periodStartISO, periodEndISO } = getSubscriptionPeriodDates(subscriptionData)
-        console.log('[VerifySession] Period:', periodStartISO, 'to', periodEndISO)
+        const { periodEndISO } = getSubscriptionPeriodDates(subscriptionData)
+        console.log('[VerifySession] Period end:', periodEndISO)
 
-        // Update or create subscription record
-        const { error: upsertError } = await supabase
-          .from('subscriptions')
-          .upsert({
-            user_id: userId,
+        // Update user_profiles table with subscription info
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .update({
+            subscription_tier: normalizedTier,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionData.id,
-            stripe_price_id: subscriptionData.items?.data?.[0]?.price?.id,
-            status: subscriptionData.status,
-            tier: normalizedTier,
-            current_period_start: periodStartISO,
+            subscription_status: subscriptionData.status,
             current_period_end: periodEndISO,
-            cancel_at_period_end: subscriptionData.cancel_at_period_end || false,
-            trial_start: stripeTimestampToISO(subscriptionData.trial_start),
             trial_end: stripeTimestampToISO(subscriptionData.trial_end),
+            trial_start: stripeTimestampToISO(subscriptionData.trial_start),
+            cancel_at_period_end: subscriptionData.cancel_at_period_end || false,
+            analyses_this_month: 0,
             updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id'
           })
+          .eq('id', userId)
 
-        if (upsertError) {
-          console.error('[VerifySession] Database upsert error:', upsertError)
+        if (profileError) {
+          console.error('[VerifySession] Database update error:', profileError)
         } else {
-          console.log('[VerifySession] ✅ Subscription record created/updated successfully')
+          console.log('[VerifySession] ✅ User profile updated with subscription tier:', normalizedTier)
         }
-
-        // Also update the profiles table with stripe_customer_id if present
-        if (customerId) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ stripe_customer_id: customerId })
-            .eq('id', userId)
-
-          if (profileError) {
-            console.log('[VerifySession] Profile update warning:', profileError.message)
-          }
-        }
-
-        // Initialize usage tracking for the new subscription period
-
-        await supabase
-          .from('usage_tracking')
-          .upsert({
-            user_id: userId,
-            subscription_id: subscriptionData.id,
-            period_start: periodStartISO,
-            period_end: periodEndISO,
-            analysis_count: 0
-          }, {
-            onConflict: 'user_id,period_start'
-          })
-
-        console.log('[VerifySession] Usage tracking initialized')
       } else {
         console.log('[VerifySession] Warning: No user ID found, database not updated')
       }

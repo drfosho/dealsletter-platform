@@ -153,16 +153,32 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
       // Get metrics from AI analysis if available
       // CRITICAL FIX: Check multiple locations for profit and ROI
       // Data can be at top level (from DB) or nested in ai_analysis.financial_metrics
+      // Use nullish coalescing (??) to properly handle 0 as a valid value
       const aiMetrics = analysis.ai_analysis?.financial_metrics;
-      let netProfit = (analysis as any).profit ||
-                       aiMetrics?.total_profit ||
-                       aiMetrics?.net_profit ||
-                       (analysis as any).analysis_data?.profit ||
-                       0;
-      let roi = (analysis as any).roi ||
-                 aiMetrics?.roi ||
-                 (analysis as any).analysis_data?.roi ||
-                 0;
+
+      // Helper to get first non-null/undefined value (0 is valid)
+      const getFirstDefined = (...values: (number | undefined | null)[]): number | undefined => {
+        for (const v of values) {
+          if (v !== undefined && v !== null) return v;
+        }
+        return undefined;
+      };
+
+      let netProfit = getFirstDefined(
+        (analysis as any).profit,
+        aiMetrics?.total_profit,
+        aiMetrics?.net_profit,
+        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.total_profit,
+        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.net_profit,
+        (analysis as any).analysis_data?.profit
+      );
+
+      let roi = getFirstDefined(
+        (analysis as any).roi,
+        aiMetrics?.roi,
+        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.roi,
+        (analysis as any).analysis_data?.roi
+      );
 
       console.log('[FinancialMetrics] Flip metrics debug:', {
         topLevelProfit: (analysis as any).profit,
@@ -175,12 +191,23 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
       // CRITICAL FIX: ARV must be HIGHER than purchase price for flip profitability
       // ARV = After Repair Value = what property will sell for AFTER renovations
-      // The comparables.value is current AVM, NOT the post-renovation ARV
+      // PRIORITY: Use saved ARV from AI analysis first (generated with user inputs)
+      // Only fall back to comparables.value if no ARV was saved
       let estimatedARV = (aiMetrics as any)?.arv ||
+                        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.arv ||
                         (analysis as any).analysis_data?.arv ||
                         (analysis as any).analysis_data?.strategy_details?.arv ||
-                        (analysis.property_data as any)?.comparables?.value ||
                         0;
+
+      // Only use comparables.value as absolute last resort (it's current market value, not ARV)
+      // and only if it's higher than purchase price (indicating potential appreciation)
+      if (estimatedARV === 0) {
+        const comparablesValue = (analysis.property_data as any)?.comparables?.value || 0;
+        // Only use comparables if significantly higher than purchase (suggests value-add potential)
+        if (comparablesValue > purchasePrice * 1.1) {
+          estimatedARV = comparablesValue;
+        }
+      }
 
       // Renovation level multipliers for ARV calculation
       const renovationLevel = (analysis as any).strategy_details?.renovationLevel ||
@@ -215,10 +242,15 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         arvIsValid: estimatedARV > purchasePrice
       });
 
-      // CRITICAL FIX: If netProfit or ROI is 0 but we have valid inputs, recalculate
+      // CRITICAL FIX: Only recalculate if values are truly missing (undefined/null)
+      // A value of 0 is valid (break-even deal) and should NOT trigger recalculation
       // This handles cases where the DB update failed or values weren't saved properly
-      if ((netProfit === 0 || roi === 0) && purchasePrice > 0 && estimatedARV > purchasePrice) {
-        console.log('[FinancialMetrics] RECALCULATING: netProfit or ROI is 0, using centralized calculator');
+      const needsRecalculation = (netProfit === undefined || roi === undefined) &&
+                                  purchasePrice > 0 &&
+                                  estimatedARV > purchasePrice;
+
+      if (needsRecalculation) {
+        console.log('[FinancialMetrics] RECALCULATING: netProfit or ROI is undefined, using centralized calculator');
 
         // Get loan details from analysis data
         const interestRate = analysis.interest_rate ||
@@ -258,9 +290,9 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
           isValid: flipResults.validation.isValid
         });
 
-        // Use recalculated values
-        netProfit = flipResults.netProfit;
-        roi = flipResults.roi;
+        // Use recalculated values (these are always numbers from the calculator)
+        const recalculatedNetProfit = flipResults.netProfit;
+        const recalculatedRoi = flipResults.roi;
 
         // Also get proper investment values from the calculator
         const totalInvestment = flipResults.cashRequired;
@@ -271,8 +303,8 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
           rehabCosts,
           totalInvestment,
           estimatedARV,
-          netProfit,
-          roi,
+          netProfit: recalculatedNetProfit,
+          roi: recalculatedRoi,
           profitMargin,
           holdingPeriod: holdingMonths / 12,
           // Set rental metrics to 0 for flips
@@ -284,7 +316,7 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
           annualNOI: 0,
           capRate: 0,
           cashOnCashReturn: 0,
-          totalReturn: roi,
+          totalReturn: recalculatedRoi,
           totalCashInvested: totalInvestment,
           propertyTax: 0,
           insurance: 0,
@@ -295,17 +327,20 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
       }
 
       // Calculate values using stored data (original path when values are present)
+      // Default undefined values to 0 (only reach here if we have at least one valid saved value)
+      const finalNetProfit = netProfit ?? 0;
+      const finalRoi = roi ?? 0;
       const closingCosts = purchasePrice * 0.03;
       const totalInvestment = downPayment + rehabCosts + closingCosts;
-      const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
+      const profitMargin = estimatedARV > 0 ? (finalNetProfit / estimatedARV) * 100 : 0;
 
       return {
         purchasePrice,
         rehabCosts,
         totalInvestment,
         estimatedARV,
-        netProfit,
-        roi,
+        netProfit: finalNetProfit,
+        roi: finalRoi,
         profitMargin,
         // CRITICAL: Use timeline from strategy_details, NOT loan_term
         holdingPeriod: (parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
@@ -321,7 +356,7 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         annualNOI: 0,
         capRate: 0,
         cashOnCashReturn: 0,
-        totalReturn: roi,
+        totalReturn: finalRoi,
         totalCashInvested: totalInvestment,
         propertyTax: 0,
         insurance: 0,

@@ -24,7 +24,7 @@ const blogPosts: BlogPost[] = [
     date: 'January 2026',
     readTime: '18 min read',
     category: 'Market Analysis',
-    imageUrl: '/logos/SAN DIEGO BLOG HEADER.png',
+    imageUrl: '/logos/SAN DIEGO DEEP DIVE.png',
     slug: 'san-diego-deep-dive-2026'
   },
   {
@@ -400,8 +400,8 @@ export default function BlogPage() {
                     />
                   ) : post.slug === 'san-diego-deep-dive-2026' ? (
                     <Image
-                      src="/logos/SAN DIEGO BLOG HEADER.png"
-                      alt="San Diego Real Estate Deep Dive 2026"
+                      src="/logos/SAN DIEGO DEEP DIVE.png"
+                      alt="San Diego County Real Estate Deep Dive 2026"
                       fill
                       className="object-cover"
                     />
