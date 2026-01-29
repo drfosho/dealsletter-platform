@@ -11,15 +11,11 @@
  * ADMIN_EMAILS=admin1@example.com,admin2@example.com
  */
 
-// SEC-010: Load admin emails exclusively from environment variables
-const envAdmins = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(e => e.length > 0) || [];
-
-// Validate that admin emails are configured in production
-if (process.env.NODE_ENV === 'production' && envAdmins.length === 0) {
-  console.warn('[AdminConfig] ⚠️  No admin emails configured. Set ADMIN_EMAILS environment variable.');
+// Helper to get admin emails - called each time to pick up env changes during development
+function getAdminEmails(): string[] {
+  const emails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim().toLowerCase()).filter(e => e.length > 0) || [];
+  return emails;
 }
-
-const allAdminEmails = envAdmins;
 
 export interface AdminConfig {
   isAdmin: boolean;
@@ -29,8 +25,20 @@ export interface AdminConfig {
 }
 
 export function getAdminConfig(email: string | null | undefined): AdminConfig {
-  const isAdmin = email ? allAdminEmails.includes(email) : false;
-  
+  const adminEmails = getAdminEmails();
+  const normalizedEmail = email?.toLowerCase().trim();
+  const isAdmin = normalizedEmail ? adminEmails.includes(normalizedEmail) : false;
+
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[AdminConfig] Checking admin status:', {
+      email: normalizedEmail,
+      adminEmails,
+      isAdmin,
+      envVar: process.env.ADMIN_EMAILS
+    });
+  }
+
   return {
     isAdmin,
     bypassSubscriptionLimits: isAdmin,

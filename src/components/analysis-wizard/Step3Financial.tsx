@@ -156,9 +156,27 @@ export default function Step3Financial({
   });
   
   // Use the financial data passed from previous steps
-  const initialFinancial = useMemo(() => ({
-    ...data.financial
-  }), [data.financial]);
+  // CRITICAL: Apply strategy-based defaults for flip/brrrr on initialization
+  const initialFinancial = useMemo(() => {
+    const isHardMoneyStrategy = (data.strategy === 'flip' || data.strategy === 'brrrr');
+    const shouldUseHardMoney = isHardMoneyStrategy && data.strategyDetails?.initialFinancing !== 'conventional';
+
+    if (shouldUseHardMoney) {
+      // Apply hard money defaults for flip/brrrr strategies
+      return {
+        ...data.financial,
+        interestRate: 10.0,           // 10% hard money rate
+        loanTerm: 1,                  // 12 months
+        downPaymentPercent: 10,       // 10% down for hard money
+        points: 2.5,                  // 2.5% origination points
+        loanType: 'hardMoney' as const,
+      };
+    }
+
+    return {
+      ...data.financial
+    };
+  }, [data.financial, data.strategy, data.strategyDetails?.initialFinancing]);
 
   const [financial, setFinancial] = useState(initialFinancial);
   const [isCalculatingARV, setIsCalculatingARV] = useState(false);
@@ -887,7 +905,7 @@ export default function Step3Financial({
 
   /**
    * Calculate Cash Required (what investor brings to closing)
-   * For hard money: Down payment + Closing costs (rehab is lender funded)
+   * For hard money: Down payment + Closing costs + Rehab shortfall (if > 80% ARV)
    * For conventional: Down payment + Closing costs + Rehab costs
    */
   const calculateCashRequired = () => {
@@ -896,9 +914,23 @@ export default function Step3Financial({
     const loanAmount = financial.purchasePrice - downPayment;
     const pointsCost = loanType === 'hardMoney' ? (loanAmount * (financial.points || 0)) / 100 : 0;
 
-    // For hard money loans, renovation costs are 100% funded by lender
-    // so they should NOT be included in the upfront investment
-    const renovationContribution = loanType === 'hardMoney' ? 0 : (financial.renovationCosts || 0);
+    // For hard money loans, calculate rehab shortfall if total loan exceeds 80% ARV
+    let renovationContribution = 0;
+    if (loanType === 'hardMoney') {
+      // Hard money lenders cap total loan at 80% of ARV
+      const arv = financial.arv || 0;
+      const rehabCosts = financial.renovationCosts || 0;
+      if (arv > 0) {
+        const maxLoanAtARV = arv * 0.80;
+        const maxRehabFunding = Math.max(0, maxLoanAtARV - loanAmount);
+        // Investor must cover any rehab costs that exceed the 80% ARV limit
+        renovationContribution = Math.max(0, rehabCosts - maxRehabFunding);
+      }
+      // If no ARV set, assume lender funds all rehab (100% funding)
+    } else {
+      // Conventional loans require investor to fund all rehab upfront
+      renovationContribution = financial.renovationCosts || 0;
+    }
 
     return downPayment +
       (financial.closingCosts || 0) +
@@ -941,6 +973,44 @@ export default function Step3Financial({
     const profit = calculateEstimatedProfit();
     return cashRequired > 0 ? (profit / cashRequired) * 100 : 0;
   };
+
+  /**
+   * Calculate hard money loan limits based on 80% ARV rule
+   * Hard money lenders typically cap total loan at 70-80% of ARV
+   */
+  const calculateHardMoneyLimits = () => {
+    const arv = financial.arv || 0;
+    const purchasePrice = financial.purchasePrice || 0;
+    const rehabCosts = financial.renovationCosts || 0;
+    const downPayment = (purchasePrice * (financial.downPaymentPercent || 10)) / 100;
+    const purchaseLoan = purchasePrice - downPayment;
+
+    // Most hard money lenders cap at 70-80% of ARV
+    const maxLoanAtARV = arv * 0.80; // 80% of ARV
+    const totalRequestedLoan = purchaseLoan + rehabCosts;
+
+    // Calculate how much rehab the lender will actually fund
+    const maxRehabFunding = Math.max(0, maxLoanAtARV - purchaseLoan);
+    const actualRehabFunded = Math.min(rehabCosts, maxRehabFunding);
+    const rehabShortfall = rehabCosts - actualRehabFunded;
+
+    // Check if loan exceeds 80% ARV
+    const exceedsLimit = totalRequestedLoan > maxLoanAtARV;
+    const ltvPercent = arv > 0 ? (totalRequestedLoan / arv) * 100 : 0;
+
+    return {
+      maxLoanAtARV: Math.round(maxLoanAtARV),
+      totalRequestedLoan: Math.round(totalRequestedLoan),
+      purchaseLoan: Math.round(purchaseLoan),
+      maxRehabFunding: Math.round(maxRehabFunding),
+      actualRehabFunded: Math.round(actualRehabFunded),
+      rehabShortfall: Math.round(rehabShortfall),
+      exceedsLimit,
+      ltvPercent: Math.round(ltvPercent * 10) / 10,
+    };
+  };
+
+  const hardMoneyLimits = loanType === 'hardMoney' && financial.arv ? calculateHardMoneyLimits() : null;
 
   const handleContinue = () => {
     updateData({ financial });
@@ -1961,12 +2031,50 @@ export default function Step3Financial({
                   <strong>Hard Money Loan Features:</strong>
                 </p>
                 <ul className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 space-y-1">
-                  <li>• 100% renovation funding (no upfront rehab costs)</li>
+                  <li>• Rehab funding up to 80% of ARV (max loan-to-value)</li>
                   <li>• {financial.points || hardMoneyDefaults.points} points origination fee</li>
                   <li>• {financial.loanTerm < 2 ? `${financial.loanTerm * 12} month` : `${financial.loanTerm} year`} term with interest-only payments</li>
                   <li>• Quick approval & closing (7-14 days typical)</li>
                 </ul>
               </div>
+
+              {/* 80% ARV Limit Warning */}
+              {hardMoneyLimits && (financial.arv ?? 0) > 0 && (
+                <div className={`mt-3 p-3 rounded-lg ${hardMoneyLimits.exceedsLimit ? 'bg-red-500/10 border border-red-500/30' : 'bg-blue-500/10 border border-blue-500/30'}`}>
+                  <p className={`text-sm font-medium ${hardMoneyLimits.exceedsLimit ? 'text-red-700 dark:text-red-300' : 'text-blue-700 dark:text-blue-300'}`}>
+                    <strong>80% ARV Loan Limit Analysis:</strong>
+                  </p>
+                  <div className="text-sm mt-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Max Loan (80% ARV):</span>
+                      <span className="font-medium">${hardMoneyLimits.maxLoanAtARV.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Purchase Loan:</span>
+                      <span className="font-medium">${hardMoneyLimits.purchaseLoan.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Rehab Funded by Lender:</span>
+                      <span className="font-medium">${hardMoneyLimits.actualRehabFunded.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Current LTV:</span>
+                      <span className={`font-medium ${hardMoneyLimits.ltvPercent > 80 ? 'text-red-600' : 'text-green-600'}`}>{hardMoneyLimits.ltvPercent}%</span>
+                    </div>
+                    {hardMoneyLimits.rehabShortfall > 0 && (
+                      <div className="flex justify-between pt-2 border-t border-red-500/30">
+                        <span className="text-red-600 dark:text-red-400 font-medium">Out-of-Pocket Rehab:</span>
+                        <span className="font-bold text-red-600">${hardMoneyLimits.rehabShortfall.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                  {hardMoneyLimits.exceedsLimit && (
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                      ⚠️ Total loan exceeds 80% ARV. You&apos;ll need ${hardMoneyLimits.rehabShortfall.toLocaleString()} additional cash for rehab.
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           )}
           

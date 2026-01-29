@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { getCurrentMonthUsage, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
-import { createClient } from '@/lib/supabase/client';
+import { SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 
 type SubscriptionTier = 'basic' | 'pro' | 'pro-plus' | 'premium';
 
@@ -28,37 +27,27 @@ export default function AccountPage() {
 
     setIsLoading(true);
     try {
-      const supabase = createClient();
+      // Fetch usage from API endpoint (includes admin checks)
+      const response = await fetch('/api/analysis/usage');
+      if (response.ok) {
+        const usageData = await response.json();
 
-      // Fetch subscription from subscriptions table (source of truth for paid users)
-      const { data: subscription, error: subError } = await supabase
-        .from('subscriptions')
-        .select('tier, status')
-        .eq('user_id', user.id)
-        .in('status', ['active', 'trialing'])
-        .single();
-
-      if (subError && subError.code !== 'PGRST116') {
-        console.error('Error fetching subscription:', subError);
-      }
-
-      if (subscription?.tier) {
-        // Normalize tier name (e.g., 'pro' -> 'pro', 'pro-plus' -> 'pro-plus')
-        const normalizedTier = subscription.tier.toLowerCase().replace('_', '-') as SubscriptionTier;
-        setSubscriptionTier(normalizedTier);
-        console.log('[Account] Subscription tier from DB:', subscription.tier, '→', normalizedTier);
-      } else {
-        setSubscriptionTier('basic');
-        console.log('[Account] No active subscription found, using basic tier');
-      }
-
-      // Fetch usage
-      const { data: usage } = await getCurrentMonthUsage(user.id);
-      if (usage) {
-        setUsageData({
-          analysisCount: usage.analysis_count,
-          monthYear: usage.month_year
-        });
+        // Handle admin users with unlimited access
+        if (usageData.is_admin) {
+          setSubscriptionTier('premium'); // Display as premium for admin
+          setUsageData({
+            analysisCount: usageData.analyses_used || 0,
+            monthYear: new Date().toISOString().slice(0, 7) // Current month
+          });
+        } else {
+          // Normalize tier name
+          const normalizedTier = (usageData.subscription_tier || 'basic').toLowerCase().replace('_', '-') as SubscriptionTier;
+          setSubscriptionTier(normalizedTier);
+          setUsageData({
+            analysisCount: usageData.analyses_used || 0,
+            monthYear: new Date().toISOString().slice(0, 7)
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);

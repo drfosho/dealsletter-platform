@@ -4,8 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getUserProfile } from '@/lib/supabase/profiles';
-import { getCurrentMonthUsage, calculateRemainingAnalyses, SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
+import { SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 
 interface NavigationProps {
   variant?: 'default';
@@ -23,20 +22,18 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
     if (!user?.id) return;
 
     try {
-      // Fetch user profile
-      const { data: profile } = await getUserProfile(user.id);
-      if (profile) {
-        setSubscriptionTier(profile.subscription_tier || 'basic');
-      }
-
-      // Fetch current month usage
-      const { data: usage } = await getCurrentMonthUsage(user.id);
-      if (usage) {
-        const remaining = calculateRemainingAnalyses(
-          profile?.subscription_tier || 'basic',
-          usage.analysis_count
-        );
-        setRemainingAnalyses(remaining);
+      // Fetch usage from API endpoint (includes admin checks)
+      const response = await fetch('/api/analysis/usage');
+      if (response.ok) {
+        const usageData = await response.json();
+        // Handle admin users with unlimited access
+        if (usageData.is_admin) {
+          setSubscriptionTier('premium'); // Display as premium for admin
+          setRemainingAnalyses(-1); // -1 indicates unlimited
+        } else {
+          setSubscriptionTier(usageData.subscription_tier || 'basic');
+          setRemainingAnalyses(usageData.remaining ?? 0);
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -170,7 +167,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     <span className="text-sm font-medium">
-                      {subscriptionTier === 'pro' || subscriptionTier === 'premium' ? 'Unlimited' : `${remainingAnalyses}/20`}
+                      {remainingAnalyses === -1 || subscriptionTier === 'pro' || subscriptionTier === 'premium' ? 'Unlimited' : `${remainingAnalyses}/${SUBSCRIPTION_LIMITS[subscriptionTier] || 3}`}
                     </span>
                   </div>
                 )}
@@ -250,17 +247,17 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-xs text-muted">Monthly Usage</span>
                             <span className="text-xs font-medium">
-                              {subscriptionTier === 'pro' || subscriptionTier === 'premium' ? 'Unlimited' :
-                               `${remainingAnalyses !== null ? SUBSCRIPTION_LIMITS[subscriptionTier] - remainingAnalyses : 0} / ${SUBSCRIPTION_LIMITS[subscriptionTier]}`}
+                              {remainingAnalyses === -1 || subscriptionTier === 'pro' || subscriptionTier === 'premium' ? 'Unlimited' :
+                               `${remainingAnalyses !== null ? (SUBSCRIPTION_LIMITS[subscriptionTier] || 3) - remainingAnalyses : 0} / ${SUBSCRIPTION_LIMITS[subscriptionTier] || 3}`}
                             </span>
                           </div>
-                          {subscriptionTier === 'basic' && (
+                          {subscriptionTier === 'basic' && remainingAnalyses !== -1 && (
                             <div className="w-full bg-muted/20 rounded-full h-2 overflow-hidden">
                               <div
                                 className="h-full bg-accent transition-all duration-300"
                                 style={{
                                   width: `${remainingAnalyses !== null ?
-                                    ((SUBSCRIPTION_LIMITS[subscriptionTier] - remainingAnalyses) / SUBSCRIPTION_LIMITS[subscriptionTier]) * 100
+                                    (((SUBSCRIPTION_LIMITS[subscriptionTier] || 3) - remainingAnalyses) / (SUBSCRIPTION_LIMITS[subscriptionTier] || 3)) * 100
                                     : 0}%`
                                 }}
                               />
@@ -268,7 +265,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                           )}
                         </div>
 
-                        {subscriptionTier === 'basic' && (
+                        {subscriptionTier === 'basic' && remainingAnalyses !== -1 && (
                           <Link
                             href="/pricing"
                             className="flex items-center justify-center gap-2 mx-3 mt-2 px-3 py-2 bg-primary text-secondary text-sm rounded-lg hover:bg-primary/90 transition-colors font-medium"
@@ -354,9 +351,10 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                       {getTierDisplayName()}
                     </span>
                     <span className="text-xs text-muted">
-                      {subscriptionTier === 'pro-plus' ? `${remainingAnalyses}/200 analyses` :
+                      {remainingAnalyses === -1 ? 'Unlimited analyses' :
+                       subscriptionTier === 'pro-plus' ? `${remainingAnalyses}/200 analyses` :
                        subscriptionTier === 'pro' || subscriptionTier === 'premium' ? `${remainingAnalyses}/50 analyses` :
-                       `${remainingAnalyses}/3 analyses`}
+                       `${remainingAnalyses}/${SUBSCRIPTION_LIMITS[subscriptionTier] || 3} analyses`}
                     </span>
                   </div>
                 </div>
@@ -422,7 +420,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                     Account
                   </Link>
 
-                  {subscriptionTier === 'basic' && (
+                  {subscriptionTier === 'basic' && remainingAnalyses !== -1 && (
                     <Link
                       href="/pricing"
                       className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center"

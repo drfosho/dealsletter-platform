@@ -126,7 +126,7 @@ export async function getCurrentMonthUsage(userId: string) {
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error fetching current month usage:', error);
+      console.error('Error fetching current month usage:', JSON.stringify(error, null, 2), 'Code:', error.code, 'Message:', error.message);
       throw error;
     }
 
