@@ -152,9 +152,11 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
       // Get metrics from AI analysis if available
       // CRITICAL FIX: Check multiple locations for profit and ROI
-      // Data can be at top level (from DB) or nested in ai_analysis.financial_metrics
+      // Data can be at top level (from DB), in ai_analysis.financial_metrics,
+      // or in analysis_data.calculatedMetrics (new backup location)
       // Use nullish coalescing (??) to properly handle 0 as a valid value
       const aiMetrics = analysis.ai_analysis?.financial_metrics;
+      const savedMetrics = (analysis as any).analysis_data?.calculatedMetrics;
 
       // Helper to get first non-null/undefined value (0 is valid)
       const getFirstDefined = (...values: (number | undefined | null)[]): number | undefined => {
@@ -166,6 +168,7 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
       let netProfit = getFirstDefined(
         (analysis as any).profit,
+        savedMetrics?.profit,
         aiMetrics?.total_profit,
         aiMetrics?.net_profit,
         (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.total_profit,
@@ -175,6 +178,7 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
       let roi = getFirstDefined(
         (analysis as any).roi,
+        savedMetrics?.roi,
         aiMetrics?.roi,
         (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.roi,
         (analysis as any).analysis_data?.roi
@@ -183,19 +187,24 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
       console.log('[FinancialMetrics] Flip metrics debug:', {
         topLevelProfit: (analysis as any).profit,
         topLevelRoi: (analysis as any).roi,
+        savedMetricsProfit: savedMetrics?.profit,
+        savedMetricsRoi: savedMetrics?.roi,
+        savedMetricsArv: savedMetrics?.arv,
         aiMetricsProfit: aiMetrics?.total_profit,
         aiMetricsRoi: aiMetrics?.roi,
+        aiMetricsArv: (aiMetrics as any)?.arv,
         initialNetProfit: netProfit,
         initialRoi: roi
       });
 
       // CRITICAL FIX: ARV must be HIGHER than purchase price for flip profitability
       // ARV = After Repair Value = what property will sell for AFTER renovations
-      // PRIORITY: Use saved ARV from AI analysis first (generated with user inputs)
-      // Only fall back to comparables.value if no ARV was saved
+      // PRIORITY: Use saved ARV from analysis first (generated with user inputs)
+      // Check multiple locations where ARV might be stored
       let estimatedARV = (aiMetrics as any)?.arv ||
-                        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.arv ||
+                        savedMetrics?.arv ||
                         (analysis as any).analysis_data?.arv ||
+                        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.arv ||
                         (analysis as any).analysis_data?.strategy_details?.arv ||
                         0;
 

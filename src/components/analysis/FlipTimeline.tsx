@@ -27,9 +27,12 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
   // CRITICAL FIX: Check multiple locations for financial metrics (data can be at various levels)
   const aiMetrics = analysis.ai_analysis?.financial_metrics;
   const analysisData = (analysis as any).analysis_data || {};
+  // Also check for pre-calculated metrics stored at top level of analysis_data
+  const savedMetrics = analysisData?.calculatedMetrics || {};
 
   // ARV: Check multiple sources
   const arv = (aiMetrics as any)?.arv ||
+              savedMetrics?.arv ||
               (analysis as any).arv ||
               analysisData?.arv ||
               analysisData?.ai_analysis?.financial_metrics?.arv ||
@@ -38,6 +41,7 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
 
   // Net Profit: Check multiple sources (most critical fix)
   const netProfit = (analysis as any).profit ||  // Top-level from database
+                   savedMetrics?.profit ||
                    aiMetrics?.net_profit ||
                    aiMetrics?.total_profit ||
                    analysisData?.profit ||
@@ -47,6 +51,8 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
 
   console.log('[FlipTimeline] Financial data sources:', {
     topLevelProfit: (analysis as any).profit,
+    savedMetricsProfit: savedMetrics?.profit,
+    savedMetricsArv: savedMetrics?.arv,
     aiMetricsNetProfit: aiMetrics?.net_profit,
     aiMetricsTotalProfit: aiMetrics?.total_profit,
     analysisDataProfit: analysisData?.profit,
@@ -65,15 +71,15 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
   // Property taxes: 1.2% annually
   const monthlyTaxes = Math.round((purchasePrice * 0.012) / 12);
   
-  // Insurance: 0.35% annually for investment property
-  const monthlyInsurance = Math.round((purchasePrice * 0.0035) / 12);
+  // Insurance: 0.6% annually for vacant/investor property (higher risk)
+  const monthlyInsurance = Math.round((purchasePrice * 0.006) / 12);
   
   // Utilities and maintenance during renovation
   const monthlyUtilities = 200; // $200/month during renovation
   const monthlyMaintenance = 150; // $150/month for security/misc
   
   const estimatedMonthlyHolding = monthlyLoanInterest + monthlyRehabInterest + monthlyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
-  const holdingCosts = aiMetrics?.holding_costs || (estimatedMonthlyHolding * timeline);
+  const holdingCosts = aiMetrics?.holding_costs || savedMetrics?.holdingCosts || (estimatedMonthlyHolding * timeline);
   
   console.log('[FlipTimeline] Holding costs fallback calculation:', {
     monthlyLoanInterest,

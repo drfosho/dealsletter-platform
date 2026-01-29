@@ -156,9 +156,38 @@ export default function Step3Financial({
   });
   
   // Use the financial data passed from previous steps
-  const initialFinancial = useMemo(() => ({
-    ...data.financial
-  }), [data.financial]);
+  // CRITICAL FIX: For flip/brrrr strategies, apply hard money defaults immediately
+  // This prevents the UI from briefly showing conventional values
+  const initialFinancial = useMemo(() => {
+    const isHardMoneyStrategy = data.strategy === 'flip' || data.strategy === 'brrrr';
+
+    if (isHardMoneyStrategy && data.strategyDetails?.initialFinancing !== 'conventional') {
+      // Apply hard money defaults immediately for flip/brrrr
+      const strategyType = (data.strategy === 'flip' || data.strategy === 'brrrr' ||
+                           data.strategy === 'rental' || data.strategy === 'buy-and-hold' ||
+                           data.strategy === 'house-hack' || data.strategy === 'commercial' ||
+                           data.strategy === 'short-term-rental')
+                           ? data.strategy as InvestmentStrategy
+                           : 'rental';
+      const defaults = getSimpleFinancingDefaults(strategyType);
+
+      console.log('[Step3Financial] Initializing with hard money defaults:', {
+        strategy: data.strategy,
+        defaults
+      });
+
+      return {
+        ...data.financial,
+        interestRate: defaults.interestRate,           // 10% for hard money
+        loanTerm: defaults.loanTermYears,              // 1 year for hard money
+        downPaymentPercent: defaults.downPaymentPercent, // 10% for hard money
+        points: defaults.lenderPointsPercent,          // 2.5 points
+        loanType: 'hardMoney' as const
+      };
+    }
+
+    return { ...data.financial };
+  }, [data.financial, data.strategy, data.strategyDetails?.initialFinancing]);
 
   const [financial, setFinancial] = useState(initialFinancial);
   const [isCalculatingARV, setIsCalculatingARV] = useState(false);
@@ -303,7 +332,7 @@ export default function Step3Financial({
     }
     
     // Auto-populate monthly rent if not already set and strategy requires it
-    if (['rental', 'brrrr', 'commercial'].includes(data.strategy) &&
+    if (['rental', 'buy-and-hold', 'brrrr', 'house-hack', 'commercial'].includes(data.strategy) &&
         newRentEstimate > 0 &&
         (!financial.monthlyRent || financial.monthlyRent === 0)) {
 
@@ -1025,7 +1054,7 @@ export default function Step3Financial({
       </div>
 
       {/* Estimated Rent Info - Only show for rental strategies */}
-      {['rental', 'brrrr', 'commercial'].includes(data.strategy) && (
+      {['rental', 'buy-and-hold', 'brrrr', 'house-hack', 'commercial'].includes(data.strategy) && (
         <div className="bg-accent/10 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">

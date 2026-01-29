@@ -11,8 +11,12 @@
  * ADMIN_EMAILS=admin1@example.com,admin2@example.com
  */
 
-// SEC-010: Load admin emails exclusively from environment variables
-const envAdmins = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(e => e.length > 0) || [];
+// SEC-010: Load admin emails from environment variables
+// Check both server-side and client-side env vars for compatibility
+const envAdmins = (process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(e => e.length > 0);
 
 // Validate that admin emails are configured in production
 if (process.env.NODE_ENV === 'production' && envAdmins.length === 0) {
@@ -29,7 +33,7 @@ export interface AdminConfig {
 }
 
 export function getAdminConfig(email: string | null | undefined): AdminConfig {
-  const isAdmin = email ? allAdminEmails.includes(email) : false;
+  const isAdmin = email ? allAdminEmails.includes(email.toLowerCase()) : false;
   
   return {
     isAdmin,

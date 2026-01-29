@@ -69,6 +69,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // CRITICAL: Preserve all original analysis_data for component access
     const aiAnalysis = analysis.analysis_data?.ai_analysis || {};
     const financialMetrics = aiAnalysis?.financial_metrics || {};
+    // Also check for pre-calculated metrics stored at top level
+    const calculatedMetrics = analysis.analysis_data?.calculatedMetrics || {};
 
     // Helper to get first non-null/undefined value (0 is valid)
     const getFirstDefined = (...values: (number | undefined | null)[]): number => {
@@ -105,19 +107,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       market_data: analysis.analysis_data?.market_data || analysis.market_data || {},
       // CRITICAL: Include full ai_analysis with financial_metrics
       // Use getFirstDefined to properly preserve 0 as a valid value
+      // Check multiple sources: financialMetrics, calculatedMetrics, and top-level DB columns
       ai_analysis: {
         ...aiAnalysis,
         financial_metrics: {
           ...financialMetrics,
           // Ensure key values are present (0 is valid, only default to 0 if truly missing)
-          monthly_rent: getFirstDefined(financialMetrics?.monthly_rent, analysis.analysis_data?.monthlyRent),
-          monthly_cash_flow: getFirstDefined(financialMetrics?.monthly_cash_flow),
-          cap_rate: getFirstDefined(financialMetrics?.cap_rate),
-          cash_on_cash_return: getFirstDefined(financialMetrics?.cash_on_cash_return),
-          roi: getFirstDefined(financialMetrics?.roi, analysis.roi),
-          total_profit: getFirstDefined(financialMetrics?.total_profit, analysis.profit),
-          net_profit: getFirstDefined(financialMetrics?.net_profit, financialMetrics?.total_profit, analysis.profit),
-          arv: getFirstDefined(financialMetrics?.arv, analysis.analysis_data?.arv)
+          monthly_rent: getFirstDefined(financialMetrics?.monthly_rent, calculatedMetrics?.monthlyRent, analysis.analysis_data?.monthlyRent),
+          monthly_cash_flow: getFirstDefined(financialMetrics?.monthly_cash_flow, calculatedMetrics?.monthlyCashFlow),
+          cap_rate: getFirstDefined(financialMetrics?.cap_rate, calculatedMetrics?.capRate),
+          cash_on_cash_return: getFirstDefined(financialMetrics?.cash_on_cash_return, calculatedMetrics?.cashOnCash),
+          roi: getFirstDefined(financialMetrics?.roi, calculatedMetrics?.roi, analysis.roi),
+          total_profit: getFirstDefined(financialMetrics?.total_profit, calculatedMetrics?.profit, analysis.profit),
+          net_profit: getFirstDefined(financialMetrics?.net_profit, financialMetrics?.total_profit, calculatedMetrics?.profit, analysis.profit),
+          arv: getFirstDefined(financialMetrics?.arv, calculatedMetrics?.arv, analysis.analysis_data?.arv),
+          total_investment: getFirstDefined(financialMetrics?.total_investment, calculatedMetrics?.totalInvestment),
+          holding_costs: getFirstDefined(financialMetrics?.holding_costs, calculatedMetrics?.holdingCosts),
+          profit_margin: getFirstDefined(financialMetrics?.profit_margin, calculatedMetrics?.profitMargin)
         }
       },
       // CRITICAL: Include full analysis_data so components can access all original values

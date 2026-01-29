@@ -555,16 +555,40 @@ export async function POST(request: NextRequest) {
       });
 
       // Use the extracted values, defaulting to 0 only if undefined/null
+      // CRITICAL: Round profit to integer for database (profit column is INTEGER type)
       const finalRoi = extractedRoi ?? 0;
-      const finalProfit = extractedProfit ?? 0;
+      const finalProfit = Math.round(extractedProfit ?? 0);
 
-      console.log('[Generate] Final values for DB:', { finalRoi, finalProfit });
+      // Extract ARV for flip strategies
+      const extractedArv = aiAnalysis.financial_metrics?.arv;
 
+      console.log('[Generate] Final values for DB:', {
+        finalRoi,
+        finalProfit,
+        arv: extractedArv,
+        strategy: body.strategy
+      });
+
+      // Build update data with all calculated values for easy retrieval
       const updateData = {
         analysis_data: {
           ...analysisRecord.analysis_data,
           ai_analysis: aiAnalysis,
-          status: 'completed'
+          status: 'completed',
+          // CRITICAL: Store key calculated values at top level of analysis_data for easy access
+          calculatedMetrics: {
+            roi: finalRoi,
+            profit: finalProfit,
+            arv: extractedArv,
+            totalInvestment: aiAnalysis.financial_metrics?.total_investment,
+            holdingCosts: aiAnalysis.financial_metrics?.holding_costs,
+            profitMargin: aiAnalysis.financial_metrics?.profit_margin,
+            monthlyCashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow,
+            capRate: aiAnalysis.financial_metrics?.cap_rate,
+            cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return
+          },
+          // Store ARV at top level for flip strategies
+          arv: extractedArv
         },
         roi: finalRoi,
         profit: finalProfit
@@ -589,8 +613,26 @@ export async function POST(request: NextRequest) {
           message: updateError.message,
           details: updateError.details
         });
+        // CRITICAL FIX: Return error response if update fails
+        // This prevents returning success with $0 values
+        return NextResponse.json(
+          {
+            error: 'Failed to save analysis results',
+            details: updateError.message,
+            analysisId: analysisRecord.id
+          },
+          { status: 500 }
+        );
       } else {
         console.log('[Generate] Successfully updated analysis. Verified values:', updateResult);
+
+        // VALIDATION: Verify the values were actually saved
+        if (updateResult && (updateResult.roi === 0 && finalRoi !== 0)) {
+          console.error('[Generate] WARNING: ROI saved as 0 but should be:', finalRoi);
+        }
+        if (updateResult && (updateResult.profit === 0 && finalProfit !== 0)) {
+          console.error('[Generate] WARNING: Profit saved as 0 but should be:', finalProfit);
+        }
       }
 
       // Update user's usage count (including admin tracking)
