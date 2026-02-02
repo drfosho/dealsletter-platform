@@ -18,6 +18,16 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    id: '12',
+    title: 'LA Real Estate Q1 2026: The Market Isn\'t Crashing — It\'s Just Picky',
+    excerpt: 'LA real estate isn\'t collapsing—it\'s selective. Prices aren\'t running, buyers have breathing room, and only no-brainer properties move fast. Here\'s your complete submarket breakdown, strategy analysis, and what we\'re watching heading into spring 2026.',
+    date: 'February 2026',
+    readTime: '15 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/LA QUARTER ONE.png',
+    slug: 'la-real-estate-q1-2026'
+  },
+  {
     id: '11',
     title: 'San Diego County Real Estate Deep Dive: 2025 Actuals + 2026 Investor Playbook',
     excerpt: 'San Diego normalized in 2025—not crashed, not moonshot. Median held at $900K, inventory climbed to 2.9 months, and 36-44% of listings took price cuts. Here\'s your complete submarket breakdown with cap rates, strategy analysis, and the investor playbook for 2026.',
@@ -402,6 +412,13 @@ export default function BlogPage() {
                     <Image
                       src="/logos/SAN DIEGO DEEP DIVE.png"
                       alt="San Diego County Real Estate Deep Dive 2026"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'la-real-estate-q1-2026' ? (
+                    <Image
+                      src="/logos/LA QUARTER ONE.png"
+                      alt="LA Real Estate Q1 2026: The Market Isn't Crashing"
                       fill
                       className="object-cover"
                     />
