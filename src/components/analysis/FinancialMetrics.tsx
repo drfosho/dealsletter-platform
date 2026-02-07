@@ -14,18 +14,6 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
 
-  // Calculate proper cash required for flips (down payment + closing costs)
-  // Hard money lenders fund 100% of rehab via holdback - NOT from investor cash
-  const calculateFlipCashRequired = () => {
-    const loanAmount = purchasePrice - downPayment;
-    const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
-    const pointsCost = (loanAmount * points) / 100;
-    const otherClosingCosts = purchasePrice * 0.005; // 0.5% title/escrow
-    const totalClosingCosts = pointsCost + otherClosingCosts;
-    return downPayment + totalClosingCosts;
-  };
-  const flipCashRequired = isFlipStrategy ? calculateFlipCashRequired() : 0;
-
   // Inline rent editing state
   const [isEditingRent, setIsEditingRent] = useState(false);
   const [isEditingRentPerUnit, setIsEditingRentPerUnit] = useState(false);
@@ -215,103 +203,60 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         arvIsValid: estimatedARV > purchasePrice
       });
 
-      // CRITICAL FIX: If netProfit or ROI is 0 but we have valid inputs, recalculate
-      // This handles cases where the DB update failed or values weren't saved properly
-      if ((netProfit === 0 || roi === 0) && purchasePrice > 0 && estimatedARV > purchasePrice) {
-        console.log('[FinancialMetrics] RECALCULATING: netProfit or ROI is 0, using centralized calculator');
+      // ALWAYS use centralized calculator for flip metrics
+      // This ensures hard money rehab holdback is properly handled
+      // and numbers are consistent across all views
+      const interestRate = analysis.interest_rate ||
+                          (analysis as any).analysis_data?.interest_rate ||
+                          10.45;
+      // CRITICAL: Use timeline from strategy_details, NOT loan_term
+      // loan_term = loan maturity (1-2 years for hard money)
+      // timeline = actual project duration for holding costs (3-12 months)
+      const holdingMonths = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                            parseInt((analysis as any).strategy_details?.timeline) ||
+                            (analysis as any).analysis_data?.flip_timeline_months ||
+                            6;
+      const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
+      const loanType = (analysis as any).analysis_data?.loan_terms?.loanType || 'hardMoney';
 
-        // Get loan details from analysis data
-        const interestRate = analysis.interest_rate ||
-                            (analysis as any).analysis_data?.interest_rate ||
-                            10.45;
-        // CRITICAL: Use timeline from strategy_details, NOT loan_term
-        // loan_term = loan maturity (1-2 years for hard money)
-        // timeline = actual project duration for holding costs (3-12 months)
-        const holdingMonths = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
-                              parseInt((analysis as any).strategy_details?.timeline) ||
-                              (analysis as any).analysis_data?.flip_timeline_months ||
-                              6;
-        const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
-        const loanType = (analysis as any).analysis_data?.loan_terms?.loanType || 'hardMoney';
+      const flipInputs: FlipCalculationInputs = {
+        purchasePrice,
+        downPaymentPercent: analysis.down_payment_percent || 20,
+        interestRate,
+        loanTermYears: 1,
+        renovationCosts: rehabCosts,
+        arv: estimatedARV,
+        holdingPeriodMonths: holdingMonths,
+        loanType: loanType as 'conventional' | 'hardMoney',
+        points,
+        isHardMoney: loanType === 'hardMoney' || points >= 2
+      };
 
-        const flipInputs: FlipCalculationInputs = {
-          purchasePrice,
-          downPaymentPercent: analysis.down_payment_percent || 20,
-          interestRate,
-          loanTermYears: 1,
-          renovationCosts: rehabCosts,
-          arv: estimatedARV,
-          holdingPeriodMonths: holdingMonths,
-          loanType: loanType as 'conventional' | 'hardMoney',
-          points,
-          isHardMoney: loanType === 'hardMoney' || points >= 2
-        };
+      console.log('[FinancialMetrics] Calculating flip with inputs:', flipInputs);
 
-        console.log('[FinancialMetrics] Recalculating with inputs:', flipInputs);
+      const flipResults = calculateFlipReturns(flipInputs);
 
-        const flipResults = calculateFlipReturns(flipInputs);
-
-        console.log('[FinancialMetrics] Recalculated results:', {
-          netProfit: flipResults.netProfit,
-          roi: flipResults.roi,
-          profitMargin: flipResults.profitMargin,
-          isValid: flipResults.validation.isValid
-        });
-
-        // Use recalculated values
-        netProfit = flipResults.netProfit;
-        roi = flipResults.roi;
-
-        // Also get proper investment values from the calculator
-        const totalInvestment = flipResults.cashRequired;
-        const profitMargin = flipResults.profitMargin;
-
-        return {
-          purchasePrice,
-          rehabCosts,
-          totalInvestment,
-          estimatedARV,
-          netProfit,
-          roi,
-          profitMargin,
-          holdingPeriod: holdingMonths / 12,
-          // Set rental metrics to 0 for flips
-          monthlyRent: 0,
-          monthlyPayment: 0,
-          totalExpenses: 0,
-          monthlyCashFlow: 0,
-          annualCashFlow: 0,
-          annualNOI: 0,
-          capRate: 0,
-          cashOnCashReturn: 0,
-          totalReturn: roi,
-          totalCashInvested: totalInvestment,
-          propertyTax: 0,
-          insurance: 0,
-          maintenance: 0,
-          vacancy: 0,
-          propertyManagement: 0
-        };
-      }
-
-      // Calculate values using stored data (original path when values are present)
-      const closingCosts = purchasePrice * 0.03;
-      const totalInvestment = downPayment + rehabCosts + closingCosts;
-      const profitMargin = estimatedARV > 0 ? (netProfit / estimatedARV) * 100 : 0;
+      console.log('[FinancialMetrics] Flip results:', {
+        netProfit: flipResults.netProfit,
+        roi: flipResults.roi,
+        cashRequired: flipResults.cashRequired,
+        profitMargin: flipResults.profitMargin,
+        isHardMoney: flipResults.isHardMoney,
+        rehabHoldback: flipResults.rehabHoldback,
+        isValid: flipResults.validation.isValid
+      });
 
       return {
         purchasePrice,
         rehabCosts,
-        totalInvestment,
+        totalInvestment: flipResults.cashRequired,
         estimatedARV,
-        netProfit,
-        roi,
-        profitMargin,
-        // CRITICAL: Use timeline from strategy_details, NOT loan_term
-        holdingPeriod: (parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
-                       parseInt((analysis as any).strategy_details?.timeline) ||
-                       (analysis as any).analysis_data?.flip_timeline_months ||
-                       6) / 12, // Convert months to years for display
+        netProfit: flipResults.netProfit,
+        roi: flipResults.roi,
+        profitMargin: flipResults.profitMargin,
+        holdingPeriod: holdingMonths / 12,
+        isHardMoney: flipResults.isHardMoney,
+        rehabHoldback: flipResults.rehabHoldback,
         // Set rental metrics to 0 for flips
         monthlyRent: 0,
         monthlyPayment: 0,
@@ -321,8 +266,8 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         annualNOI: 0,
         capRate: 0,
         cashOnCashReturn: 0,
-        totalReturn: roi,
-        totalCashInvested: totalInvestment,
+        totalReturn: flipResults.roi,
+        totalCashInvested: flipResults.cashRequired,
         propertyTax: 0,
         insurance: 0,
         maintenance: 0,
@@ -554,18 +499,23 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border/50">
                 <span className="text-muted">Rehab Costs</span>
-                <span className="font-medium">
-                  {formatCurrency((metrics as any).rehabCosts)}
-                </span>
+                <div className="text-right">
+                  <span className="font-medium">
+                    {formatCurrency((metrics as any).rehabCosts)}
+                  </span>
+                  {(metrics as any).isHardMoney && (metrics as any).rehabCosts > 0 && (
+                    <p className="text-xs text-green-600">Funded by lender via holdback</p>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border/50">
-                <span className="text-muted">Closing & Holding</span>
+                <span className="text-muted">Closing Costs</span>
                 <span className="font-medium">
-                  {formatCurrency((metrics as any).totalInvestment - (metrics as any).rehabCosts - downPayment)}
+                  {formatCurrency((metrics as any).totalInvestment - downPayment)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 font-semibold">
-                <span>Total Investment</span>
+                <span>Cash Required</span>
                 <span className="text-primary">
                   {formatCurrency((metrics as any).totalInvestment)}
                 </span>
@@ -781,19 +731,19 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
             <div className="bg-muted/20 rounded-lg p-3">
               <p className="text-sm text-muted mb-1">Cash Required</p>
               <p className="font-semibold text-primary">
-                {formatCurrency(flipCashRequired)}
+                {formatCurrency((metrics as any).totalInvestment)}
               </p>
               <p className="text-xs text-muted mt-1">
                 Down payment + closing costs
               </p>
             </div>
             <div className="bg-muted/20 rounded-lg p-3">
-              <p className="text-sm text-muted mb-1">Total Investment</p>
-              <p className="font-semibold text-primary">
-                {formatCurrency((metrics as any).totalInvestment)}
+              <p className="text-sm text-muted mb-1">Net Profit</p>
+              <p className={`font-semibold ${(metrics as any).netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency((metrics as any).netProfit)}
               </p>
               <p className="text-xs text-muted mt-1">
-                All-in project cost
+                ARV minus all costs
               </p>
             </div>
             <div className="bg-muted/20 rounded-lg p-3">

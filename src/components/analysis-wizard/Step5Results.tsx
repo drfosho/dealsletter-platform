@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { WizardData } from '@/app/analysis/new/page';
@@ -12,6 +12,7 @@ import {
   getRecommendationType,
   getRecommendationColors
 } from '@/utils/format-text';
+import { calculateFlipReturns, type FlipCalculationInputs } from '@/utils/financial-calculations';
 
 interface Step5ResultsProps {
   data: WizardData;
@@ -55,6 +56,32 @@ export default function Step5Results({ data }: Step5ResultsProps) {
 
   const analysis = data.analysis as any;
   const { financial_metrics } = analysis;
+
+  // Calculate flip metrics using the centralized calculator for consistency
+  // This ensures Step5Results shows the SAME numbers as the detailed FinancialMetrics view
+  const flipMetrics = useMemo(() => {
+    if (data.strategy !== 'flip') return null;
+
+    const purchasePrice = data.financial?.purchasePrice || 0;
+    const loanType = data.financial?.loanType || 'hardMoney';
+    const points = data.financial?.points || 2.5;
+    const isHardMoney = loanType === 'hardMoney' || points >= 2;
+
+    const flipInputs: FlipCalculationInputs = {
+      purchasePrice,
+      downPaymentPercent: data.financial?.downPaymentPercent || 20,
+      interestRate: data.financial?.interestRate || 10,
+      loanTermYears: 1,
+      renovationCosts: data.financial?.renovationCosts || 0,
+      arv: data.financial?.arv || financial_metrics?.arv || purchasePrice * 1.18,
+      holdingPeriodMonths: parseInt(data.strategyDetails?.timeline || '6') || 6,
+      loanType: loanType as 'conventional' | 'hardMoney',
+      points,
+      isHardMoney
+    };
+
+    return calculateFlipReturns(flipInputs);
+  }, [data, financial_metrics]);
 
   // Get recommendation styling
   const recommendationType = getRecommendationType(analysis.recommendation);
@@ -171,19 +198,19 @@ export default function Step5Results({ data }: Step5ResultsProps) {
 
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {data.strategy === 'flip' ? (
-          // Fix & Flip Metrics
+        {data.strategy === 'flip' && flipMetrics ? (
+          // Fix & Flip Metrics - use centralized calculator for consistency
           <>
             <div className="bg-card rounded-lg border border-border p-4">
               <p className="text-sm text-muted mb-1">Net Profit</p>
-              <p className={`text-2xl font-bold ${(financial_metrics?.net_profit || financial_metrics?.total_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(financial_metrics?.net_profit || financial_metrics?.total_profit)}
+              <p className={`text-2xl font-bold ${flipMetrics.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency(flipMetrics.netProfit)}
               </p>
             </div>
             <div className="bg-card rounded-lg border border-border p-4">
-              <p className="text-sm text-muted mb-1">Total Investment</p>
+              <p className="text-sm text-muted mb-1">Cash Required</p>
               <p className="text-2xl font-bold text-primary">
-                {formatCurrency(financial_metrics?.total_investment || data.financial?.purchasePrice)}
+                {formatCurrency(flipMetrics.cashRequired)}
               </p>
             </div>
             <div className="bg-card rounded-lg border border-border p-4">
@@ -194,8 +221,8 @@ export default function Step5Results({ data }: Step5ResultsProps) {
             </div>
             <div className="bg-card rounded-lg border border-border p-4">
               <p className="text-sm text-muted mb-1">ROI</p>
-              <p className="text-2xl font-bold text-green-600">
-                {formatPercent(financial_metrics?.roi)}
+              <p className={`text-2xl font-bold ${flipMetrics.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatPercent(flipMetrics.roi)}
               </p>
             </div>
           </>
@@ -314,16 +341,23 @@ export default function Step5Results({ data }: Step5ResultsProps) {
               {(data.financial?.renovationCosts || 0) > 0 && (
                 <div className="flex justify-between">
                   <span className="text-muted">Renovation Costs</span>
-                  <span className="font-medium">{formatCurrency(data.financial?.renovationCosts)}</span>
+                  <div className="text-right">
+                    <span className="font-medium">{formatCurrency(data.financial?.renovationCosts)}</span>
+                    {flipMetrics?.isHardMoney && (
+                      <p className="text-xs text-green-600">Funded by lender</p>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="flex justify-between pt-2 border-t border-border">
                 <span className="font-medium">Total Cash Needed</span>
                 <span className="font-bold text-primary">
                   {formatCurrency(
-                    ((data.financial?.purchasePrice || 0) * (data.financial?.downPaymentPercent || 20) / 100) +
-                    (data.financial?.renovationCosts || 0) +
-                    ((data.financial?.purchasePrice || 0) * 0.03) // Closing costs estimate
+                    flipMetrics
+                      ? flipMetrics.cashRequired
+                      : ((data.financial?.purchasePrice || 0) * (data.financial?.downPaymentPercent || 20) / 100) +
+                        (data.financial?.renovationCosts || 0) +
+                        ((data.financial?.purchasePrice || 0) * 0.03)
                   )}
                 </span>
               </div>
