@@ -161,54 +161,27 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         initialRoi: roi
       });
 
-      // CRITICAL FIX: ARV must be HIGHER than purchase price for flip profitability
-      // ARV = After Repair Value = what property will sell for AFTER renovations
-      // The comparables.value is current AVM, NOT the post-renovation ARV
-      let estimatedARV = (aiMetrics as any)?.arv ||
-                        (analysis as any).analysis_data?.arv ||
+      // ARV: Use the saved ARV from analysis_data (set during wizard),
+      // then fall back to AI metrics, then comparables, then estimate
+      const estimatedARV = (analysis as any).analysis_data?.arv ||
+                        (aiMetrics as any)?.arv ||
                         (analysis as any).analysis_data?.strategy_details?.arv ||
                         (analysis.property_data as any)?.comparables?.value ||
-                        0;
+                        purchasePrice * 1.18;
 
-      // Renovation level multipliers for ARV calculation
-      const renovationLevel = (analysis as any).strategy_details?.renovationLevel ||
-                             (analysis as any).strategyDetails?.renovationLevel ||
-                             (analysis as any).analysis_data?.strategy_details?.renovationLevel ||
-                             'moderate';
-      const renovationMultipliers: Record<string, number> = {
-        cosmetic: 1.12,
-        moderate: 1.18,
-        extensive: 1.25,
-        gut: 1.35
-      };
-      const multiplier = renovationMultipliers[renovationLevel] || 1.18;
-
-      // CRITICAL VALIDATION: ARV must be at least 15% higher than purchase price for flips
-      if (estimatedARV <= purchasePrice) {
-        console.log('[FinancialMetrics] WARNING: ARV <= purchase price, recalculating');
-        // Calculate proper ARV based on purchase price + renovation value
-        estimatedARV = Math.round(purchasePrice * multiplier);
-      } else if (estimatedARV < purchasePrice * 1.15) {
-        // If ARV is barely above purchase price, adjust it
-        console.log('[FinancialMetrics] WARNING: ARV too close to purchase price, adjusting');
-        estimatedARV = Math.round(purchasePrice * multiplier);
-      }
-
-      console.log('[FinancialMetrics] ARV Calculation:', {
-        originalARV: (analysis.property_data as any)?.comparables?.value,
-        renovationLevel,
-        multiplier,
-        purchasePrice,
-        finalARV: estimatedARV,
-        arvIsValid: estimatedARV > purchasePrice
+      console.log('[FinancialMetrics] ARV source:', {
+        savedARV: (analysis as any).analysis_data?.arv,
+        aiMetricsARV: (aiMetrics as any)?.arv,
+        comparablesValue: (analysis.property_data as any)?.comparables?.value,
+        finalARV: estimatedARV
       });
 
-      // ALWAYS use centralized calculator for flip metrics
-      // This ensures hard money rehab holdback is properly handled
-      // and numbers are consistent across all views
-      const interestRate = analysis.interest_rate ||
+      // Use saved loan terms from analysis_data for consistency with wizard inputs
+      const savedLoanTerms = (analysis as any).analysis_data?.loan_terms || {};
+      const interestRate = savedLoanTerms.interestRate ||
+                          analysis.interest_rate ||
                           (analysis as any).analysis_data?.interest_rate ||
-                          10.45;
+                          10;
       // CRITICAL: Use timeline from strategy_details, NOT loan_term
       // loan_term = loan maturity (1-2 years for hard money)
       // timeline = actual project duration for holding costs (3-12 months)
@@ -216,8 +189,8 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                             parseInt((analysis as any).strategy_details?.timeline) ||
                             (analysis as any).analysis_data?.flip_timeline_months ||
                             6;
-      const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
-      const loanType = (analysis as any).analysis_data?.loan_terms?.loanType || 'hardMoney';
+      const points = savedLoanTerms.points || 0;
+      const loanType = savedLoanTerms.loanType || 'conventional';
 
       const flipInputs: FlipCalculationInputs = {
         purchasePrice,

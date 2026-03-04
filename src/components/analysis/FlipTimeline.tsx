@@ -1,93 +1,64 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { Analysis } from '@/types';
+import { calculateFlipReturns, type FlipCalculationInputs } from '@/utils/financial-calculations';
 
 interface FlipTimelineProps {
   analysis: Analysis;
 }
 
 export default function FlipTimeline({ analysis }: FlipTimelineProps) {
-  // CRITICAL: Use timeline from strategy_details, NOT loan_term
-  // Check multiple locations where timeline could be stored
-  const timeline = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+  const purchasePrice = analysis.purchase_price || 0;
+  const analysisData = (analysis as any).analysis_data || {};
+  const savedLoanTerms = analysisData?.loan_terms || {};
+
+  // Use the same input extraction as FinancialMetrics for consistency
+  const timeline = parseInt(analysisData?.strategy_details?.timeline) ||
                    parseInt((analysis as any).strategy_details?.timeline) ||
                    parseInt((analysis as any).strategyDetails?.timeline) ||
-                   (analysis as any).analysis_data?.flip_timeline_months ||
+                   analysisData?.flip_timeline_months ||
                    6;
-  
-  // Get rehab costs from multiple possible locations
-  const rehabCosts = analysis.rehab_costs || 
-                    (analysis as any).renovationCosts || 
-                    (analysis as any).analysis_data?.rehab_costs || 
-                    0;
-  const purchasePrice = analysis.purchase_price || 0;
-  const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
-  
-  // Get financial metrics from AI analysis
-  // CRITICAL FIX: Check multiple locations for financial metrics (data can be at various levels)
-  const aiMetrics = analysis.ai_analysis?.financial_metrics;
-  const analysisData = (analysis as any).analysis_data || {};
 
-  // ARV: Check multiple sources
-  const arv = (aiMetrics as any)?.arv ||
-              (analysis as any).arv ||
-              analysisData?.arv ||
+  const rehabCosts = analysis.rehab_costs ||
+                    (analysis as any).renovationCosts ||
+                    analysisData?.rehab_costs ||
+                    0;
+
+  const aiMetrics = analysis.ai_analysis?.financial_metrics;
+
+  // ARV: Use saved ARV from analysis_data first (set during wizard), then AI metrics
+  const arv = analysisData?.arv ||
+              (aiMetrics as any)?.arv ||
               analysisData?.ai_analysis?.financial_metrics?.arv ||
               (analysis.property_data as any)?.comparables?.value ||
               purchasePrice * 1.3;
 
-  // Net Profit: Check multiple sources (most critical fix)
-  const netProfit = (analysis as any).profit ||  // Top-level from database
-                   aiMetrics?.net_profit ||
-                   aiMetrics?.total_profit ||
-                   analysisData?.profit ||
-                   analysisData?.ai_analysis?.financial_metrics?.net_profit ||
-                   analysisData?.ai_analysis?.financial_metrics?.total_profit ||
-                   0;
+  // Use centralized calculator with same inputs as FinancialMetrics
+  const flipResults = useMemo(() => {
+    const interestRate = savedLoanTerms.interestRate ||
+                        analysis.interest_rate ||
+                        analysisData?.interest_rate ||
+                        10;
+    const points = savedLoanTerms.points || 0;
+    const loanType = savedLoanTerms.loanType || 'conventional';
 
-  console.log('[FlipTimeline] Financial data sources:', {
-    topLevelProfit: (analysis as any).profit,
-    aiMetricsNetProfit: aiMetrics?.net_profit,
-    aiMetricsTotalProfit: aiMetrics?.total_profit,
-    analysisDataProfit: analysisData?.profit,
-    finalNetProfit: netProfit,
-    arv
-  });
-  // Calculate fallback holding costs accurately if not provided by AI
-  // Using same formula as backend for consistency
-  const loanAmount = purchasePrice * 0.9; // Assuming 10% down for hard money
-  const monthlyInterestRate = 0.1045 / 12; // 10.45% annual rate
-  const monthlyLoanInterest = Math.round(loanAmount * monthlyInterestRate);
-  
-  // Add interest on rehab loan if using hard money (100% financed)
-  const monthlyRehabInterest = rehabCosts > 0 ? Math.round(rehabCosts * monthlyInterestRate) : 0;
-  
-  // Property taxes: 1.2% annually
-  const monthlyTaxes = Math.round((purchasePrice * 0.012) / 12);
-  
-  // Insurance: 0.35% annually for investment property
-  const monthlyInsurance = Math.round((purchasePrice * 0.0035) / 12);
-  
-  // Utilities and maintenance during renovation
-  const monthlyUtilities = 200; // $200/month during renovation
-  const monthlyMaintenance = 150; // $150/month for security/misc
-  
-  const estimatedMonthlyHolding = monthlyLoanInterest + monthlyRehabInterest + monthlyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
-  const holdingCosts = aiMetrics?.holding_costs || (estimatedMonthlyHolding * timeline);
-  
-  console.log('[FlipTimeline] Holding costs fallback calculation:', {
-    monthlyLoanInterest,
-    monthlyRehabInterest,
-    monthlyTaxes,
-    monthlyInsurance,
-    monthlyUtilities,
-    monthlyMaintenance,
-    totalMonthly: estimatedMonthlyHolding,
-    timeline,
-    totalHoldingCosts: estimatedMonthlyHolding * timeline,
-    usingAIMetrics: !!aiMetrics?.holding_costs
-  });
-  
+    const flipInputs: FlipCalculationInputs = {
+      purchasePrice,
+      downPaymentPercent: analysis.down_payment_percent || 20,
+      interestRate,
+      loanTermYears: 1,
+      renovationCosts: rehabCosts,
+      arv,
+      holdingPeriodMonths: timeline,
+      loanType: loanType as 'conventional' | 'hardMoney',
+      points,
+      isHardMoney: loanType === 'hardMoney' || points >= 2
+    };
+
+    return calculateFlipReturns(flipInputs);
+  }, [purchasePrice, analysis.down_payment_percent, analysis.interest_rate, analysisData, savedLoanTerms, rehabCosts, arv, timeline]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -97,41 +68,43 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
     }).format(value);
   };
 
+  const downPayment = flipResults.downPayment;
+
   const milestones = [
     {
       phase: 'Acquisition',
       duration: '1-2 weeks',
       description: 'Close on property',
       cost: formatCurrency(downPayment),
-      icon: '🏠'
+      icon: '\u{1F3E0}'
     },
     {
       phase: 'Renovation',
       duration: `${Math.max(1, timeline - 2)} months`,
       description: 'Complete rehab work',
       cost: formatCurrency(rehabCosts),
-      icon: '🔨'
+      icon: '\u{1F528}'
     },
     {
       phase: 'Marketing',
       duration: '2-4 weeks',
       description: 'List and show property',
-      cost: formatCurrency(holdingCosts),
-      icon: '📣'
+      cost: formatCurrency(flipResults.holdingCosts),
+      icon: '\u{1F4E3}'
     },
     {
       phase: 'Sale',
       duration: '1-2 weeks',
       description: 'Close with buyer',
       cost: formatCurrency(arv),
-      icon: '💰'
+      icon: '\u{1F4B0}'
     }
   ];
 
   return (
     <div className="bg-card rounded-xl border border-border p-6">
       <h3 className="text-lg font-semibold text-primary mb-6">Fix & Flip Timeline</h3>
-      
+
       {/* Project Overview */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-lg p-4">
@@ -140,7 +113,9 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
         </div>
         <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4">
           <p className="text-sm text-muted mb-1">Expected Profit</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(netProfit)}</p>
+          <p className={`text-2xl font-bold ${flipResults.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {formatCurrency(flipResults.netProfit)}
+          </p>
         </div>
       </div>
 
@@ -152,13 +127,13 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
             {index < milestones.length - 1 && (
               <div className="absolute left-6 top-12 bottom-0 w-0.5 bg-border"></div>
             )}
-            
+
             <div className="flex items-start gap-4">
               {/* Icon */}
               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-xl flex-shrink-0">
                 {milestone.icon}
               </div>
-              
+
               {/* Content */}
               <div className="flex-1">
                 <div className="flex items-start justify-between">
@@ -185,11 +160,13 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
           </div>
           <div className="flex justify-between">
             <span className="text-muted">Total Investment</span>
-            <span className="font-medium">{formatCurrency(purchasePrice + rehabCosts + holdingCosts)}</span>
+            <span className="font-medium">{formatCurrency(flipResults.totalInvestment)}</span>
           </div>
           <div className="flex justify-between pt-2 border-t border-border">
             <span className="font-medium">Net Profit</span>
-            <span className="font-semibold text-green-600">{formatCurrency(netProfit)}</span>
+            <span className={`font-semibold ${flipResults.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(flipResults.netProfit)}
+            </span>
           </div>
         </div>
       </div>
