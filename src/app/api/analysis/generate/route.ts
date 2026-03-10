@@ -37,15 +37,17 @@ export async function POST(request: NextRequest) {
   try {
     console.log('\n--- STEP 1: Environment Validation ---');
     
-    console.log('Environment variables check:');
-    console.log('- Anthropic API key exists:', !!process.env.ANTHROPIC_API_KEY);
-    console.log('- Anthropic API key length:', process.env.ANTHROPIC_API_KEY?.length || 0);
-    console.log('- Supabase URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log('- Supabase URL value:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    console.log('- Supabase anon key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    console.log('- Supabase anon key length:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 0);
-    console.log('- RentCast API key exists:', !!process.env.RENTCAST_API_KEY);
-    console.log('- Node environment:', process.env.NODE_ENV);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Environment variables check:');
+      console.log('- Anthropic API key exists:', !!process.env.ANTHROPIC_API_KEY);
+      console.log('- Anthropic API key length:', process.env.ANTHROPIC_API_KEY?.length || 0);
+      console.log('- Supabase URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('- Supabase URL value:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('- Supabase anon key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+      console.log('- Supabase anon key length:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length || 0);
+      console.log('- RentCast API key exists:', !!process.env.RENTCAST_API_KEY);
+      console.log('- Node environment:', process.env.NODE_ENV);
+    }
     
     // Validate API keys
     if (!process.env.RENTCAST_API_KEY || !process.env.ANTHROPIC_API_KEY) {

@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api-auth';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY!;
 
 export async function POST(request: NextRequest) {
   try {
+    // SEC: require authentication — this triggers an expensive AI call
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+
     const body = await request.json();
     const { address, propertyData, quickAnalysis, generateSections } = body;
 

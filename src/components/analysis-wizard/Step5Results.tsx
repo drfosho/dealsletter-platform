@@ -23,9 +23,46 @@ export default function Step5Results({ data }: Step5ResultsProps) {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const handleDownloadPDF = () => {
-    // TODO: Implement PDF generation
-    alert('PDF download coming soon!');
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!data.analysisId) return;
+    setPdfLoading(true);
+    try {
+      const res = await fetch(`/api/analysis/${data.analysisId}`);
+      if (!res.ok) throw new Error('Failed to fetch analysis');
+      const analysis = await res.json();
+      const { exportAnalysisPDF } = await import('@/utils/export-analysis');
+      const filename = await exportAnalysisPDF(analysis);
+      setExportSuccess(`PDF saved: ${filename}`);
+      setTimeout(() => setExportSuccess(null), 3000);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+      alert('PDF export failed. Please try again.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    if (!data.analysisId) return;
+    setExcelLoading(true);
+    try {
+      const res = await fetch(`/api/analysis/${data.analysisId}`);
+      if (!res.ok) throw new Error('Failed to fetch analysis');
+      const analysis = await res.json();
+      const { exportAnalysisExcel } = await import('@/utils/export-analysis');
+      const filename = exportAnalysisExcel(analysis);
+      setExportSuccess(`Excel saved: ${filename}`);
+      setTimeout(() => setExportSuccess(null), 3000);
+    } catch (err) {
+      console.error('Excel export failed:', err);
+      alert('Excel export failed. Please try again.');
+    } finally {
+      setExcelLoading(false);
+    }
   };
 
   const handleShare = () => {
@@ -359,6 +396,16 @@ export default function Step5Results({ data }: Step5ResultsProps) {
         </div>
       </div>
 
+      {/* Export Success Toast */}
+      {exportSuccess && (
+        <div className="fixed top-6 right-6 z-50 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-in slide-in-from-top">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {exportSuccess}
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3 mb-8">
         <Link
@@ -369,9 +416,47 @@ export default function Step5Results({ data }: Step5ResultsProps) {
         </Link>
         <button
           onClick={handleDownloadPDF}
-          className="flex-1 sm:flex-initial px-6 py-3 bg-card border border-border text-primary rounded-lg hover:bg-muted/20 font-medium"
+          disabled={pdfLoading}
+          className="flex-1 sm:flex-initial px-6 py-3 bg-card border border-border text-primary rounded-lg hover:bg-muted/20 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          Download PDF
+          {pdfLoading ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Generating PDF...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+              </svg>
+              Export PDF
+            </>
+          )}
+        </button>
+        <button
+          onClick={handleDownloadExcel}
+          disabled={excelLoading}
+          className="flex-1 sm:flex-initial px-6 py-3 bg-card border border-border text-primary rounded-lg hover:bg-muted/20 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {excelLoading ? (
+            <>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Generating Excel...
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+              </svg>
+              Export Excel
+            </>
+          )}
         </button>
         <button
           onClick={handleShare}

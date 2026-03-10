@@ -252,6 +252,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
                 
                 <ActionButtons
                   analysisId={analysis.id}
+                  analysis={analysis}
                   isSaved={isSaved}
                   onSave={handleSaveToDashboard}
                   onShare={() => setShowShareModal(true)}

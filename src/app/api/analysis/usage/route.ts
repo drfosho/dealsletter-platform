@@ -35,7 +35,8 @@ export async function GET(_request: NextRequest) {
 
     // Check if user is admin
     const adminConfig = getAdminConfig(user.email);
-    
+    console.log('[Usage] Admin check:', { email: user.email, isAdmin: adminConfig.isAdmin, envAdmins: process.env.ADMIN_EMAILS });
+
     // If admin, return unlimited access
     if (adminConfig.bypassSubscriptionLimits) {
       return NextResponse.json({

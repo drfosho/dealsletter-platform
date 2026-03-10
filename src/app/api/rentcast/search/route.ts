@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rentCastService } from '@/services/rentcast';
 import { EnhancedSearchParams } from '@/types/rentcast';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function POST(req: NextRequest) {
   try {
+    // SEC: require authentication — proxies paid RentCast API
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+
     const body = await req.json();
     const searchParams: EnhancedSearchParams = body;
     

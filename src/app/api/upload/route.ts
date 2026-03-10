@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // SEC: require authentication for file uploads
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
     

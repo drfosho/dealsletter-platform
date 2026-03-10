@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import type { Analysis } from '@/types';
 
 interface ActionButtonsProps {
   analysisId: string;
+  analysis?: Analysis;
   isSaved: boolean;
   onSave: () => void;
   onShare: () => void;
@@ -14,6 +16,7 @@ interface ActionButtonsProps {
 
 export default function ActionButtons({
   analysisId,
+  analysis,
   isSaved,
   onSave,
   onShare,
@@ -21,43 +24,39 @@ export default function ActionButtons({
   onReanalyze,
   onDelete
 }: ActionButtonsProps) {
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportState, setExportState] = useState<'idle' | 'pdf' | 'excel' | 'done'>('idle');
 
   const handleExportPDF = async () => {
-    setIsExporting(true);
+    if (!analysis) return;
+    setExportState('pdf');
     try {
-      // TODO: Implement actual PDF export
-      const response = await fetch(`/api/analysis/${analysisId}/export?format=pdf`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `analysis-${analysisId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
+      const { exportAnalysisPDF } = await import('@/utils/export-analysis');
+      await exportAnalysisPDF(analysis);
+      setExportState('done');
+      setTimeout(() => setExportState('idle'), 2000);
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('PDF export coming soon!');
-    } finally {
-      setIsExporting(false);
+      console.error('PDF export failed:', error);
+      alert('PDF export failed. Please try again.');
+      setExportState('idle');
     }
   };
 
   const handleExportExcel = async () => {
-    setIsExporting(true);
+    if (!analysis) return;
+    setExportState('excel');
     try {
-      // TODO: Implement actual Excel export
-      alert('Excel export coming soon!');
+      const { exportAnalysisExcel } = await import('@/utils/export-analysis');
+      exportAnalysisExcel(analysis);
+      setExportState('done');
+      setTimeout(() => setExportState('idle'), 2000);
     } catch (error) {
-      console.error('Export failed:', error);
-    } finally {
-      setIsExporting(false);
+      console.error('Excel export failed:', error);
+      alert('Excel export failed. Please try again.');
+      setExportState('idle');
     }
   };
+
+  const isExporting = exportState === 'pdf' || exportState === 'excel';
 
   return (
     <div className="flex flex-wrap gap-3">
@@ -66,8 +65,8 @@ export default function ActionButtons({
         onClick={onSave}
         className={`
           px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2
-          ${isSaved 
-            ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+          ${isSaved
+            ? 'bg-green-100 text-green-700 hover:bg-green-200'
             : 'bg-primary text-secondary hover:bg-primary/90'
           }
         `}
@@ -84,34 +83,51 @@ export default function ActionButtons({
           className="px-4 py-2 bg-card border border-primary text-primary rounded-lg hover:bg-primary/5 font-medium flex items-center gap-2"
           disabled={isExporting}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          {isExporting ? 'Exporting...' : 'Export'}
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-          </svg>
+          {isExporting ? (
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : exportState === 'done' ? (
+            <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          )}
+          {exportState === 'pdf' ? 'Generating PDF...' :
+           exportState === 'excel' ? 'Generating Excel...' :
+           exportState === 'done' ? 'Downloaded!' : 'Export'}
+          {!isExporting && exportState !== 'done' && (
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
         </button>
-        <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-          <button
-            onClick={handleExportPDF}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-muted/20 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-5L9 2H4z" clipRule="evenodd" />
-            </svg>
-            Export as PDF
-          </button>
-          <button
-            onClick={handleExportExcel}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-muted/20 flex items-center gap-2"
-          >
-            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-5L9 2H4z" clipRule="evenodd" />
-            </svg>
-            Export as Excel
-          </button>
-        </div>
+        {!isExporting && exportState !== 'done' && (
+          <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+            <button
+              onClick={handleExportPDF}
+              className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted/20 flex items-center gap-2 rounded-t-lg"
+            >
+              <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+              </svg>
+              Export as PDF
+            </button>
+            <button
+              onClick={handleExportExcel}
+              className="w-full px-4 py-2.5 text-left text-sm hover:bg-muted/20 flex items-center gap-2 rounded-b-lg"
+            >
+              <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+              </svg>
+              Export as Excel
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Secondary Actions */}

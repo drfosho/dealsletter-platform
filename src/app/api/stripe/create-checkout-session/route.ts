@@ -13,7 +13,7 @@ function getPriceId(tier: string, billingPeriod: string): string | undefined {
 
   // Log ALL Stripe env vars (explicit references required for Vercel)
   const envVars = {
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? `SET (${process.env.STRIPE_SECRET_KEY.substring(0, 10)}...)` : 'MISSING',
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
     STRIPE_PRICE_PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY || 'MISSING',
     STRIPE_PRICE_PRO_YEARLY: process.env.STRIPE_PRICE_PRO_YEARLY || 'MISSING',
     STRIPE_PRICE_PRO_PLUS_MONTHLY: process.env.STRIPE_PRICE_PRO_PLUS_MONTHLY || 'MISSING',
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   // Debug: Check environment variables
   console.log('[Checkout] Environment Check:')
   console.log('[Checkout] - STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY)
-  console.log('[Checkout] - STRIPE_SECRET_KEY prefix:', process.env.STRIPE_SECRET_KEY?.substring(0, 7))
+  console.log('[Checkout] - STRIPE_SECRET_KEY prefix:', process.env.STRIPE_SECRET_KEY ? 'sk_***' : 'MISSING')
   console.log('[Checkout] - NEXT_PUBLIC_APP_URL:', process.env.NEXT_PUBLIC_APP_URL)
 
   try {

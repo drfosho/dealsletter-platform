@@ -13,7 +13,7 @@
 
 // SEC-010: Load admin emails from environment variables
 // Check both server-side and client-side env vars for compatibility
-const envAdmins = (process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
+const envAdmins = (process.env.ADMIN_EMAILS || '')
   .split(',')
   .map(e => e.trim().toLowerCase())
   .filter(e => e.length > 0);

@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchComprehensivePropertyData, mergeRentCastData } from '@/utils/rentcast-fetcher';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // SEC: require authentication — triggers paid API calls
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
+
     const { address } = await request.json();
     
     if (!address) {

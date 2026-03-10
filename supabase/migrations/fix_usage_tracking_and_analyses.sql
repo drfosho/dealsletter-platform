@@ -72,7 +72,7 @@ BEGIN
   WHERE p.id = p_user_id;
   
   -- Check if user is admin (hardcoded for now - in production, use a proper admin table)
-  IF v_user_email IN ('godbeykevin@gmail.com', 'admin@dealsletter.com') THEN
+  IF v_user_email IN ('kevin@dealsletter.io', 'godbeykevin@gmail.com', 'admin@dealsletter.com') THEN
     v_is_admin := true;
   END IF;
   

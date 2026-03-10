@@ -18,6 +18,16 @@ interface BlogPost {
 
 const blogPosts: BlogPost[] = [
   {
+    id: '13',
+    title: 'Bay Area Real Estate Q1 2026: Tight, Split, and Still Moving',
+    excerpt: 'The Bay Area market is split into two worlds: prime SF/Peninsula/Silicon Valley cores are still competitive with sub-1 month supply, while parts of East Bay and North Bay offer more negotiating room. Rates drifting to 5.98%, rents firming at $3,200 avg — here\'s your county-by-county breakdown and 60-90 day buyer playbook.',
+    date: 'March 2026',
+    readTime: '14 min read',
+    category: 'Market Analysis',
+    imageUrl: '/logos/BAY AREA Q1.png',
+    slug: 'bay-area-q1-2026'
+  },
+  {
     id: '12',
     title: 'LA Real Estate Q1 2026: The Market Isn\'t Crashing — It\'s Just Picky',
     excerpt: 'LA real estate isn\'t collapsing—it\'s selective. Prices aren\'t running, buyers have breathing room, and only no-brainer properties move fast. Here\'s your complete submarket breakdown, strategy analysis, and what we\'re watching heading into spring 2026.',
@@ -419,6 +429,13 @@ export default function BlogPage() {
                     <Image
                       src="/logos/LA QUARTER ONE.png"
                       alt="LA Real Estate Q1 2026: The Market Isn't Crashing"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : post.slug === 'bay-area-q1-2026' ? (
+                    <Image
+                      src="/logos/BAY AREA Q1.png"
+                      alt="Bay Area Real Estate Q1 2026: Tight, Split, and Still Moving"
                       fill
                       className="object-cover"
                     />
