@@ -25,9 +25,13 @@ export async function requireAuth(): Promise<
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Cookie setting may fail in certain contexts; allow getUser to continue
+          }
         },
       },
     }
