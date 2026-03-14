@@ -119,16 +119,14 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center">
+              <label htmlFor="remember" className="flex items-center gap-3 py-1 cursor-pointer select-none">
                 <input
                   id="remember"
                   type="checkbox"
-                  className="h-4 w-4 text-accent focus:ring-accent/20 border-border/60 rounded"
+                  className="h-5 w-5 text-accent focus:ring-accent/20 border-border/60 rounded cursor-pointer"
                 />
-                <label htmlFor="remember" className="ml-2 block text-sm text-muted">
-                  Remember me
-                </label>
-              </div>
+                <span className="text-sm text-muted">Remember me</span>
+              </label>
               <Link
                 href="/auth/forgot-password"
                 className="text-sm text-accent hover:text-accent/80 transition-colors"

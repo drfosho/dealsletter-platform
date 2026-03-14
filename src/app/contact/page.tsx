@@ -15,10 +15,10 @@ export default function ContactPage() {
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="relative">
-                <Logo 
-                  width={300}
-                  height={75}
-                  className="h-10 sm:h-12 w-auto"
+                <Logo
+                  width={160}
+                  height={40}
+                  className="h-8 sm:h-10 w-auto"
                   priority
                 />
                 <div className="absolute top-0.5 sm:top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>

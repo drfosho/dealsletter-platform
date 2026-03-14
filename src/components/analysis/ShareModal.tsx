@@ -46,7 +46,7 @@ export default function ShareModal({ analysisId, onClose }: ShareModalProps) {
           <h3 className="text-lg font-semibold text-primary">Share Analysis</h3>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-muted/20 rounded-lg transition-colors"
+            className="p-2.5 -mr-1 hover:bg-muted/20 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -63,11 +63,11 @@ export default function ShareModal({ analysisId, onClose }: ShareModalProps) {
             </div>
             <button
               onClick={() => setIsPublic(!isPublic)}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
+              className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${
                 isPublic ? 'bg-primary' : 'bg-muted'
               }`}
             >
-              <span className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+              <span className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform shadow-sm ${
                 isPublic ? 'translate-x-6' : 'translate-x-0'
               }`} />
             </button>

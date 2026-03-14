@@ -136,9 +136,9 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                 <Image
                   src="/logos/Copy of Dealsletter Official Logo Black.svg"
                   alt="Dealsletter Logo"
-                  width={180}
-                  height={48}
-                  className="h-10 sm:h-12 w-auto"
+                  width={140}
+                  height={36}
+                  className="h-8 sm:h-10 w-auto"
                   priority
                   suppressHydrationWarning
                 />

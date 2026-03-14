@@ -282,7 +282,7 @@ export default function MyAnalyzedProperties({ userId: _userId }: MyAnalyzedProp
                 </span>
                 <button
                   onClick={() => handleToggleFavorite(property.id)}
-                  className="p-1 hover:bg-muted/20 rounded transition-colors"
+                  className="p-2 hover:bg-muted/20 rounded transition-colors"
                 >
                   <svg 
                     className={`w-4 h-4 ${property.is_favorite ? 'text-red-500 fill-current' : 'text-muted'}`} 
