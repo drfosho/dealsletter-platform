@@ -131,12 +131,18 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="relative h-7 sm:h-9" style={{ aspectRatio: '3.9' }}>
+              <div className="relative h-7 sm:h-9">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/logos/Copy of Dealsletter Official Logo Black.svg"
+                  src="/logos/websiteMainLogoLight.png"
                   alt="Dealsletter Logo"
-                  className="h-full w-auto"
+                  className="block dark:hidden h-full w-auto"
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logos/websiteMainLogo.png"
+                  alt="Dealsletter Logo"
+                  className="hidden dark:block h-full w-auto"
                 />
                 <div className="absolute top-0 -right-1 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
               </div>
