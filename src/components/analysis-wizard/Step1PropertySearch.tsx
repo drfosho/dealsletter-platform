@@ -212,8 +212,23 @@ function PropertyDataReview({
                 </label>
                 <input
                   type="number"
-                  value={editedData.units}
-                  onChange={(e) => setEditedData(prev => ({ ...prev, units: parseInt(e.target.value) || 1 }))}
+                  value={editedData.units === 0 ? '' : editedData.units}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setEditedData(prev => ({ ...prev, units: 0 }));
+                    } else {
+                      const num = parseInt(val);
+                      if (!isNaN(num) && num >= 0 && num <= 500) {
+                        setEditedData(prev => ({ ...prev, units: num }));
+                      }
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!editedData.units || editedData.units < 1) {
+                      setEditedData(prev => ({ ...prev, units: 1 }));
+                    }
+                  }}
                   min="1"
                   max="500"
                   className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"

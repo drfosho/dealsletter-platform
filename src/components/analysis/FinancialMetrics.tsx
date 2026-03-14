@@ -33,6 +33,12 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
   const [editedRentPerUnit, setEditedRentPerUnit] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Operating expense overrides
+  const [expenseOverrides, setExpenseOverrides] = useState<Record<string, number>>({});
+  const [editingExpense, setEditingExpense] = useState<string | null>(null);
+  const [editedExpenseValue, setEditedExpenseValue] = useState('');
+  const [editingAsPercent, setEditingAsPercent] = useState(false);
+
   // Get initial rent value
   const initialMonthlyRent = analysis.ai_analysis?.financial_metrics?.monthly_rent ||
                             analysis.rental_estimate?.rent ||
@@ -137,6 +143,45 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
     }
     setIsEditingRentPerUnit(false);
     setEditedRentPerUnit('');
+  };
+
+  // Fields that support percent-of-rent editing
+  const percentFields = new Set(['vacancy', 'maintenance', 'propertyManagement']);
+
+  // Operating expense editing handlers
+  const handleExpenseEdit = (field: string, currentValue: number, asPercent: boolean) => {
+    setEditingExpense(field);
+    setEditingAsPercent(asPercent);
+    if (asPercent && currentRent > 0) {
+      setEditedExpenseValue(((currentValue / currentRent) * 100).toFixed(1));
+    } else {
+      setEditedExpenseValue(Math.round(currentValue).toString());
+    }
+  };
+
+  const handleExpenseSave = (field: string) => {
+    const parsed = parseFloat(editedExpenseValue);
+    if (!isNaN(parsed) && parsed >= 0) {
+      const dollarValue = editingAsPercent ? (parsed / 100) * currentRent : parsed;
+      setExpenseOverrides(prev => ({ ...prev, [field]: dollarValue }));
+    }
+    setEditingExpense(null);
+    setEditedExpenseValue('');
+    setEditingAsPercent(false);
+  };
+
+  const handleExpenseCancel = () => {
+    setEditingExpense(null);
+    setEditedExpenseValue('');
+    setEditingAsPercent(false);
+  };
+
+  const handleExpenseReset = (field: string) => {
+    setExpenseOverrides(prev => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
   const metrics = useMemo(() => {
@@ -390,13 +435,13 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
     console.log('[FinancialMetrics] Using rent:', { monthlyRent, units, rentPerUnit, isMultiFamily });
 
-    // Calculate expenses (simplified)
-    const propertyTax = (purchasePrice * 0.012) / 12; // 1.2% annual
-    const insurance = (purchasePrice * 0.004) / 12; // 0.4% annual
+    // Calculate expenses (use overrides if set, otherwise use defaults)
+    const propertyTax = expenseOverrides.propertyTax ?? (purchasePrice * 0.012) / 12; // 1.2% annual
+    const insurance = expenseOverrides.insurance ?? (purchasePrice * 0.004) / 12; // 0.4% annual
     const hoa = 0; // Could be added from property data
-    const maintenance = monthlyRent * 0.1; // 10% of rent
-    const vacancy = monthlyRent * 0.08; // 8% vacancy rate
-    const propertyManagement = analysis.strategy === 'rental' ? monthlyRent * 0.08 : 0;
+    const maintenance = expenseOverrides.maintenance ?? monthlyRent * 0.1; // 10% of rent
+    const vacancy = expenseOverrides.vacancy ?? monthlyRent * 0.08; // 8% vacancy rate
+    const propertyManagement = expenseOverrides.propertyManagement ?? (analysis.strategy === 'rental' ? monthlyRent * 0.08 : 0);
 
     const totalExpenses = monthlyPayment + propertyTax + insurance + 
                          hoa + maintenance + vacancy + propertyManagement;
@@ -443,7 +488,7 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
       propertyManagement,
       rentPerUnit
     };
-  }, [analysis, isFlipStrategy, purchasePrice, downPayment, currentRent, isMultiFamily, units]);
+  }, [analysis, isFlipStrategy, purchasePrice, downPayment, currentRent, isMultiFamily, units, expenseOverrides]);
 
   function calculateFirstYearPrincipal(
     loanAmount: number, 
@@ -475,6 +520,128 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
   const formatPercent = (value: number) => {
     return `${value.toFixed(1)}%`;
+  };
+
+  const renderEditableExpense = (label: string, field: string, value: number) => {
+    const isEditing = editingExpense === field;
+    const isOverridden = field in expenseOverrides;
+    const supportsPercent = percentFields.has(field);
+    const currentPercent = currentRent > 0 ? (value / currentRent) * 100 : 0;
+
+    return (
+      <div key={field} className="flex justify-between items-center py-2 border-b border-border/50">
+        <span className="text-muted">
+          {label}
+          {!isEditing && supportsPercent && (
+            <span className="text-xs ml-1">({currentPercent.toFixed(1)}%)</span>
+          )}
+          {isOverridden && (
+            <button
+              onClick={() => handleExpenseReset(field)}
+              className="text-xs text-blue-500 hover:text-blue-600 ml-1"
+              title="Reset to default"
+            >
+              (reset)
+            </button>
+          )}
+        </span>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              {supportsPercent && (
+                <button
+                  onClick={() => {
+                    const currentVal = parseFloat(editedExpenseValue) || 0;
+                    if (editingAsPercent) {
+                      // Switch to dollar: convert current % to $
+                      setEditingAsPercent(false);
+                      setEditedExpenseValue(Math.round((currentVal / 100) * currentRent).toString());
+                    } else {
+                      // Switch to percent: convert current $ to %
+                      setEditingAsPercent(true);
+                      setEditedExpenseValue(currentRent > 0 ? ((currentVal / currentRent) * 100).toFixed(1) : '0');
+                    }
+                  }}
+                  className="text-xs px-1.5 py-0.5 rounded border border-border hover:border-primary text-muted hover:text-primary transition-colors"
+                  title={editingAsPercent ? 'Switch to dollar amount' : 'Switch to percentage'}
+                >
+                  {editingAsPercent ? '%→$' : '$→%'}
+                </button>
+              )}
+              <span className="text-red-600 text-sm">{editingAsPercent ? '%' : '$'}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={editedExpenseValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                    setEditedExpenseValue(val);
+                  }
+                }}
+                className="w-28 px-2 py-1 border border-primary rounded text-right"
+                autoFocus
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleExpenseSave(field);
+                  if (e.key === 'Escape') handleExpenseCancel();
+                }}
+              />
+              <button
+                onClick={() => handleExpenseSave(field)}
+                className="text-green-600 hover:text-green-700"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+              <button
+                onClick={handleExpenseCancel}
+                className="text-red-600 hover:text-red-700"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <span className={`font-medium text-red-600 ${isOverridden ? 'underline decoration-dotted' : ''}`}>
+                -{formatCurrency(value)}
+              </span>
+              {supportsPercent ? (
+                <span className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => handleExpenseEdit(field, value, true)}
+                    className="text-muted hover:text-primary text-xs px-1"
+                    title="Edit as percentage"
+                  >
+                    %
+                  </button>
+                  <button
+                    onClick={() => handleExpenseEdit(field, value, false)}
+                    className="text-muted hover:text-primary text-xs px-1"
+                    title="Edit as dollar amount"
+                  >
+                    $
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => handleExpenseEdit(field, value, false)}
+                  className="text-muted hover:text-primary"
+                  title="Edit this expense"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -661,11 +828,18 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                     <>
                       <span className="text-muted">$</span>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={editedRent}
-                        onChange={(e) => setEditedRent(e.target.value)}
-                        className="w-24 px-2 py-1 border border-primary rounded text-right text-sm"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setEditedRent(val);
+                          }
+                        }}
+                        className="w-28 px-2 py-1 border border-primary rounded text-right text-sm"
                         autoFocus
+                        onFocus={(e) => e.target.select()}
                         onKeyDown={(e) => e.key === 'Enter' && handleRentSave()}
                       />
                       <button
@@ -712,11 +886,18 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                       <>
                         <span className="text-muted text-xs">$</span>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           value={editedRentPerUnit}
-                          onChange={(e) => setEditedRentPerUnit(e.target.value)}
-                          className="w-20 px-2 py-1 border border-primary rounded text-right text-xs"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setEditedRentPerUnit(val);
+                            }
+                          }}
+                          className="w-24 px-2 py-1 border border-primary rounded text-right text-xs"
                           autoFocus
+                          onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => e.key === 'Enter' && handleRentPerUnitSave()}
                         />
                         <button
@@ -773,38 +954,13 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                 -{formatCurrency(metrics.monthlyPayment)}
               </span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Property Tax</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.propertyTax)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Insurance</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.insurance)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Maintenance (10%)</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.maintenance)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Vacancy (8%)</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.vacancy)}
-              </span>
-            </div>
-            {metrics.propertyManagement > 0 && (
-              <div className="flex justify-between items-center py-2 border-b border-border/50">
-                <span className="text-muted">Property Mgmt (8%)</span>
-                <span className="font-medium text-red-600">
-                  -{formatCurrency(metrics.propertyManagement)}
-                </span>
-              </div>
-            )}
+            {renderEditableExpense('Property Tax', 'propertyTax', metrics.propertyTax)}
+            {renderEditableExpense('Insurance', 'insurance', metrics.insurance)}
+            {renderEditableExpense('Maintenance', 'maintenance', metrics.maintenance)}
+            {renderEditableExpense('Vacancy', 'vacancy', metrics.vacancy)}
+            {(metrics.propertyManagement > 0 || expenseOverrides.propertyManagement !== undefined) &&
+              renderEditableExpense('Property Mgmt', 'propertyManagement', metrics.propertyManagement)
+            }
             <div className="flex justify-between items-center py-2 font-semibold">
               <span>Total Expenses</span>
               <span className="text-red-600">

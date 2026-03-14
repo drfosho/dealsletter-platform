@@ -1152,11 +1152,14 @@ export default function Step3Financial({
                         type="number"
                         value={financial.rentPerUnit || ''}
                         onChange={(e) => {
-                          const rentPerUnit = parseFloat(e.target.value) || 0;
-                          handleFieldChange('rentPerUnit', rentPerUnit);
-                          // Update total rent
-                          const units = financial.units || unitCount;
-                          handleFieldChange('monthlyRent', rentPerUnit * units);
+                          const raw = e.target.value;
+                          handleFieldChange('rentPerUnit', raw);
+                          // Only cross-update total rent when user has typed a real number
+                          const rentPerUnit = parseFloat(raw);
+                          if (!isNaN(rentPerUnit) && raw !== '') {
+                            const units = financial.units || unitCount;
+                            handleFieldChange('monthlyRent', rentPerUnit * units);
+                          }
                         }}
                         className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder={rentEstimate && unitCount > 1 ? `Avg: $${Math.round(rentEstimate / unitCount)}` : "Per unit rent"}
@@ -1173,12 +1176,15 @@ export default function Step3Financial({
                         type="number"
                         value={financial.monthlyRent || ''}
                         onChange={(e) => {
-                          const totalRent = parseFloat(e.target.value) || 0;
-                          handleFieldChange('monthlyRent', totalRent);
-                          // Update rent per unit
-                          const units = financial.units || unitCount;
-                          if (units > 1) {
-                            handleFieldChange('rentPerUnit', totalRent / units);
+                          const raw = e.target.value;
+                          handleFieldChange('monthlyRent', raw);
+                          // Only cross-update rent per unit when user has typed a real number
+                          const totalRent = parseFloat(raw);
+                          if (!isNaN(totalRent) && raw !== '') {
+                            const units = financial.units || unitCount;
+                            if (units > 1) {
+                              handleFieldChange('rentPerUnit', totalRent / units);
+                            }
                           }
                         }}
                         className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1632,7 +1638,7 @@ export default function Step3Financial({
           <div className="flex items-center gap-3">
             <input
               type="number"
-              value={financial.downPaymentPercent}
+              value={financial.downPaymentPercent || ''}
               onChange={(e) => handleFieldChange('downPaymentPercent', e.target.value)}
               className="w-24 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               min="0"
@@ -1693,12 +1699,13 @@ export default function Step3Financial({
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
-                    value={financial.points || hardMoneyDefaults.points}
+                    value={financial.points || ''}
                     onChange={(e) => handleFieldChange('points', e.target.value)}
                     className="flex-1 px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     min="0"
                     max="5"
                     step="0.5"
+                    placeholder={hardMoneyDefaults.points.toString()}
                   />
                   <span className="text-muted">points</span>
                 </div>
