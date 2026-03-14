@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import Link from 'next/link'
-import Image from 'next/image'
+
 
 function VerifyEmailContent() {
   const { user, loading } = useAuth()
@@ -113,12 +113,17 @@ function VerifyEmailContent() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <Image
-              src="/logos/Copy of Dealsletter Official Logo Black.svg"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logos/websiteMainLogoLight.png"
               alt="Dealsletter Logo"
-              width={180}
-              height={45}
-              className="h-10 w-auto mx-auto"
+              className="block dark:hidden h-10 w-auto mx-auto"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logos/websiteMainLogo.png"
+              alt="Dealsletter Logo"
+              className="hidden dark:block h-10 w-auto mx-auto"
             />
           </Link>
         </div>

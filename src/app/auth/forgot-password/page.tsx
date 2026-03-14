@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function ForgotPasswordPage() {
@@ -64,12 +64,17 @@ export default function ForgotPasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <Image 
-              src="/logos/Copy of Dealsletter Official Logo Black.svg"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logos/websiteMainLogoLight.png"
               alt="Dealsletter Logo"
-              width={200}
-              height={50}
-              className="h-12 w-auto mx-auto"
+              className="block dark:hidden h-10 w-auto mx-auto"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logos/websiteMainLogo.png"
+              alt="Dealsletter Logo"
+              className="hidden dark:block h-10 w-auto mx-auto"
             />
           </Link>
         </div>
