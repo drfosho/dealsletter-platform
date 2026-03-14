@@ -163,9 +163,7 @@ export default function BlogPage() {
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="relative">
                 <Logo
-                  width={160}
-                  height={40}
-                  className="h-8 sm:h-10 w-auto"
+                  className="h-7 sm:h-9 w-auto"
                   priority
                 />
                 <div className="absolute top-0.5 sm:top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
