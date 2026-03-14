@@ -215,7 +215,7 @@ export default function AnalysisHistoryTable({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => onView(analysis.id)}
-                          className="p-1 text-primary hover:bg-muted/20 rounded-lg transition-colors"
+                          className="p-2 text-primary hover:bg-muted/20 rounded-lg transition-colors"
                           title="View analysis"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -232,7 +232,7 @@ export default function AnalysisHistoryTable({
                         )}
                         <button
                           onClick={() => onDelete(analysis.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete analysis"
                         >
                           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

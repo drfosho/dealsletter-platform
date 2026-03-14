@@ -369,14 +369,14 @@ export default function SignUpPage() {
                     />
                   </div>
 
-                  <div className="flex items-start">
+                  <label htmlFor="terms" className="flex items-start gap-3 py-1 cursor-pointer select-none">
                     <input
                       id="terms"
                       type="checkbox"
                       required
-                      className="h-4 w-4 mt-0.5 text-accent focus:ring-accent/20 border-border/60 rounded"
+                      className="h-5 w-5 mt-0.5 shrink-0 text-accent focus:ring-accent/20 border-border/60 rounded cursor-pointer"
                     />
-                    <label htmlFor="terms" className="ml-2 block text-sm text-muted">
+                    <span className="text-sm text-muted">
                       I agree to the{' '}
                       <Link
                         href="/terms"
@@ -395,8 +395,8 @@ export default function SignUpPage() {
                       >
                         Privacy Policy
                       </Link>
-                    </label>
-                  </div>
+                    </span>
+                  </label>
 
                   <button
                     type="submit"
@@ -497,18 +497,18 @@ export default function SignUpPage() {
                     <p className="mt-1 text-xs text-muted">Helps us tailor educational content</p>
                   </div>
 
-                  <div className="flex items-start pt-2">
+                  <label htmlFor="newsletter" className="flex items-start gap-3 py-1 pt-2 cursor-pointer select-none">
                     <input
                       id="newsletter"
                       type="checkbox"
                       checked={subscribeNewsletter}
                       onChange={(e) => setSubscribeNewsletter(e.target.checked)}
-                      className="h-4 w-4 mt-0.5 text-accent focus:ring-accent/20 border-border/60 rounded"
+                      className="h-5 w-5 mt-0.5 shrink-0 text-accent focus:ring-accent/20 border-border/60 rounded cursor-pointer"
                     />
-                    <label htmlFor="newsletter" className="ml-2 block text-sm text-muted">
+                    <span className="text-sm text-muted">
                       Subscribe to Dealsletter newsletter (weekly market insights & deals)
-                    </label>
-                  </div>
+                    </span>
+                  </label>
 
                   <div className="flex gap-3 pt-2">
                     <button

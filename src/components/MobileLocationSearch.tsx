@@ -344,7 +344,7 @@ export default function MobileLocationSearch({ onLocationSelect, onClose }: Mobi
               ) : inputValue && (
                 <button
                   onClick={() => setInputValue('')}
-                  className="p-1 hover:bg-muted/10 rounded-lg transition-colors"
+                  className="p-2 hover:bg-muted/10 rounded-lg transition-colors"
                 >
                   <svg className="w-5 h-5 text-muted hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

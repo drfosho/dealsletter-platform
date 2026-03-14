@@ -62,9 +62,9 @@ export default function Home() {
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="relative">
                 <Logo
-                  width={400}
-                  height={100}
-                  className="h-10 sm:h-12 md:h-14 w-auto"
+                  width={180}
+                  height={45}
+                  className="h-8 sm:h-10 md:h-11 w-auto"
                   priority
                 />
                 <div className="absolute top-0.5 sm:top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -881,9 +881,9 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <Logo
-                width={160}
-                height={40}
-                className="h-10 w-auto mb-4"
+                width={140}
+                height={35}
+                className="h-8 w-auto mb-4"
               />
               <p className="text-sm text-muted">
                 AI-powered property analysis for smarter real estate investments.

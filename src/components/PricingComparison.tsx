@@ -144,11 +144,11 @@ export default function PricingComparison() {
           </span>
           <button
             onClick={() => setBillingPeriod(billingPeriod === 'monthly' ? 'yearly' : 'monthly')}
-            className="relative inline-flex h-7 w-14 items-center rounded-full bg-muted/20 border border-border/60 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            className="relative inline-flex h-8 w-[3.75rem] items-center rounded-full bg-muted/20 border border-border/60 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-purple-600 transition-transform ${
-                billingPeriod === 'yearly' ? 'translate-x-7' : 'translate-x-1'
+              className={`inline-block h-6 w-6 transform rounded-full bg-purple-600 transition-transform shadow-sm ${
+                billingPeriod === 'yearly' ? 'translate-x-[1.875rem]' : 'translate-x-1'
               }`}
             />
           </button>
