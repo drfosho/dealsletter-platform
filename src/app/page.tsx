@@ -60,7 +60,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="relative h-7 sm:h-9 md:h-10" style={{ aspectRatio: '4' }}>
+              <div className="relative h-9 sm:h-10 md:h-12">
                 <Logo
                   className="h-full w-auto"
                   priority
@@ -878,7 +878,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <Logo className="h-8 w-auto mb-4" />
+              <Logo className="h-10 w-auto mb-4" />
               <p className="text-sm text-muted">
                 AI-powered property analysis for smarter real estate investments.
               </p>

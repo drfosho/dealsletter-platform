@@ -68,13 +68,13 @@ export default function ForgotPasswordPage() {
             <img
               src="/logos/websiteMainLogoLight.png"
               alt="Dealsletter Logo"
-              className="block dark:hidden h-10 w-auto mx-auto"
+              className="block dark:hidden h-12 w-auto mx-auto"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logos/websiteMainLogo.png"
               alt="Dealsletter Logo"
-              className="hidden dark:block h-10 w-auto mx-auto"
+              className="hidden dark:block h-12 w-auto mx-auto"
             />
           </Link>
         </div>

@@ -131,7 +131,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="relative h-7 sm:h-9">
+              <div className="relative h-9 sm:h-10 md:h-12">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logos/websiteMainLogoLight.png"

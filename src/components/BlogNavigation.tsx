@@ -12,7 +12,7 @@ export default function BlogNavigation() {
       <nav className="fixed top-0 w-full px-3 sm:px-6 py-1.5 sm:py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <Link href="/" className="block hover:opacity-80 transition-opacity">
-            <div className="relative h-7 sm:h-9">
+            <div className="relative h-9 sm:h-10 md:h-12">
               <Logo
                 className="h-full w-auto"
                 priority
