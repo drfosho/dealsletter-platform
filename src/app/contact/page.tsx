@@ -10,7 +10,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full px-6 py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
+      <nav className="fixed top-0 w-full px-4 sm:px-6 py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
@@ -18,10 +18,10 @@ export default function ContactPage() {
                 <Logo 
                   width={300}
                   height={75}
-                  className="h-12 md:h-16 w-auto"
+                  className="h-10 sm:h-12 w-auto"
                   priority
                 />
-                <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="absolute top-0.5 sm:top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               </div>
             </Link>
           </div>
@@ -65,7 +65,7 @@ export default function ContactPage() {
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
           <div className="md:hidden">
-            <div className="px-6 py-4 bg-background/95 backdrop-blur-xl border-b border-border/20">
+            <div className="px-4 sm:px-6 py-4 bg-background/95 backdrop-blur-xl border-b border-border/20">
               <div className="flex flex-col space-y-3">
                 <Link 
                   href="/" 
@@ -116,11 +116,11 @@ export default function ContactPage() {
       </nav>
 
       {/* Contact Content */}
-      <div className="pt-32 px-6 pb-20">
+      <div className="pt-24 sm:pt-32 px-4 sm:px-6 pb-20">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-4">
               Get in Touch
             </h1>
             <p className="text-lg text-muted max-w-2xl mx-auto">
@@ -131,7 +131,7 @@ export default function ContactPage() {
           {/* Contact Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             {/* General Inquiries */}
-            <div className="bg-card rounded-xl border border-border/60 p-8 hover:shadow-xl transition-all duration-300">
+            <div className="bg-card rounded-xl border border-border/60 p-6 sm:p-8 hover:shadow-xl transition-all duration-300">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -153,7 +153,7 @@ export default function ContactPage() {
             </div>
 
             {/* Support */}
-            <div className="bg-card rounded-xl border border-border/60 p-8 hover:shadow-xl transition-all duration-300">
+            <div className="bg-card rounded-xl border border-border/60 p-6 sm:p-8 hover:shadow-xl transition-all duration-300">
               <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />

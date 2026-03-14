@@ -120,7 +120,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <main className="max-w-7xl mx-auto px-6 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <LoadingSpinner text="Loading analysis..." />
         </main>
       </div>
@@ -131,7 +131,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <main className="max-w-7xl mx-auto px-6 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <div className="max-w-4xl mx-auto text-center py-12">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -154,7 +154,7 @@ export default function AnalysisResultsPage({ params }: PageParams) {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
             {/* Header */}
             <div className="mb-6">
               <button

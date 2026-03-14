@@ -157,18 +157,18 @@ export default function BlogPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="fixed top-0 w-full px-6 py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
+      <nav className="fixed top-0 w-full px-4 sm:px-6 py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="relative">
-                <Logo 
+                <Logo
                   width={300}
                   height={75}
-                  className="h-12 md:h-16 w-auto"
+                  className="h-10 sm:h-12 w-auto"
                   priority
                 />
-                <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="absolute top-0.5 sm:top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               </div>
             </Link>
           </div>
@@ -215,7 +215,7 @@ export default function BlogPage() {
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
           <div className="md:hidden">
-            <div className="px-6 py-4 bg-background/95 backdrop-blur-xl border-b border-border/20">
+            <div className="px-4 sm:px-6 py-4 bg-background/95 backdrop-blur-xl border-b border-border/20">
               <div className="flex flex-col space-y-3">
                 <Link 
                   href="/" 
@@ -266,14 +266,14 @@ export default function BlogPage() {
       </nav>
 
       {/* Blog Content */}
-      <div className="pt-32 px-6 pb-20">
+      <div className="pt-24 sm:pt-32 px-4 sm:px-6 pb-20">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
             <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
               Investment Education
             </span>
-            <h1 className="text-4xl md:text-5xl font-bold text-primary mb-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-4">
               Dealsletter Insights
             </h1>
             <p className="text-lg text-muted max-w-2xl mx-auto">

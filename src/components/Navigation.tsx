@@ -128,7 +128,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
 
   return (
     <header className="bg-card border-b border-border/20 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 sm:space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
@@ -198,7 +198,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
 
                   {/* Dropdown Menu */}
                   {isProfileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-64 bg-card rounded-xl shadow-lg border border-border/60 overflow-hidden">
+                    <div className="absolute right-0 mt-2 w-60 sm:w-64 bg-card rounded-xl shadow-lg border border-border/60 overflow-hidden">
                       <div className="p-4 border-b border-border/20">
                         <div className="flex items-center gap-3">
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold ${getTierColor()}`}>
@@ -341,7 +341,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden">
-          <div className="px-6 py-4 bg-card/95 backdrop-blur-xl border-b border-border/20">
+          <div className="px-4 sm:px-6 py-4 bg-card/95 backdrop-blur-xl border-b border-border/20">
             {/* User Info */}
             {user && (
               <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border/20">

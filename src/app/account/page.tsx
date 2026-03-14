@@ -160,7 +160,7 @@ export default function AccountPage() {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <div className="animate-pulse">
             <div className="h-8 bg-muted/20 rounded w-1/3 mb-8"></div>
             <div className="h-64 bg-muted/20 rounded-xl mb-6"></div>
@@ -179,7 +179,7 @@ export default function AccountPage() {
     <div className="min-h-screen bg-background">
       <Navigation />
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Header */}
         <h1 className="text-3xl font-bold text-primary mb-8">Account</h1>
 
