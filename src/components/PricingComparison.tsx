@@ -130,7 +130,7 @@ export default function PricingComparison() {
         <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
           Pricing Plans
         </span>
-        <h2 className="text-4xl font-bold text-primary mb-4">
+        <h2 className="text-3xl sm:text-4xl font-bold text-primary mb-4">
           Simple, Transparent Pricing
         </h2>
         <p className="text-xl text-muted max-w-2xl mx-auto mb-8">

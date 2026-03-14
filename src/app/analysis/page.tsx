@@ -57,7 +57,7 @@ export default function AnalysisPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <div className="max-w-7xl mx-auto">
             {/* Header with usage stats */}
             <div className="mb-8">
@@ -97,7 +97,7 @@ export default function AnalysisPage() {
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               <Link href="/analysis/new" className="group md:col-span-2">
-                <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300 transform hover:scale-[1.02]">
+                <div className="relative overflow-hidden bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl p-6 sm:p-8 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300 transform hover:scale-[1.02]">
                   {/* Background pattern */}
                   <div className="absolute inset-0 opacity-10">
                     <div className="absolute inset-0" style={{

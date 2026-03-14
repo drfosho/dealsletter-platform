@@ -52,7 +52,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className={`fixed top-0 w-full px-6 z-50 transition-all duration-300 ${
+      <nav className={`fixed top-0 w-full px-4 sm:px-6 z-50 transition-all duration-300 ${
         isScrolled
           ? 'py-2 bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-lg'
           : 'py-3 bg-background/80 backdrop-blur-xl border-b border-border/20'
@@ -64,10 +64,10 @@ export default function Home() {
                 <Logo
                   width={400}
                   height={100}
-                  className="h-16 md:h-20 w-auto"
+                  className="h-10 sm:h-12 md:h-14 w-auto"
                   priority
                 />
-                <div className="absolute top-1 md:top-2 -right-1 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="absolute top-0.5 sm:top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               </div>
             </Link>
           </div>
@@ -183,7 +183,7 @@ export default function Home() {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden animate-in slide-in-from-top-2 duration-200">
-            <div className="px-6 py-6 bg-background/98 backdrop-blur-xl border-b border-border/30 shadow-xl">
+            <div className="px-4 py-4 sm:px-6 sm:py-6 bg-background/98 backdrop-blur-xl border-b border-border/30 shadow-xl">
               <div className="flex flex-col space-y-2">
                 {user ? (
                   <>
@@ -324,7 +324,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative px-6 py-24 pt-36 overflow-hidden">
+      <section className="relative px-4 sm:px-6 py-16 sm:py-24 pt-28 sm:pt-36 overflow-hidden">
         {/* Subtle background pattern */}
         <div className="absolute inset-0 opacity-30">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5"></div>
@@ -405,7 +405,7 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-6 bg-gradient-to-b from-purple-500/5 to-transparent border-y border-purple-500/10">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 bg-gradient-to-b from-purple-500/5 to-transparent border-y border-purple-500/10">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             <div className="text-center p-6 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-colors">
@@ -449,7 +449,7 @@ export default function Home() {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
@@ -467,7 +467,7 @@ export default function Home() {
             {/* Connecting line for desktop */}
             <div className="hidden md:block absolute top-24 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-purple-500/20 via-purple-500/40 to-purple-500/20"></div>
 
-            <div className="text-center p-8 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-all hover:shadow-lg hover:shadow-purple-500/5 relative">
+            <div className="text-center p-5 sm:p-8 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-all hover:shadow-lg hover:shadow-purple-500/5 relative">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/20">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -480,7 +480,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="text-center p-8 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-all hover:shadow-lg hover:shadow-purple-500/5 relative">
+            <div className="text-center p-5 sm:p-8 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-all hover:shadow-lg hover:shadow-purple-500/5 relative">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/20">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -504,7 +504,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="text-center p-8 bg-gradient-to-br from-purple-500/5 to-blue-500/5 rounded-2xl border-2 border-purple-500/30 hover:border-purple-500/50 transition-all hover:shadow-lg hover:shadow-purple-500/10 relative">
+            <div className="text-center p-5 sm:p-8 bg-gradient-to-br from-purple-500/5 to-blue-500/5 rounded-2xl border-2 border-purple-500/30 hover:border-purple-500/50 transition-all hover:shadow-lg hover:shadow-purple-500/10 relative">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/20">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -527,7 +527,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24 px-6 bg-gradient-to-b from-purple-500/5 to-transparent">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-b from-purple-500/5 to-transparent">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
@@ -629,7 +629,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-24 px-6 bg-gradient-to-b from-transparent to-purple-500/5">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-b from-transparent to-purple-500/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
@@ -714,7 +714,7 @@ export default function Home() {
       </section>
 
       {/* Blog Preview Section */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20 inline-block mb-4">
@@ -835,7 +835,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-6 bg-gradient-to-br from-purple-500/10 via-blue-500/5 to-purple-500/10">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 bg-gradient-to-br from-purple-500/10 via-blue-500/5 to-purple-500/10">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-block mb-6">
             <span className="px-4 py-2 bg-green-500/10 text-green-600 rounded-full text-sm font-semibold border border-green-500/20">
@@ -876,7 +876,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-border/40">
+      <footer className="py-8 sm:py-12 px-4 sm:px-6 border-t border-border/40">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>

@@ -7,7 +7,7 @@ interface LogoProps {
   priority?: boolean;
 }
 
-export default function Logo({ width = 400, height = 100, className = "", priority = false }: LogoProps) {
+export default function Logo({ width = 200, height = 50, className = "", priority = false }: LogoProps) {
   return (
     <div className="relative">
       {/* Light mode logo */}
