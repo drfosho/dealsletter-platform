@@ -36,8 +36,7 @@ export default function Home() {
   const { user, signOut } = useAuth();
 
   // Animated counters
-  const analysesCount = useAnimatedCounter(15000, 2500);
-  const avgROI = useAnimatedCounter(42, 2000);
+  const investorCount = useAnimatedCounter(1700, 2500);
 
   // Scroll detection for sticky nav
   useEffect(() => {
@@ -50,7 +49,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-grid-pattern">
       {/* Navigation */}
       <nav className={`fixed top-0 w-full px-4 sm:px-6 z-50 transition-all duration-300 ${
         isScrolled
@@ -60,7 +59,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="relative h-9 sm:h-10 md:h-12">
+              <div className="relative h-10 sm:h-11 md:h-14">
                 <Logo
                   className="h-full w-auto"
                   priority
@@ -323,20 +322,23 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative px-4 sm:px-6 py-16 sm:py-24 pt-28 sm:pt-36 overflow-hidden">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 opacity-30">
+        {/* Subtle background pattern — faint blueprint grid */}
+        <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5"></div>
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 opacity-[0.12]"
             style={{
-              backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(147, 51, 234, 0.15) 1px, transparent 0)',
-              backgroundSize: '24px 24px'
+              backgroundImage:
+                'linear-gradient(rgba(147, 51, 234, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 51, 234, 0.4) 1px, transparent 1px), linear-gradient(rgba(147, 51, 234, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(147, 51, 234, 0.2) 1px, transparent 1px)',
+              backgroundSize: '100px 100px, 100px 100px, 20px 20px, 20px 20px',
             }}
           ></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto">
-          <div className="text-center max-w-4xl mx-auto">
+          <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+            {/* Left — text content */}
+            <div className="text-center lg:text-left max-w-4xl mx-auto lg:mx-0">
             <div className="inline-block mb-6">
               <span className="px-4 py-2 bg-purple-500/10 text-purple-600 rounded-full text-sm font-semibold border border-purple-500/20">
                 AI-Powered Investment Analysis
@@ -346,15 +348,15 @@ export default function Home() {
               Analyze real estate deals
               <span className="block bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">that actually work.</span>
             </h1>
-            <p className="text-lg md:text-xl text-primary/70 mb-4 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-primary/70 mb-4 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
               AI-Powered Property Analysis for Real Estate Investors & Agents
             </p>
-            <p className="text-base text-muted mb-10 max-w-xl mx-auto">
+            <p className="text-base text-muted mb-10 max-w-xl mx-auto lg:mx-0">
               Get instant ROI projections, cash flow analysis, and AI-powered insights. Make confident investment decisions backed by data.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
               <Link
                 href={user ? "/analysis/new" : "/auth/signup"}
                 className="group relative overflow-hidden px-10 py-5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-300 font-bold text-lg flex items-center justify-center space-x-3 min-h-[60px] shadow-lg hover:shadow-purple-500/25 transform hover:scale-[1.02]"
@@ -378,7 +380,7 @@ export default function Home() {
             </div>
 
             {/* Trust Indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted">
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-sm text-muted">
               <div className="flex items-center space-x-2 bg-green-500/5 px-3 py-1.5 rounded-full border border-green-500/20">
                 <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -395,7 +397,83 @@ export default function Home() {
                 <svg className="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span className="text-purple-600 font-medium">Pro: 50/month @ $29</span>
+                <span className="text-purple-600 font-medium">Pro: 50 analyses/month @ $29</span>
+              </div>
+            </div>
+            </div>
+
+            {/* Right — floating property analysis card (desktop only) */}
+            <div className="hidden lg:block">
+              <div className="relative">
+                {/* Glow behind card */}
+                <div className="absolute -inset-4 bg-purple-500/10 rounded-3xl blur-2xl"></div>
+
+                <div className="relative bg-card rounded-2xl border border-border/60 shadow-2xl shadow-purple-500/10 overflow-hidden">
+                  {/* Card header */}
+                  <div className="px-6 py-4 border-b border-border/40 bg-purple-500/5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      <span className="text-sm font-semibold text-primary">Property Analysis</span>
+                    </div>
+                    <span className="px-2.5 py-1 bg-green-500/10 text-green-500 text-xs font-bold rounded-full border border-green-500/20">BUY</span>
+                  </div>
+
+                  {/* Address */}
+                  <div className="px-6 pt-5 pb-4">
+                    <div className="flex items-start gap-3 mb-5">
+                      <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-primary">742 Evergreen Terrace</div>
+                        <div className="text-sm text-muted">Springfield, IL 62704</div>
+                        <div className="flex gap-3 mt-1 text-xs text-muted">
+                          <span>3 bd</span>
+                          <span>2 ba</span>
+                          <span>1,850 sqft</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metrics grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                      <div className="bg-background rounded-lg p-3">
+                        <div className="text-xs text-muted mb-1">Cap Rate</div>
+                        <div className="text-lg font-bold text-primary">7.2%</div>
+                      </div>
+                      <div className="bg-background rounded-lg p-3">
+                        <div className="text-xs text-muted mb-1">Cash-on-Cash</div>
+                        <div className="text-lg font-bold text-primary">12.4%</div>
+                      </div>
+                      <div className="bg-background rounded-lg p-3">
+                        <div className="text-xs text-muted mb-1">Monthly Cash Flow</div>
+                        <div className="text-lg font-bold text-green-500">+$847</div>
+                      </div>
+                      <div className="bg-background rounded-lg p-3">
+                        <div className="text-xs text-muted mb-1">5-Year ROI</div>
+                        <div className="text-lg font-bold text-purple-500">62%</div>
+                      </div>
+                    </div>
+
+                    {/* AI recommendation bar */}
+                    <div className="flex items-center gap-2 px-4 py-3 bg-green-500/5 rounded-lg border border-green-500/20">
+                      <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm text-green-600 font-medium">Strong buy — above-average returns for this market</span>
+                    </div>
+                  </div>
+
+                  {/* Strategy tag */}
+                  <div className="px-6 py-3 border-t border-border/40 flex items-center justify-between">
+                    <span className="text-xs text-muted">Strategy: <span className="text-purple-500 font-medium">Buy & Hold</span></span>
+                    <span className="text-xs text-muted">Analyzed just now</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -409,29 +487,11 @@ export default function Home() {
             <div className="text-center p-6 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-colors">
               <div className="w-14 h-14 mx-auto mb-4 bg-purple-500/10 rounded-xl flex items-center justify-center">
                 <svg className="w-7 h-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">{analysesCount.toLocaleString()}+</div>
-              <div className="text-muted font-medium">Properties Analyzed</div>
-            </div>
-            <div className="text-center p-6 bg-card rounded-2xl border border-border/60 hover:border-green-500/40 transition-colors">
-              <div className="w-14 h-14 mx-auto mb-4 bg-green-500/10 rounded-xl flex items-center justify-center">
-                <svg className="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              </div>
-              <div className="text-4xl md:text-5xl font-bold text-green-600 mb-2">{avgROI}%</div>
-              <div className="text-muted font-medium">Avg. ROI Found</div>
-            </div>
-            <div className="text-center p-6 bg-card rounded-2xl border border-border/60 hover:border-blue-500/40 transition-colors">
-              <div className="w-14 h-14 mx-auto mb-4 bg-blue-500/10 rounded-xl flex items-center justify-center">
-                <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2">30s</div>
-              <div className="text-muted font-medium">Avg. Analysis Time</div>
+              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">{investorCount.toLocaleString()}+</div>
+              <div className="text-muted font-medium">Investors</div>
             </div>
             <div className="text-center p-6 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-colors">
               <div className="w-14 h-14 mx-auto mb-4 bg-purple-500/10 rounded-xl flex items-center justify-center">
@@ -439,8 +499,26 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <div className="text-4xl md:text-5xl font-bold text-purple-600 mb-2">5</div>
-              <div className="text-muted font-medium">Investment Strategies</div>
+              <div className="text-4xl md:text-5xl font-bold text-purple-600 mb-2">4</div>
+              <div className="text-muted font-medium">Strategies</div>
+            </div>
+            <div className="text-center p-6 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-colors">
+              <div className="w-14 h-14 mx-auto mb-4 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                <svg className="w-7 h-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="text-4xl md:text-5xl font-bold text-purple-600 mb-2">~30s</div>
+              <div className="text-muted font-medium">Analysis Time</div>
+            </div>
+            <div className="text-center p-6 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-colors">
+              <div className="w-14 h-14 mx-auto mb-4 bg-purple-500/10 rounded-xl flex items-center justify-center">
+                <svg className="w-7 h-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="text-4xl md:text-5xl font-bold text-purple-600 mb-2">2023</div>
+              <div className="text-muted font-medium">Since</div>
             </div>
           </div>
         </div>
@@ -466,10 +544,16 @@ export default function Home() {
             <div className="hidden md:block absolute top-24 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-purple-500/20 via-purple-500/40 to-purple-500/20"></div>
 
             <div className="text-center p-5 sm:p-8 bg-card rounded-2xl border border-border/60 hover:border-purple-500/40 transition-all hover:shadow-lg hover:shadow-purple-500/5 relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/20">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-purple-500/20 relative">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
+                {/* Small house accent */}
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-purple-700 rounded-lg flex items-center justify-center border-2 border-card">
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />
+                  </svg>
+                </div>
               </div>
               <span className="absolute top-4 right-4 w-8 h-8 bg-purple-500/10 rounded-full flex items-center justify-center text-sm font-bold text-purple-600">1</span>
               <h3 className="text-xl font-bold text-primary mb-3">Enter Address</h3>
