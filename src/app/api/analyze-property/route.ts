@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { trackUsage } from '@/lib/analytics';
 import { getStrategyInterestRate } from '@/utils/interest-rates';
+import { requireAuth } from '@/lib/api-auth';
 
 // Initialize Anthropic client with timeout
 const anthropic = new Anthropic({
@@ -659,6 +660,10 @@ interface APIMetrics {
 }
 
 export async function POST(request: NextRequest) {
+  // SEC: require authentication — expensive AI analysis endpoint
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
   const startTime = Date.now();
   const metrics: APIMetrics = {
     model: 'claude-opus-4-20250514',

@@ -42,8 +42,8 @@ export default function SanDiegoDeepDive2026Article() {
             <div className="mb-8 rounded-xl overflow-hidden">
               <div className="relative aspect-[5/3] bg-muted/10">
                 <Image
-                  src="/logos/SAN DIEGO BLOG HEADER.png"
-                  alt="San Diego Real Estate Market Deep Dive 2026"
+                  src="/logos/SAN DIEGO DEEP DIVE.png"
+                  alt="San Diego County Real Estate Deep Dive: 2025 Actuals + 2026 Investor Playbook"
                   fill
                   className="object-cover rounded-xl"
                 />

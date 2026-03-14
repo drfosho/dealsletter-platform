@@ -83,13 +83,17 @@ class PropertyAPIService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        // Include details in the error message for better debugging
+        let errorData: Record<string, unknown> = {};
+        try {
+          errorData = await response.json();
+        } catch {
+          // Response body wasn't JSON
+        }
         const errorMessage = errorData.details
           ? `${errorData.error}: ${errorData.details}`
-          : errorData.error || 'Failed to search property';
-        console.error('[PropertyAPI] API error:', errorData);
-        throw new Error(errorMessage);
+          : errorData.error || `Failed to search property (status ${response.status})`;
+        console.error('[PropertyAPI] API error:', { status: response.status, ...errorData });
+        throw new Error(String(errorMessage));
       }
 
       const data = await response.json();

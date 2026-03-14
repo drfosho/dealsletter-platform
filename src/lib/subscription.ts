@@ -5,21 +5,18 @@ export type SubscriptionTier = 'free' | 'trial' | 'pro' | 'premium';
 
 /**
  * SEC-010: Admin emails loaded from environment variables only
- * Note: On the client side, we rely on the API to check admin status
- * since process.env.ADMIN_EMAILS is not available in the browser.
- * The API endpoint /api/analysis/usage properly checks admin status server-side.
+ * Set ADMIN_EMAILS in your .env.local or Vercel environment:
+ * ADMIN_EMAILS=admin1@example.com,admin2@example.com
  */
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(e => e.length > 0);
 
-// Check if user is an admin - only works reliably on server side
-// Client-side code should use the API endpoint instead
+// Check if user is an admin
 export function isAdminUser(email?: string | null): boolean {
   if (!email) return false;
-  // This only works server-side; on client it will always return false
-  const adminEmails = (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map(e => e.trim().toLowerCase())
-    .filter(e => e.length > 0);
-  return adminEmails.includes(email.toLowerCase());
+  return ADMIN_EMAILS.includes(email.toLowerCase());
 }
 
 export interface UserSubscription {
@@ -99,36 +96,37 @@ export const FEATURE_ACCESS = {
 };
 
 // Get user's current subscription
-// Note: For accurate admin detection on client-side, use canPerformAnalysis() instead
+// Delegates admin check to the server via /api/analysis/usage so that
+// ADMIN_EMAILS (server-only env var) is properly evaluated.
 export async function getUserSubscription(userId?: string): Promise<UserSubscription | null> {
   if (!userId) return null;
+
+  // Check admin status via server endpoint first
+  try {
+    const usageRes = await fetch('/api/analysis/usage');
+    if (usageRes.ok) {
+      const usage = await usageRes.json();
+      if (usage.is_admin) {
+        return {
+          id: 'admin-' + userId,
+          user_id: userId,
+          subscription_tier: 'pro',
+          trial_end_date: null,
+          subscription_end_date: null,
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+    }
+  } catch {
+    // Fall through to normal subscription check
+  }
 
   const supabase = createClient();
 
   try {
-    // Try to check admin via API first (works on client side)
-    try {
-      const response = await fetch('/api/analysis/usage');
-      if (response.ok) {
-        const usageData = await response.json();
-        if (usageData.is_admin) {
-          return {
-            id: 'admin-' + userId,
-            user_id: userId,
-            subscription_tier: 'pro', // Give admins pro tier access
-            trial_end_date: null,
-            subscription_end_date: null,
-            stripe_customer_id: null,
-            stripe_subscription_id: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-        }
-      }
-    } catch {
-      // API call failed, continue with database check
-    }
-
     const { data, error } = await supabase
       .from('user_subscriptions')
       .select('*')
@@ -137,7 +135,6 @@ export async function getUserSubscription(userId?: string): Promise<UserSubscrip
 
     if (error) {
       console.error('Error fetching subscription:', error);
-      // Return free tier if no subscription found
       return {
         id: 'free-' + userId,
         user_id: userId,
@@ -155,11 +152,7 @@ export async function getUserSubscription(userId?: string): Promise<UserSubscrip
     if (data.subscription_tier === 'trial' && data.trial_end_date) {
       const trialEndDate = new Date(data.trial_end_date);
       if (trialEndDate < new Date()) {
-        // Trial expired, downgrade to free
-        return {
-          ...data,
-          subscription_tier: 'free',
-        };
+        return { ...data, subscription_tier: 'free' };
       }
     }
 
@@ -167,11 +160,7 @@ export async function getUserSubscription(userId?: string): Promise<UserSubscrip
     if (data.subscription_end_date) {
       const subEndDate = new Date(data.subscription_end_date);
       if (subEndDate < new Date()) {
-        // Subscription expired, downgrade to free
-        return {
-          ...data,
-          subscription_tier: 'free',
-        };
+        return { ...data, subscription_tier: 'free' };
       }
     }
 
@@ -189,23 +178,9 @@ export async function hasFeatureAccess(
 ): Promise<boolean> {
   if (!userId) return FEATURE_ACCESS.free[feature] === true;
 
-  // Check admin status via API (works on client side)
-  try {
-    const response = await fetch('/api/analysis/usage');
-    if (response.ok) {
-      const usageData = await response.json();
-      if (usageData.is_admin) {
-        return true; // Admins have access to everything
-      }
-    }
-  } catch {
-    // API call failed, continue with subscription check
-  }
-
   const subscription = await getUserSubscription(userId);
   const tier = subscription?.subscription_tier || 'free';
 
-  // For pro tier grant all access
   if (tier === 'pro' || tier === 'premium') {
     return true;
   }
@@ -216,26 +191,13 @@ export async function hasFeatureAccess(
 // Get user's tier
 export async function getUserTier(userId?: string): Promise<SubscriptionTier> {
   if (!userId) return 'free';
-
-  // Check admin status via API (works on client side)
-  try {
-    const response = await fetch('/api/analysis/usage');
-    if (response.ok) {
-      const usageData = await response.json();
-      if (usageData.is_admin) {
-        return 'pro'; // Admins get pro tier
-      }
-    }
-  } catch {
-    // API call failed, continue with subscription check
-  }
-
   const subscription = await getUserSubscription(userId);
   return subscription?.subscription_tier || 'free';
 }
 
 // Check if user can perform analysis
-// Uses the API endpoint to ensure admin checks work properly (server-side env var access)
+// Uses the server-side /api/analysis/usage endpoint which has proper admin
+// bypass via ADMIN_EMAILS (a server-only env var unavailable on the client).
 export async function canPerformAnalysis(userId?: string): Promise<{
   allowed: boolean;
   reason?: string;
@@ -252,76 +214,42 @@ export async function canPerformAnalysis(userId?: string): Promise<{
     };
   }
 
-  // Use the API endpoint which properly handles admin checks server-side
   try {
     const response = await fetch('/api/analysis/usage');
-
     if (!response.ok) {
-      console.error('Usage API error:', response.status);
-      // Default to allowing access if usage check fails
-      return {
-        allowed: true,
-        reason: 'Usage check unavailable',
-      };
+      console.error('Usage API returned', response.status);
+      // Allow access if the check fails so we don't block users
+      return { allowed: true, reason: 'Usage check unavailable' };
     }
 
     const result = await response.json();
 
-    // Admin users get unlimited access
-    if (result.is_admin) {
+    if (result.is_admin || result.can_analyze) {
       return {
         allowed: true,
-        remaining: 9999,
-        limit: 9999,
-        used: result.analyses_used || 0,
+        remaining: result.remaining ?? 9999,
+        limit: result.tier_limit ?? 9999,
+        used: result.analyses_used ?? 0,
       };
     }
 
-    if (result.can_analyze) {
-      return {
-        allowed: true,
-        remaining: result.remaining || 0,
-        limit: result.tier_limit || 3,
-        used: result.analyses_used || 0,
-      };
-    } else {
-      // User has exceeded their limit
-      return {
-        allowed: false,
-        reason: result.message || 'Monthly analysis limit reached',
-        upgradeRequired: true,
-        remaining: 0,
-        limit: result.tier_limit || 3,
-        used: result.analyses_used || result.tier_limit || 3,
-      };
-    }
+    return {
+      allowed: false,
+      reason: result.message || 'Monthly analysis limit reached',
+      upgradeRequired: true,
+      remaining: 0,
+      limit: result.tier_limit || 3,
+      used: result.analyses_used || 0,
+    };
   } catch (error) {
     console.error('Error in canPerformAnalysis:', error);
-    // Default to allowing access if check fails
-    return {
-      allowed: true,
-      reason: 'Usage check unavailable',
-    };
+    return { allowed: true, reason: 'Usage check unavailable' };
   }
 }
 
 // Check if user can export data
 export async function canExportData(userId?: string): Promise<boolean> {
   if (!userId) return false;
-
-  // Check admin status via API (works on client side)
-  try {
-    const response = await fetch('/api/analysis/usage');
-    if (response.ok) {
-      const usageData = await response.json();
-      if (usageData.is_admin) {
-        return true;
-      }
-    }
-  } catch {
-    // API call failed, continue with tier check
-  }
-
   const tier = await getUserTier(userId);
   return tier !== 'free';
 }

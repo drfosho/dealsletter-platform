@@ -3,9 +3,13 @@ import { rentCastService } from '@/services/rentcast';
 import { PropertySearchRequest } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
 import { propertySearchLimiter, getClientIdentifier } from '@/utils/rate-limiter';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // SEC: require authentication — proxies paid RentCast API
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
     // Check rate limit
     const clientId = getClientIdentifier(request);
     if (!propertySearchLimiter.isAllowed(clientId)) {

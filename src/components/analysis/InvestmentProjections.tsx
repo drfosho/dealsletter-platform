@@ -23,14 +23,6 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
       0
     );
     
-    console.log('[InvestmentProjections] Monthly rent sources:', {
-      aiAnalysisRent: analysis.ai_analysis?.financial_metrics?.monthly_rent,
-      rentalEstimateRent: analysis.rental_estimate?.rent,
-      rentalEstimateRentEstimate: (analysis.rental_estimate as any)?.rentEstimate,
-      analysisDataRent: (analysis.analysis_data as any)?.monthlyRent,
-      finalMonthlyRent: monthlyRent
-    });
-    
     const appreciationRate = 0.03; // 3% annual
     const rentGrowthRate = 0.025; // 2.5% annual
     const inflationRate = 0.02; // 2% for expenses
@@ -95,13 +87,6 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
         totalReturn: equity + totalCashFlow - downPayment
       });
     }
-
-    console.log('[InvestmentProjections] Projections calculated:', {
-      yearsCalculated: yearlyData.length,
-      firstYear: yearlyData[0],
-      lastYear: yearlyData[yearlyData.length - 1],
-      hasPositiveReturns: yearlyData.some(d => d.totalReturn > 0)
-    });
 
     return yearlyData;
   }, [analysis, timeframe]);
@@ -193,80 +178,111 @@ export default function InvestmentProjections({ analysis }: InvestmentProjection
       {/* Projection Chart - Enhanced Bar Chart */}
       <div className="bg-muted/10 rounded-lg p-6">
         <h4 className="text-sm font-semibold text-primary mb-4">Total Return Over Time</h4>
-        <div className="relative h-64">
-          {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted pr-2">
-            {[100, 75, 50, 25, 0].map((percent) => (
-              <span key={percent} className="text-right">
-                {formatCurrency((lastYear.totalReturn * percent) / 100)}
-              </span>
-            ))}
-          </div>
-          
-          {/* Chart area */}
-          <div className="ml-16 h-full relative">
-            {/* Grid lines */}
-            <div className="absolute inset-0">
-              {[0, 25, 50, 75, 100].map((percent) => (
-                <div
-                  key={percent}
-                  className="absolute w-full border-t border-border/30"
-                  style={{ top: `${100 - percent}%` }}
-                />
-              ))}
-            </div>
-            
-            {/* Bars */}
-            <div className="relative h-full flex items-end justify-between gap-2 px-2">
-              {projections.map((data, index) => {
-                // Handle case where lastYear.totalReturn might be 0 or invalid
-                const maxReturn = Math.max(...projections.map(p => Math.abs(p.totalReturn)), 1);
-                const heightPercent = lastYear.totalReturn > 0 
-                  ? Math.max(0, (data.totalReturn / lastYear.totalReturn) * 100)
-                  : Math.max(0, (data.totalReturn / maxReturn) * 100);
-                const isNegative = data.totalReturn < 0;
-                
-                console.log(`[Bar ${data.year}]`, {
-                  totalReturn: data.totalReturn,
-                  maxReturn,
-                  heightPercent,
-                  isNegative
-                });
-                
-                // Show every year for 5-year view, every 2 years for 10-year, every 4 years for 20-year
-                const showBar = timeframe === '5' || 
-                               (timeframe === '10' && index % 2 === 0) || 
-                               (timeframe === '20' && index % 4 === 0) ||
-                               index === projections.length - 1;
-                
-                if (!showBar) return null;
-                
-                return (
-                  <div key={data.year} className="flex-1 flex flex-col items-center">
-                    <div className="w-full flex items-end justify-center h-full">
-                      <div 
-                        className={`w-full max-w-[30px] rounded-t transition-all duration-500 relative group cursor-pointer ${
-                          isNegative 
-                            ? 'bg-gradient-to-t from-red-600 to-red-400' 
-                            : 'bg-gradient-to-t from-primary to-accent'
-                        }`}
-                        style={{ height: `${Math.abs(heightPercent)}%` }}
-                      >
-                        {/* Tooltip on hover */}
-                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                          <p className="text-xs font-semibold">{formatCurrency(data.totalReturn)}</p>
-                          <p className="text-xs text-muted">Year {data.year}</p>
+        {(() => {
+          // Filter visible bars based on timeframe
+          const visibleBars = projections.filter((_, index) => {
+            return timeframe === '5' ||
+              (timeframe === '10' && (index % 2 === 0 || index === projections.length - 1)) ||
+              (timeframe === '20' && (index % 4 === 0 || index === projections.length - 1));
+          });
+
+          const maxVal = Math.max(...visibleBars.map(d => d.totalReturn), 0);
+          const minVal = Math.min(...visibleBars.map(d => d.totalReturn), 0);
+          const range = Math.max(maxVal - minVal, 1);
+          const hasNegative = minVal < 0;
+
+          // Percentage of chart height above the zero line
+          const zeroLinePercent = hasNegative ? (maxVal / range) * 100 : 100;
+
+          // Y-axis tick values
+          const yTicks = hasNegative
+            ? [maxVal, maxVal * 0.5, 0, minVal * 0.5, minVal]
+            : [maxVal, maxVal * 0.75, maxVal * 0.5, maxVal * 0.25, 0];
+
+          return (
+            <div className="relative h-64">
+              {/* Y-axis labels */}
+              <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-muted pr-2 w-16">
+                {yTicks.map((val, i) => (
+                  <span key={i} className="text-right leading-none">
+                    {formatCurrency(val)}
+                  </span>
+                ))}
+              </div>
+
+              {/* Chart area */}
+              <div className="ml-16 h-full relative">
+                {/* Grid lines */}
+                <div className="absolute inset-0">
+                  {yTicks.map((val, i) => {
+                    const pct = range > 0 ? ((maxVal - val) / range) * 100 : 0;
+                    return (
+                      <div
+                        key={i}
+                        className={`absolute w-full border-t ${val === 0 ? 'border-muted/60' : 'border-border/30'}`}
+                        style={{ top: `${pct}%` }}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Bars */}
+                <div className="relative h-full flex items-stretch gap-1 sm:gap-2 px-1">
+                  {visibleBars.map((data) => {
+                    const isNegative = data.totalReturn < 0;
+                    const barPercent = (Math.abs(data.totalReturn) / range) * 100;
+
+                    return (
+                      <div key={data.year} className="flex-1 flex flex-col items-center relative">
+                        {/* Bar container - split at zero line */}
+                        <div className="w-full flex flex-col h-full">
+                          {/* Positive zone */}
+                          <div
+                            className="w-full flex items-end justify-center"
+                            style={{ height: `${zeroLinePercent}%` }}
+                          >
+                            {!isNegative && (
+                              <div
+                                className="w-full max-w-[32px] rounded-t bg-gradient-to-t from-primary to-accent transition-all duration-500 relative group cursor-pointer min-h-[2px]"
+                                style={{ height: `${barPercent / zeroLinePercent * 100}%` }}
+                              >
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                                  <p className="text-xs font-semibold text-green-600">{formatCurrency(data.totalReturn)}</p>
+                                  <p className="text-xs text-muted">Year {data.year}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Negative zone */}
+                          {hasNegative && (
+                            <div
+                              className="w-full flex items-start justify-center"
+                              style={{ height: `${100 - zeroLinePercent}%` }}
+                            >
+                              {isNegative && (
+                                <div
+                                  className="w-full max-w-[32px] rounded-b bg-gradient-to-b from-red-400 to-red-600 transition-all duration-500 relative group cursor-pointer min-h-[2px]"
+                                  style={{ height: `${barPercent / (100 - zeroLinePercent) * 100}%` }}
+                                >
+                                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg p-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                                    <p className="text-xs font-semibold text-red-600">{formatCurrency(data.totalReturn)}</p>
+                                    <p className="text-xs text-muted">Year {data.year}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
+                        <span className="text-xs text-muted mt-1 shrink-0">Y{data.year}</span>
                       </div>
-                    </div>
-                    <span className="text-xs text-muted mt-2">Y{data.year}</span>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        
+          );
+        })()}
+
         {/* Legend */}
         <div className="flex items-center justify-center gap-6 mt-4">
           <div className="flex items-center gap-2">

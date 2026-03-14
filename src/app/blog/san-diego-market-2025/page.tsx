@@ -41,8 +41,8 @@ export default function SanDiegoMarket2025Article() {
             <div className="mb-8 rounded-xl overflow-hidden">
               <div className="relative aspect-[5/3] bg-muted/10">
                 <Image
-                  src="/logos/SAN DIEGO BLOG HEADER.png"
-                  alt="San Diego Real Estate Market Analysis 2025"
+                  src="/logos/SAN DIEGO DEEP DIVE.png"
+                  alt="San Diego Real Estate Deep Dive 2026"
                   fill
                   className="object-cover rounded-xl"
                 />

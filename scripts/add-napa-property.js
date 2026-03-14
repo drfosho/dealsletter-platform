@@ -219,7 +219,7 @@ async function addNapaProperty() {
       headers: {
         'Content-Type': 'application/json',
         // Add admin auth if needed
-        'x-admin-key': process.env.ADMIN_API_KEY || 'admin-key-placeholder'
+        'x-admin-key': process.env.ADMIN_API_KEY || (() => { throw new Error('ADMIN_API_KEY environment variable is not set') })()
       },
       body: JSON.stringify(napaProperty)
     });

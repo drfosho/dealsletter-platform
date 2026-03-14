@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { usageStats, calculateEstimatedCost } from '@/lib/analytics';
+import { requireAuth } from '@/lib/api-auth';
+import { getAdminConfig } from '@/lib/admin-config';
 
-// GET endpoint to retrieve analytics
-export async function GET(request: NextRequest) {
-  // Check for admin authorization (implement your auth logic)
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.includes('admin')) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+// GET endpoint to retrieve analytics (admin only)
+export async function GET(_request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { isAdmin } = getAdminConfig(auth.user.email);
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   
   const stats = {
@@ -23,15 +23,13 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(stats);
 }
 
-// POST endpoint to reset analytics
-export async function POST(request: NextRequest) {
-  // Check for admin authorization
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.includes('admin')) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+// POST endpoint to reset analytics (admin only)
+export async function POST(_request: NextRequest) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { isAdmin } = getAdminConfig(auth.user.email);
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   
   // Reset stats

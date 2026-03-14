@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rentCastService } from '@/services/rentcast';
 import { logError } from '@/utils/error-utils';
+import { requireAuth } from '@/lib/api-auth';
 
 interface RouteParams {
   params: Promise<{
@@ -10,6 +11,9 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    // SEC: require authentication — proxies paid RentCast API
+    const auth = await requireAuth();
+    if (auth.error) return auth.error;
     // Validate API key
     if (!process.env.RENTCAST_API_KEY) {
       return NextResponse.json(

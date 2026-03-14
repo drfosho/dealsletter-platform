@@ -167,6 +167,13 @@ export function calculateMonthlyMortgage(
       payment += additionalPrincipal * monthlyRate;
     }
 
+    // Debug log for hard money (not an error - interest-only is expected to be higher)
+    console.log('[calculateMonthlyMortgage] Hard money interest-only payment:', {
+      principal: principal.toLocaleString(),
+      rate: annualInterestRate + '%',
+      monthlyPayment: Math.round(payment).toLocaleString()
+    });
+
     return Math.round(payment * 100) / 100;
   }
 
@@ -175,15 +182,17 @@ export function calculateMonthlyMortgage(
     (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) /
     (Math.pow(1 + monthlyRate, numPayments) - 1);
 
-  // Sanity check - monthly payment should be roughly 0.5% to 3% of principal
-  // (depends on rate and term, but 3% would be extreme)
+  // Sanity check - for conventional loans, payment should be reasonable
+  // For 30-year at 7%, payment is about 0.67% of principal
+  // For 15-year at 7%, payment is about 0.9% of principal
+  // Only warn if way out of range (> 5% suggests bad inputs)
   const paymentPercent = (payment / principal) * 100;
   if (paymentPercent > 5) {
-    console.error('[calculateMonthlyMortgage] CALCULATION ERROR: Payment too high!', {
-      principal,
+    console.warn('[calculateMonthlyMortgage] Payment seems high - verify inputs:', {
+      principal: principal.toLocaleString(),
       annualInterestRate,
       termYears,
-      payment,
+      payment: Math.round(payment).toLocaleString(),
       paymentPercent: paymentPercent.toFixed(2) + '%'
     });
   }
@@ -520,8 +529,8 @@ export interface FlipCalculationInputs extends FinancialInputs {
 export interface ClosingCostsBreakdown {
   lenderPoints: number;
   lenderPointsPercent: number;
-  otherClosingCosts: number;
-  otherClosingCostsPercent: number;
+  originationFee: number;
+  titleEscrowMisc: number;
   totalClosingCosts: number;
   totalClosingCostsPercent: number;
 }
@@ -569,11 +578,12 @@ export interface FlipValidationResult {
 /**
  * Calculate fix & flip returns
  *
- * IMPORTANT: Properly handles hard money financing with rehab holdback:
- * - Hard Money: Lender funds 100% of rehab via holdback (not cash from investor)
- * - Cash Required = Down payment + Closing costs (what investor brings)
- * - Total Investment = All-in cost (for project tracking)
- * - ROI = Net Profit / Cash Required (shows return on actual cash invested)
+ * CORRECT FORMULAS (Industry Standard):
+ * 1. LTV Check: Hard money lenders cap total loan at 75% of ARV
+ * 2. Cash Required = Down payment + Closing costs + Cash for Rehab (if over LTV) + Holding costs
+ * 3. Total Investment = Purchase + Rehab + Closing + Holding costs
+ * 4. Net Profit = Net Proceeds - Cash Required
+ * 5. ROI = Net Profit / Cash Required
  */
 export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalculationOutputs {
   console.log('=== FIX & FLIP CALCULATION DEBUG ===');
@@ -586,7 +596,8 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   const renovationCosts = parsePrice(inputs.renovationCosts || 0);
   const arv = parsePrice(inputs.arv);
   const holdingMonths = parseInteger(inputs.holdingPeriodMonths || 6);
-  const points = parsePercentage(inputs.points || 0);
+  // Default to 3% points for hard money if not specified
+  const points = parsePercentage(inputs.points) || 3;
 
   console.log('Parsed Input Values:', {
     purchasePrice,
@@ -624,7 +635,7 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     warnings.push(`Holding period (${holdingMonths} months) is unusual - typical flips are 3-12 months`);
   }
 
-  // Determine if this is a hard money loan (default to true for flips with points > 2%)
+  // Determine if this is a hard money loan (default to true for flips)
   const isHardMoney = inputs.isHardMoney ??
     (inputs.loanType === 'hardMoney' || points >= 2);
 
@@ -634,117 +645,157 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   const downPayment = (purchasePrice * downPaymentPercent) / 100;
   const acquisitionLoan = purchasePrice - downPayment;
 
-  console.log('Financing:', {
+  console.log('Acquisition Financing:', {
     downPayment: `$${downPayment.toLocaleString()} (${downPaymentPercent}%)`,
     acquisitionLoan: `$${acquisitionLoan.toLocaleString()}`,
     isHardMoney
   });
 
-  // REHAB HOLDBACK: Hard money lenders fund 100% of rehab in holdback
-  // This is NOT cash from the investor
-  const rehabHoldback = isHardMoney ? renovationCosts : 0;
-  const cashForRehab = isHardMoney ? 0 : renovationCosts; // Only pay if conventional
+  console.log('STEP 4: Calculating rehab funding with LTV check...');
 
-  // Total loan = acquisition + rehab holdback
-  const totalLoan = acquisitionLoan + rehabHoldback;
+  // CRITICAL: Hard money lenders have LTV limits (typically 75% of ARV)
+  // If total loan needed exceeds this, investor must bring cash for rehab
+  const maxLTV = 0.75; // 75% of ARV is typical max
+  const maxLoan = arv * maxLTV;
+  const totalLoanNeeded = acquisitionLoan + renovationCosts;
 
-  // Lender points (on acquisition loan, not on rehab holdback typically)
-  const pointsCost = (acquisitionLoan * points) / 100;
+  let rehabFundedByLender: number;
+  let cashForRehab: number;
 
-  console.log('STEP 4: Calculating holding costs...');
+  if (isHardMoney) {
+    if (totalLoanNeeded <= maxLoan) {
+      // Lender can fund all rehab
+      rehabFundedByLender = renovationCosts;
+      cashForRehab = 0;
+    } else {
+      // Lender hits LTV limit - investor must bring some rehab cash
+      rehabFundedByLender = Math.max(0, maxLoan - acquisitionLoan);
+      cashForRehab = renovationCosts - rehabFundedByLender;
+    }
+  } else {
+    // Conventional loan - investor pays all rehab
+    rehabFundedByLender = 0;
+    cashForRehab = renovationCosts;
+  }
 
-  // Calculate holding costs
-  // Interest on acquisition loan
-  const monthlyAcquisitionInterest = acquisitionLoan * (interestRate / 100 / 12);
-  // Interest on rehab holdback (drawn over time, so use 50% average)
-  const monthlyRehabInterest = rehabHoldback * (interestRate / 100 / 12) * 0.5;
+  // Total loan = acquisition + rehab funded by lender
+  const totalLoan = acquisitionLoan + rehabFundedByLender;
+
+  console.log('Rehab Funding (LTV Check):', {
+    maxLTV: `${maxLTV * 100}%`,
+    maxLoan: `$${maxLoan.toLocaleString()}`,
+    totalLoanNeeded: `$${totalLoanNeeded.toLocaleString()}`,
+    exceedsLTV: totalLoanNeeded > maxLoan,
+    rehabFundedByLender: `$${rehabFundedByLender.toLocaleString()}`,
+    cashForRehab: `$${cashForRehab.toLocaleString()} (investor brings)`,
+    totalLoan: `$${totalLoan.toLocaleString()}`
+  });
+
+  console.log('STEP 5: Calculating closing costs...');
+
+  // Calculate closing costs - Points apply to LOAN amount
+  // Hard money closing costs:
+  // 1. Lender points (on loan amount) - typically 3%
+  // 2. Origination fee (on loan amount) - typically 1%
+  // 3. Title/escrow/misc - fixed amount ~$2,000
+  const lenderPointsCost = (acquisitionLoan * points) / 100;
+  const originationFee = isHardMoney ? (acquisitionLoan * 0.01) : 0;
+  const titleEscrowMisc = 2000;
+  const totalClosingCosts = lenderPointsCost + originationFee + titleEscrowMisc;
+
+  console.log('Closing Costs:', {
+    lenderPoints: `$${lenderPointsCost.toFixed(2)} (${points}% of $${acquisitionLoan.toLocaleString()} loan)`,
+    originationFee: `$${originationFee.toFixed(2)} (1% of loan)`,
+    titleEscrowMisc: `$${titleEscrowMisc.toFixed(2)}`,
+    totalClosingCosts: `$${totalClosingCosts.toFixed(2)}`
+  });
+
+  console.log('STEP 6: Calculating holding costs...');
+
+  // Calculate holding costs using renovation timeline
+  // Interest on acquisition loan (monthly interest-only for hard money)
+  const monthlyAcquisitionInterest = (acquisitionLoan * (interestRate / 100)) / 12;
+  // Property tax: 1.2% annually
   const monthlyPropertyTax = (purchasePrice * 0.012) / 12;
-  const monthlyInsurance = (purchasePrice * 0.0035) / 12;
+  // Insurance: 0.6% annually for investor/vacant property
+  const monthlyInsurance = (purchasePrice * 0.006) / 12;
+  // Utilities during renovation
   const monthlyUtilities = 200;
-  const monthlyMaintenance = 150;
 
-  const monthlyHoldingCosts = monthlyAcquisitionInterest + monthlyRehabInterest +
-    monthlyPropertyTax + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
+  const monthlyHoldingCosts = monthlyAcquisitionInterest + monthlyPropertyTax + monthlyInsurance + monthlyUtilities;
   const totalHoldingCosts = monthlyHoldingCosts * holdingMonths;
 
   console.log('Holding Costs Breakdown:', {
     monthlyAcquisitionInterest: `$${monthlyAcquisitionInterest.toFixed(2)}`,
-    monthlyRehabInterest: `$${monthlyRehabInterest.toFixed(2)}`,
     monthlyPropertyTax: `$${monthlyPropertyTax.toFixed(2)}`,
     monthlyInsurance: `$${monthlyInsurance.toFixed(2)}`,
     monthlyUtilities: `$${monthlyUtilities}`,
-    monthlyMaintenance: `$${monthlyMaintenance}`,
     totalMonthly: `$${monthlyHoldingCosts.toFixed(2)}`,
     holdingMonths,
     totalHoldingCosts: `$${totalHoldingCosts.toFixed(2)}`
   });
 
-  console.log('STEP 5: Calculating closing costs...');
+  console.log('STEP 7: Calculating selling costs...');
 
-  // Calculate closing costs
-  // IMPORTANT: Closing costs INCLUDE lender points - do NOT double count
-  // For hard money: 2.5% points + 0.5% other = 3% total
-  const otherClosingCostsPercent = points > 0 ? Math.max(0.5, 3 - points) : 3;
-  const otherClosingCosts = purchasePrice * (otherClosingCostsPercent / 100);
-  const totalClosingCosts = pointsCost + otherClosingCosts; // Points ARE part of closing costs
-
-  console.log('Closing Costs:', {
-    pointsCost: `$${pointsCost.toFixed(2)} (${points}%)`,
-    otherClosingCosts: `$${otherClosingCosts.toFixed(2)} (${otherClosingCostsPercent}%)`,
-    totalClosingCosts: `$${totalClosingCosts.toFixed(2)}`
-  });
-
-  console.log('STEP 6: Calculating selling costs...');
-
-  // Selling costs
-  const sellingCosts = arv * 0.08; // 8% for realtor + closing
+  // Selling costs - 8% of ARV (6% realtor + 2% closing)
+  const sellingCosts = arv * 0.08;
 
   console.log('Selling Costs:', {
     sellingCosts: `$${sellingCosts.toFixed(2)} (8% of ARV $${arv.toLocaleString()})`
   });
 
-  console.log('STEP 7: Calculating investment totals...');
+  console.log('STEP 8: Calculating investment totals...');
 
-  // CASH REQUIRED = What investor actually brings to closing
-  // For hard money: Down payment + Closing costs (NOT including rehab)
-  // For conventional: Down payment + Closing costs + Rehab costs
-  const cashRequired = downPayment + totalClosingCosts + cashForRehab;
+  // CASH REQUIRED = What investor actually brings (out of pocket)
+  // Includes: Down payment + Closing costs + Cash for Rehab (if LTV exceeded) + Holding costs
+  const cashRequired = downPayment + totalClosingCosts + cashForRehab + totalHoldingCosts;
 
-  // TOTAL INVESTMENT = All-in project cost (for tracking, not cash flow)
-  // Includes all costs regardless of financing source
+  // TOTAL INVESTMENT = All-in project cost
+  // Includes: Purchase price + Rehab + Closing + Holding costs
   const totalInvestment = purchasePrice + renovationCosts + totalClosingCosts + totalHoldingCosts;
 
-  // TOTAL PROJECT COST = Total investment + selling costs
+  // TOTAL PROJECT COST = Total investment + selling costs (for reference)
   const totalProjectCost = totalInvestment + sellingCosts;
 
   console.log('Investment Summary:', {
     cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
+    cashRequiredBreakdown: {
+      downPayment: `$${downPayment.toLocaleString()}`,
+      closingCosts: `$${totalClosingCosts.toLocaleString()}`,
+      cashForRehab: `$${cashForRehab.toLocaleString()}`,
+      holdingCosts: `$${totalHoldingCosts.toLocaleString()}`
+    },
     totalInvestment: `$${totalInvestment.toLocaleString()} (all-in cost)`,
     totalProjectCost: `$${totalProjectCost.toLocaleString()} (including selling)`
   });
 
-  console.log('STEP 8: Calculating returns...');
+  console.log('STEP 9: Calculating returns...');
 
-  // Calculate returns
-  const netProfit = arv - totalProjectCost;
+  // Calculate net proceeds from sale
+  const loanPayoff = acquisitionLoan + rehabFundedByLender;
+  const netProceeds = arv - sellingCosts - loanPayoff;
 
-  // ROI = Net Profit / Cash Required (shows return on actual cash invested)
-  // This accounts for leverage from hard money financing
+  // NET PROFIT = Net Proceeds - Cash Required
+  const netProfit = netProceeds - cashRequired;
+
+  // ROI = Net Profit / Cash Required (return on actual cash invested)
   const roi = cashRequired > 0 ? (netProfit / cashRequired) * 100 : 0;
 
   // Profit Margin = Net Profit / ARV (industry standard)
   const profitMargin = arv > 0 ? (netProfit / arv) * 100 : 0;
 
-  console.log('Returns:', {
+  console.log('Exit Calculation:', {
     arv: `$${arv.toLocaleString()}`,
-    totalProjectCost: `$${totalProjectCost.toLocaleString()}`,
-    netProfit: `$${netProfit.toLocaleString()}`,
+    sellingCosts: `$${sellingCosts.toLocaleString()}`,
+    loanPayoff: `$${loanPayoff.toLocaleString()}`,
+    netProceeds: `$${netProceeds.toLocaleString()}`,
     cashRequired: `$${cashRequired.toLocaleString()}`,
+    netProfit: `$${netProfit.toLocaleString()}`,
     roi: `${roi.toFixed(2)}%`,
     profitMargin: `${profitMargin.toFixed(2)}%`
   });
 
-  console.log('STEP 9: Running sanity checks...');
+  console.log('STEP 10: Running sanity checks...');
 
   // SANITY CHECKS - Catch calculation errors
   if (netProfit > arv) {
@@ -756,18 +807,13 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     warnings.push(`Net profit ($${netProfit.toLocaleString()}) exceeds purchase price with ${profitMargin.toFixed(1)}% margin - verify ARV is accurate`);
   }
 
-  if (roi > 500) {
+  if (roi > 200) {
     warnings.push(`ROI of ${roi.toFixed(1)}% is unusually high - verify inputs are correct`);
   }
 
-  if (roi > 1000) {
+  if (roi > 500) {
     errors.push(`CALCULATION ERROR: ROI of ${roi.toFixed(1)}% is unrealistic - likely a calculation error`);
-    console.error('SANITY CHECK FAILED: ROI over 1000%!');
-  }
-
-  if (totalProjectCost < purchasePrice) {
-    errors.push(`CALCULATION ERROR: Total project cost ($${totalProjectCost.toLocaleString()}) is less than purchase price ($${purchasePrice.toLocaleString()})`);
-    console.error('SANITY CHECK FAILED: Total project cost less than purchase price!');
+    console.error('SANITY CHECK FAILED: ROI over 500%!');
   }
 
   if (totalInvestment < purchasePrice) {
@@ -775,13 +821,9 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     console.error('SANITY CHECK FAILED: Total investment less than purchase price!');
   }
 
-  // Check if holding costs seem reasonable (1-15% of purchase price for typical 3-12 month flip)
-  const holdingCostPercent = (totalHoldingCosts / purchasePrice) * 100;
-  if (holdingCostPercent < 1) {
-    warnings.push(`Holding costs (${holdingCostPercent.toFixed(1)}% of purchase price) seem too low`);
-  }
-  if (holdingCostPercent > 20) {
-    warnings.push(`Holding costs (${holdingCostPercent.toFixed(1)}% of purchase price) seem too high`);
+  if (cashRequired < downPayment) {
+    errors.push(`CALCULATION ERROR: Cash required ($${cashRequired.toLocaleString()}) is less than down payment ($${downPayment.toLocaleString()})`);
+    console.error('SANITY CHECK FAILED: Cash required less than down payment!');
   }
 
   const validation: FlipValidationResult = {
@@ -790,7 +832,7 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     warnings
   };
 
-  console.log('STEP 10: Validation Results:', {
+  console.log('STEP 11: Validation Results:', {
     isValid: validation.isValid,
     errors: validation.errors,
     warnings: validation.warnings
@@ -804,8 +846,11 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     purchasePrice: `$${purchasePrice.toLocaleString()}`,
     arv: `$${arv.toLocaleString()}`,
     renovationCosts: `$${renovationCosts.toLocaleString()}`,
+    cashRequired: `$${cashRequired.toLocaleString()}`,
+    totalInvestment: `$${totalInvestment.toLocaleString()}`,
     netProfit: `$${netProfit.toLocaleString()}`,
     roi: `${roi.toFixed(2)}%`,
+    profitMargin: `${profitMargin.toFixed(2)}%`,
     isValid: validation.isValid
   });
 
@@ -815,7 +860,7 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     totalProjectCost,
     downPayment,
     acquisitionLoan,
-    rehabHoldback,
+    rehabHoldback: rehabFundedByLender,
     totalLoan,
     holdingCosts: totalHoldingCosts,
     sellingCosts,
@@ -824,12 +869,12 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     profitMargin,
     closingCosts: totalClosingCosts,
     closingCostsBreakdown: {
-      lenderPoints: pointsCost,
+      lenderPoints: lenderPointsCost,
       lenderPointsPercent: points,
-      otherClosingCosts,
-      otherClosingCostsPercent,
+      originationFee,
+      titleEscrowMisc,
       totalClosingCosts,
-      totalClosingCostsPercent: points + otherClosingCostsPercent
+      totalClosingCostsPercent: acquisitionLoan > 0 ? (totalClosingCosts / acquisitionLoan) * 100 : 0
     },
     isHardMoney,
     validation

@@ -156,26 +156,37 @@ export default function Step3Financial({
   });
   
   // Use the financial data passed from previous steps
-  // CRITICAL: Apply strategy-based defaults for flip/brrrr on initialization
+  // CRITICAL FIX: For flip/brrrr strategies, apply hard money defaults immediately
+  // This prevents the UI from briefly showing conventional values
   const initialFinancial = useMemo(() => {
-    const isHardMoneyStrategy = (data.strategy === 'flip' || data.strategy === 'brrrr');
-    const shouldUseHardMoney = isHardMoneyStrategy && data.strategyDetails?.initialFinancing !== 'conventional';
+    const isHardMoneyStrategy = data.strategy === 'flip' || data.strategy === 'brrrr';
 
-    if (shouldUseHardMoney) {
-      // Apply hard money defaults for flip/brrrr strategies
+    if (isHardMoneyStrategy && data.strategyDetails?.initialFinancing !== 'conventional') {
+      // Apply hard money defaults immediately for flip/brrrr
+      const strategyType = (data.strategy === 'flip' || data.strategy === 'brrrr' ||
+                           data.strategy === 'rental' || data.strategy === 'buy-and-hold' ||
+                           data.strategy === 'house-hack' || data.strategy === 'commercial' ||
+                           data.strategy === 'short-term-rental')
+                           ? data.strategy as InvestmentStrategy
+                           : 'rental';
+      const defaults = getSimpleFinancingDefaults(strategyType);
+
+      console.log('[Step3Financial] Initializing with hard money defaults:', {
+        strategy: data.strategy,
+        defaults
+      });
+
       return {
         ...data.financial,
-        interestRate: 10.0,           // 10% hard money rate
-        loanTerm: 1,                  // 12 months
-        downPaymentPercent: 10,       // 10% down for hard money
-        points: 2.5,                  // 2.5% origination points
-        loanType: 'hardMoney' as const,
+        interestRate: defaults.interestRate,           // 10% for hard money
+        loanTerm: defaults.loanTermYears,              // 1 year for hard money
+        downPaymentPercent: defaults.downPaymentPercent, // 10% for hard money
+        points: defaults.lenderPointsPercent,          // 2.5 points
+        loanType: 'hardMoney' as const
       };
     }
 
-    return {
-      ...data.financial
-    };
+    return { ...data.financial };
   }, [data.financial, data.strategy, data.strategyDetails?.initialFinancing]);
 
   const [financial, setFinancial] = useState(initialFinancial);
@@ -321,7 +332,7 @@ export default function Step3Financial({
     }
     
     // Auto-populate monthly rent if not already set and strategy requires it
-    if (['rental', 'brrrr', 'commercial'].includes(data.strategy) &&
+    if (['rental', 'buy-and-hold', 'brrrr', 'house-hack', 'commercial'].includes(data.strategy) &&
         newRentEstimate > 0 &&
         (!financial.monthlyRent || financial.monthlyRent === 0)) {
 
@@ -905,7 +916,7 @@ export default function Step3Financial({
 
   /**
    * Calculate Cash Required (what investor brings to closing)
-   * For hard money: Down payment + Closing costs + Rehab shortfall (if > 80% ARV)
+   * For hard money: Down payment + Closing costs (rehab is lender funded)
    * For conventional: Down payment + Closing costs + Rehab costs
    */
   const calculateCashRequired = () => {
@@ -914,23 +925,9 @@ export default function Step3Financial({
     const loanAmount = financial.purchasePrice - downPayment;
     const pointsCost = loanType === 'hardMoney' ? (loanAmount * (financial.points || 0)) / 100 : 0;
 
-    // For hard money loans, calculate rehab shortfall if total loan exceeds 80% ARV
-    let renovationContribution = 0;
-    if (loanType === 'hardMoney') {
-      // Hard money lenders cap total loan at 80% of ARV
-      const arv = financial.arv || 0;
-      const rehabCosts = financial.renovationCosts || 0;
-      if (arv > 0) {
-        const maxLoanAtARV = arv * 0.80;
-        const maxRehabFunding = Math.max(0, maxLoanAtARV - loanAmount);
-        // Investor must cover any rehab costs that exceed the 80% ARV limit
-        renovationContribution = Math.max(0, rehabCosts - maxRehabFunding);
-      }
-      // If no ARV set, assume lender funds all rehab (100% funding)
-    } else {
-      // Conventional loans require investor to fund all rehab upfront
-      renovationContribution = financial.renovationCosts || 0;
-    }
+    // For hard money loans, renovation costs are 100% funded by lender
+    // so they should NOT be included in the upfront investment
+    const renovationContribution = loanType === 'hardMoney' ? 0 : (financial.renovationCosts || 0);
 
     return downPayment +
       (financial.closingCosts || 0) +
@@ -973,44 +970,6 @@ export default function Step3Financial({
     const profit = calculateEstimatedProfit();
     return cashRequired > 0 ? (profit / cashRequired) * 100 : 0;
   };
-
-  /**
-   * Calculate hard money loan limits based on 80% ARV rule
-   * Hard money lenders typically cap total loan at 70-80% of ARV
-   */
-  const calculateHardMoneyLimits = () => {
-    const arv = financial.arv || 0;
-    const purchasePrice = financial.purchasePrice || 0;
-    const rehabCosts = financial.renovationCosts || 0;
-    const downPayment = (purchasePrice * (financial.downPaymentPercent || 10)) / 100;
-    const purchaseLoan = purchasePrice - downPayment;
-
-    // Most hard money lenders cap at 70-80% of ARV
-    const maxLoanAtARV = arv * 0.80; // 80% of ARV
-    const totalRequestedLoan = purchaseLoan + rehabCosts;
-
-    // Calculate how much rehab the lender will actually fund
-    const maxRehabFunding = Math.max(0, maxLoanAtARV - purchaseLoan);
-    const actualRehabFunded = Math.min(rehabCosts, maxRehabFunding);
-    const rehabShortfall = rehabCosts - actualRehabFunded;
-
-    // Check if loan exceeds 80% ARV
-    const exceedsLimit = totalRequestedLoan > maxLoanAtARV;
-    const ltvPercent = arv > 0 ? (totalRequestedLoan / arv) * 100 : 0;
-
-    return {
-      maxLoanAtARV: Math.round(maxLoanAtARV),
-      totalRequestedLoan: Math.round(totalRequestedLoan),
-      purchaseLoan: Math.round(purchaseLoan),
-      maxRehabFunding: Math.round(maxRehabFunding),
-      actualRehabFunded: Math.round(actualRehabFunded),
-      rehabShortfall: Math.round(rehabShortfall),
-      exceedsLimit,
-      ltvPercent: Math.round(ltvPercent * 10) / 10,
-    };
-  };
-
-  const hardMoneyLimits = loanType === 'hardMoney' && financial.arv ? calculateHardMoneyLimits() : null;
 
   const handleContinue = () => {
     updateData({ financial });
@@ -1095,7 +1054,7 @@ export default function Step3Financial({
       </div>
 
       {/* Estimated Rent Info - Only show for rental strategies */}
-      {['rental', 'brrrr', 'commercial'].includes(data.strategy) && (
+      {['rental', 'buy-and-hold', 'brrrr', 'house-hack', 'commercial'].includes(data.strategy) && (
         <div className="bg-accent/10 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -1193,11 +1152,14 @@ export default function Step3Financial({
                         type="number"
                         value={financial.rentPerUnit || ''}
                         onChange={(e) => {
-                          const rentPerUnit = parseFloat(e.target.value) || 0;
-                          handleFieldChange('rentPerUnit', rentPerUnit);
-                          // Update total rent
-                          const units = financial.units || unitCount;
-                          handleFieldChange('monthlyRent', rentPerUnit * units);
+                          const raw = e.target.value;
+                          handleFieldChange('rentPerUnit', raw);
+                          // Only cross-update total rent when user has typed a real number
+                          const rentPerUnit = parseFloat(raw);
+                          if (!isNaN(rentPerUnit) && raw !== '') {
+                            const units = financial.units || unitCount;
+                            handleFieldChange('monthlyRent', rentPerUnit * units);
+                          }
                         }}
                         className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                         placeholder={rentEstimate && unitCount > 1 ? `Avg: $${Math.round(rentEstimate / unitCount)}` : "Per unit rent"}
@@ -1214,12 +1176,15 @@ export default function Step3Financial({
                         type="number"
                         value={financial.monthlyRent || ''}
                         onChange={(e) => {
-                          const totalRent = parseFloat(e.target.value) || 0;
-                          handleFieldChange('monthlyRent', totalRent);
-                          // Update rent per unit
-                          const units = financial.units || unitCount;
-                          if (units > 1) {
-                            handleFieldChange('rentPerUnit', totalRent / units);
+                          const raw = e.target.value;
+                          handleFieldChange('monthlyRent', raw);
+                          // Only cross-update rent per unit when user has typed a real number
+                          const totalRent = parseFloat(raw);
+                          if (!isNaN(totalRent) && raw !== '') {
+                            const units = financial.units || unitCount;
+                            if (units > 1) {
+                              handleFieldChange('rentPerUnit', totalRent / units);
+                            }
                           }
                         }}
                         className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1673,7 +1638,7 @@ export default function Step3Financial({
           <div className="flex items-center gap-3">
             <input
               type="number"
-              value={financial.downPaymentPercent}
+              value={financial.downPaymentPercent || ''}
               onChange={(e) => handleFieldChange('downPaymentPercent', e.target.value)}
               className="w-24 px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               min="0"
@@ -1734,12 +1699,13 @@ export default function Step3Financial({
                 <div className="flex items-center gap-3">
                   <input
                     type="number"
-                    value={financial.points || hardMoneyDefaults.points}
+                    value={financial.points || ''}
                     onChange={(e) => handleFieldChange('points', e.target.value)}
                     className="flex-1 px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     min="0"
                     max="5"
                     step="0.5"
+                    placeholder={hardMoneyDefaults.points.toString()}
                   />
                   <span className="text-muted">points</span>
                 </div>
@@ -2031,50 +1997,12 @@ export default function Step3Financial({
                   <strong>Hard Money Loan Features:</strong>
                 </p>
                 <ul className="text-sm text-yellow-700 dark:text-yellow-300 mt-2 space-y-1">
-                  <li>• Rehab funding up to 80% of ARV (max loan-to-value)</li>
+                  <li>• 100% renovation funding (no upfront rehab costs)</li>
                   <li>• {financial.points || hardMoneyDefaults.points} points origination fee</li>
                   <li>• {financial.loanTerm < 2 ? `${financial.loanTerm * 12} month` : `${financial.loanTerm} year`} term with interest-only payments</li>
                   <li>• Quick approval & closing (7-14 days typical)</li>
                 </ul>
               </div>
-
-              {/* 80% ARV Limit Warning */}
-              {hardMoneyLimits && (financial.arv ?? 0) > 0 && (
-                <div className={`mt-3 p-3 rounded-lg ${hardMoneyLimits.exceedsLimit ? 'bg-red-500/10 border border-red-500/30' : 'bg-blue-500/10 border border-blue-500/30'}`}>
-                  <p className={`text-sm font-medium ${hardMoneyLimits.exceedsLimit ? 'text-red-700 dark:text-red-300' : 'text-blue-700 dark:text-blue-300'}`}>
-                    <strong>80% ARV Loan Limit Analysis:</strong>
-                  </p>
-                  <div className="text-sm mt-2 space-y-1">
-                    <div className="flex justify-between">
-                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Max Loan (80% ARV):</span>
-                      <span className="font-medium">${hardMoneyLimits.maxLoanAtARV.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Purchase Loan:</span>
-                      <span className="font-medium">${hardMoneyLimits.purchaseLoan.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Rehab Funded by Lender:</span>
-                      <span className="font-medium">${hardMoneyLimits.actualRehabFunded.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className={hardMoneyLimits.exceedsLimit ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}>Current LTV:</span>
-                      <span className={`font-medium ${hardMoneyLimits.ltvPercent > 80 ? 'text-red-600' : 'text-green-600'}`}>{hardMoneyLimits.ltvPercent}%</span>
-                    </div>
-                    {hardMoneyLimits.rehabShortfall > 0 && (
-                      <div className="flex justify-between pt-2 border-t border-red-500/30">
-                        <span className="text-red-600 dark:text-red-400 font-medium">Out-of-Pocket Rehab:</span>
-                        <span className="font-bold text-red-600">${hardMoneyLimits.rehabShortfall.toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
-                  {hardMoneyLimits.exceedsLimit && (
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-2">
-                      ⚠️ Total loan exceeds 80% ARV. You&apos;ll need ${hardMoneyLimits.rehabShortfall.toLocaleString()} additional cash for rehab.
-                    </p>
-                  )}
-                </div>
-              )}
             </>
           )}
           

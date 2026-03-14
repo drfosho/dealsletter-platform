@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import type { Analysis } from '@/types';
 
 interface AnalysisHistoryTableProps {
@@ -98,9 +98,8 @@ export default function AnalysisHistoryTable({
               const isSelected = selectedIds.includes(analysis.id);
               
               return (
-                <>
-                  <tr 
-                    key={analysis.id} 
+                <Fragment key={analysis.id}>
+                  <tr
                     className={`hover:bg-muted/20 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
                   >
                     <td className="px-4 py-4">
@@ -323,7 +322,7 @@ export default function AnalysisHistoryTable({
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               );
             })}
           </tbody>

@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-auth'
+import { getAdminConfig } from '@/lib/admin-config'
 
 export async function GET(_request: NextRequest) {
+  // SEC: admin-only — this endpoint modifies database schema
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+  const { isAdmin } = getAdminConfig(auth.user.email);
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   console.log('[Fix Metadata] Checking and fixing metadata column...')
-  
+
   try {
     const supabase = await createClient()
     

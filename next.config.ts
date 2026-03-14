@@ -1,8 +1,89 @@
 import type { NextConfig } from "next";
 
+// Content-Security-Policy directives
+// Kept readable — joined into one header value below.
+const cspDirectives = [
+  "default-src 'self'",
+  // Scripts: self + inline for Next.js hydration, Google Maps, Stripe, Vercel analytics
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.stripe.com https://va.vercel-scripts.com",
+  // Styles: self + inline for Tailwind / runtime-injected styles
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  // Images: self + data URIs + the domains already in remotePatterns + map tiles + Stripe
+  "img-src 'self' data: blob: https://maps.googleapis.com https://maps.gstatic.com https://images.unsplash.com https://*.googleusercontent.com https://*.stripe.com",
+  // Fonts
+  "font-src 'self' https://fonts.gstatic.com",
+  // Connect (API calls): self + Supabase + Stripe + Google + RentCast + Vercel analytics
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://maps.googleapis.com https://api.rentcast.io https://va.vercel-scripts.com",
+  // Frames: only Stripe checkout / 3-D Secure
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  // Object / base / form
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  // Block all <object>, <embed>, <applet>
+  "plugin-types 'none'",
+  // Upgrade insecure requests in production
+  "upgrade-insecure-requests",
+];
+
+const ContentSecurityPolicy = cspDirectives.join('; ');
+
+const securityHeaders = [
+  // --- STRICT in production ---
+  {
+    // HSTS: tell browsers to always use HTTPS for 2 years + include subdomains.
+    // Strict: yes — prevents SSL-stripping attacks entirely.
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    // CSP: allowlist of permitted resource origins.
+    // Strict: the most impactful header — blocks XSS, data exfiltration, and
+    // clickjacking via frame-src. unsafe-inline/eval are required by Next.js
+    // hydration; tighten with nonces if you adopt a custom Document.
+    key: 'Content-Security-Policy',
+    value: ContentSecurityPolicy,
+  },
+  {
+    // Prevent MIME-type sniffing (e.g., treating an uploaded .txt as HTML).
+    // Strict: yes — no reason to ever relax this.
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
+  },
+  {
+    // Block the page from being embedded in frames on other origins.
+    // Strict: yes — prevents clickjacking. SAMEORIGIN allows your own iframes.
+    key: 'X-Frame-Options',
+    value: 'SAMEORIGIN',
+  },
+  {
+    // Control how much referrer info is sent with outbound navigations.
+    // Strict: strict-origin-when-cross-origin is the best balance — sends the
+    // origin (not full URL path) on cross-origin requests, full referrer for
+    // same-origin. Protects query strings with tokens/ids from leaking.
+    key: 'Referrer-Policy',
+    value: 'strict-origin-when-cross-origin',
+  },
+
+  // --- MODERATE ---
+  {
+    // Opts out of Google FLoC / Topics API tracking.
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()',
+  },
+  {
+    // Legacy XSS filter (Chrome removed it, but some browsers still honour it).
+    key: 'X-XSS-Protection',
+    value: '1; mode=block',
+  },
+  {
+    // Prevent DNS prefetching of external links to avoid privacy leaks.
+    key: 'X-DNS-Prefetch-Control',
+    value: 'on',
+  },
+];
+
 const nextConfig: NextConfig = {
-  // ESLint configuration moved to eslint.config.mjs in Next.js 16
-  // TypeScript errors are checked during build by default
   images: {
     remotePatterns: [
       {
@@ -19,6 +100,15 @@ const nextConfig: NextConfig = {
         hostname: '*.googleusercontent.com',
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        // Apply security headers to all routes
+        source: '/(.*)',
+        headers: securityHeaders,
+      },
+    ];
   },
 };
 

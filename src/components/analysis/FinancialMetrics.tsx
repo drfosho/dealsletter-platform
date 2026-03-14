@@ -14,12 +14,30 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
 
+  // Calculate proper cash required for flips (down payment + closing costs)
+  // Hard money lenders fund 100% of rehab via holdback - NOT from investor cash
+  const calculateFlipCashRequired = () => {
+    const loanAmount = purchasePrice - downPayment;
+    const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
+    const pointsCost = (loanAmount * points) / 100;
+    const otherClosingCosts = purchasePrice * 0.005; // 0.5% title/escrow
+    const totalClosingCosts = pointsCost + otherClosingCosts;
+    return downPayment + totalClosingCosts;
+  };
+  const flipCashRequired = isFlipStrategy ? calculateFlipCashRequired() : 0;
+
   // Inline rent editing state
   const [isEditingRent, setIsEditingRent] = useState(false);
   const [isEditingRentPerUnit, setIsEditingRentPerUnit] = useState(false);
   const [editedRent, setEditedRent] = useState('');
   const [editedRentPerUnit, setEditedRentPerUnit] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Operating expense overrides
+  const [expenseOverrides, setExpenseOverrides] = useState<Record<string, number>>({});
+  const [editingExpense, setEditingExpense] = useState<string | null>(null);
+  const [editedExpenseValue, setEditedExpenseValue] = useState('');
+  const [editingAsPercent, setEditingAsPercent] = useState(false);
 
   // Get initial rent value
   const initialMonthlyRent = analysis.ai_analysis?.financial_metrics?.monthly_rent ||
@@ -127,6 +145,45 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
     setEditedRentPerUnit('');
   };
 
+  // Fields that support percent-of-rent editing
+  const percentFields = new Set(['vacancy', 'maintenance', 'propertyManagement']);
+
+  // Operating expense editing handlers
+  const handleExpenseEdit = (field: string, currentValue: number, asPercent: boolean) => {
+    setEditingExpense(field);
+    setEditingAsPercent(asPercent);
+    if (asPercent && currentRent > 0) {
+      setEditedExpenseValue(((currentValue / currentRent) * 100).toFixed(1));
+    } else {
+      setEditedExpenseValue(Math.round(currentValue).toString());
+    }
+  };
+
+  const handleExpenseSave = (field: string) => {
+    const parsed = parseFloat(editedExpenseValue);
+    if (!isNaN(parsed) && parsed >= 0) {
+      const dollarValue = editingAsPercent ? (parsed / 100) * currentRent : parsed;
+      setExpenseOverrides(prev => ({ ...prev, [field]: dollarValue }));
+    }
+    setEditingExpense(null);
+    setEditedExpenseValue('');
+    setEditingAsPercent(false);
+  };
+
+  const handleExpenseCancel = () => {
+    setEditingExpense(null);
+    setEditedExpenseValue('');
+    setEditingAsPercent(false);
+  };
+
+  const handleExpenseReset = (field: string) => {
+    setExpenseOverrides(prev => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const metrics = useMemo(() => {
     const loanAmount = purchasePrice - downPayment;
 
@@ -140,96 +197,210 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
       // Get metrics from AI analysis if available
       // CRITICAL FIX: Check multiple locations for profit and ROI
-      // Data can be at top level (from DB) or nested in ai_analysis.financial_metrics
+      // Data can be at top level (from DB), in ai_analysis.financial_metrics,
+      // or in analysis_data.calculatedMetrics (new backup location)
+      // Use nullish coalescing (??) to properly handle 0 as a valid value
       const aiMetrics = analysis.ai_analysis?.financial_metrics;
-      let netProfit = (analysis as any).profit ||
-                       aiMetrics?.total_profit ||
-                       aiMetrics?.net_profit ||
-                       (analysis as any).analysis_data?.profit ||
-                       0;
-      let roi = (analysis as any).roi ||
-                 aiMetrics?.roi ||
-                 (analysis as any).analysis_data?.roi ||
-                 0;
+      const savedMetrics = (analysis as any).analysis_data?.calculatedMetrics;
+
+      // Helper to get first non-null/undefined value (0 is valid)
+      const getFirstDefined = (...values: (number | undefined | null)[]): number | undefined => {
+        for (const v of values) {
+          if (v !== undefined && v !== null) return v;
+        }
+        return undefined;
+      };
+
+      let netProfit = getFirstDefined(
+        (analysis as any).profit,
+        savedMetrics?.profit,
+        aiMetrics?.total_profit,
+        aiMetrics?.net_profit,
+        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.total_profit,
+        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.net_profit,
+        (analysis as any).analysis_data?.profit
+      );
+
+      let roi = getFirstDefined(
+        (analysis as any).roi,
+        savedMetrics?.roi,
+        aiMetrics?.roi,
+        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.roi,
+        (analysis as any).analysis_data?.roi
+      );
 
       console.log('[FinancialMetrics] Flip metrics debug:', {
         topLevelProfit: (analysis as any).profit,
         topLevelRoi: (analysis as any).roi,
+        savedMetricsProfit: savedMetrics?.profit,
+        savedMetricsRoi: savedMetrics?.roi,
+        savedMetricsArv: savedMetrics?.arv,
         aiMetricsProfit: aiMetrics?.total_profit,
         aiMetricsRoi: aiMetrics?.roi,
+        aiMetricsArv: (aiMetrics as any)?.arv,
         initialNetProfit: netProfit,
         initialRoi: roi
       });
 
-      // ARV: Use the saved ARV from analysis_data (set during wizard),
-      // then fall back to AI metrics, then comparables, then estimate
-      const estimatedARV = (analysis as any).analysis_data?.arv ||
-                        (aiMetrics as any)?.arv ||
+      // CRITICAL FIX: ARV must be HIGHER than purchase price for flip profitability
+      // ARV = After Repair Value = what property will sell for AFTER renovations
+      // PRIORITY: Use saved ARV from analysis first (generated with user inputs)
+      // Check multiple locations where ARV might be stored
+      let estimatedARV = (aiMetrics as any)?.arv ||
+                        savedMetrics?.arv ||
+                        (analysis as any).analysis_data?.arv ||
+                        (analysis as any).analysis_data?.ai_analysis?.financial_metrics?.arv ||
                         (analysis as any).analysis_data?.strategy_details?.arv ||
-                        (analysis.property_data as any)?.comparables?.value ||
-                        purchasePrice * 1.18;
+                        0;
 
-      console.log('[FinancialMetrics] ARV source:', {
-        savedARV: (analysis as any).analysis_data?.arv,
-        aiMetricsARV: (aiMetrics as any)?.arv,
-        comparablesValue: (analysis.property_data as any)?.comparables?.value,
-        finalARV: estimatedARV
-      });
+      // Only use comparables.value as absolute last resort (it's current market value, not ARV)
+      // and only if it's higher than purchase price (indicating potential appreciation)
+      if (estimatedARV === 0) {
+        const comparablesValue = (analysis.property_data as any)?.comparables?.value || 0;
+        // Only use comparables if significantly higher than purchase (suggests value-add potential)
+        if (comparablesValue > purchasePrice * 1.1) {
+          estimatedARV = comparablesValue;
+        }
+      }
 
-      // Use saved loan terms from analysis_data for consistency with wizard inputs
-      const savedLoanTerms = (analysis as any).analysis_data?.loan_terms || {};
-      const interestRate = savedLoanTerms.interestRate ||
-                          analysis.interest_rate ||
-                          (analysis as any).analysis_data?.interest_rate ||
-                          10;
-      // CRITICAL: Use timeline from strategy_details, NOT loan_term
-      // loan_term = loan maturity (1-2 years for hard money)
-      // timeline = actual project duration for holding costs (3-12 months)
-      const holdingMonths = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
-                            parseInt((analysis as any).strategy_details?.timeline) ||
-                            (analysis as any).analysis_data?.flip_timeline_months ||
-                            6;
-      const points = savedLoanTerms.points || 0;
-      const loanType = savedLoanTerms.loanType || 'conventional';
-
-      const flipInputs: FlipCalculationInputs = {
-        purchasePrice,
-        downPaymentPercent: analysis.down_payment_percent || 20,
-        interestRate,
-        loanTermYears: 1,
-        renovationCosts: rehabCosts,
-        arv: estimatedARV,
-        holdingPeriodMonths: holdingMonths,
-        loanType: loanType as 'conventional' | 'hardMoney',
-        points,
-        isHardMoney: loanType === 'hardMoney' || points >= 2
+      // Renovation level multipliers for ARV calculation
+      const renovationLevel = (analysis as any).strategy_details?.renovationLevel ||
+                             (analysis as any).strategyDetails?.renovationLevel ||
+                             (analysis as any).analysis_data?.strategy_details?.renovationLevel ||
+                             'moderate';
+      const renovationMultipliers: Record<string, number> = {
+        cosmetic: 1.12,
+        moderate: 1.18,
+        extensive: 1.25,
+        gut: 1.35
       };
+      const multiplier = renovationMultipliers[renovationLevel] || 1.18;
 
-      console.log('[FinancialMetrics] Calculating flip with inputs:', flipInputs);
+      // CRITICAL VALIDATION: ARV must be at least 15% higher than purchase price for flips
+      if (estimatedARV <= purchasePrice) {
+        console.log('[FinancialMetrics] WARNING: ARV <= purchase price, recalculating');
+        // Calculate proper ARV based on purchase price + renovation value
+        estimatedARV = Math.round(purchasePrice * multiplier);
+      } else if (estimatedARV < purchasePrice * 1.15) {
+        // If ARV is barely above purchase price, adjust it
+        console.log('[FinancialMetrics] WARNING: ARV too close to purchase price, adjusting');
+        estimatedARV = Math.round(purchasePrice * multiplier);
+      }
 
-      const flipResults = calculateFlipReturns(flipInputs);
-
-      console.log('[FinancialMetrics] Flip results:', {
-        netProfit: flipResults.netProfit,
-        roi: flipResults.roi,
-        cashRequired: flipResults.cashRequired,
-        profitMargin: flipResults.profitMargin,
-        isHardMoney: flipResults.isHardMoney,
-        rehabHoldback: flipResults.rehabHoldback,
-        isValid: flipResults.validation.isValid
+      console.log('[FinancialMetrics] ARV Calculation:', {
+        originalARV: (analysis.property_data as any)?.comparables?.value,
+        renovationLevel,
+        multiplier,
+        purchasePrice,
+        finalARV: estimatedARV,
+        arvIsValid: estimatedARV > purchasePrice
       });
+
+      // CRITICAL FIX: Only recalculate if values are truly missing (undefined/null)
+      // A value of 0 is valid (break-even deal) and should NOT trigger recalculation
+      // This handles cases where the DB update failed or values weren't saved properly
+      const needsRecalculation = (netProfit === undefined || roi === undefined) &&
+                                  purchasePrice > 0 &&
+                                  estimatedARV > purchasePrice;
+
+      if (needsRecalculation) {
+        console.log('[FinancialMetrics] RECALCULATING: netProfit or ROI is undefined, using centralized calculator');
+
+        // Get loan details from analysis data
+        const interestRate = analysis.interest_rate ||
+                            (analysis as any).analysis_data?.interest_rate ||
+                            10.45;
+        // CRITICAL: Use timeline from strategy_details, NOT loan_term
+        // loan_term = loan maturity (1-2 years for hard money)
+        // timeline = actual project duration for holding costs (3-12 months)
+        const holdingMonths = parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                              parseInt((analysis as any).strategy_details?.timeline) ||
+                              (analysis as any).analysis_data?.flip_timeline_months ||
+                              6;
+        const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
+        const loanType = (analysis as any).analysis_data?.loan_terms?.loanType || 'hardMoney';
+
+        const flipInputs: FlipCalculationInputs = {
+          purchasePrice,
+          downPaymentPercent: analysis.down_payment_percent || 20,
+          interestRate,
+          loanTermYears: 1,
+          renovationCosts: rehabCosts,
+          arv: estimatedARV,
+          holdingPeriodMonths: holdingMonths,
+          loanType: loanType as 'conventional' | 'hardMoney',
+          points,
+          isHardMoney: loanType === 'hardMoney' || points >= 2
+        };
+
+        console.log('[FinancialMetrics] Recalculating with inputs:', flipInputs);
+
+        const flipResults = calculateFlipReturns(flipInputs);
+
+        console.log('[FinancialMetrics] Recalculated results:', {
+          netProfit: flipResults.netProfit,
+          roi: flipResults.roi,
+          profitMargin: flipResults.profitMargin,
+          isValid: flipResults.validation.isValid
+        });
+
+        // Use recalculated values (these are always numbers from the calculator)
+        const recalculatedNetProfit = flipResults.netProfit;
+        const recalculatedRoi = flipResults.roi;
+
+        // Also get proper investment values from the calculator
+        const totalInvestment = flipResults.cashRequired;
+        const profitMargin = flipResults.profitMargin;
+
+        return {
+          purchasePrice,
+          rehabCosts,
+          totalInvestment,
+          estimatedARV,
+          netProfit: recalculatedNetProfit,
+          roi: recalculatedRoi,
+          profitMargin,
+          holdingPeriod: holdingMonths / 12,
+          // Set rental metrics to 0 for flips
+          monthlyRent: 0,
+          monthlyPayment: 0,
+          totalExpenses: 0,
+          monthlyCashFlow: 0,
+          annualCashFlow: 0,
+          annualNOI: 0,
+          capRate: 0,
+          cashOnCashReturn: 0,
+          totalReturn: recalculatedRoi,
+          totalCashInvested: totalInvestment,
+          propertyTax: 0,
+          insurance: 0,
+          maintenance: 0,
+          vacancy: 0,
+          propertyManagement: 0
+        };
+      }
+
+      // Calculate values using stored data (original path when values are present)
+      // Default undefined values to 0 (only reach here if we have at least one valid saved value)
+      const finalNetProfit = netProfit ?? 0;
+      const finalRoi = roi ?? 0;
+      const closingCosts = purchasePrice * 0.03;
+      const totalInvestment = downPayment + rehabCosts + closingCosts;
+      const profitMargin = estimatedARV > 0 ? (finalNetProfit / estimatedARV) * 100 : 0;
 
       return {
         purchasePrice,
         rehabCosts,
-        totalInvestment: flipResults.cashRequired,
+        totalInvestment,
         estimatedARV,
-        netProfit: flipResults.netProfit,
-        roi: flipResults.roi,
-        profitMargin: flipResults.profitMargin,
-        holdingPeriod: holdingMonths / 12,
-        isHardMoney: flipResults.isHardMoney,
-        rehabHoldback: flipResults.rehabHoldback,
+        netProfit: finalNetProfit,
+        roi: finalRoi,
+        profitMargin,
+        // CRITICAL: Use timeline from strategy_details, NOT loan_term
+        holdingPeriod: (parseInt((analysis as any).analysis_data?.strategy_details?.timeline) ||
+                       parseInt((analysis as any).strategy_details?.timeline) ||
+                       (analysis as any).analysis_data?.flip_timeline_months ||
+                       6) / 12, // Convert months to years for display
         // Set rental metrics to 0 for flips
         monthlyRent: 0,
         monthlyPayment: 0,
@@ -239,8 +410,8 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
         annualNOI: 0,
         capRate: 0,
         cashOnCashReturn: 0,
-        totalReturn: flipResults.roi,
-        totalCashInvested: flipResults.cashRequired,
+        totalReturn: finalRoi,
+        totalCashInvested: totalInvestment,
         propertyTax: 0,
         insurance: 0,
         maintenance: 0,
@@ -264,13 +435,13 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
     console.log('[FinancialMetrics] Using rent:', { monthlyRent, units, rentPerUnit, isMultiFamily });
 
-    // Calculate expenses (simplified)
-    const propertyTax = (purchasePrice * 0.012) / 12; // 1.2% annual
-    const insurance = (purchasePrice * 0.004) / 12; // 0.4% annual
+    // Calculate expenses (use overrides if set, otherwise use defaults)
+    const propertyTax = expenseOverrides.propertyTax ?? (purchasePrice * 0.012) / 12; // 1.2% annual
+    const insurance = expenseOverrides.insurance ?? (purchasePrice * 0.004) / 12; // 0.4% annual
     const hoa = 0; // Could be added from property data
-    const maintenance = monthlyRent * 0.1; // 10% of rent
-    const vacancy = monthlyRent * 0.08; // 8% vacancy rate
-    const propertyManagement = analysis.strategy === 'rental' ? monthlyRent * 0.08 : 0;
+    const maintenance = expenseOverrides.maintenance ?? monthlyRent * 0.1; // 10% of rent
+    const vacancy = expenseOverrides.vacancy ?? monthlyRent * 0.08; // 8% vacancy rate
+    const propertyManagement = expenseOverrides.propertyManagement ?? (analysis.strategy === 'rental' ? monthlyRent * 0.08 : 0);
 
     const totalExpenses = monthlyPayment + propertyTax + insurance + 
                          hoa + maintenance + vacancy + propertyManagement;
@@ -317,7 +488,7 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
       propertyManagement,
       rentPerUnit
     };
-  }, [analysis, isFlipStrategy, purchasePrice, downPayment, currentRent, isMultiFamily, units]);
+  }, [analysis, isFlipStrategy, purchasePrice, downPayment, currentRent, isMultiFamily, units, expenseOverrides]);
 
   function calculateFirstYearPrincipal(
     loanAmount: number, 
@@ -349,6 +520,128 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
 
   const formatPercent = (value: number) => {
     return `${value.toFixed(1)}%`;
+  };
+
+  const renderEditableExpense = (label: string, field: string, value: number) => {
+    const isEditing = editingExpense === field;
+    const isOverridden = field in expenseOverrides;
+    const supportsPercent = percentFields.has(field);
+    const currentPercent = currentRent > 0 ? (value / currentRent) * 100 : 0;
+
+    return (
+      <div key={field} className="flex justify-between items-center py-2 border-b border-border/50">
+        <span className="text-muted">
+          {label}
+          {!isEditing && supportsPercent && (
+            <span className="text-xs ml-1">({currentPercent.toFixed(1)}%)</span>
+          )}
+          {isOverridden && (
+            <button
+              onClick={() => handleExpenseReset(field)}
+              className="text-xs text-blue-500 hover:text-blue-600 ml-1"
+              title="Reset to default"
+            >
+              (reset)
+            </button>
+          )}
+        </span>
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              {supportsPercent && (
+                <button
+                  onClick={() => {
+                    const currentVal = parseFloat(editedExpenseValue) || 0;
+                    if (editingAsPercent) {
+                      // Switch to dollar: convert current % to $
+                      setEditingAsPercent(false);
+                      setEditedExpenseValue(Math.round((currentVal / 100) * currentRent).toString());
+                    } else {
+                      // Switch to percent: convert current $ to %
+                      setEditingAsPercent(true);
+                      setEditedExpenseValue(currentRent > 0 ? ((currentVal / currentRent) * 100).toFixed(1) : '0');
+                    }
+                  }}
+                  className="text-xs px-1.5 py-0.5 rounded border border-border hover:border-primary text-muted hover:text-primary transition-colors"
+                  title={editingAsPercent ? 'Switch to dollar amount' : 'Switch to percentage'}
+                >
+                  {editingAsPercent ? '%→$' : '$→%'}
+                </button>
+              )}
+              <span className="text-red-600 text-sm">{editingAsPercent ? '%' : '$'}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={editedExpenseValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                    setEditedExpenseValue(val);
+                  }
+                }}
+                className="w-28 px-2 py-1 border border-primary rounded text-right"
+                autoFocus
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleExpenseSave(field);
+                  if (e.key === 'Escape') handleExpenseCancel();
+                }}
+              />
+              <button
+                onClick={() => handleExpenseSave(field)}
+                className="text-green-600 hover:text-green-700"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </button>
+              <button
+                onClick={handleExpenseCancel}
+                className="text-red-600 hover:text-red-700"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <span className={`font-medium text-red-600 ${isOverridden ? 'underline decoration-dotted' : ''}`}>
+                -{formatCurrency(value)}
+              </span>
+              {supportsPercent ? (
+                <span className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => handleExpenseEdit(field, value, true)}
+                    className="text-muted hover:text-primary text-xs px-1"
+                    title="Edit as percentage"
+                  >
+                    %
+                  </button>
+                  <button
+                    onClick={() => handleExpenseEdit(field, value, false)}
+                    className="text-muted hover:text-primary text-xs px-1"
+                    title="Edit as dollar amount"
+                  >
+                    $
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => handleExpenseEdit(field, value, false)}
+                  className="text-muted hover:text-primary"
+                  title="Edit this expense"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -472,23 +765,18 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border/50">
                 <span className="text-muted">Rehab Costs</span>
-                <div className="text-right">
-                  <span className="font-medium">
-                    {formatCurrency((metrics as any).rehabCosts)}
-                  </span>
-                  {(metrics as any).isHardMoney && (metrics as any).rehabCosts > 0 && (
-                    <p className="text-xs text-green-600">Funded by lender via holdback</p>
-                  )}
-                </div>
+                <span className="font-medium">
+                  {formatCurrency((metrics as any).rehabCosts)}
+                </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-border/50">
-                <span className="text-muted">Closing Costs</span>
+                <span className="text-muted">Closing & Holding</span>
                 <span className="font-medium">
-                  {formatCurrency((metrics as any).totalInvestment - downPayment)}
+                  {formatCurrency((metrics as any).totalInvestment - (metrics as any).rehabCosts - downPayment)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 font-semibold">
-                <span>Cash Required</span>
+                <span>Total Investment</span>
                 <span className="text-primary">
                   {formatCurrency((metrics as any).totalInvestment)}
                 </span>
@@ -540,11 +828,18 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                     <>
                       <span className="text-muted">$</span>
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={editedRent}
-                        onChange={(e) => setEditedRent(e.target.value)}
-                        className="w-24 px-2 py-1 border border-primary rounded text-right text-sm"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            setEditedRent(val);
+                          }
+                        }}
+                        className="w-28 px-2 py-1 border border-primary rounded text-right text-sm"
                         autoFocus
+                        onFocus={(e) => e.target.select()}
                         onKeyDown={(e) => e.key === 'Enter' && handleRentSave()}
                       />
                       <button
@@ -591,11 +886,18 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                       <>
                         <span className="text-muted text-xs">$</span>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           value={editedRentPerUnit}
-                          onChange={(e) => setEditedRentPerUnit(e.target.value)}
-                          className="w-20 px-2 py-1 border border-primary rounded text-right text-xs"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setEditedRentPerUnit(val);
+                            }
+                          }}
+                          className="w-24 px-2 py-1 border border-primary rounded text-right text-xs"
                           autoFocus
+                          onFocus={(e) => e.target.select()}
                           onKeyDown={(e) => e.key === 'Enter' && handleRentPerUnitSave()}
                         />
                         <button
@@ -652,38 +954,13 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                 -{formatCurrency(metrics.monthlyPayment)}
               </span>
             </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Property Tax</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.propertyTax)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Insurance</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.insurance)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Maintenance (10%)</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.maintenance)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b border-border/50">
-              <span className="text-muted">Vacancy (8%)</span>
-              <span className="font-medium text-red-600">
-                -{formatCurrency(metrics.vacancy)}
-              </span>
-            </div>
-            {metrics.propertyManagement > 0 && (
-              <div className="flex justify-between items-center py-2 border-b border-border/50">
-                <span className="text-muted">Property Mgmt (8%)</span>
-                <span className="font-medium text-red-600">
-                  -{formatCurrency(metrics.propertyManagement)}
-                </span>
-              </div>
-            )}
+            {renderEditableExpense('Property Tax', 'propertyTax', metrics.propertyTax)}
+            {renderEditableExpense('Insurance', 'insurance', metrics.insurance)}
+            {renderEditableExpense('Maintenance', 'maintenance', metrics.maintenance)}
+            {renderEditableExpense('Vacancy', 'vacancy', metrics.vacancy)}
+            {(metrics.propertyManagement > 0 || expenseOverrides.propertyManagement !== undefined) &&
+              renderEditableExpense('Property Mgmt', 'propertyManagement', metrics.propertyManagement)
+            }
             <div className="flex justify-between items-center py-2 font-semibold">
               <span>Total Expenses</span>
               <span className="text-red-600">
@@ -704,19 +981,19 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
             <div className="bg-muted/20 rounded-lg p-3">
               <p className="text-sm text-muted mb-1">Cash Required</p>
               <p className="font-semibold text-primary">
-                {formatCurrency((metrics as any).totalInvestment)}
+                {formatCurrency(flipCashRequired)}
               </p>
               <p className="text-xs text-muted mt-1">
                 Down payment + closing costs
               </p>
             </div>
             <div className="bg-muted/20 rounded-lg p-3">
-              <p className="text-sm text-muted mb-1">Net Profit</p>
-              <p className={`font-semibold ${(metrics as any).netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency((metrics as any).netProfit)}
+              <p className="text-sm text-muted mb-1">Total Investment</p>
+              <p className="font-semibold text-primary">
+                {formatCurrency((metrics as any).totalInvestment)}
               </p>
               <p className="text-xs text-muted mt-1">
-                ARV minus all costs
+                All-in project cost
               </p>
             </div>
             <div className="bg-muted/20 rounded-lg p-3">

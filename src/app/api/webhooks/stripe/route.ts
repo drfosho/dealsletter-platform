@@ -144,23 +144,11 @@ export async function POST(request: NextRequest) {
             updated_at: new Date().toISOString()
           };
 
-          // Try with metadata first
-          let updateResult = await supabase
+          // Update subscription record
+          await supabase
             .from('subscriptions')
-            .update({
-              ...updateData,
-              metadata: subscription.metadata
-            })
+            .update(updateData)
             .eq('stripe_subscription_id', subscription.id);
-
-          // If metadata column doesn't exist, try without it
-          if (updateResult.error && updateResult.error.message.includes('metadata')) {
-            console.log('[Webhook] Metadata column not found, updating without it');
-            await supabase
-              .from('subscriptions')
-              .update(updateData)
-              .eq('stripe_subscription_id', subscription.id);
-          }
           
           console.log(`[Webhook] Updated subscription ${subscription.id} for user ${userId}`);
         }
@@ -390,24 +378,15 @@ async function handleSubscriptionCreated(
     updated_at: new Date().toISOString()
   };
 
-  // Try with metadata first, if it fails, try without
-  let result = await supabase
+  // Create/update subscription record
+  const result = await supabase
     .from('subscriptions')
-    .upsert({
-      ...subscriptionData,
-      metadata: subscription.metadata
-    }, {
+    .upsert(subscriptionData, {
       onConflict: 'user_id'
     });
 
-  // If metadata column doesn't exist, try without it
-  if (result.error && result.error.message.includes('metadata')) {
-    console.log('[Webhook] Metadata column not found, creating subscription without it');
-    result = await supabase
-      .from('subscriptions')
-      .upsert(subscriptionData, {
-        onConflict: 'user_id'
-      });
+  if (result.error) {
+    console.error('[Webhook] Subscription upsert error:', result.error);
   }
 
   // Initialize usage tracking for the new period

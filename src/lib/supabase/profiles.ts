@@ -29,13 +29,14 @@ export async function getUserProfile(userId: string) {
       .single();
 
     if (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error fetching user profile:', JSON.stringify(error, null, 2));
+      console.error('Raw error object:', error);
       return { data: null, error };
     }
 
     return { data, error: null };
   } catch (error) {
-    console.error('Error in getUserProfile:', error);
+    console.error('Error in getUserProfile:', error instanceof Error ? error.message : JSON.stringify(error));
     return { data: null, error };
   }
 }

@@ -5,20 +5,23 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 
-type SubscriptionTier = 'basic' | 'pro' | 'pro-plus' | 'premium';
-
-interface UsageData {
-  analysisCount: number;
-  monthYear: string;
+interface UsageInfo {
+  can_analyze: boolean;
+  analyses_used: number;
+  tier_limit: number;
+  remaining: number;
+  subscription_tier: string;
+  subscription_status: string;
+  trial_end: string | null;
+  current_period_end: string | null;
+  is_admin: boolean;
 }
 
 export default function AccountPage() {
   const router = useRouter();
   const { user, loading: authLoading, signOut } = useAuth();
-  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>('basic');
-  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBillingLoading, setIsBillingLoading] = useState(false);
 
@@ -27,30 +30,13 @@ export default function AccountPage() {
 
     setIsLoading(true);
     try {
-      // Fetch usage from API endpoint (includes admin checks)
-      const response = await fetch('/api/analysis/usage');
-      if (response.ok) {
-        const usageData = await response.json();
-
-        // Handle admin users with unlimited access
-        if (usageData.is_admin) {
-          setSubscriptionTier('premium'); // Display as premium for admin
-          setUsageData({
-            analysisCount: usageData.analyses_used || 0,
-            monthYear: new Date().toISOString().slice(0, 7) // Current month
-          });
-        } else {
-          // Normalize tier name
-          const normalizedTier = (usageData.subscription_tier || 'basic').toLowerCase().replace('_', '-') as SubscriptionTier;
-          setSubscriptionTier(normalizedTier);
-          setUsageData({
-            analysisCount: usageData.analyses_used || 0,
-            monthYear: new Date().toISOString().slice(0, 7)
-          });
-        }
+      const res = await fetch('/api/analysis/usage');
+      if (res.ok) {
+        const data = await res.json();
+        setUsageInfo(data);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Error fetching usage data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -86,48 +72,59 @@ export default function AccountPage() {
     }
   };
 
+  const tier = usageInfo?.subscription_tier || 'free';
+  const isAdmin = usageInfo?.is_admin || false;
+  const isPaid = tier === 'pro' || tier === 'pro-plus' || tier === 'premium' || tier === 'enterprise';
+
   const getTierDisplayName = () => {
-    switch (subscriptionTier) {
-      case 'pro-plus':
-        return 'Pro Plus';
+    if (isAdmin) return 'Admin';
+    switch (tier) {
+      case 'pro-plus': return 'Pro Plus';
       case 'premium':
-      case 'pro':
-        return 'Pro';
-      default:
-        return 'Free';
+      case 'pro': return 'Pro';
+      case 'enterprise': return 'Enterprise';
+      default: return 'Free';
     }
   };
 
   const getTierColor = () => {
-    switch (subscriptionTier) {
-      case 'pro-plus':
-        return 'bg-gradient-to-r from-indigo-500 to-purple-600';
+    if (isAdmin) return 'bg-gradient-to-r from-amber-500 to-orange-600';
+    switch (tier) {
+      case 'pro-plus': return 'bg-gradient-to-r from-indigo-500 to-purple-600';
       case 'premium':
-      case 'pro':
-        return 'bg-gradient-to-r from-purple-500 to-blue-500';
-      default:
-        return 'bg-gradient-to-r from-gray-500 to-gray-600';
+      case 'pro': return 'bg-gradient-to-r from-purple-500 to-blue-500';
+      default: return 'bg-gradient-to-r from-gray-500 to-gray-600';
     }
   };
 
-  const getMonthlyLimit = () => {
-    const limit = SUBSCRIPTION_LIMITS[subscriptionTier];
-    return limit === -1 ? 'Unlimited' : limit;
+  const getMonthlyLimitDisplay = () => {
+    if (isAdmin) return 'Unlimited';
+    return usageInfo?.tier_limit ?? 3;
   };
 
   const getUsagePercentage = () => {
-    if (!usageData) return 0;
-    const limit = SUBSCRIPTION_LIMITS[subscriptionTier];
-    if (limit === -1 || limit === undefined) return 0;
-    return Math.min((usageData.analysisCount / limit) * 100, 100);
+    if (!usageInfo || isAdmin) return 0;
+    if (usageInfo.tier_limit <= 0) return 0;
+    return Math.min((usageInfo.analyses_used / usageInfo.tier_limit) * 100, 100);
   };
 
-  const getRemainingAnalyses = () => {
-    if (!usageData) return 0;
-    const limit = SUBSCRIPTION_LIMITS[subscriptionTier];
-    if (limit === undefined) return 0;
-    return Math.max(limit - usageData.analysisCount, 0);
+  const getRemainingDisplay = () => {
+    if (isAdmin) return '\u221E'; // infinity symbol
+    return usageInfo?.remaining ?? 0;
   };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const isTrialing = usageInfo?.subscription_status === 'trialing' && usageInfo?.trial_end;
+  const trialEndDate = formatDate(usageInfo?.trial_end ?? null);
+  const nextBillingDate = formatDate(usageInfo?.current_period_end ?? null);
 
   const getInitials = () => {
     const firstName = user?.user_metadata?.first_name;
@@ -177,8 +174,6 @@ export default function AccountPage() {
   if (!user) {
     return null;
   }
-
-  const remaining = getRemainingAnalyses();
 
   return (
     <div className="min-h-screen bg-background">
@@ -234,27 +229,41 @@ export default function AccountPage() {
                 <div className="flex items-center gap-3 mb-1">
                   <span className="text-xl font-bold text-primary">{getTierDisplayName()} Plan</span>
                   <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                    subscriptionTier === 'basic'
-                      ? 'bg-gray-500/10 text-gray-600 border border-gray-500/20'
-                      : 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
+                    isTrialing
+                      ? 'bg-blue-500/10 text-blue-600 border border-blue-500/20'
+                      : !isPaid && !isAdmin
+                        ? 'bg-gray-500/10 text-gray-600 border border-gray-500/20'
+                        : 'bg-purple-500/10 text-purple-600 border border-purple-500/20'
                   }`}>
-                    {subscriptionTier === 'basic' ? 'Free' : 'Active'}
+                    {isAdmin ? 'Admin' : isTrialing ? 'Trial' : !isPaid ? 'Free' : 'Active'}
                   </span>
                 </div>
                 <p className="text-muted">
-                  {subscriptionTier === 'basic'
-                    ? `${SUBSCRIPTION_LIMITS.basic} property analyses per month`
-                    : `${SUBSCRIPTION_LIMITS[subscriptionTier] === -1 ? 'Unlimited' : SUBSCRIPTION_LIMITS[subscriptionTier]} property analyses per month`}
+                  {isAdmin
+                    ? 'Unlimited property analyses'
+                    : `${usageInfo?.tier_limit ?? 3} property analyses per month`
+                  }
                 </p>
+                {/* Trial / Billing date info */}
+                {isTrialing && trialEndDate && (
+                  <p className="text-sm text-blue-600 mt-1">
+                    Free trial ends: {trialEndDate}
+                  </p>
+                )}
+                {!isTrialing && isPaid && nextBillingDate && (
+                  <p className="text-sm text-muted mt-1">
+                    Next billing date: {nextBillingDate}
+                  </p>
+                )}
               </div>
-              {subscriptionTier === 'basic' ? (
+              {!isPaid && !isAdmin ? (
                 <Link
                   href="/pricing"
                   className="px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-semibold shadow-md shadow-purple-500/20"
                 >
                   Upgrade to Pro
                 </Link>
-              ) : (
+              ) : !isAdmin ? (
                 <div className="flex items-center gap-3">
                   <Link
                     href="/account/subscription"
@@ -270,19 +279,19 @@ export default function AccountPage() {
                     {isBillingLoading ? 'Loading...' : 'Billing Portal'}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
 
-            {subscriptionTier === 'basic' && (
+            {!isPaid && !isAdmin && (
               <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <svg className="w-5 h-5 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <div>
-                    <div className="font-medium text-primary mb-1">Upgrade to Pro for {SUBSCRIPTION_LIMITS.pro} analyses/month</div>
+                    <div className="font-medium text-primary mb-1">Upgrade to Pro for 50 analyses/month</div>
                     <p className="text-sm text-muted">
-                      Get {SUBSCRIPTION_LIMITS.pro} property analyses per month, priority support, and detailed projections for just $29/month.
+                      Get 50 property analyses per month, priority support, and detailed projections for just $29/month.
                     </p>
                   </div>
                 </div>
@@ -300,35 +309,38 @@ export default function AccountPage() {
             <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center p-4 bg-muted/5 rounded-xl">
                 <div className="text-3xl font-bold text-primary mb-1">
-                  {usageData?.analysisCount || 0}
+                  {usageInfo?.analyses_used ?? 0}
                 </div>
                 <div className="text-sm text-muted">Analyses Used</div>
               </div>
 
               <div className="text-center p-4 bg-muted/5 rounded-xl">
                 <div className="text-3xl font-bold text-primary mb-1">
-                  {getMonthlyLimit()}
+                  {getMonthlyLimitDisplay()}
                 </div>
                 <div className="text-sm text-muted">Monthly Limit</div>
               </div>
 
               <div className="text-center p-4 bg-muted/5 rounded-xl">
                 <div className={`text-3xl font-bold mb-1 ${
-                  remaining === -1 ? 'text-green-600' :
-                  remaining === 0 ? 'text-red-600' :
-                  remaining <= 5 ? 'text-orange-600' : 'text-primary'
+                  isAdmin ? 'text-green-600' :
+                  (usageInfo?.remaining ?? 0) === 0 ? 'text-red-600' :
+                  (usageInfo?.remaining ?? 0) <= 5 ? 'text-orange-600' : 'text-primary'
                 }`}>
-                  {remaining === -1 ? '∞' : remaining}
+                  {getRemainingDisplay()}
                 </div>
                 <div className="text-sm text-muted">Remaining</div>
               </div>
             </div>
 
-            {subscriptionTier === 'basic' && (
+            {/* Usage progress bar — show for all non-admin users */}
+            {!isAdmin && (
               <div className="mt-6">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted">Usage Progress</span>
-                  <span className="font-medium">{usageData?.analysisCount || 0} / {SUBSCRIPTION_LIMITS.basic}</span>
+                  <span className="font-medium">
+                    {usageInfo?.analyses_used ?? 0} / {usageInfo?.tier_limit ?? 3} used this month
+                  </span>
                 </div>
                 <div className="w-full bg-muted/20 rounded-full h-3 overflow-hidden">
                   <div
@@ -339,9 +351,14 @@ export default function AccountPage() {
                     style={{ width: `${getUsagePercentage()}%` }}
                   />
                 </div>
-                {getUsagePercentage() >= 100 && (
+                {getUsagePercentage() >= 100 && !isPaid && (
                   <p className="text-sm text-red-600 mt-2">
-                    You&apos;ve reached your monthly limit. Upgrade to Pro for {SUBSCRIPTION_LIMITS.pro} analyses/month.
+                    You&apos;ve reached your monthly limit. <Link href="/pricing" className="underline font-medium">Upgrade to Pro</Link> for 50 analyses/month.
+                  </p>
+                )}
+                {getUsagePercentage() >= 100 && isPaid && (
+                  <p className="text-sm text-red-600 mt-2">
+                    You&apos;ve reached your monthly limit. Usage resets on your next billing date.
                   </p>
                 )}
               </div>

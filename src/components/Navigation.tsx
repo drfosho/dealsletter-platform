@@ -4,36 +4,37 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { SUBSCRIPTION_LIMITS } from '@/lib/supabase/usage-tracking';
 
 interface NavigationProps {
   variant?: 'default';
+}
+
+interface UsageInfo {
+  analyses_used: number;
+  tier_limit: number;
+  remaining: number;
+  subscription_tier: string;
+  is_admin: boolean;
 }
 
 export default function Navigation({ variant: _variant = 'default' }: NavigationProps) {
   const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [subscriptionTier, setSubscriptionTier] = useState<'basic' | 'pro' | 'pro-plus' | 'premium'>('basic');
-  const [remainingAnalyses, setRemainingAnalyses] = useState<number | null>(null);
+  const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const subscriptionTier = usageInfo?.subscription_tier || 'free';
+  const isAdmin = usageInfo?.is_admin || false;
 
   const fetchUserData = useCallback(async () => {
     if (!user?.id) return;
 
     try {
-      // Fetch usage from API endpoint (includes admin checks)
-      const response = await fetch('/api/analysis/usage');
-      if (response.ok) {
-        const usageData = await response.json();
-        // Handle admin users with unlimited access
-        if (usageData.is_admin) {
-          setSubscriptionTier('premium'); // Display as premium for admin
-          setRemainingAnalyses(-1); // -1 indicates unlimited
-        } else {
-          setSubscriptionTier(usageData.subscription_tier || 'basic');
-          setRemainingAnalyses(usageData.remaining ?? 0);
-        }
+      const res = await fetch('/api/analysis/usage');
+      if (res.ok) {
+        const data = await res.json();
+        setUsageInfo(data);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -89,7 +90,9 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
   };
 
   const getTierColor = () => {
+    if (isAdmin) return 'bg-gradient-to-r from-amber-500 to-orange-600';
     switch (subscriptionTier) {
+      case 'pro-plus':
       case 'premium':
       case 'pro':
         return 'bg-gradient-to-r from-blue-500 to-cyan-500';
@@ -99,6 +102,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
   };
 
   const getTierBadgeColor = () => {
+    if (isAdmin) return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
     switch (subscriptionTier) {
       case 'pro-plus':
         return 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20';
@@ -111,16 +115,16 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
   };
 
   const getTierDisplayName = () => {
+    if (isAdmin) return 'Admin';
     switch (subscriptionTier) {
-      case 'pro-plus':
-        return 'Pro Plus';
+      case 'pro-plus': return 'Pro Plus';
       case 'premium':
-      case 'pro':
-        return 'Pro';
-      default:
-        return 'Free';
+      case 'pro': return 'Pro';
+      default: return 'Free';
     }
   };
+
+  const isPaid = subscriptionTier === 'pro' || subscriptionTier === 'pro-plus' || subscriptionTier === 'premium' || subscriptionTier === 'enterprise';
 
   return (
     <header className="bg-card border-b border-border/20 sticky top-0 z-50">
@@ -161,13 +165,13 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
             {user ? (
               <>
                 {/* Analyses Remaining Indicator */}
-                {remainingAnalyses !== null && (
+                {usageInfo && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/10 rounded-lg">
                     <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     <span className="text-sm font-medium">
-                      {remainingAnalyses === -1 || subscriptionTier === 'pro' || subscriptionTier === 'premium' ? 'Unlimited' : `${remainingAnalyses}/${SUBSCRIPTION_LIMITS[subscriptionTier] || 3}`}
+                      {isAdmin ? 'Unlimited' : `${usageInfo.analyses_used}/${usageInfo.tier_limit}`}
                     </span>
                   </div>
                 )}
@@ -247,17 +251,17 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-xs text-muted">Monthly Usage</span>
                             <span className="text-xs font-medium">
-                              {remainingAnalyses === -1 || subscriptionTier === 'pro' || subscriptionTier === 'premium' ? 'Unlimited' :
-                               `${remainingAnalyses !== null ? (SUBSCRIPTION_LIMITS[subscriptionTier] || 3) - remainingAnalyses : 0} / ${SUBSCRIPTION_LIMITS[subscriptionTier] || 3}`}
+                              {isAdmin ? 'Unlimited' :
+                               `${usageInfo?.analyses_used ?? 0} / ${usageInfo?.tier_limit ?? 3}`}
                             </span>
                           </div>
-                          {subscriptionTier === 'basic' && remainingAnalyses !== -1 && (
+                          {!isAdmin && usageInfo && (
                             <div className="w-full bg-muted/20 rounded-full h-2 overflow-hidden">
                               <div
                                 className="h-full bg-accent transition-all duration-300"
                                 style={{
-                                  width: `${remainingAnalyses !== null ?
-                                    (((SUBSCRIPTION_LIMITS[subscriptionTier] || 3) - remainingAnalyses) / (SUBSCRIPTION_LIMITS[subscriptionTier] || 3)) * 100
+                                  width: `${usageInfo.tier_limit > 0
+                                    ? Math.min((usageInfo.analyses_used / usageInfo.tier_limit) * 100, 100)
                                     : 0}%`
                                 }}
                               />
@@ -265,7 +269,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                           )}
                         </div>
 
-                        {subscriptionTier === 'basic' && remainingAnalyses !== -1 && (
+                        {!isPaid && !isAdmin && (
                           <Link
                             href="/pricing"
                             className="flex items-center justify-center gap-2 mx-3 mt-2 px-3 py-2 bg-primary text-secondary text-sm rounded-lg hover:bg-primary/90 transition-colors font-medium"
@@ -351,10 +355,9 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                       {getTierDisplayName()}
                     </span>
                     <span className="text-xs text-muted">
-                      {remainingAnalyses === -1 ? 'Unlimited analyses' :
-                       subscriptionTier === 'pro-plus' ? `${remainingAnalyses}/200 analyses` :
-                       subscriptionTier === 'pro' || subscriptionTier === 'premium' ? `${remainingAnalyses}/50 analyses` :
-                       `${remainingAnalyses}/${SUBSCRIPTION_LIMITS[subscriptionTier] || 3} analyses`}
+                      {isAdmin ? 'Unlimited analyses' :
+                       usageInfo ? `${usageInfo.analyses_used}/${usageInfo.tier_limit} analyses` :
+                       '...'}
                     </span>
                   </div>
                 </div>
@@ -420,7 +423,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                     Account
                   </Link>
 
-                  {subscriptionTier === 'basic' && remainingAnalyses !== -1 && (
+                  {!isPaid && !isAdmin && (
                     <Link
                       href="/pricing"
                       className="px-6 py-3 bg-primary text-secondary rounded-lg hover:bg-primary/90 transition-colors font-medium min-h-[44px] flex items-center justify-center"

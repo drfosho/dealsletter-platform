@@ -36,11 +36,6 @@ function secureCompare(a: string, b: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  // Allow API routes to pass through without middleware auth (they handle their own auth)
-  if (request.nextUrl.pathname.startsWith('/api')) {
-    return NextResponse.next({ request });
-  }
-
   // Check if the request is for the admin area (non-API)
   if (request.nextUrl.pathname.startsWith('/admin')) {
     let adminPassword: string
