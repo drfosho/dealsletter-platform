@@ -54,20 +54,18 @@ export default function Home() {
       {/* Navigation */}
       <nav className={`fixed top-0 w-full px-4 sm:px-6 z-50 transition-all duration-300 ${
         isScrolled
-          ? 'py-2 bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-lg'
-          : 'py-3 bg-background/80 backdrop-blur-xl border-b border-border/20'
+          ? 'py-2.5 bg-background/95 backdrop-blur-xl border-b border-border/40 shadow-lg'
+          : 'py-2.5 bg-background/80 backdrop-blur-xl border-b border-border/20'
       }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/" className="hover:opacity-80 transition-opacity">
-              <div className="relative">
+              <div className="relative h-7 sm:h-9 md:h-10" style={{ aspectRatio: '4' }}>
                 <Logo
-                  width={180}
-                  height={45}
-                  className="h-8 sm:h-10 md:h-11 w-auto"
+                  className="h-full w-auto"
                   priority
                 />
-                <div className="absolute top-0.5 sm:top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="absolute top-0 -right-1 w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
               </div>
             </Link>
           </div>
@@ -880,11 +878,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <Logo
-                width={140}
-                height={35}
-                className="h-8 w-auto mb-4"
-              />
+              <Logo className="h-8 w-auto mb-4" />
               <p className="text-sm text-muted">
                 AI-powered property analysis for smarter real estate investments.
               </p>

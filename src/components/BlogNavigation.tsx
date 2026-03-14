@@ -12,11 +12,9 @@ export default function BlogNavigation() {
       <nav className="fixed top-0 w-full px-3 sm:px-6 py-1.5 sm:py-3 bg-background/80 backdrop-blur-xl z-50 border-b border-border/20">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <Link href="/" className="block hover:opacity-80 transition-opacity">
-            <div className="relative w-[100px] sm:w-[140px] md:w-[200px] lg:w-[240px]">
-              <Logo 
-                width={240}
-                height={60}
-                className="w-full h-auto"
+            <div className="relative h-7 sm:h-9">
+              <Logo
+                className="h-full w-auto"
                 priority
               />
               <div className="hidden sm:block absolute top-1 -right-1 w-1.5 h-1.5 md:w-2 md:h-2 bg-green-500 rounded-full animate-pulse"></div>

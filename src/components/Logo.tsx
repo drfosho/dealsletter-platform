@@ -1,4 +1,4 @@
-import Image from 'next/image';
+/* eslint-disable @next/next/no-img-element */
 
 interface LogoProps {
   width?: number;
@@ -7,26 +7,22 @@ interface LogoProps {
   priority?: boolean;
 }
 
-export default function Logo({ width = 200, height = 50, className = "", priority = false }: LogoProps) {
+export default function Logo({ className = "", priority = false }: LogoProps) {
   return (
-    <div className={`relative ${className}`} style={{ lineHeight: 0 }}>
+    <div className={`relative ${className}`}>
       {/* Light mode logo */}
-      <Image
+      <img
         src="/logos/websiteMainLogoLight.png"
         alt="Dealsletter Logo"
-        width={width}
-        height={height}
         className="block dark:hidden h-full w-auto"
-        priority={priority}
+        {...(priority ? { fetchPriority: 'high' } : {})}
       />
       {/* Dark mode logo */}
-      <Image
+      <img
         src="/logos/websiteMainLogo.png"
         alt="Dealsletter Logo"
-        width={width}
-        height={height}
         className="hidden dark:block h-full w-auto"
-        priority={priority}
+        {...(priority ? { fetchPriority: 'high' } : {})}
       />
     </div>
   );
