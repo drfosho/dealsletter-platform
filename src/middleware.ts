@@ -176,6 +176,8 @@ export async function middleware(request: NextRequest) {
   const isBlogPage = request.nextUrl.pathname.startsWith('/blog')
   const isPricingPage = request.nextUrl.pathname === '/pricing'
   const isAccountPage = request.nextUrl.pathname.startsWith('/account')
+  const isTermsPage = request.nextUrl.pathname === '/terms'
+  const isPrivacyPage = request.nextUrl.pathname === '/privacy'
 
   // Allow API routes to pass through without authentication
   if (isApiRoute) {
@@ -183,7 +185,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Public routes that don't require authentication
-  const isPublicRoute = isHomePage || isAuthPage || isContactPage || isFAQPage || isBlogPage || isPricingPage
+  const isPublicRoute = isHomePage || isAuthPage || isContactPage || isFAQPage || isBlogPage || isPricingPage || isTermsPage || isPrivacyPage
 
   // If user is not logged in and trying to access protected routes
   if (!user && !isPublicRoute) {
