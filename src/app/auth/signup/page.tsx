@@ -619,12 +619,13 @@ export default function SignUpPage() {
           <div className="mt-8 p-4 bg-card rounded-lg border border-border/40">
             <div className="flex items-center space-x-3">
               <div className="flex -space-x-2">
-                <div className="w-8 h-8 bg-accent/20 rounded-full border-2 border-card"></div>
-                <div className="w-8 h-8 bg-primary/20 rounded-full border-2 border-card"></div>
-                <div className="w-8 h-8 bg-accent/30 rounded-full border-2 border-card"></div>
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full border-2 border-card flex items-center justify-center text-white text-xs font-bold">JR</div>
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full border-2 border-card flex items-center justify-center text-white text-xs font-bold">AM</div>
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full border-2 border-card flex items-center justify-center text-white text-xs font-bold">KT</div>
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full border-2 border-card flex items-center justify-center text-white text-xs font-bold">SL</div>
               </div>
               <p className="text-sm text-muted">
-                <strong className="text-primary">1,000+</strong> investors trust Dealsletter
+                <strong className="text-primary">1,700+</strong> investors trust Dealsletter
               </p>
             </div>
           </div>
