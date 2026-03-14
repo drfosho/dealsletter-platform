@@ -1,6 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto'
 
 // SEC-001: Require ADMIN_PASSWORD from environment - no fallback
 function getAdminPassword(): string {
@@ -14,25 +13,56 @@ function getAdminPassword(): string {
   return password
 }
 
-// SEC-002: Generate secure session token instead of storing password
-function generateSessionToken(): string {
-  return randomBytes(32).toString('hex')
+// Helper: convert ArrayBuffer to hex string
+function bufferToHex(buffer: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
-// SEC-002: Create HMAC signature for session validation
-function signSessionToken(token: string, password: string): string {
-  return createHmac('sha256', password).update(token).digest('hex')
+// Helper: encode string to Uint8Array
+function encode(str: string): Uint8Array {
+  return new TextEncoder().encode(str)
+}
+
+// SEC-002: Generate secure session token using Web Crypto API
+function generateSessionToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return bufferToHex(bytes.buffer)
+}
+
+// SEC-002: Create HMAC signature for session validation using Web Crypto API
+async function signSessionToken(token: string, password: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encode(password),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const signature = await crypto.subtle.sign('HMAC', key, encode(token))
+  return bufferToHex(signature)
 }
 
 // SEC-002: Timing-safe password comparison
 function secureCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    // Still do a comparison to maintain constant time
-    const dummy = Buffer.from(a)
-    timingSafeEqual(dummy, dummy)
+  // Constant-time comparison: always compare full length via XOR
+  const aBuf = encode(a)
+  const bBuf = encode(b)
+  if (aBuf.length !== bBuf.length) {
+    // Still iterate to maintain constant time relative to input
+    let diff = 1
+    for (let i = 0; i < aBuf.length; i++) {
+      diff |= aBuf[i] ^ (bBuf[i % bBuf.length] || 0)
+    }
     return false
   }
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+  let diff = 0
+  for (let i = 0; i < aBuf.length; i++) {
+    diff |= aBuf[i] ^ bBuf[i]
+  }
+  return diff === 0
 }
 
 export async function middleware(request: NextRequest) {
@@ -52,7 +82,7 @@ export async function middleware(request: NextRequest) {
 
     // SEC-002: Check if already authenticated via signed session cookie
     if (sessionCookie?.value && signatureCookie?.value) {
-      const expectedSig = signSessionToken(sessionCookie.value, adminPassword)
+      const expectedSig = await signSessionToken(sessionCookie.value, adminPassword)
       if (secureCompare(signatureCookie.value, expectedSig)) {
         return NextResponse.next({ request });
       }
@@ -62,7 +92,7 @@ export async function middleware(request: NextRequest) {
     if (authHeader) {
       const [type, credentials] = authHeader.split(' ');
       if (type === 'Basic' && credentials) {
-        const decoded = Buffer.from(credentials, 'base64').toString();
+        const decoded = atob(credentials);
         const [, password] = decoded.split(':');
 
         // SEC-002: Use timing-safe comparison for password
@@ -71,7 +101,7 @@ export async function middleware(request: NextRequest) {
 
           // SEC-002: Generate signed session token instead of storing password
           const sessionToken = generateSessionToken()
-          const sessionSig = signSessionToken(sessionToken, adminPassword)
+          const sessionSig = await signSessionToken(sessionToken, adminPassword)
 
           response.cookies.set('admin-session', sessionToken, {
             httpOnly: true,
