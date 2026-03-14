@@ -40,7 +40,7 @@ export default function SubscriptionPage() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-3">
-              <Logo className="h-7 sm:h-9 w-auto" priority />
+              <Logo className="h-9 sm:h-10 md:h-12 w-auto" priority />
             </Link>
           </div>
           
