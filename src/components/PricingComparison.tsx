@@ -59,7 +59,7 @@ export default function PricingComparison() {
       borderColor: 'border-gray-300',
       bgGradient: 'from-gray-500/5 to-gray-500/10',
       features: [
-        '3 property analyses per month',
+        '10 property analyses per month',
         'Basic property insights',
         'Access to blog content',
         'Email support',
@@ -82,9 +82,7 @@ export default function PricingComparison() {
       borderColor: 'border-purple-500',
       bgGradient: 'from-purple-500/5 to-blue-500/5',
       popular: true,
-      trialDays: 14,
       features: [
-        '14-day free trial',
         '50 property analyses per month',
         'Detailed investment projections',
         'AI-powered investment insights',
@@ -93,7 +91,7 @@ export default function PricingComparison() {
         'Priority email support',
       ],
       notIncluded: [],
-      buttonText: 'Start 14-Day Free Trial',
+      buttonText: 'Get Started',
       valueProposition: 'Just $0.58 per analysis',
     },
     {
@@ -107,9 +105,7 @@ export default function PricingComparison() {
       color: 'bg-gradient-to-r from-indigo-600 to-purple-700',
       borderColor: 'border-indigo-500',
       bgGradient: 'from-indigo-500/5 to-purple-500/5',
-      trialDays: 14,
       features: [
-        '14-day free trial',
         '200 property analyses per month',
         'Everything in Pro',
         'Advanced analytics dashboard',
@@ -118,7 +114,7 @@ export default function PricingComparison() {
         'Custom reporting',
       ],
       notIncluded: [],
-      buttonText: 'Start 14-Day Free Trial',
+      buttonText: 'Get Started',
       valueProposition: 'Just $0.30 per analysis',
     },
   ];
@@ -134,7 +130,7 @@ export default function PricingComparison() {
           Simple, Transparent Pricing
         </h2>
         <p className="text-xl text-muted max-w-2xl mx-auto mb-8">
-          Analyze any property in seconds. Start free with 3 analyses per month, or try Pro free for 14 days.
+          Analyze any property in seconds. Start free with 10 analyses per month, or upgrade to Pro for more.
         </p>
 
         {/* Billing Toggle */}
@@ -221,14 +217,6 @@ export default function PricingComparison() {
                 </p>
               )}
               <p className="text-muted text-sm">{plan.description}</p>
-              {plan.tier !== 'free' && (
-                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-600 rounded-full text-sm font-medium">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  14-day free trial
-                </div>
-              )}
             </div>
 
             {/* CTA Button */}
@@ -324,7 +312,7 @@ export default function PricingComparison() {
               </tr>
               <tr className="border-b border-border/40">
                 <td className="px-6 py-3 text-sm text-primary">Monthly analyses</td>
-                <td className="text-center px-4 py-3 text-sm font-semibold">3</td>
+                <td className="text-center px-4 py-3 text-sm font-semibold">10</td>
                 <td className="text-center px-4 py-3 text-sm font-semibold">50</td>
                 <td className="text-center px-4 py-3 text-sm font-semibold">200</td>
               </tr>
@@ -408,9 +396,9 @@ export default function PricingComparison() {
         <h3 className="text-2xl font-bold text-primary mb-8">Frequently Asked Questions</h3>
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
           <div>
-            <h4 className="font-semibold text-primary mb-2">How does the 14-day free trial work?</h4>
+            <h4 className="font-semibold text-primary mb-2">How does the free plan work?</h4>
             <p className="text-muted text-sm">
-              Start your Pro or Pro Plus trial with full access to all features. You won&apos;t be charged until day 15. Cancel anytime during the trial at no cost.
+              Get 10 property analyses per month at no cost, with no credit card required. Upgrade to Pro or Pro Plus anytime for more analyses and premium features.
             </p>
           </div>
           <div>

@@ -878,6 +878,13 @@ export default function Step3Financial({
     setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
+  // Batch update multiple financial fields at once to avoid stale closure issues
+  const handleBatchFieldChange = (updates: Partial<typeof financial>) => {
+    const newFinancial = { ...financial, ...updates };
+    setFinancial(newFinancial);
+    updateData({ financial: newFinancial });
+  };
+
   const calculateLoanAmount = () => {
     if (!financial.purchasePrice || financial.downPaymentPercent === undefined) return 0;
     const downPayment = (financial.purchasePrice * financial.downPaymentPercent) / 100;
@@ -1117,22 +1124,19 @@ export default function Step3Financial({
                       value={financial.units || ''}
                       onChange={(e) => {
                         const value = e.target.value;
-                        // CRITICAL FIX: Allow empty value during editing
-                        // Parse and only update if valid number, otherwise let the field be empty
                         const units = parseInt(value);
                         if (!isNaN(units) && units > 0) {
-                          handleFieldChange('units', units);
-                          // Update total rent when units change
+                          // Batch update units + recalculated total rent in one state update
+                          const updates: Partial<typeof financial> = { units };
                           if (financial.rentPerUnit) {
-                            handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                            updates.monthlyRent = financial.rentPerUnit * units;
                           }
+                          handleBatchFieldChange(updates);
                         } else if (value === '') {
-                          // Allow empty field - will be validated on blur
                           handleFieldChange('units', 0);
                         }
                       }}
                       onBlur={(e) => {
-                        // Reset to 1 if left empty or zero on blur
                         if (!e.target.value || financial.units === 0) {
                           handleFieldChange('units', 1);
                         }
@@ -1142,7 +1146,7 @@ export default function Step3Financial({
                       placeholder={extractUnits().toString()}
                     />
                   </div>
-                  
+
                   {/* Rent Per Unit */}
                   <div>
                     <label className="block text-xs font-medium text-muted mb-1">Rent Per Unit</label>
@@ -1153,12 +1157,16 @@ export default function Step3Financial({
                         value={financial.rentPerUnit || ''}
                         onChange={(e) => {
                           const raw = e.target.value;
-                          handleFieldChange('rentPerUnit', raw);
-                          // Only cross-update total rent when user has typed a real number
                           const rentPerUnit = parseFloat(raw);
                           if (!isNaN(rentPerUnit) && raw !== '') {
                             const units = financial.units || unitCount;
-                            handleFieldChange('monthlyRent', rentPerUnit * units);
+                            // Batch update rentPerUnit + total rent in one state update
+                            handleBatchFieldChange({
+                              rentPerUnit: parsePrice(raw),
+                              monthlyRent: rentPerUnit * units
+                            });
+                          } else {
+                            handleFieldChange('rentPerUnit', raw);
                           }
                         }}
                         className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1166,7 +1174,7 @@ export default function Step3Financial({
                       />
                     </div>
                   </div>
-                  
+
                   {/* Total Monthly Rent (Editable) */}
                   <div>
                     <label className="block text-xs font-medium text-muted mb-1">Total Monthly Rent</label>
@@ -1177,14 +1185,19 @@ export default function Step3Financial({
                         value={financial.monthlyRent || ''}
                         onChange={(e) => {
                           const raw = e.target.value;
-                          handleFieldChange('monthlyRent', raw);
-                          // Only cross-update rent per unit when user has typed a real number
                           const totalRent = parseFloat(raw);
                           if (!isNaN(totalRent) && raw !== '') {
                             const units = financial.units || unitCount;
+                            // Batch update monthlyRent + rentPerUnit in one state update
+                            const updates: Partial<typeof financial> = {
+                              monthlyRent: parsePrice(raw)
+                            };
                             if (units > 1) {
-                              handleFieldChange('rentPerUnit', totalRent / units);
+                              updates.rentPerUnit = totalRent / units;
                             }
+                            handleBatchFieldChange(updates);
+                          } else {
+                            handleFieldChange('monthlyRent', raw);
                           }
                         }}
                         className="w-full pl-8 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -1584,22 +1597,19 @@ export default function Step3Financial({
             value={financial.units || ''}
             onChange={(e) => {
               const value = e.target.value;
-              // CRITICAL FIX: Allow empty value during editing
-              // Parse and only update if valid number, otherwise let the field be empty
               const units = parseInt(value);
               if (!isNaN(units) && units > 0) {
-                handleFieldChange('units', units);
-                // Update rent calculations if we have rent per unit
+                // Batch update units + recalculated total rent in one state update
+                const updates: Partial<typeof financial> = { units };
                 if (financial.rentPerUnit) {
-                  handleFieldChange('monthlyRent', financial.rentPerUnit * units);
+                  updates.monthlyRent = financial.rentPerUnit * units;
                 }
+                handleBatchFieldChange(updates);
               } else if (value === '') {
-                // Allow empty field - will be validated on blur
                 handleFieldChange('units', 0);
               }
             }}
             onBlur={(e) => {
-              // Reset to 1 if left empty or zero on blur
               if (!e.target.value || financial.units === 0) {
                 handleFieldChange('units', 1);
               }

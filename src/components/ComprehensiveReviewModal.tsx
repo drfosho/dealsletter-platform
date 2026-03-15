@@ -182,7 +182,11 @@ export default function ComprehensiveReviewModal({
                   <input
                     type="number"
                     value={reviewData.bedrooms || ''}
-                    onChange={(e) => setReviewData({ ...reviewData, bedrooms: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setReviewData({ ...reviewData, bedrooms: val === '' ? 0 : (parseInt(val) >= 0 ? parseInt(val) : reviewData.bedrooms) });
+                    }}
+                    min="0"
                     className="w-full px-3 py-2 bg-background border border-border/60 rounded-lg"
                   />
                 </div>
@@ -192,7 +196,11 @@ export default function ComprehensiveReviewModal({
                     type="number"
                     step="0.5"
                     value={reviewData.bathrooms || ''}
-                    onChange={(e) => setReviewData({ ...reviewData, bathrooms: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setReviewData({ ...reviewData, bathrooms: val === '' ? 0 : (parseFloat(val) >= 0 ? parseFloat(val) : reviewData.bathrooms) });
+                    }}
+                    min="0"
                     className="w-full px-3 py-2 bg-background border border-border/60 rounded-lg"
                   />
                 </div>
@@ -201,7 +209,11 @@ export default function ComprehensiveReviewModal({
                   <input
                     type="number"
                     value={reviewData.sqft || ''}
-                    onChange={(e) => setReviewData({ ...reviewData, sqft: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setReviewData({ ...reviewData, sqft: val === '' ? 0 : (parseInt(val) >= 0 ? parseInt(val) : reviewData.sqft) });
+                    }}
+                    min="0"
                     className="w-full px-3 py-2 bg-background border border-border/60 rounded-lg"
                   />
                 </div>
@@ -210,7 +222,10 @@ export default function ComprehensiveReviewModal({
                   <input
                     type="number"
                     value={reviewData.yearBuilt || ''}
-                    onChange={(e) => setReviewData({ ...reviewData, yearBuilt: parseInt(e.target.value) || null })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setReviewData({ ...reviewData, yearBuilt: val === '' ? null : (parseInt(val) >= 0 ? parseInt(val) : reviewData.yearBuilt) });
+                    }}
                     className="w-full px-3 py-2 bg-background border border-border/60 rounded-lg"
                   />
                 </div>

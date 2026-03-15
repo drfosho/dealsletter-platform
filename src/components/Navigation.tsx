@@ -254,7 +254,7 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                             <span className="text-xs text-muted">Monthly Usage</span>
                             <span className="text-xs font-medium">
                               {isAdmin ? 'Unlimited' :
-                               `${usageInfo?.analyses_used ?? 0} / ${usageInfo?.tier_limit ?? 3}`}
+                               `${usageInfo?.analyses_used ?? 0} / ${usageInfo?.tier_limit ?? 10}`}
                             </span>
                           </div>
                           {!isAdmin && usageInfo && (

@@ -385,7 +385,7 @@ export default function Home() {
                 <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-green-600 font-medium">3 free analyses/month</span>
+                <span className="text-green-600 font-medium">10 free analyses/month</span>
               </div>
               <div className="flex items-center space-x-2 bg-green-500/5 px-3 py-1.5 rounded-full border border-green-500/20">
                 <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -931,7 +931,7 @@ export default function Home() {
             Join thousands of investors making data-driven decisions.
           </p>
           <p className="text-base text-purple-600 font-medium mb-10">
-            Start with 3 free analyses/month. Upgrade to Pro for 50 analyses @ $29/mo.
+            Start with 10 free analyses/month. Upgrade to Pro for 50 analyses @ $29/mo.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

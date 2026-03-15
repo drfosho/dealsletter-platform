@@ -239,7 +239,6 @@ export async function POST(request: NextRequest) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       subscription_data: {
-        trial_period_days: 14,
         metadata: {
           tierName: tierName || 'unknown',
           billingPeriod: billingPeriod || 'monthly',

@@ -17,7 +17,6 @@ const PRODUCTS = {
         currency: 'usd',
         recurring: {
           interval: 'month' as const,
-          trial_period_days: 7
         }
       },
       yearly: {
@@ -25,7 +24,6 @@ const PRODUCTS = {
         currency: 'usd',
         recurring: {
           interval: 'year' as const,
-          trial_period_days: 7
         }
       }
     }
@@ -44,7 +42,6 @@ const PRODUCTS = {
         currency: 'usd',
         recurring: {
           interval: 'month' as const,
-          trial_period_days: 7
         }
       },
       yearly: {
@@ -52,7 +49,6 @@ const PRODUCTS = {
         currency: 'usd',
         recurring: {
           interval: 'year' as const,
-          trial_period_days: 7
         }
       }
     }
@@ -71,7 +67,6 @@ const PRODUCTS = {
         currency: 'usd',
         recurring: {
           interval: 'month' as const,
-          trial_period_days: 7
         }
       },
       yearly: {
@@ -79,7 +74,6 @@ const PRODUCTS = {
         currency: 'usd',
         recurring: {
           interval: 'year' as const,
-          trial_period_days: 7
         }
       }
     }

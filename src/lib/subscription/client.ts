@@ -71,13 +71,23 @@ export interface SubscriptionWithUsage {
 }
 
 // Get user's current subscription
+// Checks user_profiles first (primary source — updated by Stripe webhook),
+// then falls back to the subscriptions table.
 export async function getUserSubscription(): Promise<Subscription | null> {
   const supabase = createClient();
-  
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  // Check user_profiles first (this is where the Stripe webhook writes)
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('subscription_tier, subscription_status, stripe_customer_id, stripe_subscription_id, current_period_end, cancel_at_period_end')
+    .eq('id', user.id)
+    .single();
+
+  // Also check subscriptions table
+  const { data: sub, error } = await supabase
     .from('subscriptions')
     .select('*')
     .eq('user_id', user.id)
@@ -86,19 +96,57 @@ export async function getUserSubscription(): Promise<Subscription | null> {
     .limit(1)
     .single();
 
-  if (error) {
+  if (error && error.code !== 'PGRST116') {
     console.error('Error fetching subscription:', error);
-    return null;
   }
 
-  return data;
+  // If we have a subscriptions row, use it but overlay profile tier if higher
+  if (sub) {
+    const profileTier = profile?.subscription_tier?.toLowerCase() || 'free';
+    const subTier = sub.tier?.toLowerCase() || 'free';
+    const profileLimit = DEFAULT_LIMITS[profileTier]?.analysis_limit || 10;
+    const subLimit = DEFAULT_LIMITS[subTier]?.analysis_limit || 10;
+    if (profileLimit > subLimit) {
+      sub.tier = profileTier as SubscriptionTier;
+    }
+    // Ensure stripe_customer_id is populated from profile if missing
+    if (!sub.stripe_customer_id && profile?.stripe_customer_id) {
+      sub.stripe_customer_id = profile.stripe_customer_id;
+    }
+    return sub;
+  }
+
+  // No subscriptions row — build a Subscription-like object from user_profiles
+  if (profile?.subscription_tier && profile.subscription_tier !== 'free' && profile.subscription_tier !== 'basic') {
+    return {
+      id: user.id,
+      user_id: user.id,
+      stripe_customer_id: profile.stripe_customer_id || null,
+      stripe_subscription_id: profile.stripe_subscription_id || null,
+      stripe_price_id: null,
+      status: (profile.subscription_status as SubscriptionStatus) || 'active',
+      tier: profile.subscription_tier.toLowerCase() as SubscriptionTier,
+      current_period_start: null,
+      current_period_end: profile.current_period_end || null,
+      cancel_at_period_end: profile.cancel_at_period_end || false,
+      cancel_at: null,
+      canceled_at: null,
+      trial_start: null,
+      trial_end: null,
+      metadata: {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  return null;
 }
 
 // Default limits by tier (fallback if not in database)
 const DEFAULT_LIMITS: Record<string, UsageLimit> = {
-  'free': { tier: 'free', analysis_limit: 3, features: { deal_alerts: false, pdf_export: true, priority_support: false } },
-  'basic': { tier: 'basic', analysis_limit: 3, features: { deal_alerts: false, pdf_export: true, priority_support: false } },
-  'starter': { tier: 'starter', analysis_limit: 3, features: { deal_alerts: false, pdf_export: true, priority_support: false } },
+  'free': { tier: 'free', analysis_limit: 10, features: { deal_alerts: false, pdf_export: false, priority_support: false } },
+  'basic': { tier: 'basic', analysis_limit: 10, features: { deal_alerts: false, pdf_export: false, priority_support: false } },
+  'starter': { tier: 'starter', analysis_limit: 10, features: { deal_alerts: false, pdf_export: false, priority_support: false } },
   'pro': { tier: 'pro', analysis_limit: 50, features: { deal_alerts: true, pdf_export: true, priority_support: true, advanced_analysis: true } },
   'professional': { tier: 'professional', analysis_limit: 50, features: { deal_alerts: true, pdf_export: true, priority_support: true, advanced_analysis: true } },
   'pro-plus': { tier: 'pro-plus', analysis_limit: 200, features: { deal_alerts: true, pdf_export: true, priority_support: true, advanced_analysis: true, api_access: true } },
@@ -130,11 +178,12 @@ export async function getUsageLimits(tier: SubscriptionTier): Promise<UsageLimit
 // Get current usage for the user
 export async function getCurrentUsage(): Promise<UsageTracking | null> {
   const supabase = createClient();
-  
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
   const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
@@ -142,8 +191,7 @@ export async function getCurrentUsage(): Promise<UsageTracking | null> {
     .from('usage_tracking')
     .select('*')
     .eq('user_id', user.id)
-    .gte('period_start', periodStart.toISOString())
-    .lt('period_end', periodEnd.toISOString())
+    .eq('month_year', currentMonth)
     .single();
 
   if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -151,7 +199,15 @@ export async function getCurrentUsage(): Promise<UsageTracking | null> {
     return null;
   }
 
-  return data || {
+  return data ? {
+    id: data.id,
+    user_id: data.user_id,
+    subscription_id: null,
+    period_start: periodStart.toISOString(),
+    period_end: periodEnd.toISOString(),
+    analysis_count: data.analysis_count || 0,
+    last_analysis_at: data.last_analysis_at
+  } : {
     id: '',
     user_id: user.id,
     subscription_id: null,
@@ -172,7 +228,7 @@ export async function getSubscriptionWithUsage(): Promise<SubscriptionWithUsage>
   const tier = subscription?.tier || 'free';
   const limits = await getUsageLimits(tier);
 
-  const analysisLimit = limits?.analysis_limit || 3; // Default to free tier
+  const analysisLimit = limits?.analysis_limit || 10; // Default to free tier
   const analysisUsed = usage?.analysis_count || 0;
   const remainingAnalyses = Math.max(0, analysisLimit - analysisUsed);
   const canAnalyze = remainingAnalyses > 0;

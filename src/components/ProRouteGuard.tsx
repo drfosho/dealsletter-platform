@@ -84,7 +84,7 @@ export default function ProRouteGuard({
             </div>
             <h1 className="text-2xl font-bold text-primary mb-2">Monthly Limit Reached</h1>
             <p className="text-muted mb-4">
-              {accessResult?.reason || `You've used all ${accessResult?.limit || 3} of your free analyses this month.`}
+              {accessResult?.reason || `You've used all ${accessResult?.limit || 10} of your free analyses this month.`}
             </p>
             <p className="text-sm text-muted mb-8">
               Upgrade to Pro for 50 analyses per month, or wait until next month for your free analyses to reset.

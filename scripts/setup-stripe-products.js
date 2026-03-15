@@ -23,7 +23,6 @@ const products = [
       currency: 'usd',
       recurring: {
         interval: 'month',
-        trial_period_days: 14
       }
     }
   },
@@ -40,7 +39,6 @@ const products = [
       currency: 'usd',
       recurring: {
         interval: 'month',
-        trial_period_days: 14
       }
     }
   },
@@ -56,7 +54,6 @@ const products = [
       currency: 'usd',
       recurring: {
         interval: 'month',
-        trial_period_days: 14
       }
     }
   }
@@ -166,8 +163,7 @@ async function setupProducts() {
             currency: 'usd',
             recurring: {
               interval: 'year',
-              trial_period_days: 14
-            },
+                  },
             metadata: {
               tier: productData.metadata.tier,
               billing: 'yearly'

@@ -118,31 +118,33 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
     }
   }, [analysis, onUpdate, isMultiFamily, units]);
 
-  // Handle rent edit
+  // Handle rent edit - optimistic update (update UI immediately, save in background)
   const handleRentSave = async () => {
     const newRent = parseFloat(editedRent) || 0;
     if (newRent > 0) {
-      const success = await saveRent(newRent);
-      if (success) {
-        setCurrentRent(newRent);
-      }
+      setCurrentRent(newRent); // Update UI immediately
+      setIsEditingRent(false);
+      setEditedRent('');
+      await saveRent(newRent); // Save in background
+    } else {
+      setIsEditingRent(false);
+      setEditedRent('');
     }
-    setIsEditingRent(false);
-    setEditedRent('');
   };
 
-  // Handle rent per unit edit
+  // Handle rent per unit edit - optimistic update
   const handleRentPerUnitSave = async () => {
     const newRentPerUnit = parseFloat(editedRentPerUnit) || 0;
     if (newRentPerUnit > 0) {
       const newTotalRent = newRentPerUnit * units;
-      const success = await saveRent(newTotalRent, newRentPerUnit);
-      if (success) {
-        setCurrentRent(newTotalRent);
-      }
+      setCurrentRent(newTotalRent); // Update UI immediately
+      setIsEditingRentPerUnit(false);
+      setEditedRentPerUnit('');
+      await saveRent(newTotalRent, newRentPerUnit); // Save in background
+    } else {
+      setIsEditingRentPerUnit(false);
+      setEditedRentPerUnit('');
     }
-    setIsEditingRentPerUnit(false);
-    setEditedRentPerUnit('');
   };
 
   // Fields that support percent-of-rent editing
@@ -840,7 +842,10 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                         className="w-28 px-2 py-1 border border-primary rounded text-right text-sm"
                         autoFocus
                         onFocus={(e) => e.target.select()}
-                        onKeyDown={(e) => e.key === 'Enter' && handleRentSave()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRentSave();
+                          if (e.key === 'Escape') { setIsEditingRent(false); setEditedRent(''); }
+                        }}
                       />
                       <button
                         onClick={handleRentSave}
@@ -867,8 +872,9 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                       </span>
                       <button
                         onClick={() => { setEditedRent(metrics.monthlyRent.toString()); setIsEditingRent(true); }}
-                        className="text-muted hover:text-primary p-1 rounded hover:bg-muted/20"
+                        className={`text-muted hover:text-primary p-1 rounded hover:bg-muted/20 ${isEditingRentPerUnit ? 'opacity-50 pointer-events-none' : ''}`}
                         title="Edit rent"
+                        disabled={isEditingRentPerUnit}
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -898,7 +904,10 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                           className="w-24 px-2 py-1 border border-primary rounded text-right text-xs"
                           autoFocus
                           onFocus={(e) => e.target.select()}
-                          onKeyDown={(e) => e.key === 'Enter' && handleRentPerUnitSave()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRentPerUnitSave();
+                            if (e.key === 'Escape') { setIsEditingRentPerUnit(false); setEditedRentPerUnit(''); }
+                          }}
                         />
                         <button
                           onClick={handleRentPerUnitSave}
@@ -923,8 +932,9 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
                         <span className="text-primary">{formatCurrency(Math.round(metrics.rentPerUnit))}</span>
                         <button
                           onClick={() => { setEditedRentPerUnit(Math.round(metrics.rentPerUnit).toString()); setIsEditingRentPerUnit(true); }}
-                          className="text-muted hover:text-primary p-0.5 rounded hover:bg-muted/20"
+                          className={`text-muted hover:text-primary p-0.5 rounded hover:bg-muted/20 ${isEditingRent ? 'opacity-50 pointer-events-none' : ''}`}
                           title="Edit rent per unit"
+                          disabled={isEditingRent}
                         >
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />

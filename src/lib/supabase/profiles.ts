@@ -95,7 +95,7 @@ export async function getOrCreateUserProfile(userId: string, userData?: Partial<
         .from('user_profiles')
         .insert([{
           id: userId,
-          subscription_tier: 'basic',
+          subscription_tier: 'free',
           ...userData
         }])
         .select()

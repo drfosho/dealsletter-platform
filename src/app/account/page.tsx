@@ -99,7 +99,7 @@ export default function AccountPage() {
 
   const getMonthlyLimitDisplay = () => {
     if (isAdmin) return 'Unlimited';
-    return usageInfo?.tier_limit ?? 3;
+    return usageInfo?.tier_limit ?? 10;
   };
 
   const getUsagePercentage = () => {
@@ -241,7 +241,7 @@ export default function AccountPage() {
                 <p className="text-muted">
                   {isAdmin
                     ? 'Unlimited property analyses'
-                    : `${usageInfo?.tier_limit ?? 3} property analyses per month`
+                    : `${usageInfo?.tier_limit ?? 10} property analyses per month`
                   }
                 </p>
                 {/* Trial / Billing date info */}
@@ -339,7 +339,7 @@ export default function AccountPage() {
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted">Usage Progress</span>
                   <span className="font-medium">
-                    {usageInfo?.analyses_used ?? 0} / {usageInfo?.tier_limit ?? 3} used this month
+                    {usageInfo?.analyses_used ?? 0} / {usageInfo?.tier_limit ?? 10} used this month
                   </span>
                 </div>
                 <div className="w-full bg-muted/20 rounded-full h-3 overflow-hidden">

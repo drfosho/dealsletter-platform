@@ -126,8 +126,10 @@ export default function SubscriptionManager() {
 
   const { subscription: sub, usage, limits, remainingAnalyses } = subscription || {};
   const tier = sub?.tier || 'free';
+  const isFree = !sub || tier === 'free' || tier === 'basic' || tier === 'starter';
   const isActive = sub?.status === 'active' || sub?.status === 'trialing';
   const willCancel = sub?.cancel_at_period_end;
+  const hasBilling = !!sub?.stripe_customer_id;
 
   return (
     <div className="space-y-6">
@@ -135,7 +137,12 @@ export default function SubscriptionManager() {
       <div className="bg-card rounded-xl border border-border p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-primary">Subscription Status</h2>
-          {isActive ? (
+          {isFree ? (
+            <div className="flex items-center gap-2 text-muted">
+              <AlertCircle className="w-5 h-5" />
+              <span className="font-medium">Free Plan</span>
+            </div>
+          ) : isActive ? (
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">Active</span>
@@ -159,6 +166,9 @@ export default function SubscriptionManager() {
             {sub?.status === 'trialing' && (
               <p className="text-sm text-amber-600">Trial Period</p>
             )}
+            {willCancel && (
+              <p className="text-sm text-amber-600">Canceling at period end</p>
+            )}
           </div>
 
           {/* Usage */}
@@ -168,71 +178,89 @@ export default function SubscriptionManager() {
               <span className="text-sm">Monthly Usage</span>
             </div>
             <p className="text-2xl font-bold">
-              {usage?.analysis_count || 0} / {limits?.analysis_limit || 3}
+              {usage?.analysis_count || 0} / {limits?.analysis_limit || 10}
             </p>
             <div className="w-full bg-muted/20 rounded-full h-2">
-              <div 
+              <div
                 className="bg-accent h-2 rounded-full transition-all"
-                style={{ 
-                  width: `${Math.min(100, ((usage?.analysis_count || 0) / (limits?.analysis_limit || 3)) * 100)}%` 
+                style={{
+                  width: `${Math.min(100, ((usage?.analysis_count || 0) / (limits?.analysis_limit || 10)) * 100)}%`
                 }}
               />
             </div>
           </div>
 
           {/* Billing Period */}
-          {sub?.current_period_end && (
+          {sub?.current_period_end ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-muted">
                 <Calendar className="w-4 h-4" />
-                <span className="text-sm">Next Billing Date</span>
+                <span className="text-sm">{willCancel ? 'Access Until' : 'Next Billing Date'}</span>
               </div>
               <p className="text-lg font-semibold">
                 {new Date(sub.current_period_end).toLocaleDateString()}
               </p>
               {willCancel && (
-                <p className="text-sm text-amber-600">Cancels on this date</p>
+                <p className="text-sm text-amber-600">Subscription ends on this date</p>
               )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-muted">
+                <Calendar className="w-4 h-4" />
+                <span className="text-sm">Billing</span>
+              </div>
+              <p className="text-lg font-semibold text-muted">No active billing</p>
             </div>
           )}
         </div>
 
         {/* Actions */}
         <div className="flex flex-wrap gap-4 mt-6 pt-6 border-t border-border">
-          <button
-            onClick={handleUpdatePayment}
-            disabled={actionLoading || !isActive}
-            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Manage Billing
-          </button>
+          {/* Manage Billing — only for users with a Stripe customer */}
+          {hasBilling && (
+            <button
+              onClick={handleUpdatePayment}
+              disabled={actionLoading}
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {actionLoading ? 'Loading...' : 'Manage Billing'}
+            </button>
+          )}
 
-          {isActive && !willCancel && (
+          {/* Cancel — for active paid subscriptions not already canceling */}
+          {isActive && !willCancel && !isFree && (
             <button
               onClick={handleCancelSubscription}
               disabled={actionLoading}
               className="px-4 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Cancel Subscription
+              {actionLoading ? 'Canceling...' : 'Cancel Subscription'}
             </button>
           )}
 
+          {/* Resume — for subscriptions scheduled to cancel */}
           {willCancel && (
             <button
               onClick={handleResumeSubscription}
               disabled={actionLoading}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Resume Subscription
+              {actionLoading ? 'Resuming...' : 'Resume Subscription'}
             </button>
           )}
 
-          {tier !== 'premium' && (
+          {/* Upgrade — for free users or non-premium tiers */}
+          {(isFree || (tier !== 'premium' && tier !== 'pro-plus')) && (
             <a
               href="/pricing"
-              className="px-4 py-2 border border-accent text-accent rounded-lg hover:bg-accent/10 transition-colors"
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                isFree
+                  ? 'bg-accent text-white hover:bg-accent/90'
+                  : 'border border-accent text-accent hover:bg-accent/10'
+              }`}
             >
-              Upgrade Plan
+              {isFree ? 'Upgrade to Pro' : 'Upgrade Plan'}
             </a>
           )}
         </div>

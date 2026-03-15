@@ -94,7 +94,7 @@ const faqData: FAQItem[] = [
   {
     id: 'free-plan',
     question: "What's included in the Free plan?",
-    answer: "Free users get 3 property analyses per month with access to all investment strategies, basic market insights, and PDF export. No credit card required.",
+    answer: "Free users get 10 property analyses per month with access to all investment strategies, basic market insights, and PDF export. No credit card required.",
     category: "billing"
   },
   {
@@ -106,7 +106,7 @@ const faqData: FAQItem[] = [
   {
     id: 'free-trial',
     question: "Is there a free trial?",
-    answer: "Yes! The Pro plan includes a 14-day free trial. You also get 3 free analyses per month on the Free plan with no credit card required.",
+    answer: "Yes! You get 10 free analyses per month on the Free plan with no credit card required. Upgrade to Pro or Pro Plus anytime for more analyses and premium features.",
     category: "billing"
   },
   {
@@ -138,13 +138,13 @@ const faqData: FAQItem[] = [
   {
     id: 'cancel-subscription',
     question: "Can I cancel my subscription?",
-    answer: "Yes, cancel anytime from your account settings. You'll keep Pro access until the end of your billing period, then revert to the Free plan with 3 analyses per month.",
+    answer: "Yes, cancel anytime from your account settings. You'll keep Pro access until the end of your billing period, then revert to the Free plan with 10 analyses per month.",
     category: "account"
   },
   {
     id: 'analyses-after-cancel',
     question: "What happens to my analyses if I cancel?",
-    answer: "Your saved analyses remain accessible indefinitely. You'll still have 3 free analyses per month and can view all your historical analyses.",
+    answer: "Your saved analyses remain accessible indefinitely. You'll still have 10 free analyses per month and can view all your historical analyses.",
     category: "account"
   },
   {
