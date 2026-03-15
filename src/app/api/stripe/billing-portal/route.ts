@@ -22,28 +22,28 @@ export async function POST(_request: NextRequest) {
 
     console.log('[BillingPortal] User ID:', user.id)
 
-    // Try to get Stripe customer ID from subscriptions table first (primary source)
-    const { data: subscription, error: subError } = await supabase
-      .from('subscriptions')
+    // Check user_profiles first (primary source — updated by Stripe webhook)
+    const { data: profile } = await supabase
+      .from('user_profiles')
       .select('stripe_customer_id')
-      .eq('user_id', user.id)
-      .in('status', ['active', 'trialing', 'past_due', 'canceled'])
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', user.id)
       .single()
 
-    let stripeCustomerId = subscription?.stripe_customer_id
+    let stripeCustomerId = profile?.stripe_customer_id
 
-    // Fallback to profiles table if not found in subscriptions
+    // Fallback to subscriptions table
     if (!stripeCustomerId) {
-      console.log('[BillingPortal] No customer ID in subscriptions, checking profiles...')
-      const { data: profile } = await supabase
-        .from('profiles')
+      console.log('[BillingPortal] No customer ID in user_profiles, checking subscriptions...')
+      const { data: subscription } = await supabase
+        .from('subscriptions')
         .select('stripe_customer_id')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing', 'past_due', 'canceled'])
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single()
 
-      stripeCustomerId = profile?.stripe_customer_id
+      stripeCustomerId = subscription?.stripe_customer_id
     }
 
     console.log('[BillingPortal] Stripe customer ID:', stripeCustomerId || 'NOT FOUND')

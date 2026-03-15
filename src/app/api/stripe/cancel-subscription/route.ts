@@ -22,21 +22,29 @@ export async function POST(_request: NextRequest) {
 
     console.log('[CancelSubscription] User ID:', user.id);
 
-    // Get user's subscription
-    const { data: subscription, error: subError } = await supabase
-      .from('subscriptions')
-      .select('stripe_subscription_id, stripe_customer_id, tier, status')
-      .eq('user_id', user.id)
-      .in('status', ['active', 'trialing'])
+    // Get stripe_subscription_id — check user_profiles first, then subscriptions
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('stripe_subscription_id')
+      .eq('id', user.id)
       .single();
 
-    console.log('[CancelSubscription] Current subscription:', subscription);
+    let stripeSubscriptionId = profile?.stripe_subscription_id;
 
-    if (subError) {
-      console.log('[CancelSubscription] Subscription query error:', subError);
+    if (!stripeSubscriptionId) {
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('stripe_subscription_id')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'trialing'])
+        .single();
+
+      stripeSubscriptionId = subscription?.stripe_subscription_id;
     }
 
-    if (!subscription?.stripe_subscription_id) {
+    console.log('[CancelSubscription] Stripe subscription ID:', stripeSubscriptionId);
+
+    if (!stripeSubscriptionId) {
       console.log('[CancelSubscription] No active subscription found');
       return NextResponse.json(
         { error: 'No active subscription found' },
@@ -44,11 +52,11 @@ export async function POST(_request: NextRequest) {
       );
     }
 
-    console.log('[CancelSubscription] Canceling Stripe subscription:', subscription.stripe_subscription_id);
+    console.log('[CancelSubscription] Canceling Stripe subscription:', stripeSubscriptionId);
 
     // Cancel the subscription at period end
     const updatedSubscription = await stripe.subscriptions.update(
-      subscription.stripe_subscription_id,
+      stripeSubscriptionId,
       { cancel_at_period_end: true }
     );
 
@@ -59,7 +67,20 @@ export async function POST(_request: NextRequest) {
       current_period_end: (updatedSubscription as any).current_period_end
     });
 
-    // Update in database
+    // Update user_profiles
+    const { error: profileUpdateError } = await supabase
+      .from('user_profiles')
+      .update({
+        cancel_at_period_end: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id);
+
+    if (profileUpdateError) {
+      console.error('[CancelSubscription] Profile update error:', profileUpdateError);
+    }
+
+    // Also update subscriptions table if it has a row
     const { error: updateError } = await supabase
       .from('subscriptions')
       .update({
@@ -67,10 +88,10 @@ export async function POST(_request: NextRequest) {
         cancel_at: updatedSubscription.cancel_at ?
           new Date(updatedSubscription.cancel_at * 1000).toISOString() : null
       })
-      .eq('stripe_subscription_id', subscription.stripe_subscription_id);
+      .eq('stripe_subscription_id', stripeSubscriptionId);
 
     if (updateError) {
-      console.error('[CancelSubscription] Database update error:', updateError);
+      console.error('[CancelSubscription] Subscriptions table update error:', updateError);
     } else {
       console.log('[CancelSubscription] Database updated successfully');
     }

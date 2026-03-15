@@ -162,11 +162,11 @@ function VerifyEmailContent() {
               </li>
               <li className="flex items-start">
                 <span className="bg-accent text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 mt-0.5">2</span>
-                <span>Click the verification link in the email</span>
+                <span>Click the verification link <strong>or</strong> copy the 6-digit code</span>
               </li>
               <li className="flex items-start">
                 <span className="bg-accent text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mr-3 flex-shrink-0 mt-0.5">3</span>
-                <span>Return here and click the button below</span>
+                <span>Return here or <Link href={`/auth/confirm${email ? `?email=${encodeURIComponent(email)}` : ''}`} className="text-accent hover:text-accent/80 underline">enter your code</Link></span>
               </li>
             </ol>
           </div>
@@ -187,6 +187,13 @@ function VerifyEmailContent() {
                 "I've Verified My Email"
               )}
             </button>
+
+            <Link
+              href={`/auth/confirm${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+              className="w-full px-6 py-3 border border-accent text-accent rounded-lg hover:bg-accent/5 transition-colors font-medium min-h-[48px] flex items-center justify-center"
+            >
+              Enter 6-Digit Code Instead
+            </Link>
 
             <button
               onClick={handleResendEmail}

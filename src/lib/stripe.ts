@@ -36,15 +36,15 @@ export const stripe = new Proxy({} as Stripe, {
 })
 
 // Subscription tiers configuration
-// NEW PRICING STRUCTURE (December 2024):
-// - FREE: $0/month, 3 analyses/month
+// PRICING STRUCTURE:
+// - FREE: $0/month, 10 analyses/month
 // - PRO: $29/month, 50 analyses/month
 // - PRO PLUS: $59/month, 200 analyses/month
 export const SUBSCRIPTION_TIERS = {
   FREE: {
     name: 'Free',
     priceId: null,
-    analysisLimit: 3,
+    analysisLimit: 10,
     features: [
       'view_deals',
       'basic_comparison',
@@ -57,7 +57,7 @@ export const SUBSCRIPTION_TIERS = {
   STARTER: {
     name: 'Starter',
     priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER,
-    analysisLimit: 3,  // Legacy - maps to Free
+    analysisLimit: 10,  // Legacy - maps to Free
     features: [
       'view_deals',
       'basic_comparison',

@@ -92,7 +92,7 @@ export default function TermsOfService() {
             <section className="bg-card border border-border/40 rounded-xl p-6">
               <h2 className="text-2xl font-bold text-primary mb-4">4. Subscription Plans</h2>
               <div className="space-y-3 text-muted mb-4">
-                <p><strong className="text-primary">Free Plan:</strong> 3 property analyses per month</p>
+                <p><strong className="text-primary">Free Plan:</strong> 10 property analyses per month</p>
                 <p><strong className="text-primary">Pro Plan:</strong> $29/month for 50 analyses per month</p>
                 <p><strong className="text-primary">Pro Plus Plan:</strong> $59/month for 200 analyses per month</p>
               </div>

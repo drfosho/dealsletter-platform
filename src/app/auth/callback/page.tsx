@@ -11,33 +11,71 @@ function AuthCallbackContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    // Ensure user_profiles row exists for authenticated user (fallback for missing trigger)
+    const ensureUserProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', user.id)
+          .single()
+
+        if (!profile) {
+          console.log('[AuthCallback] No user_profiles row found, creating one for:', user.id)
+          const { error: insertError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: user.id,
+              full_name: (user.user_metadata?.full_name as string) || '',
+              first_name: (user.user_metadata?.first_name as string) || '',
+              last_name: (user.user_metadata?.last_name as string) || '',
+              subscription_tier: 'free',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+
+          if (insertError && insertError.code !== '23505') { // 23505 = unique violation (race condition)
+            console.error('[AuthCallback] Failed to create user_profiles row:', insertError)
+          } else {
+            console.log('[AuthCallback] user_profiles row created successfully')
+          }
+        }
+      } catch (err) {
+        // Non-fatal — don't block auth flow for profile creation
+        console.error('[AuthCallback] Error ensuring user profile:', err)
+      }
+    }
+
     const handleAuthCallback = async () => {
       try {
         // First, check the URL hash for tokens
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
         const access_token = hashParams.get('access_token')
         const refresh_token = hashParams.get('refresh_token')
-        
+
         if (access_token && refresh_token) {
           // Set the session with the tokens from the URL
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token,
             refresh_token
           })
-          
+
           if (sessionError) {
             console.error('Error setting session:', sessionError)
             setError(sessionError.message)
             setStatus('error')
             return
           }
-          
+
           if (sessionData.session?.user) {
+            // Ensure profile row exists before redirecting
+            await ensureUserProfile(sessionData.session.user)
+
             // Check if this is from email verification or regular login
             const isEmailVerification = searchParams.get('type') === 'signup'
-            
+
             setStatus('success')
-            
+
             if (isEmailVerification) {
               // Email verification flow - go to success page
               router.push('/auth/verify-success')
@@ -48,10 +86,10 @@ function AuthCallbackContent() {
             return
           }
         }
-        
+
         // If no tokens in URL, check for existing session
         const { data, error } = await supabase.auth.getSession()
-        
+
         if (error) {
           console.error('Auth callback error:', error)
           setError(error.message)
@@ -60,11 +98,14 @@ function AuthCallbackContent() {
         }
 
         if (data.session?.user) {
+          // Ensure profile row exists before redirecting
+          await ensureUserProfile(data.session.user)
+
           // Check if this is from email verification or regular login
           const isEmailVerification = searchParams.get('type') === 'signup'
-          
+
           setStatus('success')
-          
+
           if (isEmailVerification) {
             // Email verification flow - go to success page
             router.push('/auth/verify-success')

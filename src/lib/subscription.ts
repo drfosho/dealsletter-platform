@@ -33,20 +33,20 @@ export interface UserSubscription {
 
 // Feature access definitions
 // NEW PRICING STRUCTURE (December 2024):
-// - FREE: 3 analyses/month, basic features
-// - PRO: 30 analyses/month @ $49/month, all features
+// - FREE: 10 analyses/month, basic features
+// - PRO: 50 analyses/month @ $29/month, all features
 export const FEATURE_ACCESS = {
-  // Free tier access - 3 analyses per month
+  // Free tier access - 10 analyses per month
   free: {
     viewDeals: true,
     basicComparison: true,
     archiveAccess: 30, // days
     marketInsights: true,
     newsletter: true,
-    propertyAnalysis: true,  // Allow analysis (limited to 3/month)
+    propertyAnalysis: true,  // Allow analysis (limited to 10/month)
     exportData: true,        // PDF export included
     advancedCalculators: false,
-    analysisLimit: 3,        // 3 analyses per month
+    analysisLimit: 10,       // 10 analyses per month
     prioritySupport: false,
   },
 
@@ -238,7 +238,7 @@ export async function canPerformAnalysis(userId?: string): Promise<{
       reason: result.message || 'Monthly analysis limit reached',
       upgradeRequired: true,
       remaining: 0,
-      limit: result.tier_limit || 3,
+      limit: result.tier_limit || 10,
       used: result.analyses_used || 0,
     };
   } catch (error) {

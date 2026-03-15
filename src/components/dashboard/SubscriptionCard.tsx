@@ -111,7 +111,7 @@ export default function SubscriptionCard() {
               </div>
             )}
 
-            {/* Note: All plans now have fixed limits (Free: 3, Pro: 30) */}
+            {/* Note: All plans now have fixed limits (Free: 10, Pro: 50) */}
           </div>
         )}
 

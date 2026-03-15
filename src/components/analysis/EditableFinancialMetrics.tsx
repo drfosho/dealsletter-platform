@@ -69,11 +69,6 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
   const isMultiFamily = units > 1;
   const rentPerUnit = isMultiFamily ? monthlyRent / units : monthlyRent;
 
-  // Store rentPerUnit separately for multi-family editing
-  const [editableRentPerUnit, setEditableRentPerUnit] = useState(
-    (analysis.analysis_data as any)?.rentPerUnit || rentPerUnit
-  );
-
   console.log('[EditableFinancialMetrics] Units detection:', {
     analysisDataUnits: (analysis.analysis_data as any)?.units,
     propertyUnits: (analysis.property_data as any)?.property?.units,
@@ -585,6 +580,10 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
                         className="w-28 px-2 py-1 border border-primary rounded text-right"
                         autoFocus
                         onFocus={(e) => e.target.select()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRentSave();
+                          if (e.key === 'Escape') handleRentCancel();
+                        }}
                       />
                       <button
                         onClick={handleRentSave}
@@ -640,6 +639,10 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
                           className="w-24 px-2 py-1 border border-primary rounded text-right text-sm"
                           autoFocus
                           onFocus={(e) => e.target.select()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRentPerUnitSave();
+                            if (e.key === 'Escape') handleRentPerUnitCancel();
+                          }}
                         />
                         <button
                           onClick={handleRentPerUnitSave}

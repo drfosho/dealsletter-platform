@@ -243,9 +243,20 @@ function PropertyDataReview({
               </label>
               <input
                 type="number"
-                value={editedData.bedrooms}
-                onChange={(e) => setEditedData(prev => ({ ...prev, bedrooms: parseInt(e.target.value) || 0 }))}
+                value={editedData.bedrooms === 0 ? '' : editedData.bedrooms}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setEditedData(prev => ({ ...prev, bedrooms: 0 }));
+                  } else {
+                    const num = parseInt(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditedData(prev => ({ ...prev, bedrooms: num }));
+                    }
+                  }
+                }}
                 min="0"
+                placeholder="0"
                 className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
@@ -258,9 +269,20 @@ function PropertyDataReview({
               <input
                 type="number"
                 step="0.5"
-                value={editedData.bathrooms}
-                onChange={(e) => setEditedData(prev => ({ ...prev, bathrooms: parseFloat(e.target.value) || 0 }))}
+                value={editedData.bathrooms === 0 ? '' : editedData.bathrooms}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setEditedData(prev => ({ ...prev, bathrooms: 0 }));
+                  } else {
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditedData(prev => ({ ...prev, bathrooms: num }));
+                    }
+                  }
+                }}
                 min="0"
+                placeholder="0"
                 className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
@@ -272,9 +294,20 @@ function PropertyDataReview({
               </label>
               <input
                 type="number"
-                value={editedData.squareFootage}
-                onChange={(e) => setEditedData(prev => ({ ...prev, squareFootage: parseInt(e.target.value) || 0 }))}
+                value={editedData.squareFootage === 0 ? '' : editedData.squareFootage}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setEditedData(prev => ({ ...prev, squareFootage: 0 }));
+                  } else {
+                    const num = parseInt(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditedData(prev => ({ ...prev, squareFootage: num }));
+                    }
+                  }
+                }}
                 min="0"
+                placeholder="0"
                 className="w-full px-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
@@ -287,7 +320,17 @@ function PropertyDataReview({
               <input
                 type="number"
                 value={editedData.yearBuilt || ''}
-                onChange={(e) => setEditedData(prev => ({ ...prev, yearBuilt: parseInt(e.target.value) || 0 }))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setEditedData(prev => ({ ...prev, yearBuilt: 0 }));
+                  } else {
+                    const num = parseInt(val);
+                    if (!isNaN(num) && num >= 0) {
+                      setEditedData(prev => ({ ...prev, yearBuilt: num }));
+                    }
+                  }
+                }}
                 min="1800"
                 max={new Date().getFullYear()}
                 placeholder="Year"
@@ -304,8 +347,18 @@ function PropertyDataReview({
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
                 <input
                   type="number"
-                  value={editedData.rentEstimate}
-                  onChange={(e) => setEditedData(prev => ({ ...prev, rentEstimate: parseFloat(e.target.value) || 0 }))}
+                  value={editedData.rentEstimate === 0 ? '' : editedData.rentEstimate}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setEditedData(prev => ({ ...prev, rentEstimate: 0 }));
+                    } else {
+                      const num = parseFloat(val);
+                      if (!isNaN(num) && num >= 0) {
+                        setEditedData(prev => ({ ...prev, rentEstimate: num }));
+                      }
+                    }
+                  }}
                   min="0"
                   className="w-full pl-8 pr-3 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="0"
@@ -651,13 +704,13 @@ export default function Step1PropertySearch({
             <div className="w-full bg-purple-500/10 rounded-full h-2.5 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  (usageData.analyses_used || 0) >= (usageData.tier_limit || 3)
+                  (usageData.analyses_used || 0) >= (usageData.tier_limit || 10)
                     ? 'bg-red-500'
-                    : (usageData.analyses_used || 0) >= (usageData.tier_limit || 3) * 0.8
+                    : (usageData.analyses_used || 0) >= (usageData.tier_limit || 10) * 0.8
                     ? 'bg-yellow-500'
                     : 'bg-gradient-to-r from-purple-500 to-blue-500'
                 }`}
-                style={{ width: `${Math.min(((usageData.analyses_used || 0) / (usageData.tier_limit || 3)) * 100, 100)}%` }}
+                style={{ width: `${Math.min(((usageData.analyses_used || 0) / (usageData.tier_limit || 10)) * 100, 100)}%` }}
               />
             </div>
           )}

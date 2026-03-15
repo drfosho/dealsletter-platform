@@ -5,9 +5,9 @@ import { getAdminConfig } from '@/lib/admin-config';
 
 // Canonical tier limits — single source of truth
 const TIER_LIMITS: Record<string, number> = {
-  free: 3,
-  basic: 3,
-  starter: 3,
+  free: 10,
+  basic: 10,
+  starter: 10,
   pro: 50,
   professional: 50,
   'pro-plus': 200,
@@ -71,17 +71,30 @@ export async function GET(_request: NextRequest) {
       });
     }
 
-    // Fetch subscription details from the subscriptions table
+    // Check user_profiles first (primary source — updated by Stripe webhook)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('subscription_tier, subscription_status, current_period_end')
+      .eq('id', user.id)
+      .single();
+
+    // Also check subscriptions table as fallback
     const { data: subscription } = await supabase
       .from('subscriptions')
       .select('tier, status, trial_end, current_period_end')
       .eq('user_id', user.id)
       .in('status', ['active', 'trialing'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
-    // Determine the effective tier and limit
-    const effectiveTier = subscription?.tier?.toLowerCase().replace('_', '-') || 'free';
-    const tierLimit = getTierLimit(effectiveTier);
+    // Use the higher tier from either source
+    const profileTier = profile?.subscription_tier?.toLowerCase().replace('_', '-') || 'free';
+    const subsTier = subscription?.tier?.toLowerCase().replace('_', '-') || 'free';
+    const profileLimit = getTierLimit(profileTier);
+    const subsLimit = getTierLimit(subsTier);
+    const effectiveTier = profileLimit >= subsLimit ? profileTier : subsTier;
+    const tierLimit = Math.max(profileLimit, subsLimit);
 
     // Get current month usage count
     const now = new Date();
@@ -104,9 +117,9 @@ export async function GET(_request: NextRequest) {
       tier_limit: tierLimit,
       remaining,
       subscription_tier: effectiveTier === 'free' || effectiveTier === 'basic' ? 'free' : effectiveTier,
-      subscription_status: subscription?.status || 'inactive',
+      subscription_status: subscription?.status || profile?.subscription_status || 'inactive',
       trial_end: subscription?.trial_end || null,
-      current_period_end: subscription?.current_period_end || null,
+      current_period_end: subscription?.current_period_end || profile?.current_period_end || null,
       is_admin: false,
       message: canAnalyze
         ? `${remaining} of ${tierLimit} analyses remaining this month`

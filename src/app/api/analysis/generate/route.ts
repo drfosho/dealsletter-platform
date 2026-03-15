@@ -129,23 +129,58 @@ export async function POST(request: NextRequest) {
     
     // Skip usage check for admins
     if (!adminConfig.bypassSubscriptionLimits) {
-      // Check user's usage limits
+      // Check user's usage limits - try RPC first, fall back to direct query
+      let canAnalyze = true;
+      let usageMessage = '';
+
       const { data: usageCheck, error: usageError } = await supabase
         .rpc('can_user_analyze', { p_user_id: user.id });
-      
+
       if (usageError) {
-        console.error('Usage check error:', usageError);
-        return NextResponse.json(
-          { error: 'Failed to check usage limits' },
-          { status: 500 }
-        );
+        console.error('Usage RPC error, falling back to direct query:', usageError);
+        // Fallback: check usage directly via usage_tracking table
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        const { data: usageRow } = await supabase
+          .from('usage_tracking')
+          .select('analysis_count')
+          .eq('user_id', user.id)
+          .eq('month_year', currentMonth)
+          .single();
+
+        const analysesUsed = usageRow?.analysis_count ?? 0;
+        // Check user_profiles first (updated by Stripe webhook), then subscriptions as fallback
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('subscription_tier')
+          .eq('id', user.id)
+          .single();
+
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('tier')
+          .eq('user_id', user.id)
+          .in('status', ['active', 'trialing'])
+          .single();
+
+        const tierLimits: Record<string, number> = { free: 10, basic: 10, starter: 10, pro: 50, professional: 50, 'pro-plus': 200, 'pro_plus': 200, premium: 50, enterprise: 9999 };
+        const profileTier = profile?.subscription_tier?.toLowerCase() || 'free';
+        const subsTier = subscription?.tier?.toLowerCase() || 'free';
+        const limit = Math.max(tierLimits[profileTier] ?? 10, tierLimits[subsTier] ?? 10);
+
+        canAnalyze = analysesUsed < limit;
+        usageMessage = canAnalyze ? '' : `Monthly limit of ${limit} analyses reached. Upgrade for more.`;
+      } else if (usageCheck && !usageCheck.can_analyze) {
+        canAnalyze = false;
+        usageMessage = usageCheck.message || 'Please upgrade to Pro for more analyses';
       }
-      
-      if (!usageCheck?.can_analyze) {
+
+      if (!canAnalyze) {
         return NextResponse.json(
-          { 
+          {
             error: 'Monthly analysis limit reached',
-            message: usageCheck?.message || 'Please upgrade to Pro for more analyses',
+            message: usageMessage,
             usage: usageCheck
           },
           { status: 403 }

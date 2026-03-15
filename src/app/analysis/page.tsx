@@ -75,7 +75,7 @@ export default function AnalysisPage() {
                   <div className="mt-4 sm:mt-0 bg-card rounded-lg p-4 border border-border">
                     <div className="text-sm text-muted">Monthly Usage</div>
                     <div className="text-2xl font-bold text-primary">
-                      {usage.analyses_used ?? usage.current_month_usage ?? 0} / {(usage.tier_limit ?? usage.monthly_limit) === -1 ? '∞' : (usage.tier_limit ?? usage.monthly_limit ?? 3)}
+                      {usage.analyses_used ?? usage.current_month_usage ?? 0} / {(usage.tier_limit ?? usage.monthly_limit) === -1 ? '∞' : (usage.tier_limit ?? usage.monthly_limit ?? 10)}
                     </div>
                     <div className="text-xs text-muted mt-1 capitalize">
                       {usage.subscription_tier || 'free'} plan

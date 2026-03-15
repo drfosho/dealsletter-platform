@@ -90,7 +90,7 @@ function CheckoutSuccessContent() {
             <ul className="text-left text-muted space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Your 14-day free trial has started</span>
+                <span>Your subscription is now active</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />

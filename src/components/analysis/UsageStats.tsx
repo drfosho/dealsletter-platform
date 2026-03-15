@@ -13,7 +13,7 @@ interface UsageStatsProps {
 export default function UsageStats({ usage }: UsageStatsProps) {
   // Ensure we have valid numbers with fallbacks
   const safeUsed = typeof usage?.used === 'number' && !isNaN(usage.used) ? usage.used : 0;
-  const safeLimit = typeof usage?.limit === 'number' && !isNaN(usage.limit) && usage.limit > 0 ? usage.limit : 3;
+  const safeLimit = typeof usage?.limit === 'number' && !isNaN(usage.limit) && usage.limit > 0 ? usage.limit : 10;
   const safeRemaining = Math.max(0, safeLimit - safeUsed);
 
   const { percentageUsed, daysUntilReset, isNearLimit } = useMemo(() => {
