@@ -21,13 +21,10 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
                     (analysis as any).analysis_data?.rehab_costs || 
                     0;
   const purchasePrice = analysis.purchase_price || 0;
-  const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
-  
+
   // Get financial metrics from AI analysis
-  // CRITICAL FIX: Check multiple locations for financial metrics (data can be at various levels)
   const aiMetrics = analysis.ai_analysis?.financial_metrics;
   const analysisData = (analysis as any).analysis_data || {};
-  // Also check for pre-calculated metrics stored at top level of analysis_data
   const savedMetrics = analysisData?.calculatedMetrics || {};
 
   // ARV: Check multiple sources
@@ -39,60 +36,33 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
               (analysis.property_data as any)?.comparables?.value ||
               purchasePrice * 1.3;
 
-  // Net Profit: Check multiple sources (most critical fix)
-  const netProfit = (analysis as any).profit ||  // Top-level from database
+  // Net Profit: Check multiple sources
+  const netProfit = (analysis as any).profit ||
                    savedMetrics?.profit ||
                    aiMetrics?.net_profit ||
                    aiMetrics?.total_profit ||
                    analysisData?.profit ||
-                   analysisData?.ai_analysis?.financial_metrics?.net_profit ||
-                   analysisData?.ai_analysis?.financial_metrics?.total_profit ||
                    0;
 
-  console.log('[FlipTimeline] Financial data sources:', {
-    topLevelProfit: (analysis as any).profit,
-    savedMetricsProfit: savedMetrics?.profit,
-    savedMetricsArv: savedMetrics?.arv,
-    aiMetricsNetProfit: aiMetrics?.net_profit,
-    aiMetricsTotalProfit: aiMetrics?.total_profit,
-    analysisDataProfit: analysisData?.profit,
-    finalNetProfit: netProfit,
-    arv
-  });
-  // Calculate fallback holding costs accurately if not provided by AI
-  // Using same formula as backend for consistency
-  const loanAmount = purchasePrice * 0.9; // Assuming 10% down for hard money
-  const monthlyInterestRate = 0.1045 / 12; // 10.45% annual rate
-  const monthlyLoanInterest = Math.round(loanAmount * monthlyInterestRate);
-  
-  // Add interest on rehab loan if using hard money (100% financed)
-  const monthlyRehabInterest = rehabCosts > 0 ? Math.round(rehabCosts * monthlyInterestRate) : 0;
-  
-  // Property taxes: 1.2% annually
-  const monthlyTaxes = Math.round((purchasePrice * 0.012) / 12);
-  
-  // Insurance: 0.6% annually for vacant/investor property (higher risk)
-  const monthlyInsurance = Math.round((purchasePrice * 0.006) / 12);
-  
-  // Utilities and maintenance during renovation
-  const monthlyUtilities = 200; // $200/month during renovation
-  const monthlyMaintenance = 150; // $150/month for security/misc
-  
-  const estimatedMonthlyHolding = monthlyLoanInterest + monthlyRehabInterest + monthlyTaxes + monthlyInsurance + monthlyUtilities + monthlyMaintenance;
-  const holdingCosts = aiMetrics?.holding_costs || savedMetrics?.holdingCosts || (estimatedMonthlyHolding * timeline);
-  
-  console.log('[FlipTimeline] Holding costs fallback calculation:', {
-    monthlyLoanInterest,
-    monthlyRehabInterest,
-    monthlyTaxes,
-    monthlyInsurance,
-    monthlyUtilities,
-    monthlyMaintenance,
-    totalMonthly: estimatedMonthlyHolding,
-    timeline,
-    totalHoldingCosts: estimatedMonthlyHolding * timeline,
-    usingAIMetrics: !!aiMetrics?.holding_costs
-  });
+  // Hard money loan structure: 90% purchase + 100% rehab (capped at 80% ARV)
+  const interestRate = analysis.interest_rate || 10;
+  const downPayment = purchasePrice * 0.10;
+  const acquisitionLoan = purchasePrice - downPayment;
+  const maxLoan = arv * 0.80;
+  const totalLoanNeeded = acquisitionLoan + rehabCosts;
+  const totalLoan = Math.min(totalLoanNeeded, maxLoan);
+
+  // Interest on full loan amount for the holding period
+  const monthlyInterest = Math.round((totalLoan * (interestRate / 100)) / 12);
+  const holdingCosts = aiMetrics?.holding_costs || savedMetrics?.holdingCosts || (monthlyInterest * timeline);
+
+  // Selling costs — 6% of ARV
+  const sellingCosts = Math.round(arv * 0.06);
+
+  // Cash required — what borrower brings to closing
+  const closingCosts = Math.round(purchasePrice * 0.015);
+  const ltvOverage = Math.max(0, totalLoanNeeded - maxLoan);
+  const cashRequired = downPayment + closingCosts + ltvOverage;
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -108,21 +78,21 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
       phase: 'Acquisition',
       duration: '1-2 weeks',
       description: 'Close on property',
-      cost: formatCurrency(downPayment),
+      cost: formatCurrency(cashRequired),
       icon: '🏠'
     },
     {
       phase: 'Renovation',
       duration: `${Math.max(1, timeline - 2)} months`,
-      description: 'Complete rehab work',
+      description: 'Complete rehab work (lender funded)',
       cost: formatCurrency(rehabCosts),
       icon: '🔨'
     },
     {
-      phase: 'Marketing',
+      phase: 'Selling Costs',
       duration: '2-4 weeks',
-      description: 'List and show property',
-      cost: formatCurrency(holdingCosts),
+      description: 'Agent commission (6% of ARV)',
+      cost: formatCurrency(sellingCosts),
       icon: '📣'
     },
     {
@@ -190,8 +160,8 @@ export default function FlipTimeline({ analysis }: FlipTimelineProps) {
             <span className="font-medium">{formatCurrency(arv)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted">Total Investment</span>
-            <span className="font-medium">{formatCurrency(purchasePrice + rehabCosts + holdingCosts)}</span>
+            <span className="text-muted">Cash Required</span>
+            <span className="font-medium">{formatCurrency(cashRequired)}</span>
           </div>
           <div className="flex justify-between pt-2 border-t border-border">
             <span className="font-medium">Net Profit</span>

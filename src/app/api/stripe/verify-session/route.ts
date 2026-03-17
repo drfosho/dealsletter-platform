@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createClient } from '@/lib/supabase/server'
 import Stripe from 'stripe'
+import { sendSubscriptionEmail } from '@/lib/email'
 
 // Force Node.js runtime
 export const runtime = 'nodejs'
@@ -197,6 +198,25 @@ export async function GET(request: NextRequest) {
           console.error('[VerifySession] Database update error:', profileError)
         } else {
           console.log('[VerifySession] ✅ User profile updated with subscription tier:', normalizedTier)
+
+          // Send subscription confirmation email
+          const customerEmail = session.customer_email ||
+            session.customer_details?.email ||
+            user?.email;
+
+          if (customerEmail) {
+            const { periodEndISO: billingDate } = getSubscriptionPeriodDates(subscriptionData);
+            const formattedDate = billingDate
+              ? new Date(billingDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+              : undefined;
+
+            sendSubscriptionEmail({
+              email: customerEmail,
+              name: user?.user_metadata?.full_name as string || user?.user_metadata?.first_name as string || undefined,
+              tier: normalizedTier,
+              billingDate: formattedDate,
+            }).catch(err => console.error('[VerifySession] Email send error:', err));
+          }
         }
       } else {
         console.log('[VerifySession] Warning: No user ID found, database not updated')

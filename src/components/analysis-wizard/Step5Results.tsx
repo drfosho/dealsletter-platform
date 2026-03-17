@@ -13,6 +13,8 @@ import {
   getRecommendationColors
 } from '@/utils/format-text';
 import { calculateFlipReturns, type FlipCalculationInputs } from '@/utils/financial-calculations';
+import { useExportAccess } from '@/hooks/useExportAccess';
+import ExportUpgradeModal from '@/components/ExportUpgradeModal';
 
 interface Step5ResultsProps {
   data: WizardData;
@@ -23,12 +25,16 @@ export default function Step5Results({ data }: Step5ResultsProps) {
   const router = useRouter();
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const canExport = useExportAccess();
+  const isLocked = canExport === false;
 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
   const handleDownloadPDF = async () => {
+    if (isLocked) { setShowUpgradeModal(true); return; }
     if (!data.analysisId) return;
     setPdfLoading(true);
     try {
@@ -48,6 +54,7 @@ export default function Step5Results({ data }: Step5ResultsProps) {
   };
 
   const handleDownloadExcel = async () => {
+    if (isLocked) { setShowUpgradeModal(true); return; }
     if (!data.analysisId) return;
     setExcelLoading(true);
     try {
@@ -124,21 +131,8 @@ export default function Step5Results({ data }: Step5ResultsProps) {
   const recommendationType = getRecommendationType(analysis.recommendation);
   const recommendationColors = getRecommendationColors(recommendationType);
 
-  // Get property image
-  const getPropertyImage = () => {
-    const propertyData = data.propertyData as any;
-    // Check multiple possible locations for images
-    return propertyData?.property?.primaryImageUrl ||
-           propertyData?.listing?.primaryImageUrl ||
-           propertyData?.primaryImageUrl ||
-           propertyData?.images?.[0]?.url ||
-           propertyData?.images?.[0] ||
-           propertyData?.property?.images?.[0]?.url ||
-           propertyData?.property?.images?.[0] ||
-           null;
-  };
-
-  const imageUrl = getPropertyImage();
+  // TODO: re-add property image fetch when Google Maps API is configured
+  const imageUrl = null;
 
   // Get property details
   const getPropertyDetails = () => {
@@ -450,8 +444,12 @@ export default function Step5Results({ data }: Step5ResultsProps) {
         </Link>
         <button
           onClick={handleDownloadPDF}
-          disabled={pdfLoading}
-          className="flex-1 sm:flex-initial px-6 py-3 bg-card border border-border text-primary rounded-lg hover:bg-muted/20 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          disabled={pdfLoading && !isLocked}
+          className={`flex-1 sm:flex-initial px-6 py-3 bg-card border rounded-lg font-medium flex items-center justify-center gap-2 ${
+            isLocked
+              ? 'border-border text-muted cursor-pointer'
+              : 'border-border text-primary hover:bg-muted/20 disabled:opacity-50'
+          }`}
         >
           {pdfLoading ? (
             <>
@@ -460,6 +458,13 @@ export default function Step5Results({ data }: Step5ResultsProps) {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               Generating PDF...
+            </>
+          ) : isLocked ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Export PDF
             </>
           ) : (
             <>
@@ -472,8 +477,12 @@ export default function Step5Results({ data }: Step5ResultsProps) {
         </button>
         <button
           onClick={handleDownloadExcel}
-          disabled={excelLoading}
-          className="flex-1 sm:flex-initial px-6 py-3 bg-card border border-border text-primary rounded-lg hover:bg-muted/20 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          disabled={excelLoading && !isLocked}
+          className={`flex-1 sm:flex-initial px-6 py-3 bg-card border rounded-lg font-medium flex items-center justify-center gap-2 ${
+            isLocked
+              ? 'border-border text-muted cursor-pointer'
+              : 'border-border text-primary hover:bg-muted/20 disabled:opacity-50'
+          }`}
         >
           {excelLoading ? (
             <>
@@ -482,6 +491,13 @@ export default function Step5Results({ data }: Step5ResultsProps) {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               Generating Excel...
+            </>
+          ) : isLocked ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Export Excel
             </>
           ) : (
             <>
@@ -550,6 +566,8 @@ export default function Step5Results({ data }: Step5ResultsProps) {
           </div>
         </div>
       )}
+
+      <ExportUpgradeModal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
     </div>
   );
 }

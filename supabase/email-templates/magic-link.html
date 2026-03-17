@@ -1,0 +1,54 @@
+<!-- Supabase Auth: Magic Link -->
+<!-- Subject: Sign in to Dealsletter -->
+<!-- Paste into: Authentication > Email Templates > Magic Link -->
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0a0a0a;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+        <!-- Logo -->
+        <tr><td align="center" style="padding-bottom:32px;">
+          <a href="{{ .SiteURL }}" style="text-decoration:none;">
+            <img src="{{ .SiteURL }}/logos/websiteMainLogo.png" alt="Dealsletter" height="40" style="height:40px;width:auto;" />
+          </a>
+        </td></tr>
+        <!-- Card -->
+        <tr><td style="background-color:#141418;border:1px solid #2a2a3a;border-radius:16px;padding:40px 32px;">
+
+          <h1 style="color:#ffffff;font-size:28px;margin:0 0 8px;text-align:center;">Sign In to Dealsletter ✨</h1>
+          <p style="color:#9ca3af;font-size:15px;text-align:center;margin:0 0 32px;">Click below to log in — no password needed</p>
+
+          <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 24px;">
+            Click the button below to sign in to your Dealsletter account. This link is valid for 1 hour and can only be used once.
+          </p>
+
+          <!-- CTA Button -->
+          <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 0 8px;">
+            <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;font-weight:600;font-size:16px;padding:14px 32px;border-radius:10px;text-decoration:none;">
+              Sign In to Dealsletter
+            </a>
+          </td></tr></table>
+
+          <p style="color:#6b7280;font-size:13px;text-align:center;margin:24px 0 0;">
+            If you didn't request this link, you can safely ignore this email.
+          </p>
+
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="padding-top:32px;text-align:center;">
+          <p style="color:#6b7280;font-size:13px;line-height:20px;margin:0;">
+            <a href="mailto:support@dealsletter.io" style="color:#6b7280;text-decoration:underline;">Contact Support</a>
+            &nbsp;&bull;&nbsp;
+            <a href="{{ .SiteURL }}" style="color:#6b7280;text-decoration:underline;">dealsletter.io</a>
+          </p>
+          <p style="color:#4b5563;font-size:12px;margin:16px 0 0;">
+            &copy; 2026 Dealsletter &bull; Real estate investment analysis
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import Stripe from 'stripe';
+import { sendCancellationEmail } from '@/lib/email';
 
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
@@ -434,6 +435,25 @@ export async function POST(request: NextRequest) {
             console.error('[Webhook] subscription.updated - ❌ DB Error:', profileError);
           } else {
             console.log('[Webhook] subscription.updated - ✅ User profile updated');
+
+            // Send cancellation email when subscription is set to cancel at period end
+            if (subscription.cancel_at_period_end) {
+              const customerEmail = typeof subscription.customer === 'string'
+                ? (await stripe.customers.retrieve(subscription.customer) as Stripe.Customer).email
+                : null;
+
+              if (customerEmail) {
+                const { periodEndISO } = getSubscriptionPeriodDates(subscription);
+                const accessUntil = new Date(periodEndISO).toLocaleDateString('en-US', {
+                  month: 'long', day: 'numeric', year: 'numeric'
+                });
+                sendCancellationEmail({
+                  email: customerEmail,
+                  planName: tierName === 'pro' ? 'Pro' : tierName === 'pro-plus' ? 'Pro Plus' : 'Pro',
+                  accessUntil,
+                }).catch(err => console.error('[Webhook] Cancellation email error:', err));
+              }
+            }
           }
         }
         break;

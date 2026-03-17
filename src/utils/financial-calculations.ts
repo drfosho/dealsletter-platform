@@ -653,9 +653,9 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
 
   console.log('STEP 4: Calculating rehab funding with LTV check...');
 
-  // CRITICAL: Hard money lenders have LTV limits (typically 75% of ARV)
-  // If total loan needed exceeds this, investor must bring cash for rehab
-  const maxLTV = 0.75; // 75% of ARV is typical max
+  // Hard money lenders cap total loan at 80% of ARV
+  // If total loan needed exceeds this, investor must bring cash for the difference
+  const maxLTV = 0.80; // 80% of ARV
   const maxLoan = arv * maxLTV;
   const totalLoanNeeded = acquisitionLoan + renovationCosts;
 
@@ -693,69 +693,52 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
 
   console.log('STEP 5: Calculating closing costs...');
 
-  // Calculate closing costs - Points apply to LOAN amount
-  // Hard money closing costs:
-  // 1. Lender points (on loan amount) - typically 3%
-  // 2. Origination fee (on loan amount) - typically 1%
-  // 3. Title/escrow/misc - fixed amount ~$2,000
-  const lenderPointsCost = (acquisitionLoan * points) / 100;
-  const originationFee = isHardMoney ? (acquisitionLoan * 0.01) : 0;
-  const titleEscrowMisc = 2000;
-  const totalClosingCosts = lenderPointsCost + originationFee + titleEscrowMisc;
+  // Acquisition closing costs — estimated at 1.5% of purchase price
+  const closingCostRate = 0.015;
+  const totalClosingCosts = Math.round(purchasePrice * closingCostRate);
 
   console.log('Closing Costs:', {
-    lenderPoints: `$${lenderPointsCost.toFixed(2)} (${points}% of $${acquisitionLoan.toLocaleString()} loan)`,
-    originationFee: `$${originationFee.toFixed(2)} (1% of loan)`,
-    titleEscrowMisc: `$${titleEscrowMisc.toFixed(2)}`,
-    totalClosingCosts: `$${totalClosingCosts.toFixed(2)}`
+    closingCostRate: `${closingCostRate * 100}% of purchase price`,
+    totalClosingCosts: `$${totalClosingCosts.toLocaleString()}`
   });
 
   console.log('STEP 6: Calculating holding costs...');
 
   // Calculate holding costs using renovation timeline
-  // Interest on acquisition loan (monthly interest-only for hard money)
-  const monthlyAcquisitionInterest = (acquisitionLoan * (interestRate / 100)) / 12;
-  // Property tax: 1.2% annually
-  const monthlyPropertyTax = (purchasePrice * 0.012) / 12;
-  // Insurance: 0.6% annually for investor/vacant property
-  const monthlyInsurance = (purchasePrice * 0.006) / 12;
-  // Utilities during renovation
-  const monthlyUtilities = 200;
+  // Interest on FULL loan (acquisition + rehab funded by lender) — interest-only for hard money
+  const monthlyInterest = (totalLoan * (interestRate / 100)) / 12;
 
-  const monthlyHoldingCosts = monthlyAcquisitionInterest + monthlyPropertyTax + monthlyInsurance + monthlyUtilities;
+  const monthlyHoldingCosts = monthlyInterest;
   const totalHoldingCosts = monthlyHoldingCosts * holdingMonths;
 
-  console.log('Holding Costs Breakdown:', {
-    monthlyAcquisitionInterest: `$${monthlyAcquisitionInterest.toFixed(2)}`,
-    monthlyPropertyTax: `$${monthlyPropertyTax.toFixed(2)}`,
-    monthlyInsurance: `$${monthlyInsurance.toFixed(2)}`,
-    monthlyUtilities: `$${monthlyUtilities}`,
-    totalMonthly: `$${monthlyHoldingCosts.toFixed(2)}`,
+  console.log('Holding Costs (Interest-Only on Full Loan):', {
+    totalLoan: `$${totalLoan.toLocaleString()}`,
+    monthlyInterest: `$${monthlyInterest.toFixed(2)}`,
     holdingMonths,
     totalHoldingCosts: `$${totalHoldingCosts.toFixed(2)}`
   });
 
   console.log('STEP 7: Calculating selling costs...');
 
-  // Selling costs - 8% of ARV (6% realtor + 2% closing)
-  const sellingCosts = arv * 0.08;
+  // Selling costs / agent commission — 6% of ARV
+  const sellingCosts = Math.round(arv * 0.06);
 
   console.log('Selling Costs:', {
-    sellingCosts: `$${sellingCosts.toFixed(2)} (8% of ARV $${arv.toLocaleString()})`
+    sellingCosts: `$${sellingCosts.toLocaleString()} (6% of ARV $${arv.toLocaleString()})`
   });
 
   console.log('STEP 8: Calculating investment totals...');
 
-  // CASH REQUIRED = What investor actually brings (out of pocket)
-  // Includes: Down payment + Closing costs + Cash for Rehab (if LTV exceeded) + Holding costs
-  const cashRequired = downPayment + totalClosingCosts + cashForRehab + totalHoldingCosts;
+  // CASH REQUIRED = What investor actually brings to closing (out of pocket)
+  // Hard money funds 90% of purchase + 100% of rehab (up to 80% ARV)
+  // Investor only brings: 10% down + closing costs + any LTV overage
+  const cashRequired = downPayment + totalClosingCosts + cashForRehab;
 
-  // TOTAL INVESTMENT = All-in project cost
-  // Includes: Purchase price + Rehab + Closing + Holding costs
-  const totalInvestment = purchasePrice + renovationCosts + totalClosingCosts + totalHoldingCosts;
+  // TOTAL PROJECT COST = all costs of the flip (for profit calculation)
+  const totalInvestment = purchasePrice + renovationCosts + totalHoldingCosts + totalClosingCosts + sellingCosts;
 
-  // TOTAL PROJECT COST = Total investment + selling costs (for reference)
-  const totalProjectCost = totalInvestment + sellingCosts;
+  // TOTAL PROJECT COST alias
+  const totalProjectCost = totalInvestment;
 
   console.log('Investment Summary:', {
     cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
@@ -771,12 +754,8 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
 
   console.log('STEP 9: Calculating returns...');
 
-  // Calculate net proceeds from sale
-  const loanPayoff = acquisitionLoan + rehabFundedByLender;
-  const netProceeds = arv - sellingCosts - loanPayoff;
-
-  // NET PROFIT = Net Proceeds - Cash Required
-  const netProfit = netProceeds - cashRequired;
+  // NET PROFIT = ARV - Purchase - Rehab - Interest - Closing - Selling
+  const netProfit = arv - purchasePrice - renovationCosts - totalHoldingCosts - totalClosingCosts - sellingCosts;
 
   // ROI = Net Profit / Cash Required (return on actual cash invested)
   const roi = cashRequired > 0 ? (netProfit / cashRequired) * 100 : 0;
@@ -784,13 +763,15 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   // Profit Margin = Net Profit / ARV (industry standard)
   const profitMargin = arv > 0 ? (netProfit / arv) * 100 : 0;
 
-  console.log('Exit Calculation:', {
+  console.log('Profit Calculation:', {
     arv: `$${arv.toLocaleString()}`,
+    purchasePrice: `$${purchasePrice.toLocaleString()}`,
+    renovationCosts: `$${renovationCosts.toLocaleString()}`,
+    interestCosts: `$${totalHoldingCosts.toLocaleString()}`,
+    closingCosts: `$${totalClosingCosts.toLocaleString()}`,
     sellingCosts: `$${sellingCosts.toLocaleString()}`,
-    loanPayoff: `$${loanPayoff.toLocaleString()}`,
-    netProceeds: `$${netProceeds.toLocaleString()}`,
-    cashRequired: `$${cashRequired.toLocaleString()}`,
     netProfit: `$${netProfit.toLocaleString()}`,
+    cashRequired: `$${cashRequired.toLocaleString()}`,
     roi: `${roi.toFixed(2)}%`,
     profitMargin: `${profitMargin.toFixed(2)}%`
   });
@@ -869,12 +850,12 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     profitMargin,
     closingCosts: totalClosingCosts,
     closingCostsBreakdown: {
-      lenderPoints: lenderPointsCost,
-      lenderPointsPercent: points,
-      originationFee,
-      titleEscrowMisc,
+      lenderPoints: 0,
+      lenderPointsPercent: 0,
+      originationFee: 0,
+      titleEscrowMisc: 0,
       totalClosingCosts,
-      totalClosingCostsPercent: acquisitionLoan > 0 ? (totalClosingCosts / acquisitionLoan) * 100 : 0
+      totalClosingCostsPercent: purchasePrice > 0 ? (totalClosingCosts / purchasePrice) * 100 : 0
     },
     isHardMoney,
     validation

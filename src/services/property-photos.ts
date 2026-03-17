@@ -3,7 +3,7 @@
 
 interface PhotoSource {
   url: string;
-  source: 'rentcast' | 'streetview' | 'placeholder' | 'stock';
+  source: 'rentcast' | 'placeholder' | 'stock';
   confidence: 'high' | 'medium' | 'low';
 }
 
@@ -116,38 +116,9 @@ export class PropertyPhotoService {
     return photos;
   }
 
-  // Get Google Street View images
-  private static getStreetViewPhotos(address: string, count: number = 3): PhotoSource[] {
-    const googleMapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!googleMapsKey || !address) return [];
-    
-    // Check if address has a street number (more reliable for Street View)
-    const hasStreetNumber = /^\d+\s+/.test(address.trim());
-    if (!hasStreetNumber) return [];
-    
-    const photos: PhotoSource[] = [];
-    const encodedAddress = encodeURIComponent(address);
-    
-    // Main view
-    photos.push({
-      url: `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${encodedAddress}&key=${googleMapsKey}`,
-      source: 'streetview',
-      confidence: 'medium'
-    });
-    
-    // Additional angles
-    if (count > 1) {
-      const angles = [90, 270];
-      for (let i = 0; i < Math.min(count - 1, angles.length); i++) {
-        photos.push({
-          url: `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${encodedAddress}&heading=${angles[i]}&key=${googleMapsKey}`,
-          source: 'streetview',
-          confidence: 'medium'
-        });
-      }
-    }
-    
-    return photos;
+  // TODO: re-add property image fetch when Google Maps API is configured
+  private static getStreetViewPhotos(_address: string, _count: number = 3): PhotoSource[] {
+    return [];
   }
 
   // Main method to get property photos with fallback strategy

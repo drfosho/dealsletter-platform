@@ -8,7 +8,8 @@ import {
   SearchResults
 } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
-import PropertyPhotoService from './property-photos';
+// TODO: re-add PropertyPhotoService import when Google Maps API is configured
+// import PropertyPhotoService from './property-photos';
 
 // In-memory cache for development (consider Redis for production)
 const propertyCache = new Map<string, CachedPropertyData>();
@@ -294,33 +295,8 @@ class RentCastService {
         isEstimated: (data as any).isEstimated
       });
       
-      // Add property images - enhanced for off-market properties
-      const fullAddress = `${data.addressLine1}, ${data.city}, ${data.state} ${data.zipCode}`;
-      
-      console.log('[RentCast] Attempting to fetch property images for:', fullAddress);
-      console.log('[RentCast] Google Maps API Key available:', !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
-      
-      // Get photos using the enhanced photo service
-      const photos = await PropertyPhotoService.getPropertyPhotos(
-        fullAddress,
-        data.propertyType,
-        data.images, // Pass any existing RentCast photos
-        5
-      );
-      
-      data.images = photos;
-      data.primaryImageUrl = photos[0] || PropertyPhotoService.getDefaultPlaceholder();
-      
-      console.log('[RentCast] Property images added:', {
-        address: fullAddress,
-        hasStreetNumber: /^\d+\s+/.test(data.addressLine1?.trim() || ''),
-        primaryImage: data.primaryImageUrl,
-        totalImages: data.images?.length,
-        imagesFound: data.images?.length || 0,
-        imageURLs: data.images,
-        hasGoogleMaps: !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
-        isPlaceholder: data.primaryImageUrl?.includes('No Image Available')
-      });
+      // TODO: re-add property image fetch when Google Maps API is configured
+      // Property images are currently disabled — no external image fetching
       
       this.setCache(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL });
       return data;
@@ -415,18 +391,8 @@ class RentCastService {
         totalCount = 0;
       }
       
-      // Add images to each property
-      for (const property of results) {
-        const fullAddress = `${property.addressLine1}, ${property.city}, ${property.state} ${property.zipCode}`;
-        const photos = await PropertyPhotoService.getPropertyPhotos(
-          fullAddress,
-          property.propertyType,
-          property.images,
-          3
-        );
-        property.images = photos;
-        property.primaryImageUrl = photos[0] || PropertyPhotoService.getDefaultPlaceholder();
-      }
+      // TODO: re-add property image fetch when Google Maps API is configured
+      // Property images are currently disabled — no external image fetching
       
       const searchResults: SearchResults<RentCastPropertyDetails> = {
         results,

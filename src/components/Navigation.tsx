@@ -46,6 +46,17 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
     }
   }, [user?.id, fetchUserData]);
 
+  // Re-fetch usage when user returns to this tab (after completing an analysis in another tab/page)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && user?.id) {
+        fetchUserData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user?.id, fetchUserData]);
+
   useEffect(() => {
     // Close dropdown when clicking outside
     const handleClickOutside = (event: MouseEvent) => {

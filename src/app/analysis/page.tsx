@@ -25,6 +25,20 @@ export default function AnalysisPage() {
   useEffect(() => {
     fetchRecentAnalyses();
     fetchUsageStats();
+
+    // Re-fetch when user returns to this tab (e.g., after completing an analysis)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUsageStats();
+        fetchRecentAnalyses();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', () => { fetchUsageStats(); fetchRecentAnalyses(); });
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const fetchRecentAnalyses = async () => {

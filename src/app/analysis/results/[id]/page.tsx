@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+// TODO: re-add Image import when property images are configured
+// import Image from 'next/image';
 import Navigation from '@/components/Navigation';
 import LoadingSpinner from '@/components/property-search/LoadingSpinner';
 import FinancialMetrics from '@/components/analysis/FinancialMetrics';
@@ -169,62 +170,12 @@ export default function AnalysisResultsPage({ params }: PageParams) {
               
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex items-start gap-4">
-                  {/* Property Image */}
-                  {(() => {
-                    // Check for images in various possible locations from RentCast API
-                    const listing = (analysis.property_data as any)?.listing;
-                    const propertyData = analysis.property_data as any;
-                    // Handle property as array
-                    const property = Array.isArray(propertyData?.property) 
-                      ? propertyData.property[0] 
-                      : propertyData?.property;
-                    
-                    console.log('[PropertyImage] Looking for images:', {
-                      hasPropertyData: !!propertyData,
-                      hasProperty: !!property,
-                      hasListing: !!listing,
-                      propertyPrimaryImage: property?.primaryImageUrl,
-                      propertyImages: property?.images,
-                      listingPrimaryImage: listing?.primaryImageUrl,
-                      listingImages: listing?.images
-                    });
-                    
-                    const imageUrl = listing?.primaryImageUrl || 
-                                   listing?.images?.[0]?.url || 
-                                   listing?.images?.[0] ||
-                                   property?.primaryImageUrl || 
-                                   property?.images?.[0]?.url ||
-                                   property?.images?.[0] ||
-                                   propertyData?.primaryImageUrl || 
-                                   propertyData?.images?.[0];
-                    
-                    if (imageUrl) {
-                      return (
-                        <div className="relative w-24 h-24">
-                          <Image
-                            src={imageUrl}
-                            alt={analysis.address}
-                            fill
-                            className="object-cover rounded-lg shadow-md"
-                            sizes="96px"
-                            onError={(e) => {
-                              const img = e.target as HTMLImageElement;
-                              // Use the no image placeholder
-                              img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"%3E%3Crect width="200" height="200" fill="%23f3f4f6"/%3E%3Cg transform="translate(100,100)"%3E%3Crect x="-40" y="-40" width="80" height="80" fill="none" stroke="%239ca3af" stroke-width="2" rx="4"/%3E%3Cpath d="M-30,-20 L-10,0 L0,-10 L10,0 L30,-20" fill="none" stroke="%239ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/%3E%3Ccircle cx="-10" cy="-15" r="4" fill="none" stroke="%239ca3af" stroke-width="2"/%3E%3Ctext y="35" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="%236b7280"%3ENo Image%3C/text%3E%3C/g%3E%3C/svg%3E';
-                            }}
-                          />
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div className="w-24 h-24 bg-muted/20 rounded-lg flex items-center justify-center">
-                        <svg className="w-10 h-10 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
-                      </div>
-                    );
-                  })()}
+                  {/* Property Image — TODO: re-add property image fetch when Google Maps API is configured */}
+                  <div className="w-24 h-24 bg-muted/20 rounded-lg flex items-center justify-center">
+                    <svg className="w-10 h-10 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                  </div>
                   <div>
                     <h1 className="text-2xl lg:text-3xl font-bold text-primary mb-2">
                       {analysis.address}

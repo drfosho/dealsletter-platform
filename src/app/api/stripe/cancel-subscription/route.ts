@@ -60,11 +60,25 @@ export async function POST(_request: NextRequest) {
       { cancel_at_period_end: true }
     );
 
+    // Extract timestamps — handle both subscription-level and item-level fields
+    const cancelAtTs = updatedSubscription.cancel_at;
+    const periodEndTs = (updatedSubscription as any).current_period_end
+      || updatedSubscription.items?.data?.[0]?.current_period_end;
+
+    // Convert Unix timestamps (seconds) to ISO strings
+    const cancelAtISO = cancelAtTs ? new Date(cancelAtTs * 1000).toISOString() : null;
+    const periodEndISO = periodEndTs ? new Date(periodEndTs * 1000).toISOString() : null;
+    // Use cancel_at as the access-until date (Stripe sets this to period end when cancel_at_period_end=true)
+    const accessUntilISO = cancelAtISO || periodEndISO;
+
     console.log('[CancelSubscription] Stripe updated:', {
       id: updatedSubscription.id,
       cancel_at_period_end: updatedSubscription.cancel_at_period_end,
-      cancel_at: updatedSubscription.cancel_at,
-      current_period_end: (updatedSubscription as any).current_period_end
+      cancel_at: cancelAtTs,
+      cancelAtISO,
+      periodEndTs,
+      periodEndISO,
+      accessUntilISO,
     });
 
     // Update user_profiles
@@ -77,7 +91,7 @@ export async function POST(_request: NextRequest) {
       .eq('id', user.id);
 
     if (profileUpdateError) {
-      console.error('[CancelSubscription] Profile update error:', profileUpdateError);
+      console.error('[CancelSubscription] Profile update error:', JSON.stringify(profileUpdateError));
     }
 
     // Also update subscriptions table if it has a row
@@ -85,28 +99,25 @@ export async function POST(_request: NextRequest) {
       .from('subscriptions')
       .update({
         cancel_at_period_end: true,
-        cancel_at: updatedSubscription.cancel_at ?
-          new Date(updatedSubscription.cancel_at * 1000).toISOString() : null
+        cancel_at: accessUntilISO,
       })
       .eq('stripe_subscription_id', stripeSubscriptionId);
 
     if (updateError) {
-      console.error('[CancelSubscription] Subscriptions table update error:', updateError);
+      console.error('[CancelSubscription] Subscriptions table update error:', JSON.stringify(updateError));
     } else {
       console.log('[CancelSubscription] Database updated successfully');
     }
 
-    const cancelDate = (updatedSubscription as any).current_period_end
-      ? new Date((updatedSubscription as any).current_period_end * 1000).toISOString()
-      : null;
-
-    console.log('[CancelSubscription] Cancellation successful, access until:', cancelDate);
+    console.log('[CancelSubscription] Cancellation successful, access until:', accessUntilISO);
 
     return NextResponse.json({
       success: true,
-      cancel_at: updatedSubscription.cancel_at,
-      current_period_end: cancelDate,
-      message: `Subscription will cancel at end of billing period${cancelDate ? ` (${new Date(cancelDate).toLocaleDateString()})` : ''}`
+      cancel_at: accessUntilISO,
+      current_period_end: accessUntilISO,
+      message: accessUntilISO
+        ? `Subscription will cancel on ${new Date(accessUntilISO).toLocaleDateString()}`
+        : 'Subscription will cancel at end of billing period',
     });
   } catch (error) {
     console.error('[CancelSubscription] Error:', error);

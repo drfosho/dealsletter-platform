@@ -122,6 +122,8 @@ function ConfirmContent() {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
+            // Send welcome email for new free signups (fire-and-forget)
+            fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
           }
         } catch {
           // Non-fatal
