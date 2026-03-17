@@ -687,6 +687,45 @@ export async function POST(request: NextRequest) {
         // Don't fail the request, just log the error
       } else {
         console.log('[Analysis] Successfully incremented usage count');
+
+        // Check if user has hit 80% of their limit and send warning email
+        try {
+          const now = new Date();
+          const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const { data: usageRow } = await supabase
+            .from('usage_tracking')
+            .select('analysis_count')
+            .eq('user_id', user.id)
+            .eq('month_year', currentMonth)
+            .single();
+
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('subscription_tier')
+            .eq('id', user.id)
+            .single();
+
+          const tierLimits: Record<string, number> = { free: 10, basic: 10, starter: 10, pro: 50, professional: 50, 'pro-plus': 200, 'pro_plus': 200, premium: 50 };
+          const tier = profile?.subscription_tier?.toLowerCase() || 'free';
+          const limit = tierLimits[tier] ?? 10;
+          const used = usageRow?.analysis_count ?? 0;
+
+          // Send at exactly 80% threshold (e.g., 8 of 10, 40 of 50)
+          const threshold = Math.floor(limit * 0.8);
+          if (used === threshold) {
+            const { sendUsageWarningEmail } = await import('@/lib/email');
+            sendUsageWarningEmail({
+              email: user.email!,
+              name: user.user_metadata?.full_name as string || undefined,
+              used,
+              limit,
+              tier,
+            }).catch(err => console.error('[Analysis] Usage warning email error:', err));
+          }
+        } catch (emailErr) {
+          // Non-fatal — don't block analysis response
+          console.error('[Analysis] Usage warning check error:', emailErr);
+        }
       }
 
       // Return complete analysis

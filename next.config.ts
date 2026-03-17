@@ -86,11 +86,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'maps.googleapis.com',
-        pathname: '/maps/api/**',
-      },
+      // TODO: re-add maps.googleapis.com when Google Maps API is configured
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',

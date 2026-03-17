@@ -1,18 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  getSubscriptionWithUsage, 
-  cancelSubscription, 
+import {
+  getSubscriptionWithUsage,
   resumeSubscription,
-  type SubscriptionWithUsage 
+  type SubscriptionWithUsage
 } from '@/lib/subscription/client';
 import { CheckCircle, AlertCircle, CreditCard, BarChart3, Calendar } from 'lucide-react';
+import CancelSubscriptionModal from './CancelSubscriptionModal';
 
 export default function SubscriptionManager() {
   const [subscription, setSubscription] = useState<SubscriptionWithUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     loadSubscriptionData();
@@ -29,28 +31,15 @@ export default function SubscriptionManager() {
     }
   };
 
-  const handleCancelSubscription = async () => {
-    if (!confirm('Are you sure you want to cancel your subscription? You will still have access until the end of your billing period.')) {
-      return;
-    }
+  const handleCancelClick = () => {
+    setShowCancelModal(true);
+  };
 
-    setActionLoading(true);
-    console.log('[SubscriptionManager] Canceling subscription...');
-    try {
-      const success = await cancelSubscription();
-      console.log('[SubscriptionManager] Cancel result:', success);
-      if (success) {
-        await loadSubscriptionData();
-        alert('Subscription canceled successfully. You will still have access until the end of your billing period.');
-      } else {
-        alert('Failed to cancel subscription. Please try again or contact support.');
-      }
-    } catch (error) {
-      console.error('[SubscriptionManager] Error canceling subscription:', error);
-      alert('An error occurred while canceling. Please try again or contact support.');
-    } finally {
-      setActionLoading(false);
-    }
+  const handleCanceled = async (accessUntilDate: string) => {
+    setShowCancelModal(false);
+    await loadSubscriptionData();
+    setToast(`Subscription canceled — access continues until ${accessUntilDate}`);
+    setTimeout(() => setToast(null), 6000);
   };
 
   const handleResumeSubscription = async () => {
@@ -231,7 +220,7 @@ export default function SubscriptionManager() {
           {/* Cancel — for active paid subscriptions not already canceling */}
           {isActive && !willCancel && !isFree && (
             <button
-              onClick={handleCancelSubscription}
+              onClick={handleCancelClick}
               disabled={actionLoading}
               className="px-4 py-2 border border-destructive text-destructive rounded-lg hover:bg-destructive/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
@@ -327,6 +316,32 @@ export default function SubscriptionManager() {
           </div>
         </div>
       </div>
+
+      {/* Cancel subscription modal */}
+      <CancelSubscriptionModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onCanceled={handleCanceled}
+        tier={tier}
+        accessEndDate={sub?.current_period_end || null}
+      />
+
+      {/* Toast notification */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="flex items-center gap-3 bg-[#141418] border border-[#2a2a3a] rounded-xl px-5 py-3.5 shadow-2xl">
+            <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="text-sm text-[#d1d5db]">{toast}</span>
+            <button onClick={() => setToast(null)} className="text-[#6b7280] hover:text-white ml-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

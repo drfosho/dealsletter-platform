@@ -50,6 +50,17 @@ export default function AccountPage() {
     }
   }, [user, authLoading, router, fetchUserData]);
 
+  // Re-fetch when user returns to this tab
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && user) {
+        fetchUserData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user, fetchUserData]);
+
   const handleManageBilling = async () => {
     setIsBillingLoading(true);
     try {

@@ -14,15 +14,21 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
   const purchasePrice = analysis.purchase_price || 0;
   const downPayment = (purchasePrice * (analysis.down_payment_percent || 20)) / 100;
 
-  // Calculate proper cash required for flips (down payment + closing costs)
-  // Hard money lenders fund 100% of rehab via holdback - NOT from investor cash
+  // Cash required for flips: 10% down + 1.5% closing costs
+  // Hard money lender funds 90% of purchase + 100% of rehab (up to 80% ARV)
   const calculateFlipCashRequired = () => {
-    const loanAmount = purchasePrice - downPayment;
-    const points = (analysis as any).analysis_data?.loan_terms?.points || 2.5;
-    const pointsCost = (loanAmount * points) / 100;
-    const otherClosingCosts = purchasePrice * 0.005; // 0.5% title/escrow
-    const totalClosingCosts = pointsCost + otherClosingCosts;
-    return downPayment + totalClosingCosts;
+    const dp = purchasePrice * 0.10; // 10% down for hard money
+    const closingCosts = Math.round(purchasePrice * 0.015); // 1.5% of purchase
+    // Check if total loan exceeds 80% ARV — borrower covers overage
+    const rehabCosts = analysis.rehab_costs || (analysis as any).analysis_data?.rehab_costs || 0;
+    const arv = (analysis.ai_analysis?.financial_metrics as any)?.arv ||
+                (analysis as any).analysis_data?.arv ||
+                (analysis.property_data as any)?.comparables?.value || 0;
+    const acquisitionLoan = purchasePrice - dp;
+    const totalLoanNeeded = acquisitionLoan + rehabCosts;
+    const maxLoan = arv > 0 ? arv * 0.80 : Infinity;
+    const ltvOverage = Math.max(0, totalLoanNeeded - maxLoan);
+    return dp + closingCosts + ltvOverage;
   };
   const flipCashRequired = isFlipStrategy ? calculateFlipCashRequired() : 0;
 
@@ -386,8 +392,8 @@ export default function FinancialMetrics({ analysis, onUpdate }: FinancialMetric
       // Default undefined values to 0 (only reach here if we have at least one valid saved value)
       const finalNetProfit = netProfit ?? 0;
       const finalRoi = roi ?? 0;
-      const closingCosts = purchasePrice * 0.03;
-      const totalInvestment = downPayment + rehabCosts + closingCosts;
+      // Cash required = 10% down + 1.5% closing (hard money funds rehab)
+      const totalInvestment = flipCashRequired;
       const profitMargin = estimatedARV > 0 ? (finalNetProfit / estimatedARV) * 100 : 0;
 
       return {

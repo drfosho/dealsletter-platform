@@ -38,6 +38,8 @@ function AuthCallbackContent() {
             console.error('[AuthCallback] Failed to create user_profiles row:', insertError)
           } else {
             console.log('[AuthCallback] user_profiles row created successfully')
+            // Send welcome email for new free signups (fire-and-forget)
+            fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
           }
         }
       } catch (err) {

@@ -25,7 +25,7 @@ export default function AnalysisHistoryPage() {
   });
   const [usage, setUsage] = useState({
     used: 0,
-    limit: 5,
+    limit: 10,
     nextReset: new Date()
   });
 
@@ -93,6 +93,27 @@ export default function AnalysisHistoryPage() {
   useEffect(() => {
     fetchAnalyses();
     fetchUsage();
+
+    // Re-fetch when user returns to this tab (e.g., after completing an analysis)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchUsage();
+        fetchAnalyses();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Also re-fetch when window regains focus (covers tab switches and alt-tab)
+    const handleFocus = () => {
+      fetchUsage();
+      fetchAnalyses();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   useEffect(() => {
@@ -118,7 +139,14 @@ export default function AnalysisHistoryPage() {
       const response = await fetch('/api/analysis/usage');
       if (response.ok) {
         const data = await response.json();
-        setUsage(data);
+        // Map API response shape to UsageStats expected shape
+        const now = new Date();
+        const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        setUsage({
+          used: data.analyses_used ?? 0,
+          limit: data.tier_limit ?? 10,
+          nextReset,
+        });
       }
     } catch (error) {
       console.error('Failed to fetch usage:', error);

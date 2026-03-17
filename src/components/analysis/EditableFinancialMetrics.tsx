@@ -87,8 +87,10 @@ export default function EditableFinancialMetrics({ analysis, onUpdate }: Editabl
                         (analysis as any).renovationCosts || 
                         (analysis as any).analysis_data?.rehab_costs || 
                         0;
-      const closingCosts = purchasePrice * 0.03; // 3% closing costs
-      const totalInvestment = downPayment + rehabCosts + closingCosts;
+      // Cash required: 10% down + 1.5% closing costs (hard money funds rehab)
+      const dp = purchasePrice * 0.10;
+      const closingCosts = Math.round(purchasePrice * 0.015);
+      const totalInvestment = dp + closingCosts;
       
       const aiMetrics = analysis.ai_analysis?.financial_metrics;
       const netProfit = aiMetrics?.total_profit || 0;
