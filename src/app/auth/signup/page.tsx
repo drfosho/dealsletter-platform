@@ -201,7 +201,21 @@ export default function SignUpPage() {
 
     if (error) {
       console.error('Signup error:', error)
-      setError(error.message)
+      // Provide clearer error messages for common cases
+      const msg = error.message?.toLowerCase() || ''
+      if (msg.includes('email') && (msg.includes('send') || msg.includes('smtp') || msg.includes('deliver'))) {
+        // Email delivery failed but account may have been created
+        // Proceed to verify page where user can resend
+        console.warn('Email delivery error during signup, proceeding to verify page')
+        setSuccess(true)
+        setTimeout(() => {
+          router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`)
+        }, 2000)
+      } else if (msg.includes('already registered') || msg.includes('already been registered')) {
+        setError('An account with this email already exists. Please sign in instead.')
+      } else {
+        setError(error.message)
+      }
     } else {
       console.log('Signup successful')
       setSuccess(true)

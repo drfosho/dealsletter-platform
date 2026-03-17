@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, metadata?: Record<string, unknown>) => {
     console.log('AuthContext signUp called with:', { email, metadata })
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -56,14 +56,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     })
-    
-    console.log('Supabase signUp result:', { data, error })
-    
+
+    console.log('Supabase signUp result:', {
+      userId: data?.user?.id,
+      hasSession: !!data?.session,
+      errorMessage: error?.message,
+      errorStatus: error?.status,
+    })
+
+    // If user was created but confirmation email failed, treat as success
+    // The user can resend the email from the verify page
+    // Use (data as any) because Supabase types mark data as never when error exists,
+    // but in practice Supabase CAN return both a user AND an error (email delivery failure)
+    if (error && (data as any)?.user?.id) {
+      console.warn('Signup succeeded but confirmation email may have failed:', error.message)
+      return { error: null }
+    }
+
     // Profile creation is now handled automatically by the database trigger
     if (!error && data.user) {
       console.log('User created successfully, profile will be created automatically by database trigger')
     }
-    
+
     return { error }
   }
 

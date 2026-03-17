@@ -155,7 +155,14 @@ function ConfirmContent() {
       })
 
       if (resendError) {
-        setError(resendError.message)
+        const msg = resendError.message?.toLowerCase() || ''
+        if (msg.includes('email') && (msg.includes('send') || msg.includes('smtp') || msg.includes('deliver'))) {
+          setError('Email delivery is temporarily unavailable. Please try again in a few minutes.')
+        } else if (msg.includes('rate') || msg.includes('limit')) {
+          setError('Please wait a minute before requesting another code.')
+        } else {
+          setError(resendError.message)
+        }
       } else {
         setResendSuccess(true)
         setCode(['', '', '', '', '', ''])

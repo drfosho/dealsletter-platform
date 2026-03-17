@@ -63,10 +63,16 @@ function VerifyEmailContent() {
       })
 
       if (error) {
-        setResendError(error.message)
+        const msg = error.message?.toLowerCase() || ''
+        if (msg.includes('email') && (msg.includes('send') || msg.includes('smtp') || msg.includes('deliver'))) {
+          setResendError('Email delivery is temporarily unavailable. Please try again in a few minutes or use the 6-digit code option below.')
+        } else if (msg.includes('rate') || msg.includes('limit')) {
+          setResendError('Please wait a minute before requesting another email.')
+        } else {
+          setResendError(error.message)
+        }
       } else {
         setResendSuccess(true)
-        // Hide success message after 5 seconds
         setTimeout(() => setResendSuccess(false), 5000)
       }
     } catch {
