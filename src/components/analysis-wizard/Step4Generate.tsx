@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { WizardData } from '@/app/analysis/new/page';
 
@@ -31,6 +31,8 @@ export default function Step4Generate({
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [_analysisId, setAnalysisId] = useState<string | null>(null);
+  // Ref guard: prevents double API call from React 18 Strict Mode re-mounting
+  const hasStarted = useRef(false);
 
   const generateAnalysis = useCallback(async () => {
     return fetch('/api/analysis/generate', {
@@ -103,7 +105,8 @@ export default function Step4Generate({
   }, [updateData, onNext, generateAnalysis]);
 
   useEffect(() => {
-    if (!isGenerating) {
+    if (!hasStarted.current) {
+      hasStarted.current = true;
       startAnalysis();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
