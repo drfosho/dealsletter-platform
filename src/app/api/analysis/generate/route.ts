@@ -25,7 +25,8 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
 });
 
-console.log('[Generate] Anthropic client initialized');
+const CLAUDE_MODEL = 'claude-sonnet-4-6';
+console.log('[Generate] Anthropic client initialized, model:', CLAUDE_MODEL);
 
 export async function POST(request: NextRequest) {
   console.log('=== ANALYSIS GENERATION START ===');
@@ -963,8 +964,8 @@ Format monetary values with commas. Write in plain text without any formatting s
     };
 
     const claudeRequest = {
-      model: "claude-sonnet-4-5-20250929", // Using Claude Sonnet 4.5
-      max_tokens: 3000, // Reduced from 4000 - analysis doesn't need that much
+      model: CLAUDE_MODEL,
+      max_tokens: 3000,
       temperature: 0.3,
       system: systemPrompts[request.strategy] || systemPrompts.rental,
       messages: [

@@ -624,9 +624,9 @@ class RentCastService {
         };
       }
 
-      // Fetch all data in parallel with automatic attribute lookup enabled
-      const [property, rental, comparables, listing] = await Promise.all([
-        this.getPropertyDetails(address),
+      // Fetch AVM data with propertyAttributes=auto (returns subject property details
+      // automatically, so we skip the separate /properties lookup to save an API call)
+      const [rental, comparables, listing] = await Promise.all([
         this.getRentalEstimate(address, true).catch(err => {
           console.warn('[RentCast] Rental estimate failed:', err);
           return undefined;
@@ -640,6 +640,18 @@ class RentCastService {
           return undefined;
         })
       ]);
+
+      // Extract property details from AVM response (included via propertyAttributes=auto)
+      // Fall back to separate lookup only if AVM didn't return property data
+      let property: RentCastPropertyDetails;
+      const avmPropertyData = (rental as any)?.propertyAttributes || (comparables as any)?.propertyAttributes;
+      if (avmPropertyData) {
+        console.log('[RentCast] Using property attributes from AVM response (saved 1 API call)');
+        property = this.normalizePropertyData(avmPropertyData);
+      } else {
+        console.log('[RentCast] AVM did not return property attributes, falling back to /properties lookup');
+        property = await this.getPropertyDetails(address);
+      }
 
       // Get market data using property's zip code
       const market = await this.getMarketData(property.zipCode).catch(err => {

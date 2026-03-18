@@ -666,7 +666,7 @@ export async function POST(request: NextRequest) {
 
   const startTime = Date.now();
   const metrics: APIMetrics = {
-    model: 'claude-opus-4-20250514',
+    model: 'claude-sonnet-4-6',
     processingTime: 0,
     cached: false,
     success: false
@@ -724,8 +724,7 @@ export async function POST(request: NextRequest) {
     let propertyData: PropertyData | null = null;
     let totalAttempts = 0;
     const models = [
-      'claude-opus-4-20250514',  // Primary model for best quality
-      'claude-sonnet-4-5-20250929'  // Fallback model if Opus is overloaded
+      'claude-sonnet-4-6',
     ];
     
     // Try each model with retries

@@ -81,7 +81,7 @@ class PropertyAnalysisAI {
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-5-20250929', // Using Claude Sonnet 4.5
+          model: 'claude-sonnet-4-6',
           max_tokens: 8000, // Increased for comprehensive analysis
           temperature: 0.7,
           messages: [
