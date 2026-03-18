@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // Generate AI analysis
     const analysisPrompt = prepareAnalysisContext(propertyData, body)
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5-20250929",
+      model: "claude-sonnet-4-6",
       max_tokens: 2000,
       temperature: 0.3,
       system: `You are a professional real estate investment analyst. Provide detailed, data-driven analysis for real estate investments. Focus on financial metrics, risks, and opportunities. Be specific with numbers and calculations.`,
