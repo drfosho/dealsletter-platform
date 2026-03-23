@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, Loader2, XCircle } from 'lucide-react'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase/client'
 
 type SessionStatus = 'loading' | 'complete' | 'open' | 'expired' | 'error'
 
@@ -17,19 +18,57 @@ function CheckoutSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
+  const hasRun = useRef(false)
 
   const [sessionData, setSessionData] = useState<SessionData>({ status: 'loading' })
 
   useEffect(() => {
-    if (!sessionId) {
-      setSessionData({ status: 'error' })
-      return
-    }
+    if (hasRun.current) return
+    hasRun.current = true
 
-    // Verify the session
-    fetch(`/api/stripe/verify-session?session_id=${sessionId}`)
-      .then((res) => res.json())
-      .then((data) => {
+    const run = async () => {
+      // Step 1: Restore Supabase session if lost during Stripe redirect
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+      if (!currentSession) {
+        console.log('[CheckoutSuccess] No active session — attempting to restore from backup')
+        const backup = localStorage.getItem('checkout_session_backup')
+
+        if (backup) {
+          try {
+            const { access_token, refresh_token } = JSON.parse(backup)
+            const { error: restoreError } = await supabase.auth.setSession({
+              access_token,
+              refresh_token
+            })
+            if (restoreError) {
+              console.error('[CheckoutSuccess] Session restore failed:', restoreError.message)
+            } else {
+              console.log('[CheckoutSuccess] Session restored successfully')
+            }
+          } catch (err) {
+            console.error('[CheckoutSuccess] Failed to parse session backup:', err)
+          }
+        } else {
+          console.warn('[CheckoutSuccess] No session backup found')
+        }
+      } else {
+        console.log('[CheckoutSuccess] Session is active')
+      }
+
+      // Clean up backup regardless
+      localStorage.removeItem('checkout_session_backup')
+
+      // Step 2: Verify the Stripe checkout session
+      if (!sessionId) {
+        setSessionData({ status: 'error' })
+        return
+      }
+
+      try {
+        const res = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`)
+        const data = await res.json()
+
         if (data.status === 'complete') {
           setSessionData({
             status: 'complete',
@@ -45,10 +84,12 @@ function CheckoutSuccessContent() {
         } else {
           setSessionData({ status: data.status || 'error' })
         }
-      })
-      .catch(() => {
+      } catch {
         setSessionData({ status: 'error' })
-      })
+      }
+    }
+
+    run()
   }, [sessionId, router])
 
   if (sessionData.status === 'loading') {
