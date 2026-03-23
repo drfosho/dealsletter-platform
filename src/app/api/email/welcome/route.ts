@@ -18,6 +18,7 @@ export async function POST(_request: NextRequest) {
                  undefined;
 
     // Check if welcome email was already sent (dedup)
+    // Query may fail if welcome_email_sent column doesn't exist yet — that's OK, just send
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('welcome_email_sent')
@@ -29,16 +30,17 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ sent: false, reason: 'already_sent' });
     }
 
+    console.log('[WelcomeEmail] Sending welcome email to:', user.email);
     const sent = await sendWelcomeEmail({
       email: user.email!,
       name,
     });
 
-    // Mark as sent so we don't send duplicates
+    // Mark as sent so we don't send duplicates (ignore error if column doesn't exist)
     if (sent) {
       await supabase
         .from('user_profiles')
-        .update({ welcome_email_sent: true })
+        .update({ welcome_email_sent: true } as Record<string, unknown>)
         .eq('id', user.id);
     }
 

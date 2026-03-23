@@ -14,9 +14,10 @@ function AuthCallbackContent() {
     // Ensure user_profiles row exists for authenticated user (fallback for missing trigger)
     const ensureUserProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }, isSignup: boolean) => {
       try {
+        // Query profile — use id only (welcome_email_sent may not exist yet)
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('id, welcome_email_sent')
+          .select('id')
           .eq('id', user.id)
           .single()
 
@@ -41,10 +42,10 @@ function AuthCallbackContent() {
           }
         }
 
-        // Send welcome email on signup confirmation if not already sent
-        // This handles both new profiles and profiles created by DB trigger
-        if (isSignup && !profile?.welcome_email_sent) {
-          console.log('[AuthCallback] Sending welcome email for new signup')
+        // Send welcome email on signup confirmation
+        // Dedup is handled server-side in /api/email/welcome via welcome_email_sent flag
+        if (isSignup) {
+          console.log('[AuthCallback] Signup confirmation detected, triggering welcome email')
           fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
         }
       } catch (err) {
@@ -61,6 +62,12 @@ function AuthCallbackContent() {
         const refresh_token = hashParams.get('refresh_token')
 
         if (access_token && refresh_token) {
+          // Check if this is from email verification — Supabase puts type in hash fragment
+          const hashType = hashParams.get('type')
+          const queryType = searchParams.get('type')
+          const isEmailVerification = hashType === 'signup' || queryType === 'signup'
+          console.log('[AuthCallback] Auth type detection:', { hashType, queryType, isEmailVerification })
+
           // Set the session with the tokens from the URL
           const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token,
@@ -75,9 +82,6 @@ function AuthCallbackContent() {
           }
 
           if (sessionData.session?.user) {
-            // Check if this is from email verification or regular login
-            const isEmailVerification = searchParams.get('type') === 'signup'
-
             // Ensure profile row exists before redirecting
             await ensureUserProfile(sessionData.session.user, isEmailVerification)
 
@@ -106,14 +110,15 @@ function AuthCallbackContent() {
 
         if (data.session?.user) {
           // Check if this is from email verification or regular login
-          const isEmailVerification = searchParams.get('type') === 'signup'
+          // Also check hash params in case tokens were already consumed
+          const fallbackIsSignup = hashParams.get('type') === 'signup' || searchParams.get('type') === 'signup'
 
           // Ensure profile row exists before redirecting
-          await ensureUserProfile(data.session.user, isEmailVerification)
+          await ensureUserProfile(data.session.user, fallbackIsSignup)
 
           setStatus('success')
 
-          if (isEmailVerification) {
+          if (fallbackIsSignup) {
             // Email verification flow - go to success page
             router.push('/auth/verify-success')
           } else {
