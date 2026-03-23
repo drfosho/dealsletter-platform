@@ -42,12 +42,7 @@ function AuthCallbackContent() {
           }
         }
 
-        // Send welcome email on signup confirmation
-        // Dedup is handled server-side in /api/email/welcome via welcome_email_sent flag
-        if (isSignup) {
-          console.log('[AuthCallback] Signup confirmation detected, triggering welcome email')
-          fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
-        }
+        // Welcome email is sent from /auth/verify-success (single trigger point)
       } catch (err) {
         // Non-fatal — don't block auth flow for profile creation
         console.error('[AuthCallback] Error ensuring user profile:', err)

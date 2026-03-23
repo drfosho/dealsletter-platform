@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { sendWelcomeEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
 export async function POST(_request: NextRequest) {
   try {
+    // Use the user's session to get their identity
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -13,19 +15,25 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Atomic claim: set welcome_email_sent = true ONLY if it's currently false.
-    // Only one concurrent request can succeed — the others get 0 rows updated.
-    const { data: claimed, error: claimError } = await supabase
+    // Use admin client (bypasses RLS) for the atomic claim
+    const admin = createAdminClient();
+
+    // Atomic claim: set welcome_email_sent = true ONLY if it's currently false/null.
+    // Uses service role to bypass RLS. Only one concurrent request wins.
+    const { data: claimed, error: claimError } = await admin
       .from('user_profiles')
-      .update({ welcome_email_sent: true } as Record<string, unknown>)
+      .update({ welcome_email_sent: true })
       .eq('id', user.id)
       .or('welcome_email_sent.is.null,welcome_email_sent.eq.false')
       .select('id')
       .maybeSingle();
 
     if (claimError) {
-      // Column may not exist yet — fall through and send anyway
-      console.warn('[WelcomeEmail] Claim query error (column may not exist):', claimError.message);
+      console.error('[WelcomeEmail] Claim error:', claimError.message);
+      // If column doesn't exist, the error will contain "column" — skip dedup and send
+      if (!claimError.message.includes('column')) {
+        return NextResponse.json({ sent: false, error: claimError.message }, { status: 500 });
+      }
     } else if (!claimed) {
       console.log('[WelcomeEmail] Already sent for user:', user.id);
       return NextResponse.json({ sent: false, reason: 'already_sent' });

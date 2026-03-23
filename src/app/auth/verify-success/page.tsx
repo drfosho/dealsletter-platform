@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
@@ -9,10 +9,14 @@ export default function VerifySuccess() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [countdown, setCountdown] = useState(5)
+  const welcomeEmailSent = useRef(false)
 
   useEffect(() => {
-    // Send welcome email on verify success (dedup handled server-side)
-    fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+    // Send welcome email exactly once (ref guard prevents React 18 Strict Mode double-fire)
+    if (!welcomeEmailSent.current) {
+      welcomeEmailSent.current = true
+      fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+    }
 
     // Start countdown
     const timer = setInterval(() => {
