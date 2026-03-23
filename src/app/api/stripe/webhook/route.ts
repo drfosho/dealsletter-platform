@@ -408,9 +408,51 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.updated': {
         console.log('[Webhook] 📝 Processing customer.subscription.updated');
         const subscription = event.data.object as Stripe.Subscription;
-        const userId = subscription.metadata.supabaseUserId;
+        let userId = subscription.metadata.supabaseUserId;
         console.log('[Webhook] Subscription ID:', subscription.id);
-        console.log('[Webhook] User ID:', userId || 'Not found');
+        console.log('[Webhook] User ID from metadata:', userId || 'Not found');
+
+        // If no userId in metadata, look up by stripe_subscription_id
+        if (!userId) {
+          console.log('[Webhook] subscription.updated - Looking up user by stripe_subscription_id');
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('stripe_subscription_id', subscription.id)
+            .single();
+
+          if (profile) {
+            userId = profile.id;
+            console.log('[Webhook] subscription.updated - Found user by subscription ID:', userId);
+          } else {
+            // Try by customer email as last resort
+            const customerId = typeof subscription.customer === 'string' ? subscription.customer : null;
+            if (customerId) {
+              const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+              if (customer.email) {
+                const { data: userByEmail } = await supabase
+                  .from('user_profiles')
+                  .select('id')
+                  .eq('email', customer.email)
+                  .single();
+
+                // If not found in user_profiles by email, try auth.users
+                if (userByEmail) {
+                  userId = userByEmail.id;
+                } else {
+                  const { data: authUsers } = await supabase.auth.admin.listUsers();
+                  const authUser = authUsers?.users?.find(u => u.email === customer.email);
+                  if (authUser) {
+                    userId = authUser.id;
+                  }
+                }
+                if (userId) {
+                  console.log('[Webhook] subscription.updated - Found user by customer email:', userId);
+                }
+              }
+            }
+          }
+        }
 
         if (userId) {
           const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
@@ -438,12 +480,14 @@ export async function POST(request: NextRequest) {
 
             // Send cancellation email when subscription is set to cancel at period end
             if (subscription.cancel_at_period_end) {
-              const customerEmail = typeof subscription.customer === 'string'
-                ? (await stripe.customers.retrieve(subscription.customer) as Stripe.Customer).email
-                : null;
+              let customerEmail: string | null = null;
+              const customerId = typeof subscription.customer === 'string' ? subscription.customer : null;
+              if (customerId) {
+                const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+                customerEmail = customer.email;
+              }
 
               if (customerEmail) {
-                const { periodEndISO } = getSubscriptionPeriodDates(subscription);
                 const accessUntil = new Date(periodEndISO).toLocaleDateString('en-US', {
                   month: 'long', day: 'numeric', year: 'numeric'
                 });
@@ -455,6 +499,8 @@ export async function POST(request: NextRequest) {
               }
             }
           }
+        } else {
+          console.error('[Webhook] subscription.updated - ❌ Could not find user for subscription:', subscription.id);
         }
         break;
       }
@@ -462,9 +508,38 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.deleted': {
         console.log('[Webhook] 🗑️ Processing customer.subscription.deleted');
         const subscription = event.data.object as Stripe.Subscription;
-        const userId = subscription.metadata.supabaseUserId;
+        let userId = subscription.metadata.supabaseUserId;
         console.log('[Webhook] Subscription ID:', subscription.id);
-        console.log('[Webhook] User ID:', userId || 'Not found');
+        console.log('[Webhook] User ID from metadata:', userId || 'Not found');
+
+        // If no userId in metadata, look up by stripe_subscription_id
+        if (!userId) {
+          console.log('[Webhook] subscription.deleted - Looking up user by stripe_subscription_id');
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('id')
+            .eq('stripe_subscription_id', subscription.id)
+            .single();
+
+          if (profile) {
+            userId = profile.id;
+            console.log('[Webhook] subscription.deleted - Found user by subscription ID:', userId);
+          } else {
+            // Try by customer email as last resort
+            const customerId = typeof subscription.customer === 'string' ? subscription.customer : null;
+            if (customerId) {
+              const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+              if (customer.email) {
+                const { data: authUsers } = await supabase.auth.admin.listUsers();
+                const authUser = authUsers?.users?.find(u => u.email === customer.email);
+                if (authUser) {
+                  userId = authUser.id;
+                  console.log('[Webhook] subscription.deleted - Found user by customer email:', userId);
+                }
+              }
+            }
+          }
+        }
 
         if (userId) {
           // Update user_profiles - reset to basic tier
@@ -483,6 +558,8 @@ export async function POST(request: NextRequest) {
           } else {
             console.log('[Webhook] subscription.deleted - ✅ User profile reset to basic tier');
           }
+        } else {
+          console.error('[Webhook] subscription.deleted - ❌ Could not find user for subscription:', subscription.id);
         }
         break;
       }
