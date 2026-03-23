@@ -11,98 +11,153 @@ interface Step4GenerateProps {
   onBack: () => void;
 }
 
-const analysisSteps = [
-  { id: 1, label: 'Validating property data', icon: '🏠', duration: 2000 },
-  { id: 2, label: 'Analyzing market conditions', icon: '📊', duration: 3000 },
-  { id: 3, label: 'Calculating financial metrics', icon: '💰', duration: 2500 },
-  { id: 4, label: 'Generating AI insights', icon: '🤖', duration: 4000 },
-  { id: 5, label: 'Finalizing report', icon: '📋', duration: 1500 }
+interface ProgressStep {
+  id: number;
+  label: string;
+  status: 'pending' | 'active' | 'complete';
+}
+
+const INITIAL_STEPS: ProgressStep[] = [
+  { id: 1, label: 'Fetching property details', status: 'pending' },
+  { id: 2, label: 'Pulling market data', status: 'pending' },
+  { id: 3, label: 'Running AI analysis', status: 'pending' },
+  { id: 4, label: 'Preparing your results', status: 'pending' },
 ];
 
-export default function Step4Generate({ 
-  data, 
-  updateData, 
-  onNext, 
-  onBack 
+export default function Step4Generate({
+  data,
+  updateData,
+  onNext,
+  onBack
 }: Step4GenerateProps) {
   const _router = useRouter();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [progress, setProgress] = useState(0);
+  const [steps, setSteps] = useState<ProgressStep[]>(INITIAL_STEPS);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [streamedText, setStreamedText] = useState('');
   const [_analysisId, setAnalysisId] = useState<string | null>(null);
-  // Ref guard: prevents double API call from React 18 Strict Mode re-mounting
   const hasStarted = useRef(false);
+  const streamTextRef = useRef('');
+  const textContainerRef = useRef<HTMLDivElement>(null);
 
-  const generateAnalysis = useCallback(async () => {
-    return fetch('/api/analysis/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        address: data.address,
-        strategy: data.strategy,
-        purchasePrice: data.financial.purchasePrice,
-        downPayment: (data.financial.purchasePrice * data.financial.downPaymentPercent) / 100,
-        loanTerms: {
-          interestRate: data.financial.interestRate,
-          loanTerm: data.financial.loanTerm,
-          loanType: data.financial.loanType || 'conventional',
-          points: data.financial.points
-        },
-        rehabCosts: data.financial.renovationCosts || 0,
-        arv: data.financial.arv, // After Repair Value for flip strategy
-        monthlyRent: data.financial.monthlyRent, // User-specified monthly rent
-        renovationLevel: data.strategyDetails?.renovationLevel, // Pass renovation level for backup calculation
-        strategyDetails: data.strategyDetails,
-        propertyData: data.propertyData, // Include the property data
-        units: data.financial.units || 1, // Number of units for multi-family properties
-        rentPerUnit: data.financial.rentPerUnit // Rent per unit for multi-family properties
-      })
-    });
-  }, [data]);
+  const updateStep = useCallback((stepId: number, status: 'pending' | 'active' | 'complete') => {
+    setSteps(prev => prev.map(s => {
+      if (s.id === stepId) return { ...s, status };
+      // If this step is complete, mark all previous as complete too
+      if (status === 'complete' && s.id < stepId) return { ...s, status: 'complete' };
+      return s;
+    }));
+  }, []);
 
   const startAnalysis = useCallback(async () => {
     setIsGenerating(true);
     setError(null);
+    setStreamedText('');
+    streamTextRef.current = '';
+    const t_start = performance.now();
 
-    // Simulate progress through steps
-    for (let i = 0; i < analysisSteps.length; i++) {
-      setCurrentStep(i);
-      setProgress((i / analysisSteps.length) * 100);
-      
-      // If this is the AI generation step, make the actual API call
-      if (i === 3) {
-        try {
-          const response = await generateAnalysis();
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(errorData.error || errorData.message || 'Failed to generate analysis');
+    try {
+      const response = await fetch('/api/analysis/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: data.address,
+          strategy: data.strategy,
+          purchasePrice: data.financial.purchasePrice,
+          downPayment: (data.financial.purchasePrice * data.financial.downPaymentPercent) / 100,
+          loanTerms: {
+            interestRate: data.financial.interestRate,
+            loanTerm: data.financial.loanTerm,
+            loanType: data.financial.loanType || 'conventional',
+            points: data.financial.points
+          },
+          rehabCosts: data.financial.renovationCosts || 0,
+          arv: data.financial.arv,
+          monthlyRent: data.financial.monthlyRent,
+          renovationLevel: data.strategyDetails?.renovationLevel,
+          strategyDetails: data.strategyDetails,
+          propertyData: data.propertyData,
+          units: data.financial.units || 1,
+          rentPerUnit: data.financial.rentPerUnit
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || errorData.message || 'Failed to generate analysis');
+      }
+
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response stream');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events from buffer
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || ''; // Keep incomplete event in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6); // Remove 'data: ' prefix
+
+          try {
+            const event = JSON.parse(jsonStr);
+
+            switch (event.type) {
+              case 'progress':
+                updateStep(event.step, event.status);
+                break;
+
+              case 'stream':
+                streamTextRef.current += event.text;
+                setStreamedText(streamTextRef.current);
+                // Auto-scroll
+                if (textContainerRef.current) {
+                  textContainerRef.current.scrollTop = textContainerRef.current.scrollHeight;
+                }
+                break;
+
+              case 'complete': {
+                const t_end = performance.now();
+                console.log(`[Step4] Total analysis time: ${((t_end - t_start) / 1000).toFixed(1)}s`);
+                setAnalysisId(event.result.id);
+                updateData({
+                  analysis: event.result.analysis,
+                  analysisId: event.result.id
+                });
+                setIsGenerating(false);
+                // Auto-proceed to results
+                setTimeout(() => onNext(), 800);
+                return;
+              }
+
+              case 'error':
+                throw new Error(event.message || 'Analysis generation failed');
+            }
+          } catch (parseErr) {
+            // Skip malformed events but rethrow actual errors
+            if (parseErr instanceof Error && parseErr.message !== 'Analysis generation failed' &&
+                !parseErr.message.includes('Failed')) {
+              console.warn('[Step4] Skipping malformed SSE event');
+            } else {
+              throw parseErr;
+            }
           }
-          const result = await response.json();
-          setAnalysisId(result.id);
-          updateData({ 
-            analysis: result.analysis,
-            analysisId: result.id 
-          });
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to generate analysis');
-          setIsGenerating(false);
-          return;
         }
       }
-      
-      // Wait for the step duration
-      await new Promise(resolve => setTimeout(resolve, analysisSteps[i].duration));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate analysis');
+      setIsGenerating(false);
     }
-
-    setProgress(100);
-    setIsGenerating(false);
-    
-    // Auto-proceed to results after a short delay
-    setTimeout(() => {
-      onNext();
-    }, 1000);
-  }, [updateData, onNext, generateAnalysis]);
+  }, [data, updateData, onNext, updateStep]);
 
   useEffect(() => {
     if (!hasStarted.current) {
@@ -114,16 +169,25 @@ export default function Step4Generate({
 
   const handleRetry = () => {
     setError(null);
-    setCurrentStep(0);
-    setProgress(0);
+    setSteps(INITIAL_STEPS);
+    setStreamedText('');
+    streamTextRef.current = '';
+    hasStarted.current = false;
     startAnalysis();
   };
+
+  // Calculate progress percentage from completed steps
+  const completedCount = steps.filter(s => s.status === 'complete').length;
+  const activeStep = steps.find(s => s.status === 'active');
+  const progress = activeStep
+    ? ((completedCount + 0.5) / steps.length) * 100
+    : (completedCount / steps.length) * 100;
 
   if (error) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
@@ -161,47 +225,57 @@ export default function Step4Generate({
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="bg-muted rounded-full h-3 overflow-hidden">
-          <div 
-            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500 ease-out"
+          <div
+            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-700 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
         <p className="text-sm text-muted text-center mt-2">{Math.round(progress)}% Complete</p>
       </div>
 
-      {/* Analysis Steps */}
-      <div className="space-y-4 max-w-md mx-auto">
-        {analysisSteps.map((step, index) => (
-          <div 
+      {/* Progress Steps */}
+      <div className="space-y-3 max-w-md mx-auto mb-8">
+        {steps.map((step) => (
+          <div
             key={step.id}
             className={`
-              flex items-center gap-4 p-4 rounded-lg transition-all duration-500
-              ${index === currentStep 
-                ? 'bg-primary/10 border border-primary/30 scale-105' 
-                : index < currentStep
-                ? 'bg-muted/20 opacity-70'
-                : 'opacity-30'
+              flex items-center gap-4 p-4 rounded-lg transition-all duration-300
+              ${step.status === 'active'
+                ? 'bg-primary/10 border border-primary/30'
+                : step.status === 'complete'
+                ? 'bg-primary/5 border border-transparent'
+                : 'opacity-40 border border-transparent'
               }
             `}
           >
-            <div className={`
-              text-2xl transition-all duration-500
-              ${index === currentStep ? 'animate-pulse' : ''}
-            `}>
-              {step.icon}
+            {/* Step indicator */}
+            <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+              {step.status === 'complete' ? (
+                <svg className="w-6 h-6 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              ) : step.status === 'active' ? (
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <div className="w-6 h-6 rounded-full border-2 border-muted/40" />
+              )}
             </div>
+
+            {/* Step label */}
             <div className="flex-1">
               <p className={`
-                font-medium transition-colors duration-500
-                ${index <= currentStep ? 'text-primary' : 'text-muted'}
+                font-medium text-sm
+                ${step.status === 'complete' ? 'text-green-400'
+                  : step.status === 'active' ? 'text-primary'
+                  : 'text-muted'}
               `}>
                 {step.label}
               </p>
-              {index === currentStep && (
+              {step.status === 'active' && (
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex gap-1">
                     {[...Array(3)].map((_, i) => (
-                      <div 
+                      <div
                         key={i}
                         className="w-1 h-1 bg-primary rounded-full animate-bounce"
                         style={{ animationDelay: `${i * 150}ms` }}
@@ -212,24 +286,28 @@ export default function Step4Generate({
                 </div>
               )}
             </div>
-            {index < currentStep && (
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            )}
           </div>
         ))}
       </div>
 
-      {/* Fun Facts */}
-      <div className="mt-12 text-center">
-        <div className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-lg p-6 max-w-md mx-auto">
-          <p className="text-sm text-muted mb-2">Did you know?</p>
-          <p className="text-primary font-medium">
-            Our AI analyzes over 50 data points to provide you with the most accurate investment insights
-          </p>
+      {/* Streaming Analysis Text */}
+      {streamedText && (
+        <div className="max-w-2xl mx-auto mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <p className="text-sm font-medium text-primary">AI Analysis Streaming</p>
+          </div>
+          <div
+            ref={textContainerRef}
+            className="bg-primary/5 border border-primary/20 rounded-lg p-4 max-h-64 overflow-y-auto text-sm text-muted leading-relaxed whitespace-pre-wrap font-mono"
+          >
+            {streamedText}
+            {isGenerating && (
+              <span className="inline-block w-2 h-4 bg-primary/60 animate-pulse ml-0.5" />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Cancel Button */}
       <div className="mt-8 text-center">

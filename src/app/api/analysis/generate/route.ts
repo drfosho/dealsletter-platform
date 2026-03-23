@@ -28,12 +28,148 @@ const anthropic = new Anthropic({
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
 console.log('[Generate] Anthropic client initialized, model:', CLAUDE_MODEL);
 
+// Strategy-specific system prompts (extracted to module level for streaming access)
+const SYSTEM_PROMPTS: Record<string, string> = {
+  brrrr: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT numerical values from "BRRRR STRATEGY ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Be concise but thorough
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the investment opportunity and capital recovery potential]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why]
+
+BRRRR PHASES:
+Phase 1 (Acquisition): Cash required: [exact value]
+Phase 2 (Refinance): Cash returned: [exact value]
+Phase 3 (Rental): Monthly cash flow: [exact value]
+
+KEY METRICS: Total Investment: [value], Cash Returned: [value], Cash Remaining: [value], Monthly Cash Flow: [value], Cash-on-Cash Return: [value], 5-Year ROI: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation of main risk factors including ARV accuracy, refinance approval likelihood, and potential delays]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items]
+
+Use provided values verbatim. Write naturally without any formatting symbols.`,
+
+  flip: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "FIX & FLIP ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Focus on flip-specific metrics only (no rental metrics)
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the profit potential and project scope]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on the numbers]
+
+KEY METRICS: ARV: [value], Total Investment: [value], Net Profit: [value], ROI: [value]%, Profit Margin: [value]%, Holding Period: [value] months
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation covering renovation risk, market timing, and ARV accuracy]
+
+MARKET ANALYSIS: [2-3 sentences on buyer demand and comparable sales in the area]
+
+RENOVATION STRATEGY: [2-3 sentences on the recommended approach based on renovation level]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+EXIT STRATEGY: [Recommended exit approach and 2-3 action items]
+
+Write naturally in plain text. No markdown, bullets, or special formatting.`,
+
+  rental: `You are a professional real estate investment analyst providing clear, actionable analysis.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "CASH FLOW ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- Be concise but thorough
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining the rental investment opportunity]
+
+RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on cash flow and returns]
+
+KEY METRICS: Monthly Cash Flow: [value], Cap Rate: [value]%, Cash-on-Cash Return: [value]%, Total ROI: [value]%, Annual NOI: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation of main risk factors]
+
+MARKET ANALYSIS: [2-3 sentences on rental market conditions and demand]
+
+INVESTMENT STRATEGY: [2-3 sentences on recommended approach for this property]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items]
+
+Format monetary values with commas. Write in plain text without any formatting symbols.`,
+
+  'house-hack': `You are a professional real estate investment analyst providing clear, actionable analysis for house hacking strategies.
+
+CRITICAL REQUIREMENTS:
+- Use EXACT values from "HOUSE HACK ANALYSIS" section
+- Write in professional, grammatically correct English
+- DO NOT use any markdown formatting (no **, *, --, #, bullet points)
+- Use complete, well-structured sentences
+- The PRIMARY metric is "Effective Mortgage" (what the owner pays after tenant income), NOT traditional cash flow
+- NEVER say PASS just because the effective mortgage is positive. A positive effective mortgage that is LOWER than market rent is a GOOD deal.
+- Only recommend PASS if the effective mortgage is HIGHER than market rent (meaning house hacking costs MORE than just renting)
+
+IMPORTANT FRAMING:
+- House hacking is about reducing housing costs, NOT generating positive cash flow
+- "Effective Mortgage" = Total Expenses minus Tenant Rental Income. This is what the owner-occupant actually pays per month.
+- A $500/month effective mortgage when market rent is $1,500/month means $1,000/month in savings. That is a BUY.
+- Traditional "cash flow" is NOT relevant for house hacks since the owner lives in one unit.
+
+OUTPUT FORMAT:
+
+SUMMARY: [2-3 sentences explaining how much the owner saves vs renting, and the effective mortgage amount]
+
+RECOMMENDATION: [BUY or PASS] - [Based on whether effective mortgage is less than market rent. If effective mortgage < market rent, always BUY.]
+
+KEY METRICS: Effective Mortgage: [value]/month, Market Rent Equivalent: [value]/month, Monthly Savings: [value], Housing ROI: [value]%, Annual Savings: [value]
+
+RISK LEVEL: [Low/Medium/High] - [Brief explanation focusing on landlord responsibilities and vacancy risk]
+
+HOUSE HACK BENEFITS: [3-4 sentences covering savings vs renting, equity building, tax benefits, and low down payment advantages]
+
+LANDLORD CONSIDERATIONS: [2-3 sentences on living with tenants and property management]
+
+OPPORTUNITIES: [3-5 specific opportunities as complete sentences]
+
+RISKS: [3-5 specific risks as complete sentences]
+
+NEXT STEPS: [2-3 specific, actionable items for getting started with house hacking]
+
+Format monetary values with commas. Write in plain text without any formatting symbols.`
+};
+
 export async function POST(request: NextRequest) {
+  const t_total = Date.now();
   console.log('=== ANALYSIS GENERATION START ===');
   console.log('Timestamp:', new Date().toISOString());
   console.log('Request method:', request.method);
   console.log('Request URL:', request.url);
-  console.log('Request headers:', JSON.stringify(Object.fromEntries(request.headers.entries()), null, 2));
   
   try {
     console.log('\n--- STEP 1: Environment Validation ---');
@@ -109,7 +245,9 @@ export async function POST(request: NextRequest) {
     console.log('Supabase client methods:', Object.keys(supabase));
 
     console.log('\n--- STEP 3: Authentication Check ---');
+    const t_auth = Date.now();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log(`[Timing] Auth check: ${Date.now() - t_auth}ms`);
     console.log('Auth check completed');
     console.log('User authenticated:', !!user);
     console.log('User ID:', user?.id);
@@ -277,6 +415,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('\n--- STEP 5: Property Cache Check ---');
+    const t_property = Date.now();
     console.log('Checking property cache for address:', body.address);
     const { data: cachedProperty, error: cacheError } = await supabase
       .from('property_cache')
@@ -352,6 +491,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log(`[Timing] Property data retrieval: ${Date.now() - t_property}ms`);
     console.log('\n--- STEP 6: Preparing Analysis Record ---');
     const purchasePrice = body.purchasePrice || estimatedValue || 0;
     console.log('Purchase price:', purchasePrice);
@@ -359,6 +499,7 @@ export async function POST(request: NextRequest) {
     console.log('Property data available:', !!propertyData);
     console.log('Property data keys:', propertyData ? Object.keys(propertyData) : 'none');
 
+    const t_dbInsert = Date.now();
     console.log('\n--- STEP 7: Creating Database Record ---');
     
     // Map strategy to deal_type for analyzed_properties table
@@ -566,194 +707,209 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('\n--- STEP 8: AI Analysis Generation ---');
-    try {
-      console.log('Calling generatePropertyAnalysis function...');
-      console.log('Property data passed:', !!propertyData);
-      console.log('Request body passed:', !!body);
-      
-      const aiAnalysis = await generatePropertyAnalysis(propertyData, body);
-      console.log('AI analysis generated successfully');
-      console.log('AI analysis keys:', Object.keys(aiAnalysis));
-      
-      // Update analyzed_properties table with AI results
-      console.log('Updating analyzed_properties table with AI analysis...');
+    console.log(`[Timing] DB record creation: ${Date.now() - t_dbInsert}ms`);
+    console.log(`[Timing] Pre-stream setup total: ${Date.now() - t_total}ms`);
+    console.log('\n--- STEP 8: AI Analysis Generation (Streaming) ---');
+    const t_streamStart = Date.now();
 
-      // CRITICAL: Extract ROI and profit from AI analysis with explicit logging
-      const extractedRoi = aiAnalysis.financial_metrics?.roi;
-      const extractedProfit = aiAnalysis.financial_metrics?.total_profit ||
-                              aiAnalysis.financial_metrics?.net_profit;
+    // Prepare analysis context BEFORE starting the stream
+    console.log('[Generate] Preparing analysis context...');
+    const t_contextStart = Date.now();
+    const { context, calculatedMetrics } = prepareAnalysisContext(propertyData, body);
+    console.log(`[Generate] Context prepared in ${Date.now() - t_contextStart}ms`);
 
-      console.log('[Generate] Extracted financial metrics for DB update:', {
-        roi: extractedRoi,
-        roiType: typeof extractedRoi,
-        profit: extractedProfit,
-        profitType: typeof extractedProfit,
-        fullFinancialMetrics: aiAnalysis.financial_metrics
-      });
+    // Build the streaming SSE response
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+        async start(controller) {
+          const send = (event: Record<string, unknown>) => {
+            try {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+            } catch {
+              // Controller may be closed
+            }
+          };
 
-      // Use the extracted values, defaulting to 0 only if undefined/null
-      // CRITICAL: Round profit to integer for database (profit column is INTEGER type)
-      const finalRoi = extractedRoi ?? 0;
-      const finalProfit = Math.round(extractedProfit ?? 0);
+          try {
+            // Steps 1-2 already completed (property data + market data resolved before stream)
+            send({ type: 'progress', step: 1, label: 'Fetching property details', status: 'complete' });
+            send({ type: 'progress', step: 2, label: 'Pulling market data', status: 'complete' });
 
-      // Extract ARV for flip strategies
-      const extractedArv = aiAnalysis.financial_metrics?.arv;
+            // Step 3: AI Analysis - stream Claude response
+            send({ type: 'progress', step: 3, label: 'Running AI analysis', status: 'active' });
 
-      console.log('[Generate] Final values for DB:', {
-        finalRoi,
-        finalProfit,
-        arv: extractedArv,
-        strategy: body.strategy
-      });
+            const systemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
+            const t_claudeStart = Date.now();
+            console.log(`[Generate] Starting Claude streaming call at +${t_claudeStart - t_streamStart}ms`);
 
-      // Build update data with all calculated values for easy retrieval
-      const updateData = {
-        analysis_data: {
-          ...analysisRecord.analysis_data,
-          ai_analysis: aiAnalysis,
-          status: 'completed',
-          // CRITICAL: Store key calculated values at top level of analysis_data for easy access
-          calculatedMetrics: {
-            roi: finalRoi,
-            profit: finalProfit,
-            arv: extractedArv,
-            totalInvestment: aiAnalysis.financial_metrics?.total_investment,
-            holdingCosts: aiAnalysis.financial_metrics?.holding_costs,
-            profitMargin: aiAnalysis.financial_metrics?.profit_margin,
-            monthlyCashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow,
-            capRate: aiAnalysis.financial_metrics?.cap_rate,
-            cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return
-          },
-          // Store ARV at top level for flip strategies
-          arv: extractedArv
-        },
-        roi: finalRoi,
-        profit: finalProfit
-      };
+            const claudeStream = anthropic.messages.stream({
+              model: CLAUDE_MODEL,
+              max_tokens: 3000,
+              temperature: 0.3,
+              system: systemPrompt,
+              messages: [{ role: 'user' as const, content: context }]
+            });
 
-      console.log('[Generate] Update data ROI/Profit:', {
-        roi: updateData.roi,
-        profit: updateData.profit
-      });
+            let fullText = '';
+            claudeStream.on('text', (text) => {
+              fullText += text;
+              send({ type: 'stream', text });
+            });
 
-      const { data: updateResult, error: updateError } = await supabase
-        .from('analyzed_properties')
-        .update(updateData)
-        .eq('id', analysisRecord.id)
-        .select('roi, profit')
-        .single();
+            const finalMessage = await claudeStream.finalMessage();
+            const t_claudeEnd = Date.now();
+            console.log(`[Generate] Claude streaming completed in ${t_claudeEnd - t_claudeStart}ms`);
+            console.log(`[Generate] Claude usage:`, finalMessage.usage);
+            console.log(`[Generate] Analysis text length: ${fullText.length}`);
 
-      if (updateError) {
-        console.error('[Generate] CRITICAL: Failed to update analysis:', updateError);
-        console.error('[Generate] Update error details:', {
-          code: updateError.code,
-          message: updateError.message,
-          details: updateError.details
-        });
-        // CRITICAL FIX: Return error response if update fails
-        // This prevents returning success with $0 values
-        return NextResponse.json(
-          {
-            error: 'Failed to save analysis results',
-            details: updateError.message,
-            analysisId: analysisRecord.id
-          },
-          { status: 500 }
-        );
-      } else {
-        console.log('[Generate] Successfully updated analysis. Verified values:', updateResult);
+            send({ type: 'progress', step: 3, label: 'Running AI analysis', status: 'complete' });
 
-        // VALIDATION: Verify the values were actually saved
-        if (updateResult && (updateResult.roi === 0 && finalRoi !== 0)) {
-          console.error('[Generate] WARNING: ROI saved as 0 but should be:', finalRoi);
-        }
-        if (updateResult && (updateResult.profit === 0 && finalProfit !== 0)) {
-          console.error('[Generate] WARNING: Profit saved as 0 but should be:', finalProfit);
-        }
-      }
+            // Step 4: Parse and save results
+            send({ type: 'progress', step: 4, label: 'Preparing your results', status: 'active' });
+            const t_saveStart = Date.now();
 
-      // Update user's usage count (including admin tracking)
-      console.log('[Analysis] Incrementing usage count for user:', user.id);
-      const { error: usageUpdateError } = await supabase
-        .rpc('increment_analysis_usage', { p_user_id: user.id });
-      
-      if (usageUpdateError) {
-        console.error('Failed to update usage count:', usageUpdateError);
-        console.error('Usage update error details:', {
-          code: usageUpdateError.code,
-          message: usageUpdateError.message,
-          details: usageUpdateError.details
-        });
-        // Don't fail the request, just log the error
-      } else {
-        console.log('[Analysis] Successfully incremented usage count');
+            const aiAnalysis = parseAnalysisResponse(fullText, body.strategy, calculatedMetrics);
+            console.log('[Generate] Parsed analysis, financial_metrics:', aiAnalysis.financial_metrics);
 
-        // Check if user has hit 80% of their limit and send warning email
-        try {
-          const now = new Date();
-          const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-          const { data: usageRow } = await supabase
-            .from('usage_tracking')
-            .select('analysis_count')
-            .eq('user_id', user.id)
-            .eq('month_year', currentMonth)
-            .single();
+            // Extract ROI and profit
+            const extractedRoi = aiAnalysis.financial_metrics?.roi;
+            const extractedProfit = aiAnalysis.financial_metrics?.total_profit ||
+                                    aiAnalysis.financial_metrics?.net_profit;
+            // Clamp ROI to fit DECIMAL(5,2) column: max 999.99
+            const finalRoi = Math.min(extractedRoi ?? 0, 999.99);
+            const finalProfit = Math.round(extractedProfit ?? 0);
 
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('subscription_tier')
-            .eq('id', user.id)
-            .single();
+            // Extract ARV for flip strategies
+            const extractedArv = aiAnalysis.financial_metrics?.arv;
 
-          const tierLimits: Record<string, number> = { free: 10, basic: 10, starter: 10, pro: 50, professional: 50, 'pro-plus': 200, 'pro_plus': 200, premium: 50 };
-          const tier = profile?.subscription_tier?.toLowerCase() || 'free';
-          const limit = tierLimits[tier] ?? 10;
-          const used = usageRow?.analysis_count ?? 0;
+            // Build update data
+            const updateData = {
+              analysis_data: {
+                ...analysisRecord.analysis_data,
+                ai_analysis: aiAnalysis,
+                status: 'completed',
+                calculatedMetrics: {
+                  roi: finalRoi,
+                  profit: finalProfit,
+                  arv: extractedArv,
+                  totalInvestment: aiAnalysis.financial_metrics?.total_investment,
+                  holdingCosts: aiAnalysis.financial_metrics?.holding_costs,
+                  profitMargin: aiAnalysis.financial_metrics?.profit_margin,
+                  monthlyCashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow,
+                  capRate: aiAnalysis.financial_metrics?.cap_rate,
+                  cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return
+                },
+                arv: extractedArv
+              },
+              roi: finalRoi,
+              profit: finalProfit
+            };
 
-          // Send at exactly 80% threshold (e.g., 8 of 10, 40 of 50)
-          const threshold = Math.floor(limit * 0.8);
-          if (used === threshold) {
-            const { sendUsageWarningEmail } = await import('@/lib/email');
-            sendUsageWarningEmail({
-              email: user.email!,
-              name: user.user_metadata?.full_name as string || undefined,
-              used,
-              limit,
-              tier,
-            }).catch(err => console.error('[Analysis] Usage warning email error:', err));
+            const { error: updateError } = await supabase
+              .from('analyzed_properties')
+              .update(updateData)
+              .eq('id', analysisRecord.id)
+              .select('roi, profit')
+              .single();
+
+            if (updateError) {
+              console.error('[Generate] Failed to update analysis:', updateError);
+              send({ type: 'error', message: 'Failed to save analysis results' });
+              controller.close();
+              return;
+            }
+
+            // Update usage count (non-blocking)
+            console.log('[Generate] Incrementing usage count for user:', user.id);
+            const { error: usageUpdateError } = await supabase
+              .rpc('increment_analysis_usage', { p_user_id: user.id });
+
+            if (usageUpdateError) {
+              console.error('[Generate] Failed to update usage count:', usageUpdateError);
+            } else {
+              // Check 80% threshold for warning email (non-blocking)
+              try {
+                const now = new Date();
+                const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const { data: usageRow } = await supabase
+                  .from('usage_tracking')
+                  .select('analysis_count')
+                  .eq('user_id', user.id)
+                  .eq('month_year', currentMonth)
+                  .single();
+
+                const { data: profile } = await supabase
+                  .from('user_profiles')
+                  .select('subscription_tier')
+                  .eq('id', user.id)
+                  .single();
+
+                const tierLimits: Record<string, number> = { free: 10, basic: 10, starter: 10, pro: 50, professional: 50, 'pro-plus': 200, 'pro_plus': 200, premium: 50 };
+                const tier = profile?.subscription_tier?.toLowerCase() || 'free';
+                const limit = tierLimits[tier] ?? 10;
+                const used = usageRow?.analysis_count ?? 0;
+                const threshold = Math.floor(limit * 0.8);
+                if (used === threshold) {
+                  const { sendUsageWarningEmail } = await import('@/lib/email');
+                  sendUsageWarningEmail({
+                    email: user.email!,
+                    name: user.user_metadata?.full_name as string || undefined,
+                    used,
+                    limit,
+                    tier,
+                  }).catch(err => console.error('[Generate] Usage warning email error:', err));
+                }
+              } catch (emailErr) {
+                console.error('[Generate] Usage warning check error:', emailErr);
+              }
+            }
+
+            const t_saveEnd = Date.now();
+            console.log(`[Generate] DB save completed in ${t_saveEnd - t_saveStart}ms`);
+            console.log(`[Generate] TOTAL streaming time: ${t_saveEnd - t_streamStart}ms`);
+
+            send({ type: 'progress', step: 4, label: 'Preparing your results', status: 'complete' });
+            send({
+              type: 'complete',
+              result: {
+                id: analysisRecord.id,
+                address: body.address,
+                strategy: body.strategy,
+                propertyData,
+                analysis: aiAnalysis,
+                timestamp: new Date().toISOString(),
+              }
+            });
+
+            controller.close();
+          } catch (error) {
+            console.error('[Generate] Stream error:', error);
+            // Update analysis status to failed
+            await supabase
+              .from('analyzed_properties')
+              .update({
+                analysis_data: {
+                  ...analysisRecord.analysis_data,
+                  status: 'failed',
+                  error_message: error instanceof Error ? error.message : 'Unknown error'
+                }
+              })
+              .eq('id', analysisRecord.id);
+
+            send({ type: 'error', message: error instanceof Error ? error.message : 'Analysis generation failed' });
+            controller.close();
           }
-        } catch (emailErr) {
-          // Non-fatal — don't block analysis response
-          console.error('[Analysis] Usage warning check error:', emailErr);
         }
-      }
-
-      // Return complete analysis
-      return NextResponse.json({
-        id: analysisRecord.id,
-        address: body.address,
-        strategy: body.strategy,
-        propertyData,
-        analysis: aiAnalysis,
-        timestamp: new Date().toISOString(),
       });
 
-    } catch (error) {
-      // Update analysis status to failed
-      await supabase
-        .from('analyzed_properties')
-        .update({
-          analysis_data: {
-            ...analysisRecord.analysis_data,
-            status: 'failed',
-            error_message: error instanceof Error ? error.message : 'Unknown error'
-          }
-        })
-        .eq('id', analysisRecord.id);
-
-      throw error;
-    }
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        }
+      });
 
   } catch (error) {
     console.error('\n=== DETAILED ERROR INFORMATION ===');
@@ -925,23 +1081,27 @@ CRITICAL REQUIREMENTS:
 - Write in professional, grammatically correct English
 - DO NOT use any markdown formatting (no **, *, --, #, bullet points)
 - Use complete, well-structured sentences
-- Focus on the key house hack benefit: reducing or eliminating housing costs
+- The PRIMARY metric is "Effective Mortgage" (what the owner pays after tenant income), NOT traditional cash flow
+- NEVER say PASS just because the effective mortgage is positive. A positive effective mortgage that is LOWER than market rent is a GOOD deal.
+- Only recommend PASS if the effective mortgage is HIGHER than market rent (meaning house hacking costs MORE than just renting)
+
+IMPORTANT FRAMING:
+- House hacking is about reducing housing costs, NOT generating positive cash flow
+- "Effective Mortgage" = Total Expenses minus Tenant Rental Income. This is what the owner-occupant actually pays per month.
+- A $500/month effective mortgage when market rent is $1,500/month means $1,000/month in savings. That is a BUY.
+- Traditional "cash flow" is NOT relevant for house hacks since the owner lives in one unit.
 
 OUTPUT FORMAT:
 
-SUMMARY: [2-3 sentences explaining the house hack opportunity and potential to live rent-free or at reduced cost]
+SUMMARY: [2-3 sentences explaining how much the owner saves vs renting, and the effective mortgage amount]
 
-RECOMMENDATION: [BUY, HOLD, or PASS] - [One clear sentence explaining why based on out-of-pocket housing cost]
+RECOMMENDATION: [BUY or PASS] - [Based on whether effective mortgage is less than market rent. If effective mortgage < market rent, always BUY.]
 
-KEY METRICS: Out-of-Pocket Housing Cost: [value]/month, Monthly Savings vs Renting: [value], Housing ROI: [value]%, Annual Savings: [value]
+KEY METRICS: Effective Mortgage: [value]/month, Market Rent Equivalent: [value]/month, Monthly Savings: [value], Housing ROI: [value]%, Annual Savings: [value]
 
 RISK LEVEL: [Low/Medium/High] - [Brief explanation focusing on landlord responsibilities and vacancy risk]
 
-HOUSE HACK BENEFITS:
-- Monthly savings compared to renting
-- Equity building potential
-- Tax benefits from rental portion
-- FHA financing advantages
+HOUSE HACK BENEFITS: [3-4 sentences covering savings vs renting, equity building, tax benefits, and low down payment advantages]
 
 LANDLORD CONSIDERATIONS: [2-3 sentences on living with tenants and property management]
 
@@ -1232,7 +1392,8 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
                   parseInteger((property as any)?.numberOfUnits) ||
                   2; // Default to 2 for house hack
 
-    // User occupies 1 unit, rents the rest
+    // Read which unit the user will occupy from strategy details
+    const occupiedUnitPref = (request as any).strategyDetails?.occupiedUnit || '1';
     const occupiedUnits = 1;
     const rentableUnits = Math.max(units - occupiedUnits, 1);
 
@@ -1242,16 +1403,36 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
                         parsePrice((rentalEstimate as any)?.rent) ||
                         0;
 
+    // Determine occupied unit rent (excluded from income)
+    // "smallest" = user lives in cheapest unit, maximizes rental income
+    // "largest" = user lives in most expensive unit
+    let occupiedUnitRent = rentPerUnit; // Default: same rent for all units
+    let occupiedUnitLabel = `Unit ${occupiedUnitPref}`;
+    if (occupiedUnitPref === 'smallest') {
+      occupiedUnitRent = Math.round(rentPerUnit * 0.85); // Smallest unit ~15% less
+      occupiedUnitLabel = 'Smallest unit';
+    } else if (occupiedUnitPref === 'largest') {
+      occupiedUnitRent = Math.round(rentPerUnit * 1.15); // Largest unit ~15% more
+      occupiedUnitLabel = 'Largest unit';
+    }
+
     // Rental income (only from rented units, not owner-occupied)
     const monthlyRentalIncome = rentPerUnit * rentableUnits;
 
-    // House hack financing (FHA eligible - 3.5% down for owner-occupied)
-    const houseHackDownPaymentPercent = (downPayment / effectivePurchasePrice) * 100;
+    // House hack financing
+    // Read down payment from strategy details if set there
+    const strategyDP = parseFloat((request as any).strategyDetails?.downPaymentPercent || '0');
+    const houseHackDownPaymentPercent = strategyDP > 0
+      ? strategyDP
+      : (downPayment / effectivePurchasePrice) * 100;
+    const actualDownPayment = strategyDP > 0
+      ? Math.round(effectivePurchasePrice * strategyDP / 100)
+      : downPayment;
     const isFHAEligible = houseHackDownPaymentPercent <= 5;
-    const loanAmount = effectivePurchasePrice - downPayment;
+    const loanAmount = effectivePurchasePrice - actualDownPayment;
 
     // Calculate mortgage payment
-    const interestRate = request.loanTerms?.interestRate || 6.5; // Lower rate for owner-occupied
+    const interestRate = request.loanTerms?.interestRate || 6.5;
     const loanTermYears = request.loanTerms?.loanTerm || 30;
     const monthlyRate = interestRate / 100 / 12;
     const numPayments = loanTermYears * 12;
@@ -1260,13 +1441,13 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       (Math.pow(1 + monthlyRate, numPayments) - 1);
 
     // FHA MIP (if applicable)
-    const monthlyMIP = isFHAEligible ? (loanAmount * 0.0055 / 12) : 0; // 0.55% annual MIP for FHA
+    const monthlyMIP = isFHAEligible ? (loanAmount * 0.0055 / 12) : 0;
 
     // Monthly expenses (owner pays ALL expenses, offset by rental income)
     const monthlyPropertyTax = Math.round((effectivePurchasePrice * 0.012) / 12);
     const monthlyInsurance = Math.round((effectivePurchasePrice * 0.0035) / 12);
-    const monthlyMaintenance = Math.round((rentPerUnit * units) * 0.08); // 8% of potential rent for maintenance
-    const monthlyVacancy = Math.round((rentPerUnit * rentableUnits) * 0.05); // 5% vacancy on rentable units only
+    const monthlyMaintenance = Math.round((rentPerUnit * units) * 0.08);
+    const monthlyVacancy = Math.round((rentPerUnit * rentableUnits) * 0.05);
 
     const totalMonthlyExpenses =
       monthlyMortgagePI +
@@ -1276,31 +1457,30 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
       monthlyMaintenance +
       monthlyVacancy;
 
-    // Key house hack metric: Out-of-pocket housing cost
-    const outOfPocketHousingCost = totalMonthlyExpenses - monthlyRentalIncome;
+    // EFFECTIVE MORTGAGE = what you actually pay out of pocket after rental income
+    const effectiveMortgage = totalMonthlyExpenses - monthlyRentalIncome;
 
-    // Compare to market rent (what you'd pay to rent similar housing)
-    const marketRentEquivalent = rentPerUnit; // Assume similar unit would cost same
-    const monthlyHousingSavings = marketRentEquivalent - outOfPocketHousingCost;
+    // Compare to market rent (what you'd pay to rent a similar unit)
+    const marketRentEquivalent = occupiedUnitRent;
+    const monthlyHousingSavings = marketRentEquivalent - Math.max(effectiveMortgage, 0);
     const annualHousingSavings = monthlyHousingSavings * 12;
 
     // Cash to close
     const closingCosts = effectivePurchasePrice * 0.03;
-    const cashToClose = downPayment + closingCosts;
+    const cashToClose = actualDownPayment + closingCosts;
 
     // Housing ROI (savings relative to investment)
     const housingROI = cashToClose > 0 ? (annualHousingSavings / cashToClose) * 100 : 0;
 
-    // Traditional cash flow (for comparison)
-    const monthlyCashFlow = monthlyRentalIncome - totalMonthlyExpenses;
-
     console.log('[House Hack] Calculation Results:', {
       units,
       rentableUnits,
+      occupiedUnitPref,
+      occupiedUnitRent,
       rentPerUnit,
       monthlyRentalIncome,
       totalMonthlyExpenses,
-      outOfPocketHousingCost,
+      effectiveMortgage,
       monthlyHousingSavings,
       housingROI
     });
@@ -1309,22 +1489,22 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
 
 PROPERTY SETUP:
 - Total Units: ${units}
-- Owner-Occupied Unit: ${occupiedUnits}
+- You Live In: ${occupiedUnitLabel} (market rent: $${occupiedUnitRent.toLocaleString()}/mo)
 - Rentable Units: ${rentableUnits}
 - Rent Per Unit: $${rentPerUnit.toLocaleString()}/month
 
 FINANCING (${isFHAEligible ? 'FHA Eligible' : 'Conventional'}):
 - Purchase Price: $${effectivePurchasePrice.toLocaleString()}
-- Down Payment: $${downPayment.toLocaleString()} (${houseHackDownPaymentPercent.toFixed(1)}%)
+- Down Payment: $${actualDownPayment.toLocaleString()} (${houseHackDownPaymentPercent.toFixed(1)}%)
 - Loan Amount: $${loanAmount.toLocaleString()}
 - Interest Rate: ${interestRate}%
 - Loan Term: ${loanTermYears} years
 
-MONTHLY INCOME:
-- Rental Income (${rentableUnits} units): $${monthlyRentalIncome.toLocaleString()}/month
+MONTHLY INCOME FROM TENANTS:
+- Rental Income (${rentableUnits} rented units): $${monthlyRentalIncome.toLocaleString()}/month
 - Annual Rental Income: $${(monthlyRentalIncome * 12).toLocaleString()}/year
 
-MONTHLY EXPENSES:
+MONTHLY EXPENSES (Full Property):
 - Mortgage (P&I): $${Math.round(monthlyMortgagePI).toLocaleString()}${isFHAEligible ? `
 - FHA MIP: $${Math.round(monthlyMIP).toLocaleString()}` : ''}
 - Property Taxes: $${monthlyPropertyTax.toLocaleString()}
@@ -1333,35 +1513,39 @@ MONTHLY EXPENSES:
 - Vacancy Reserve (5%): $${monthlyVacancy.toLocaleString()}
 - TOTAL EXPENSES: $${Math.round(totalMonthlyExpenses).toLocaleString()}/month
 
-HOUSE HACK ADVANTAGE:
+YOUR EFFECTIVE MORTGAGE (What You Actually Pay):
 - Total Monthly Expenses: $${Math.round(totalMonthlyExpenses).toLocaleString()}
-- Less: Rental Income: $${monthlyRentalIncome.toLocaleString()}
-- OUT-OF-POCKET HOUSING COST: $${Math.round(outOfPocketHousingCost).toLocaleString()}/month ${outOfPocketHousingCost <= 0 ? '(LIVE FREE OR GET PAID!)' : ''}
+- Less Tenant Rental Income: -$${monthlyRentalIncome.toLocaleString()}
+- YOUR EFFECTIVE MORTGAGE: $${Math.round(effectiveMortgage).toLocaleString()}/month ${effectiveMortgage <= 0 ? '(TENANTS COVER EVERYTHING!)' : ''}
 
-SAVINGS ANALYSIS:
-- Market Rent for Similar Unit: $${rentPerUnit.toLocaleString()}/month
-- Your Out-of-Pocket Cost: $${Math.round(outOfPocketHousingCost).toLocaleString()}/month
-- MONTHLY SAVINGS: $${Math.round(monthlyHousingSavings).toLocaleString()} ${monthlyHousingSavings > 0 ? '(POSITIVE!)' : ''}
+SAVINGS VS RENTING:
+- Market Rent for Similar Unit: $${marketRentEquivalent.toLocaleString()}/month
+- Your Effective Mortgage: $${Math.round(Math.max(effectiveMortgage, 0)).toLocaleString()}/month
+- MONTHLY SAVINGS: $${Math.round(monthlyHousingSavings).toLocaleString()}/month
 - ANNUAL SAVINGS: $${Math.round(annualHousingSavings).toLocaleString()}/year
 
 INVESTMENT METRICS:
 - Cash to Close: $${Math.round(cashToClose).toLocaleString()}
-- Housing ROI: ${housingROI.toFixed(1)}% (return on your down payment via housing savings)
-${outOfPocketHousingCost <= 0 ? '- INFINITE RETURN: You are getting paid to live here!' : ''}
+- Housing ROI: ${housingROI.toFixed(1)}% (annual savings / cash invested)
+${effectiveMortgage <= 0 ? '- LIVE FREE: Tenants cover 100% of your housing costs!' : `- You pay only $${Math.round(effectiveMortgage).toLocaleString()}/mo instead of $${marketRentEquivalent.toLocaleString()}/mo to rent`}
 
-Provide a house hack analysis focusing on the out-of-pocket housing cost reduction and comparison to renting.`;
+IMPORTANT: This is a house hack analysis. The "effective mortgage" is the key metric, NOT traditional cash flow. A positive effective mortgage simply means you still pay something toward housing, but MUCH less than renting. This is a GOOD deal if the effective mortgage is significantly below market rent.
 
+Provide a house hack analysis focusing on the effective mortgage reduction and savings compared to renting.`;
+
+    // For house hack, use effective mortgage and savings as the key metrics
+    // NOT traditional cash flow (which would always be negative and misleading)
     calculatedMetrics = {
       totalInvestment: cashToClose,
-      cashFlow: monthlyCashFlow, // Traditional cash flow for comparison
+      cashFlow: -effectiveMortgage, // Negative of effective mortgage for display (positive = good)
       capRate: 0, // Not applicable for house hack
-      cocReturn: housingROI, // Use housing ROI instead
-      roi: housingROI,
+      cocReturn: housingROI,
+      roi: Math.min(housingROI, 999.99), // Clamp for DB
       annualNOI: monthlyRentalIncome * 12 - (monthlyPropertyTax + monthlyInsurance + monthlyMaintenance) * 12,
       totalProfit: annualHousingSavings * 5, // 5-year savings
       monthlyRent: monthlyRentalIncome,
       // House hack specific
-      outOfPocketHousingCost: outOfPocketHousingCost,
+      outOfPocketHousingCost: effectiveMortgage,
       monthlyHousingSavings: monthlyHousingSavings
     };
 

@@ -186,6 +186,20 @@ export default function Step3Financial({
       };
     }
 
+    // House hack: apply FHA/low-down-payment defaults
+    if (data.strategy === 'house-hack') {
+      const dpFromStrategy = parseFloat(data.strategyDetails?.downPaymentPercent || '5');
+      const defaults = getSimpleFinancingDefaults('house-hack');
+      console.log('[Step3Financial] Initializing with house-hack defaults:', { dpFromStrategy, defaults });
+      return {
+        ...data.financial,
+        downPaymentPercent: dpFromStrategy,
+        interestRate: defaults.interestRate,
+        loanTerm: defaults.loanTermYears,
+        loanType: 'conventional' as const
+      };
+    }
+
     return { ...data.financial };
   }, [data.financial, data.strategy, data.strategyDetails?.initialFinancing]);
 
