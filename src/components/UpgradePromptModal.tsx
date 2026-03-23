@@ -21,7 +21,7 @@ export default function UpgradePromptModal({
     if (subscriptionTier === 'free' || subscriptionTier === 'basic') {
       return {
         title: 'Monthly Limit Reached',
-        description: 'You&apos;ve used your 3 free analyses this month. Upgrade to Pro for 50 analyses per month.',
+        description: 'You&apos;ve used your 10 free analyses this month. Upgrade to Pro for 50 analyses per month.',
         features: [
           '50 property analyses per month',
           'Detailed investment projections',
