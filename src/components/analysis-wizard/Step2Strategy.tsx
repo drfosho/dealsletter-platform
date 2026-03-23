@@ -120,6 +120,9 @@ export default function Step2Strategy({
         case 'rental':
           newDetails = { timeline: '10', exitStrategy: 'self' };
           break;
+        case 'house-hack':
+          newDetails = { downPaymentPercent: '5', occupiedUnit: '1' };
+          break;
         case 'commercial':
           newDetails = { timeline: '1' };
           break;
@@ -337,7 +340,7 @@ export default function Step2Strategy({
                 <label className="block text-sm font-medium text-primary mb-2">
                   Investment Horizon
                 </label>
-                <select 
+                <select
                   value={strategyDetails.timeline || '10'}
                   onChange={(e) => handleDetailsChange('timeline', e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -351,7 +354,7 @@ export default function Step2Strategy({
                 <label className="block text-sm font-medium text-primary mb-2">
                   Property Management
                 </label>
-                <select 
+                <select
                   value={strategyDetails.exitStrategy || 'self'}
                   onChange={(e) => handleDetailsChange('exitStrategy', e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
@@ -359,6 +362,55 @@ export default function Step2Strategy({
                   <option value="self">Self-manage</option>
                   <option value="property-manager">Property Manager (8-10%)</option>
                 </select>
+              </div>
+            </div>
+          )}
+
+          {selectedStrategy === 'house-hack' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted">
+                You will live in one unit and rent the others to offset your mortgage.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Down Payment
+                  </label>
+                  <select
+                    value={strategyDetails.downPaymentPercent || '5'}
+                    onChange={(e) => handleDetailsChange('downPaymentPercent', e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="3.5">3.5% (FHA minimum)</option>
+                    <option value="5">5% (Low down payment)</option>
+                    <option value="10">10% (Conventional)</option>
+                    <option value="15">15%</option>
+                    <option value="20">20% (No PMI)</option>
+                  </select>
+                  <p className="text-xs text-muted mt-1">
+                    Owner-occupied properties qualify for low down payment loans
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-primary mb-2">
+                    Unit You Will Live In
+                  </label>
+                  <select
+                    value={strategyDetails.occupiedUnit || '1'}
+                    onChange={(e) => handleDetailsChange('occupiedUnit', e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  >
+                    <option value="largest">Largest unit</option>
+                    <option value="smallest">Smallest unit (maximize rental income)</option>
+                    <option value="1">Unit 1</option>
+                    <option value="2">Unit 2</option>
+                    <option value="3">Unit 3</option>
+                    <option value="4">Unit 4</option>
+                  </select>
+                  <p className="text-xs text-muted mt-1">
+                    Choose which unit you plan to occupy - the rest will be rented
+                  </p>
+                </div>
               </div>
             </div>
           )}

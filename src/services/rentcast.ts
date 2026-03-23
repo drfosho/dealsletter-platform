@@ -653,11 +653,15 @@ class RentCastService {
         property = await this.getPropertyDetails(address);
       }
 
-      // Get market data using property's zip code
-      const market = await this.getMarketData(property.zipCode).catch(err => {
+      // Get market data in parallel with property extraction where possible
+      // Try to extract zip from address first to avoid waiting for property data
+      const zipMatch = address.match(/\b(\d{5})(?:-\d{4})?\b/);
+      const zipCode = property.zipCode || (zipMatch ? zipMatch[1] : '');
+
+      const market = zipCode ? await this.getMarketData(zipCode).catch(err => {
         console.warn('[RentCast] Market data failed:', err);
         return undefined;
-      });
+      }) : undefined;
 
       const comprehensiveData = {
         property,
