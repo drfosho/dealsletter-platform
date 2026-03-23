@@ -85,6 +85,14 @@ export default function Home() {
                 >
                   My Analyses
                 </Link>
+                <a
+                  href="https://newsletter.dealsletter.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
+                >
+                  Real Estate Deals
+                </a>
                 <Link
                   href="/blog"
                   className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
@@ -118,6 +126,14 @@ export default function Home() {
                 >
                   Property Analysis
                 </Link>
+                <a
+                  href="https://newsletter.dealsletter.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
+                >
+                  Real Estate Deals
+                </a>
                 <Link
                   href="/blog"
                   className="relative px-4 py-3 rounded-lg transition-all duration-200 font-semibold min-h-[44px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/5"
@@ -204,6 +220,18 @@ export default function Home() {
                       </svg>
                       My Analyses
                     </Link>
+                    <a
+                      href="https://newsletter.dealsletter.io"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Real Estate Deals
+                    </a>
                     <Link
                       href="/blog"
                       className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
@@ -259,6 +287,18 @@ export default function Home() {
                       </svg>
                       Property Analysis
                     </Link>
+                    <a
+                      href="https://newsletter.dealsletter.io"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Real Estate Deals
+                    </a>
                     <Link
                       href="/blog"
                       className="relative px-4 py-4 rounded-xl transition-all duration-200 font-semibold min-h-[52px] flex items-center text-primary/80 hover:text-primary hover:bg-primary/8"
