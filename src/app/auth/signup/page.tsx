@@ -542,7 +542,7 @@ export default function SignUpPage() {
                       className="h-5 w-5 mt-0.5 shrink-0 text-accent focus:ring-accent/20 border-border/60 rounded cursor-pointer"
                     />
                     <span className="text-sm text-muted">
-                      Subscribe to Dealsletter newsletter (weekly market insights & deals)
+                      Get free deals in my inbox every week
                     </span>
                   </label>
 
