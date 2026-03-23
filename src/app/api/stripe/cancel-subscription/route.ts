@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
+import { sendCancellationEmail } from '@/lib/email';
 
 // Force Node.js runtime to ensure env vars are accessible
 export const runtime = 'nodejs';
@@ -110,6 +111,33 @@ export async function POST(_request: NextRequest) {
     }
 
     console.log('[CancelSubscription] Cancellation successful, access until:', accessUntilISO);
+
+    // Send cancellation confirmation email
+    const customerEmail = user.email;
+    if (customerEmail) {
+      const tierName = (await supabase
+        .from('user_profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single())?.data?.subscription_tier || 'pro';
+
+      const planName = tierName === 'pro-plus' || tierName === 'pro_plus'
+        ? 'Pro Plus' : 'Pro';
+      const accessUntilFormatted = accessUntilISO
+        ? new Date(accessUntilISO).toLocaleDateString('en-US', {
+            month: 'long', day: 'numeric', year: 'numeric'
+          })
+        : 'end of billing period';
+
+      sendCancellationEmail({
+        email: customerEmail,
+        name: user.user_metadata?.full_name as string || undefined,
+        planName,
+        accessUntil: accessUntilFormatted,
+      }).catch(err => console.error('[CancelSubscription] Email error:', err));
+
+      console.log('[CancelSubscription] Cancellation email queued for:', customerEmail);
+    }
 
     return NextResponse.json({
       success: true,
