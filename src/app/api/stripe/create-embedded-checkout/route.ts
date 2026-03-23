@@ -56,31 +56,52 @@ export async function POST(request: NextRequest) {
     // SEC-009: Don't log user email - log only authentication status
     console.log('[EmbeddedCheckout] User authenticated:', !!user)
 
-    // Check for existing active subscription to prevent duplicates
+    // Check for existing active subscription — route to upgrade instead of new checkout
     if (user) {
-      const { data: existingSub } = await supabase
-        .from('subscriptions')
-        .select('tier, status, stripe_subscription_id')
-        .eq('user_id', user.id)
-        .in('status', ['active', 'trialing'])
+      // Check user_profiles first (most reliable), then subscriptions table
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('stripe_subscription_id, subscription_tier')
+        .eq('id', user.id)
         .single()
 
-      if (existingSub?.stripe_subscription_id) {
-        console.log('[EmbeddedCheckout] User already has active subscription:', existingSub)
-        const normalizedExistingTier = existingSub.tier?.toLowerCase().replace('-', '_')
-        const normalizedNewTier = tier?.toLowerCase().replace('-', '_')
+      const existingSubId = profile?.stripe_subscription_id
+      const existingTier = profile?.subscription_tier?.toLowerCase()
+
+      // Also check subscriptions table as fallback
+      let fallbackSubId = existingSubId
+      if (!fallbackSubId) {
+        const { data: existingSub } = await supabase
+          .from('subscriptions')
+          .select('stripe_subscription_id, tier')
+          .eq('user_id', user.id)
+          .in('status', ['active', 'trialing'])
+          .single()
+        fallbackSubId = existingSub?.stripe_subscription_id
+      }
+
+      if (fallbackSubId) {
+        const normalizedExistingTier = (existingTier || '').replace('-', '_')
+        const normalizedNewTier = (tier || '').toLowerCase().replace('-', '_')
 
         if (normalizedExistingTier === normalizedNewTier) {
           return NextResponse.json(
             { error: 'You are already subscribed to this plan.' },
             { status: 400 }
           )
-        } else {
-          return NextResponse.json(
-            { error: 'You have an active subscription. Please cancel it first or use the billing portal to change plans.' },
-            { status: 400 }
-          )
         }
+
+        // User has an active subscription but wants a different tier — signal upgrade
+        console.log('[EmbeddedCheckout] Existing subscriber detected, signaling upgrade flow')
+        return NextResponse.json(
+          {
+            requiresUpgrade: true,
+            currentTier: existingTier,
+            targetTier: tier,
+            message: 'Existing subscription detected. Use the upgrade flow.'
+          },
+          { status: 200 }
+        )
       }
     }
 

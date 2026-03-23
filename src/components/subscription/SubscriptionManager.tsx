@@ -14,6 +14,13 @@ export default function SubscriptionManager() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradePreview, setUpgradePreview] = useState<{
+    prorationAmount: number;
+    newRecurringAmount: number;
+    totalDueToday: number;
+  } | null>(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,6 +104,50 @@ export default function SubscriptionManager() {
       alert('An error occurred while opening the billing portal. Please try again or contact support.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleUpgradeClick = async () => {
+    setUpgradeLoading(true);
+    setUpgradePreview(null);
+    try {
+      const res = await fetch('/api/stripe/preview-upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetTier: 'PRO_PLUS' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setUpgradePreview(data);
+      setShowUpgradeModal(true);
+    } catch (error) {
+      console.error('[SubscriptionManager] Preview upgrade error:', error);
+      alert('Failed to load upgrade preview. Please try again.');
+    } finally {
+      setUpgradeLoading(false);
+    }
+  };
+
+  const handleConfirmUpgrade = async () => {
+    setUpgradeLoading(true);
+    try {
+      const res = await fetch('/api/stripe/upgrade-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetTier: 'PRO_PLUS' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setShowUpgradeModal(false);
+      setUpgradePreview(null);
+      await loadSubscriptionData();
+      setToast('Upgraded to Pro Plus! Your new limits are now active.');
+      setTimeout(() => setToast(null), 6000);
+    } catch (error) {
+      console.error('[SubscriptionManager] Upgrade error:', error);
+      alert('Failed to upgrade. Please try again or contact support.');
+    } finally {
+      setUpgradeLoading(false);
     }
   };
 
@@ -239,18 +290,25 @@ export default function SubscriptionManager() {
             </button>
           )}
 
-          {/* Upgrade — for free users or non-premium tiers */}
-          {(isFree || (tier !== 'premium' && tier !== 'pro-plus')) && (
+          {/* Upgrade — for free users, link to pricing */}
+          {isFree && (
             <a
               href="/pricing"
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                isFree
-                  ? 'bg-accent text-white hover:bg-accent/90'
-                  : 'border border-accent text-accent hover:bg-accent/10'
-              }`}
+              className="px-4 py-2 rounded-lg transition-colors bg-accent text-white hover:bg-accent/90"
             >
-              {isFree ? 'Upgrade to Pro' : 'Upgrade Plan'}
+              Upgrade to Pro
             </a>
+          )}
+
+          {/* Upgrade — for Pro users, upgrade to Pro Plus with proration */}
+          {!isFree && isActive && !willCancel && tier === 'pro' && (
+            <button
+              onClick={handleUpgradeClick}
+              disabled={upgradeLoading}
+              className="px-4 py-2 border border-accent text-accent rounded-lg hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {upgradeLoading ? 'Loading...' : 'Upgrade to Pro Plus'}
+            </button>
           )}
         </div>
       </div>
@@ -316,6 +374,56 @@ export default function SubscriptionManager() {
           </div>
         </div>
       </div>
+
+      {/* Upgrade confirmation modal */}
+      {showUpgradeModal && upgradePreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowUpgradeModal(false)} />
+          <div className="relative bg-card border border-border rounded-xl p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-xl font-bold text-primary mb-2">Upgrade to Pro Plus</h3>
+            <p className="text-muted text-sm mb-6">
+              Your plan will be upgraded immediately with prorated billing.
+            </p>
+
+            <div className="bg-muted/10 rounded-lg p-4 space-y-3 mb-6">
+              <div className="flex justify-between">
+                <span className="text-muted">Prorated charge today</span>
+                <span className="font-semibold text-primary">
+                  ${upgradePreview.totalDueToday.toFixed(2)}
+                </span>
+              </div>
+              <div className="border-t border-border pt-3 flex justify-between">
+                <span className="text-muted">Then going forward</span>
+                <span className="font-semibold text-primary">
+                  ${upgradePreview.newRecurringAmount.toFixed(2)}/month
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted mb-6">
+              You&apos;ll be charged approximately ${upgradePreview.totalDueToday.toFixed(2)} today
+              for the remainder of this billing period, then ${upgradePreview.newRecurringAmount.toFixed(2)}/month going forward.
+              Your analysis limit increases from 50 to 200 per month immediately.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="flex-1 px-4 py-2.5 border border-border text-primary rounded-lg hover:bg-muted/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmUpgrade}
+                disabled={upgradeLoading}
+                className="flex-1 px-4 py-2.5 bg-accent text-white rounded-lg hover:bg-accent/90 disabled:opacity-50 transition-colors font-medium"
+              >
+                {upgradeLoading ? 'Upgrading...' : 'Confirm Upgrade'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel subscription modal */}
       <CancelSubscriptionModal
