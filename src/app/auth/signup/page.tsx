@@ -207,6 +207,13 @@ export default function SignUpPage() {
         // Email delivery failed but account may have been created
         // Proceed to verify page where user can resend
         console.warn('Email delivery error during signup, proceeding to verify page')
+        if (subscribeNewsletter) {
+          fetch('/api/newsletter/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          }).catch(() => {})
+        }
         setSuccess(true)
         setTimeout(() => {
           router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`)
@@ -218,6 +225,16 @@ export default function SignUpPage() {
       }
     } else {
       console.log('Signup successful')
+
+      // Subscribe to Beehiiv newsletter (non-blocking)
+      if (subscribeNewsletter) {
+        fetch('/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        }).catch(() => {})
+      }
+
       setSuccess(true)
       setTimeout(() => {
         router.push(`/auth/verify-email?email=${encodeURIComponent(email)}`)
