@@ -165,6 +165,9 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
             <Link href="/analysis" className="px-4 py-2 text-accent hover:text-accent/80 transition-colors font-semibold">
               Property Analysis
             </Link>
+            <a href="https://newsletter.dealsletter.io" target="_blank" rel="noopener noreferrer" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
+              Real Estate Deals
+            </a>
             <Link href="/blog" className="px-4 py-2 text-muted hover:text-primary transition-colors font-medium">
               Blog
             </Link>
@@ -388,6 +391,16 @@ export default function Navigation({ variant: _variant = 'default' }: Navigation
                 </svg>
                 Property Analysis
               </Link>
+
+              <a
+                href="https://newsletter.dealsletter.io"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3 text-muted hover:text-primary transition-colors font-medium min-h-[44px] flex items-center rounded-lg hover:bg-muted/10"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Real Estate Deals
+              </a>
 
               {user && (
                 <Link
