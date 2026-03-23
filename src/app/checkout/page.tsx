@@ -19,6 +19,7 @@ function CheckoutContent() {
   const period = searchParams.get('period') || 'monthly'
 
   const [error, setError] = useState<string | null>(null)
+  const [upgrading, setUpgrading] = useState(false)
 
   // Redirect if no tier specified
   useEffect(() => {
@@ -26,6 +27,25 @@ function CheckoutContent() {
       router.push('/pricing')
     }
   }, [tier, router])
+
+  // Handle upgrade for existing subscribers (called when API signals requiresUpgrade)
+  const performUpgrade = useCallback(async () => {
+    setUpgrading(true)
+    try {
+      const res = await fetch('/api/stripe/upgrade-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetTier: tier, billingPeriod: period })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      // Redirect to analysis with success message
+      router.push('/analysis?upgraded=true')
+    } catch (err) {
+      setUpgrading(false)
+      setError(err instanceof Error ? err.message : 'Failed to upgrade subscription')
+    }
+  }, [tier, period, router])
 
   const fetchClientSecret = useCallback(async () => {
     if (!tier) return ''
@@ -37,19 +57,26 @@ function CheckoutContent() {
         body: JSON.stringify({ tier, period })
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create checkout session')
+      const data = await response.json()
+
+      // If user already has a subscription, perform upgrade instead of new checkout
+      if (data.requiresUpgrade) {
+        console.log('[Checkout] Existing subscriber — routing to upgrade flow')
+        performUpgrade()
+        return '' // Return empty to prevent embedded checkout from rendering
       }
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session')
+      }
+
       return data.clientSecret
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load checkout'
       setError(message)
       throw err
     }
-  }, [tier, period])
+  }, [tier, period, performUpgrade])
 
   const getTierDisplayName = () => {
     switch (tier?.toLowerCase()) {
@@ -80,6 +107,18 @@ function CheckoutContent() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    )
+  }
+
+  if (upgrading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-accent mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-primary mb-2">Upgrading Your Plan</h2>
+          <p className="text-muted">Switching to {getTierDisplayName()} with prorated billing...</p>
+        </div>
       </div>
     )
   }
