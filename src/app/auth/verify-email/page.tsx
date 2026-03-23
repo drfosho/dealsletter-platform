@@ -40,9 +40,7 @@ function VerifyEmailContent() {
 
       const { data } = await supabase.auth.getUser()
       if (data?.user?.email_confirmed_at) {
-        // Trigger welcome email (dedup handled server-side)
-        fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
-        router.push('/analysis')
+        router.push('/auth/verify-success')
       }
     }
 
@@ -94,9 +92,7 @@ function VerifyEmailContent() {
 
       const { data } = await supabase.auth.getUser()
       if (data?.user?.email_confirmed_at) {
-        // Trigger welcome email (dedup handled server-side)
-        fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
-        router.push('/analysis')
+        router.push('/auth/verify-success')
       } else {
         // Show pending message
         setVerificationPending(true)

@@ -123,8 +123,7 @@ function ConfirmContent() {
               updated_at: new Date().toISOString(),
             })
           }
-          // Send welcome email (dedup handled server-side)
-          fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+          // Welcome email is sent from /auth/verify-success (single trigger point)
         } catch {
           // Non-fatal
         }
