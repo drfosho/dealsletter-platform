@@ -17,10 +17,30 @@ export async function POST(_request: NextRequest) {
                  (user.user_metadata?.first_name as string) ||
                  undefined;
 
+    // Check if welcome email was already sent (dedup)
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('welcome_email_sent')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.welcome_email_sent) {
+      console.log('[WelcomeEmail] Already sent for user:', user.id);
+      return NextResponse.json({ sent: false, reason: 'already_sent' });
+    }
+
     const sent = await sendWelcomeEmail({
       email: user.email!,
       name,
     });
+
+    // Mark as sent so we don't send duplicates
+    if (sent) {
+      await supabase
+        .from('user_profiles')
+        .update({ welcome_email_sent: true })
+        .eq('id', user.id);
+    }
 
     return NextResponse.json({ sent });
   } catch (error) {
