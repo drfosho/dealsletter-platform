@@ -12,11 +12,11 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     // Ensure user_profiles row exists for authenticated user (fallback for missing trigger)
-    const ensureUserProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+    const ensureUserProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }, isSignup: boolean) => {
       try {
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('id')
+          .select('id, welcome_email_sent')
           .eq('id', user.id)
           .single()
 
@@ -38,9 +38,14 @@ function AuthCallbackContent() {
             console.error('[AuthCallback] Failed to create user_profiles row:', insertError)
           } else {
             console.log('[AuthCallback] user_profiles row created successfully')
-            // Send welcome email for new free signups (fire-and-forget)
-            fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
           }
+        }
+
+        // Send welcome email on signup confirmation if not already sent
+        // This handles both new profiles and profiles created by DB trigger
+        if (isSignup && !profile?.welcome_email_sent) {
+          console.log('[AuthCallback] Sending welcome email for new signup')
+          fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
         }
       } catch (err) {
         // Non-fatal — don't block auth flow for profile creation
@@ -70,11 +75,11 @@ function AuthCallbackContent() {
           }
 
           if (sessionData.session?.user) {
-            // Ensure profile row exists before redirecting
-            await ensureUserProfile(sessionData.session.user)
-
             // Check if this is from email verification or regular login
             const isEmailVerification = searchParams.get('type') === 'signup'
+
+            // Ensure profile row exists before redirecting
+            await ensureUserProfile(sessionData.session.user, isEmailVerification)
 
             setStatus('success')
 
@@ -100,11 +105,11 @@ function AuthCallbackContent() {
         }
 
         if (data.session?.user) {
-          // Ensure profile row exists before redirecting
-          await ensureUserProfile(data.session.user)
-
           // Check if this is from email verification or regular login
           const isEmailVerification = searchParams.get('type') === 'signup'
+
+          // Ensure profile row exists before redirecting
+          await ensureUserProfile(data.session.user, isEmailVerification)
 
           setStatus('success')
 

@@ -97,18 +97,23 @@ export async function sendWelcomeEmail(data: { email: string; name?: string }): 
 
   const html = emailLayout(`
     <h1 style="color:#ffffff;font-size:28px;margin:0 0 8px;text-align:center;">Welcome to Dealsletter! 🏠</h1>
-    <p style="color:#9ca3af;font-size:15px;text-align:center;margin:0 0 32px;">Your account is ready</p>
+    <p style="color:#9ca3af;font-size:15px;text-align:center;margin:0 0 32px;">Your email is confirmed &mdash; your account is ready</p>
 
     <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 24px;">${greeting}</p>
     <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 24px;">
-      Welcome to Dealsletter — your AI-powered property analysis platform.
-      You have <strong style="color:#a78bfa;">10 free analyses per month</strong> to evaluate investment opportunities.
+      Thanks for confirming your email. Welcome to <strong style="color:#a78bfa;">Dealsletter</strong> &mdash;
+      the AI-powered platform that helps real estate investors analyze deals in seconds, not hours.
+    </p>
+    <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 24px;">
+      Just enter any property address, pick your strategy (rental, fix &amp; flip, BRRRR, or house hack),
+      and our AI delivers a full investment analysis with financial projections, market data, risk assessment, and a clear buy or pass recommendation.
     </p>
 
-    ${infoCard('Your Free Plan', [
+    ${infoCard('Your Free Plan Includes', [
       '<strong style="color:#e5e7eb;">10</strong> property analyses per month',
-      'All investment strategies (rental, flip, BRRRR)',
-      'AI-powered financial projections',
+      'All investment strategies &mdash; rental, flip, BRRRR, house hack',
+      'AI-powered financial projections &amp; market insights',
+      'Real-time RentCast market data &amp; comparable sales',
       'No credit card required',
     ])}
 
@@ -121,12 +126,25 @@ export async function sendWelcomeEmail(data: { email: string; name?: string }): 
 
     ${ctaButton('Run Your First Analysis', `${APP_URL}/analysis/new`)}
 
-    <p style="color:#6b7280;font-size:13px;text-align:center;margin:16px 0 0;">
-      Need more? <a href="${APP_URL}/pricing" style="color:#a78bfa;text-decoration:underline;">Upgrade to Pro</a> for 50 analyses/month.
-    </p>
+    <!-- Pro upsell -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:32px;background-color:#0f0f14;border:1px solid #7c3aed40;border-radius:12px;">
+      <tr><td style="padding:24px;">
+        <p style="color:#a78bfa;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px;">Unlock More With Pro</p>
+        <p style="color:#d1d5db;font-size:14px;line-height:22px;margin:0 0 16px;">
+          Serious about investing? Pro gives you <strong style="color:#e5e7eb;">50 analyses per month</strong>,
+          PDF &amp; Excel exports, analysis history, comparison tools, and priority support &mdash;
+          everything you need to move fast on deals.
+        </p>
+        <table cellpadding="0" cellspacing="0"><tr><td>
+          <a href="${APP_URL}/pricing" style="display:inline-block;color:#a78bfa;font-weight:600;font-size:14px;text-decoration:underline;">
+            See Pro Plans &rarr;
+          </a>
+        </td></tr></table>
+      </td></tr>
+    </table>
   `);
 
-  return send(data.email, 'Welcome to Dealsletter — Start Analyzing Properties 🏠', html);
+  return send(data.email, 'Welcome to Dealsletter — Your Account Is Ready 🏠', html);
 }
 
 
