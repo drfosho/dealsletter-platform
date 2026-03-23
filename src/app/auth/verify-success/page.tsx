@@ -11,6 +11,9 @@ export default function VerifySuccess() {
   const [countdown, setCountdown] = useState(5)
 
   useEffect(() => {
+    // Send welcome email on verify success (dedup handled server-side)
+    fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+
     // Start countdown
     const timer = setInterval(() => {
       setCountdown((prev) => prev - 1)
