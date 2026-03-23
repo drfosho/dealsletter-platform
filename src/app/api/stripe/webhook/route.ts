@@ -277,29 +277,44 @@ export async function POST(request: NextRequest) {
           const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
           console.log('[Webhook] subscription.created - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
+          console.log('[Webhook] subscription.created - User ID:', userId);
           console.log('[Webhook] subscription.created - Status:', subscription.status);
           console.log('[Webhook] subscription.created - Period end:', periodEndISO);
 
-          const { error: profileError } = await supabase
+          // Only set columns we know exist (removed analyses_this_month, trial_start, trial_end)
+          const updatePayload = {
+            subscription_tier: tierName,
+            stripe_customer_id: subscription.customer as string,
+            stripe_subscription_id: subscription.id,
+            subscription_status: subscription.status as string,
+            current_period_end: periodEndISO,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            updated_at: new Date().toISOString()
+          };
+
+          console.log('[Webhook] subscription.created - Update payload:', JSON.stringify(updatePayload));
+
+          const { data: updateResult, error: profileError } = await supabase
             .from('user_profiles')
-            .update({
-              subscription_tier: tierName,
-              stripe_customer_id: subscription.customer as string,
-              stripe_subscription_id: subscription.id,
-              subscription_status: subscription.status as string,
-              current_period_end: periodEndISO,
-              cancel_at_period_end: subscription.cancel_at_period_end,
-              trial_start: stripeTimestampToISO(subscription.trial_start),
-              trial_end: stripeTimestampToISO(subscription.trial_end),
-              analyses_this_month: 0,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
+            .update(updatePayload)
+            .eq('id', userId)
+            .select('id, subscription_tier')
+            .single();
 
           if (profileError) {
-            console.error('[Webhook] subscription.created - ❌ DB Error:', profileError);
+            console.error('[Webhook] subscription.created - ❌ DB Error:', {
+              message: profileError.message,
+              code: profileError.code,
+              details: profileError.details,
+              hint: profileError.hint
+            });
+          } else if (!updateResult) {
+            console.error('[Webhook] subscription.created - ⚠️ Update returned no rows — user_profiles row may not exist for userId:', userId);
           } else {
-            console.log('[Webhook] subscription.created - ✅ Tier set to:', tierName);
+            console.log('[Webhook] subscription.created - ✅ DB Update Result:', {
+              id: updateResult.id,
+              newTier: updateResult.subscription_tier
+            });
           }
         } else {
           console.error('[Webhook] subscription.created - ❌ Could not find user for subscription:', subscription.id);
@@ -355,33 +370,88 @@ export async function POST(request: NextRequest) {
             const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
             console.log('[Webhook] checkout.completed - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
+            console.log('[Webhook] checkout.completed - User ID:', userId);
+            console.log('[Webhook] checkout.completed - Subscription ID:', subscription.id);
+            console.log('[Webhook] checkout.completed - Customer ID:', customerId);
             console.log('[Webhook] checkout.completed - Status:', subscription.status);
             console.log('[Webhook] checkout.completed - Period end:', periodEndISO);
 
-            // Update user_profiles with subscription info
-            const { error: profileError } = await supabase
+            // First verify the user_profiles row exists
+            const { data: existingProfile, error: lookupError } = await supabase
               .from('user_profiles')
-              .update({
+              .select('id, subscription_tier')
+              .eq('id', userId)
+              .single();
+
+            console.log('[Webhook] checkout.completed - Profile lookup:', {
+              found: !!existingProfile,
+              currentTier: existingProfile?.subscription_tier,
+              lookupError: lookupError?.message || null
+            });
+
+            if (!existingProfile) {
+              console.error('[Webhook] checkout.completed - ❌ No user_profiles row found for userId:', userId);
+              console.error('[Webhook] checkout.completed - Creating profile row...');
+              // Try to create the profile row
+              const { error: insertError } = await supabase
+                .from('user_profiles')
+                .insert({
+                  id: userId,
+                  subscription_tier: tierName,
+                  stripe_customer_id: customerId,
+                  stripe_subscription_id: subscription.id,
+                  subscription_status: subscription.status as string,
+                  current_period_end: periodEndISO,
+                  cancel_at_period_end: subscription.cancel_at_period_end,
+                  updated_at: new Date().toISOString()
+                });
+              if (insertError) {
+                console.error('[Webhook] checkout.completed - ❌ Insert also failed:', insertError);
+              } else {
+                console.log('[Webhook] checkout.completed - ✅ Created profile with tier:', tierName);
+              }
+            } else {
+              // Update existing profile — only set columns we know exist
+              const updatePayload = {
                 subscription_tier: tierName,
                 stripe_customer_id: customerId,
                 stripe_subscription_id: subscription.id,
                 subscription_status: subscription.status as string,
                 current_period_end: periodEndISO,
                 cancel_at_period_end: subscription.cancel_at_period_end,
-                trial_start: stripeTimestampToISO(subscription.trial_start),
-                trial_end: stripeTimestampToISO(subscription.trial_end),
-                analyses_this_month: 0,
                 updated_at: new Date().toISOString()
-              })
-              .eq('id', userId);
+              };
 
-            if (profileError) {
-              console.error('[Webhook] checkout.completed - ❌ DB Error:', profileError);
-            } else {
-              console.log('[Webhook] checkout.completed - ✅ Tier set to:', tierName);
+              console.log('[Webhook] checkout.completed - Update payload:', JSON.stringify(updatePayload));
+
+              const { data: updateResult, error: profileError } = await supabase
+                .from('user_profiles')
+                .update(updatePayload)
+                .eq('id', userId)
+                .select('id, subscription_tier')
+                .single();
+
+              if (profileError) {
+                console.error('[Webhook] checkout.completed - ❌ DB Update Error:', {
+                  message: profileError.message,
+                  code: profileError.code,
+                  details: profileError.details,
+                  hint: profileError.hint
+                });
+              } else {
+                console.log('[Webhook] checkout.completed - ✅ DB Update Result:', {
+                  id: updateResult?.id,
+                  newTier: updateResult?.subscription_tier
+                });
+              }
             }
           } else {
             console.error('[Webhook] checkout.completed - ❌ Could not find user for session:', session.id);
+            console.error('[Webhook] checkout.completed - Metadata:', {
+              subscriptionMetadata: subscription.metadata,
+              sessionMetadata: session.metadata,
+              customerEmail: customer.email
+            });
           }
         }
         break;
@@ -445,22 +515,34 @@ export async function POST(request: NextRequest) {
           console.log('[Webhook] subscription.updated - Status:', subscription.status);
           console.log('[Webhook] subscription.updated - cancel_at_period_end:', subscription.cancel_at_period_end);
 
-          // Update user_profiles with subscription details
-          const { error: profileError } = await supabase
+          // Update user_profiles with subscription details (only known columns)
+          const updatePayload = {
+            subscription_tier: tierName,
+            subscription_status: subscription.status as string,
+            current_period_end: periodEndISO,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            updated_at: new Date().toISOString()
+          };
+
+          console.log('[Webhook] subscription.updated - User ID:', userId);
+          console.log('[Webhook] subscription.updated - Update payload:', JSON.stringify(updatePayload));
+
+          const { data: updateResult, error: profileError } = await supabase
             .from('user_profiles')
-            .update({
-              subscription_tier: tierName,
-              subscription_status: subscription.status as string,
-              current_period_end: periodEndISO,
-              cancel_at_period_end: subscription.cancel_at_period_end,
-              trial_start: stripeTimestampToISO(subscription.trial_start),
-              trial_end: stripeTimestampToISO(subscription.trial_end),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
+            .update(updatePayload)
+            .eq('id', userId)
+            .select('id, subscription_tier')
+            .single();
 
           if (profileError) {
-            console.error('[Webhook] subscription.updated - ❌ DB Error:', profileError);
+            console.error('[Webhook] subscription.updated - ❌ DB Error:', {
+              message: profileError.message,
+              code: profileError.code,
+              details: profileError.details,
+              hint: profileError.hint
+            });
+          } else if (!updateResult) {
+            console.error('[Webhook] subscription.updated - ⚠️ Update returned no rows for userId:', userId);
           } else {
             console.log('[Webhook] subscription.updated - ✅ User profile updated');
 
