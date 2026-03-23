@@ -13,36 +13,33 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const name = (user.user_metadata?.full_name as string) ||
-                 (user.user_metadata?.first_name as string) ||
-                 undefined;
-
-    // Check if welcome email was already sent (dedup)
-    // Query may fail if welcome_email_sent column doesn't exist yet — that's OK, just send
-    const { data: profile } = await supabase
+    // Atomic claim: set welcome_email_sent = true ONLY if it's currently false.
+    // Only one concurrent request can succeed — the others get 0 rows updated.
+    const { data: claimed, error: claimError } = await supabase
       .from('user_profiles')
-      .select('welcome_email_sent')
+      .update({ welcome_email_sent: true } as Record<string, unknown>)
       .eq('id', user.id)
-      .single();
+      .or('welcome_email_sent.is.null,welcome_email_sent.eq.false')
+      .select('id')
+      .maybeSingle();
 
-    if (profile?.welcome_email_sent) {
+    if (claimError) {
+      // Column may not exist yet — fall through and send anyway
+      console.warn('[WelcomeEmail] Claim query error (column may not exist):', claimError.message);
+    } else if (!claimed) {
       console.log('[WelcomeEmail] Already sent for user:', user.id);
       return NextResponse.json({ sent: false, reason: 'already_sent' });
     }
+
+    const name = (user.user_metadata?.full_name as string) ||
+                 (user.user_metadata?.first_name as string) ||
+                 undefined;
 
     console.log('[WelcomeEmail] Sending welcome email to:', user.email);
     const sent = await sendWelcomeEmail({
       email: user.email!,
       name,
     });
-
-    // Mark as sent so we don't send duplicates (ignore error if column doesn't exist)
-    if (sent) {
-      await supabase
-        .from('user_profiles')
-        .update({ welcome_email_sent: true } as Record<string, unknown>)
-        .eq('id', user.id);
-    }
 
     return NextResponse.json({ sent });
   } catch (error) {
