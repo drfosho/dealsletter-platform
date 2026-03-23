@@ -207,38 +207,42 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // SEC-003: Atomic duplicate detection using upsert with conflict handling
-    // This prevents TOCTOU race conditions where concurrent requests could both pass a SELECT check
-    const { data: insertResult, error: insertError } = await supabase
-      .from('webhook_events')
-      .upsert({
-        stripe_event_id: event.id,
-        type: event.type,
-        data: event.data,
-        processed: false
-      }, {
-        onConflict: 'stripe_event_id',
-        ignoreDuplicates: true  // Don't update if exists, just skip
-      })
-      .select('id, created_at')
-      .single();
+    // Deduplication: try to record the event. If the table exists and the event
+    // was already recorded, skip processing. If the table doesn't exist or the
+    // insert fails for any reason, PROCEED with processing (never block on dedup failure).
+    let isDuplicate = false;
+    try {
+      const { data: insertResult, error: insertError } = await supabase
+        .from('webhook_events')
+        .upsert({
+          stripe_event_id: event.id,
+          event_type: event.type,
+          processed_at: new Date().toISOString()
+        }, {
+          onConflict: 'stripe_event_id',
+          ignoreDuplicates: true
+        })
+        .select('stripe_event_id')
+        .maybeSingle();
 
-    // Check if this was a duplicate by seeing if we got a result
-    // If ignoreDuplicates is true and there was a conflict, no row is returned
-    if (insertError && insertError.code !== 'PGRST116') {
-      // PGRST116 = "JSON object requested, multiple (or no) rows returned"
-      // This is expected when ignoreDuplicates skips the insert
-      console.error('[Webhook] ❌ Error recording event:', insertError);
+      if (insertError) {
+        // Table may not exist or have wrong schema — log and proceed
+        console.warn('[Webhook] ⚠️ Dedup table error (proceeding anyway):', insertError.message, insertError.code);
+      } else if (!insertResult) {
+        // No row returned means ignoreDuplicates kicked in — this is a real duplicate
+        isDuplicate = true;
+      }
+    } catch (dedupErr) {
+      // Dedup completely failed — proceed with processing
+      console.warn('[Webhook] ⚠️ Dedup check failed (proceeding anyway):', dedupErr);
     }
 
-    // If no result returned, it means the event already existed (duplicate)
-    if (!insertResult) {
-      console.log('[Webhook] ⚠️ Event already processed (atomic check):', event.id);
-      console.log('[Webhook] Skipping duplicate processing');
+    if (isDuplicate) {
+      console.log('[Webhook] ⚠️ Event already processed (duplicate):', event.id);
       console.log('[Webhook] ========================================');
       return NextResponse.json({ received: true });
     }
-    console.log('[Webhook] ✓ New event recorded, processing...');
+    console.log('[Webhook] ✓ Processing event...');
 
     // Handle the event
     switch (event.type) {
