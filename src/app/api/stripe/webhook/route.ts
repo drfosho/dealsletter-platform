@@ -245,60 +245,40 @@ export async function POST(request: NextRequest) {
       case 'customer.subscription.created': {
         console.log('[Webhook] 📋 Processing customer.subscription.created');
         const subscription = event.data.object as Stripe.Subscription;
-        
-        // Get user ID from metadata
-        const userId = subscription.metadata.supabaseUserId;
-        
+
+        // Get user ID from metadata, fall back to lookup by customer email
+        let userId = subscription.metadata.supabaseUserId;
+        console.log('[Webhook] subscription.created - Subscription ID:', subscription.id);
+        console.log('[Webhook] subscription.created - User ID from metadata:', userId || 'Not found');
+
         if (!userId) {
-          // Try to find user by customer email
+          console.log('[Webhook] subscription.created - Looking up user by customer email');
           const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
-          
+
           if (customer.email) {
-            const { data: authUser } = await supabase
-              .from('auth.users')
-              .select('id')
-              .eq('email', customer.email)
-              .single();
-            
+            // Use admin API to find user by email (auth.users is not queryable via .from())
+            const { data: authUsers } = await supabase.auth.admin.listUsers();
+            const authUser = authUsers?.users?.find(u => u.email === customer.email);
+
             if (authUser) {
-              // Update subscription with user ID
+              userId = authUser.id;
+              console.log('[Webhook] subscription.created - Found user by email');
+              // Update subscription metadata for future webhooks
               await stripe.subscriptions.update(subscription.id, {
                 metadata: { ...subscription.metadata, supabaseUserId: authUser.id }
               });
-              
-              // Update user_profiles with subscription info
-              const stripeTierName = subscription.metadata.tierName || 'STARTER';
-              const tierName = mapTierName(stripeTierName);
-              const { periodEndISO } = getSubscriptionPeriodDates(subscription);
-
-              await supabase
-                .from('user_profiles')
-                .update({
-                  subscription_tier: tierName,
-                  stripe_customer_id: subscription.customer as string,
-                  stripe_subscription_id: subscription.id,
-                  subscription_status: subscription.status as string,
-                  current_period_end: periodEndISO,
-                  cancel_at_period_end: subscription.cancel_at_period_end,
-                  trial_start: stripeTimestampToISO(subscription.trial_start),
-                  trial_end: stripeTimestampToISO(subscription.trial_end),
-                  analyses_this_month: 0,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', authUser.id);
             }
           }
-        } else {
-          // Create subscription record with existing user ID
-          // SEC-009: Don't log user IDs
-          console.log('[Webhook] subscription.created - User ID found: [REDACTED]');
+        }
 
+        if (userId) {
           const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
           const tierName = mapTierName(stripeTierName);
           const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
-          console.log('[Webhook] subscription.created - Tier:', stripeTierName, '→', tierName);
-          console.log('[Webhook] subscription.created - Subscription ID:', subscription.id);
+          console.log('[Webhook] subscription.created - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
+          console.log('[Webhook] subscription.created - Status:', subscription.status);
+          console.log('[Webhook] subscription.created - Period end:', periodEndISO);
 
           const { error: profileError } = await supabase
             .from('user_profiles')
@@ -319,8 +299,10 @@ export async function POST(request: NextRequest) {
           if (profileError) {
             console.error('[Webhook] subscription.created - ❌ DB Error:', profileError);
           } else {
-            console.log('[Webhook] subscription.created - ✅ User profile updated with subscription tier:', tierName);
+            console.log('[Webhook] subscription.created - ✅ Tier set to:', tierName);
           }
+        } else {
+          console.error('[Webhook] subscription.created - ❌ Could not find user for subscription:', subscription.id);
         }
         break;
       }
@@ -353,28 +335,28 @@ export async function POST(request: NextRequest) {
 
           // Get user ID from metadata or email
           let userId = subscription.metadata.supabaseUserId || session.metadata?.supabaseUserId;
-          
+          console.log('[Webhook] checkout.completed - User ID from metadata:', userId || 'Not found');
+
           if (!userId && customer.email) {
-            // Try to find user by email
-            const { data: authUser } = await supabase
-              .from('auth.users')
-              .select('id')
-              .eq('email', customer.email)
-              .single();
-            
+            // Use admin API to find user by email
+            console.log('[Webhook] checkout.completed - Looking up user by customer email');
+            const { data: authUsers } = await supabase.auth.admin.listUsers();
+            const authUser = authUsers?.users?.find(u => u.email === customer.email);
             userId = authUser?.id;
+            if (userId) {
+              console.log('[Webhook] checkout.completed - Found user by email');
+            }
           }
 
           if (userId) {
-            // SEC-009: Log only that user was found, not the actual ID
-            console.log('[Webhook] User ID found: [REDACTED]');
-
             // Get tier from metadata
             const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || session.metadata?.tierName || 'PRO';
             const tierName = mapTierName(stripeTierName);
             const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
-            console.log('[Webhook] Tier name:', stripeTierName, '→', tierName);
+            console.log('[Webhook] checkout.completed - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
+            console.log('[Webhook] checkout.completed - Status:', subscription.status);
+            console.log('[Webhook] checkout.completed - Period end:', periodEndISO);
 
             // Update user_profiles with subscription info
             const { error: profileError } = await supabase
@@ -394,12 +376,12 @@ export async function POST(request: NextRequest) {
               .eq('id', userId);
 
             if (profileError) {
-              console.error('[Webhook] ❌ User profile update error:', profileError);
+              console.error('[Webhook] checkout.completed - ❌ DB Error:', profileError);
             } else {
-              console.log('[Webhook] ✅ User profile updated with subscription tier:', tierName);
+              console.log('[Webhook] checkout.completed - ✅ Tier set to:', tierName);
             }
           } else {
-            console.error('[Webhook] ❌ No user ID found - cannot update database');
+            console.error('[Webhook] checkout.completed - ❌ Could not find user for session:', session.id);
           }
         }
         break;
@@ -458,6 +440,10 @@ export async function POST(request: NextRequest) {
           const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
           const tierName = mapTierName(stripeTierName);
           const { periodEndISO } = getSubscriptionPeriodDates(subscription);
+
+          console.log('[Webhook] subscription.updated - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
+          console.log('[Webhook] subscription.updated - Status:', subscription.status);
+          console.log('[Webhook] subscription.updated - cancel_at_period_end:', subscription.cancel_at_period_end);
 
           // Update user_profiles with subscription details
           const { error: profileError } = await supabase
