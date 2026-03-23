@@ -8,6 +8,7 @@ import {
   EmbeddedCheckout
 } from '@stripe/react-stripe-js'
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -20,6 +21,21 @@ function CheckoutContent() {
 
   const [error, setError] = useState<string | null>(null)
   const [upgrading, setUpgrading] = useState(false)
+
+  // Store session tokens before Stripe checkout so they can be restored after redirect
+  useEffect(() => {
+    const storeSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        localStorage.setItem('checkout_session_backup', JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        }))
+        console.log('[Checkout] Session tokens stored for post-redirect recovery')
+      }
+    }
+    storeSession()
+  }, [])
 
   // Redirect if no tier specified
   useEffect(() => {
