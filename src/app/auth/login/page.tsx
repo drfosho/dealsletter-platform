@@ -44,8 +44,13 @@ export default function LoginPage() {
         setLoading(false)
       } else if (session) {
         console.log('Login successful, session created, redirecting...')
+        // Check for post-login redirect (e.g., from checkout success)
+        const redirect = new URLSearchParams(window.location.search).get('redirect')
+          || localStorage.getItem('post_login_redirect')
+          || '/analysis'
+        localStorage.removeItem('post_login_redirect')
         // Use window.location for a hard redirect to ensure the session is picked up
-        window.location.href = '/analysis'
+        window.location.href = redirect
       } else {
         console.error('No error but no session either')
         setError('An unexpected error occurred. Please try again.')
