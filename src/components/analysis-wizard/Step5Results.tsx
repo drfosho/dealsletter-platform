@@ -354,7 +354,7 @@ export default function Step5Results({ data }: Step5ResultsProps) {
                   {formatCurrency(
                     ((data.financial?.purchasePrice || 0) * (data.financial?.downPaymentPercent || 20) / 100) +
                     (data.financial?.renovationCosts || 0) +
-                    ((data.financial?.purchasePrice || 0) * 0.03) // Closing costs estimate
+                    (data.financial?.closingCosts ?? ((data.financial?.purchasePrice || 0) * 0.03))
                   )}
                 </span>
               </div>
