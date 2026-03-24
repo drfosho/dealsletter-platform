@@ -18,9 +18,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dealsletter Platform - Real Estate Deal Analysis",
-  description: "Analyze real estate investment opportunities with advanced metrics, AI-powered deal scoring, and comprehensive property analysis tools.",
+  title: {
+    default: "Dealsletter - AI-Powered Real Estate Investment Analysis",
+    template: "%s | Dealsletter",
+  },
+  description: "Analyze any property in seconds with AI. Get instant ROI projections, rental estimates, market data, and a clear buy or pass recommendation for rentals, flips, BRRRR, and house hacks.",
+  metadataBase: new URL("https://dealsletter.io"),
   manifest: "/manifest.json",
+  openGraph: {
+    title: "Dealsletter - AI-Powered Real Estate Investment Analysis",
+    description: "Analyze any property in seconds with AI. Get instant ROI projections, rental estimates, market data, and a clear buy or pass recommendation.",
+    url: "https://dealsletter.io",
+    siteName: "Dealsletter",
+    images: [
+      {
+        url: "/logos/dealsletter-og-banner.png",
+        width: 1200,
+        height: 630,
+        alt: "Dealsletter - AI-Powered Real Estate Investment Analysis",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dealsletter - AI-Powered Real Estate Investment Analysis",
+    description: "Analyze any property in seconds with AI. Get instant ROI projections, rental estimates, and a clear buy or pass recommendation.",
+    images: ["/logos/dealsletter-og-banner.png"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
