@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     siteName: "Dealsletter",
     images: [
       {
-        url: "/logos/dealsletter-og-banner.png",
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://dealsletter.io"}/logos/dealsletter-og-banner.png`,
         width: 1200,
         height: 630,
         alt: "Dealsletter - AI-Powered Real Estate Investment Analysis",
@@ -45,7 +45,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Dealsletter - AI-Powered Real Estate Investment Analysis",
     description: "Analyze any property in seconds with AI. Get instant ROI projections, rental estimates, and a clear buy or pass recommendation.",
-    images: ["/logos/dealsletter-og-banner.png"],
+    images: {
+      url: `${process.env.NEXT_PUBLIC_SITE_URL || "https://dealsletter.io"}/logos/dealsletter-og-banner.png`,
+      alt: "Dealsletter - AI-Powered Real Estate Investment Analysis platform showing property analysis dashboard",
+    },
   },
   appleWebApp: {
     capable: true,
