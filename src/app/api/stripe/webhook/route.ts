@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import Stripe from 'stripe';
-import { sendCancellationEmail } from '@/lib/email';
+import { sendCancellationEmail, sendSubscriptionEmail } from '@/lib/email';
 
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
@@ -413,6 +413,20 @@ export async function POST(request: NextRequest) {
                 console.error('[Webhook] checkout.completed - ❌ Insert also failed:', insertError);
               } else {
                 console.log('[Webhook] checkout.completed - ✅ Created profile with tier:', tierName);
+
+                // Send subscription confirmation email
+                if (customer.email) {
+                  console.log('[Webhook] checkout.completed - Sending subscription email to', customer.email);
+                  sendSubscriptionEmail({
+                    email: customer.email,
+                    tier: tierName,
+                    billingDate: periodEndISO ? new Date(periodEndISO).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
+                  }).then(sent => {
+                    console.log('[Webhook] checkout.completed - Subscription email sent:', sent);
+                  }).catch(err => {
+                    console.error('[Webhook] checkout.completed - Subscription email error:', err);
+                  });
+                }
               }
             } else {
               // Update existing profile — only set columns we know exist
@@ -447,6 +461,20 @@ export async function POST(request: NextRequest) {
                   id: updateResult?.id,
                   newTier: updateResult?.subscription_tier
                 });
+
+                // Send subscription confirmation email
+                if (customer.email) {
+                  console.log('[Webhook] checkout.completed - Sending subscription email to', customer.email);
+                  sendSubscriptionEmail({
+                    email: customer.email,
+                    tier: tierName,
+                    billingDate: periodEndISO ? new Date(periodEndISO).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
+                  }).then(sent => {
+                    console.log('[Webhook] checkout.completed - Subscription email sent:', sent);
+                  }).catch(err => {
+                    console.error('[Webhook] checkout.completed - Subscription email error:', err);
+                  });
+                }
               }
             }
           } else {
