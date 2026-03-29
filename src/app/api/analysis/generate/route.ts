@@ -30,21 +30,25 @@ console.log('[Generate] Anthropic client initialized, model:', CLAUDE_MODEL);
 
 // V2 — JSON schema enforcement appended to every strategy prompt
 const V2_JSON_SCHEMA_SUFFIX = `
-IMPORTANT: In addition to the analysis above, you must ALSO respond with a single valid JSON object at the END of your response, on its own line, prefixed with "---JSON---". No markdown. No code fences. Just the raw JSON object after that marker.
 
-Your JSON must follow this exact schema:
+CRITICAL OUTPUT RULES:
+- Your entire response must be one valid JSON object. Nothing else.
+- No markdown, no code fences, no explanation text before or after.
+- All numbers are already calculated for you in the FINANCIAL CALCULATIONS block — copy them directly into the JSON, do not recalculate.
+- narrative: EXACTLY 2-3 sentences. One on deal quality, one on the biggest risk, one on your recommendation. Reference specific numbers. No fluff. Write like a blunt senior investor.
+- marketContext: maximum 2 sentences about local market conditions.
+- riskFlags: minimum 2, maximum 4 items.
+- dealScore: integer 1-10 based on the actual calculated metrics.
 
-{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"string — one sentence buy/pass/hold recommendation with confidence level","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"string — short risk title","detail":"string — one sentence explanation"}],"narrative":"string — 3 to 5 sentence investor-focused analysis summary. Write like a senior real estate analyst talking to an experienced investor. Be direct, reference the actual numbers, and give a clear opinion.","marketContext":"string — 2 to 3 sentences on the local market conditions relevant to this deal","dealScore":number between 1 and 10}
+JSON schema:
+{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"one sentence buy/pass/hold with confidence","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"short risk title","detail":"one sentence"}],"narrative":"2-3 sentences, plain text, no bullets","marketContext":"1-2 sentences on local market","dealScore":1-10}
 
 Rules:
-- All number values should be rounded to 2 decimal places max
-- capRate and cashOnCash are percentages expressed as numbers (e.g. 6.8 not 0.068)
-- roi is the 5-year projected ROI as a percentage number
-- cashFlow.monthly is the net monthly cash flow in dollars (negative if property loses money)
-- If a metric does not apply to this strategy, return null
-- riskFlags array must have between 2 and 5 items
-- narrative must be plain text, no bullet points, no markdown
-- Do not include any fields not in this schema
+- capRate/cashOnCash are percentages as numbers (6.8 not 0.068)
+- roi is 5-year projected ROI percentage
+- cashFlow.monthly in dollars (negative if losing money)
+- null for metrics that don't apply to this strategy
+- Round numbers to 2 decimal places max
 `;
 
 // Strategy-specific system prompts (extracted to module level for streaming access)
@@ -747,31 +751,94 @@ export async function POST(request: NextRequest) {
     const { context, calculatedMetrics } = prepareAnalysisContext(propertyData, body);
     console.log(`[Generate] Context prepared in ${Date.now() - t_contextStart}ms`);
 
-    // Build the streaming SSE response
+    // Build the V2 streaming response — PROGRESS lines then a single RESULT
     const encoder = new TextEncoder();
-    const stream = new ReadableStream({
+    const v2Stream = new ReadableStream({
         async start(controller) {
-          const send = (event: Record<string, unknown>) => {
-            try {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-            } catch {
-              // Controller may be closed
-            }
+          const sendLine = (line: string) => {
+            try { controller.enqueue(encoder.encode(line + '\n')); } catch {}
+          };
+          const sendProg = (step: string, detail: string) => {
+            sendLine(`PROGRESS:${JSON.stringify({ type: 'progress', step, detail })}`);
           };
 
           try {
-            // Steps 1-2 already completed (property data + market data resolved before stream)
-            send({ type: 'progress', step: 1, label: 'Fetching property details', status: 'complete' });
-            send({ type: 'progress', step: 2, label: 'Pulling market data', status: 'complete' });
+            // --- Rich contextual progress events ---
+            const prop = (Array.isArray(propertyData?.property) ? propertyData.property[0] : propertyData?.property) || {};
+            const rental = (propertyData?.rental || {}) as any;
+            const comps = (propertyData?.comparables || {}) as any;
+            const arvAnalysisData = (propertyData as any)?.arvAnalysis;
 
-            // Step 3: AI Analysis - stream Claude response
-            send({ type: 'progress', step: 3, label: 'Running AI analysis', status: 'active' });
+            sendProg('auth', 'Request verified');
 
+            sendProg('property',
+              `Property found — ${prop.bedrooms || '?'}bd/${prop.bathrooms || '?'}ba, ${prop.squareFootage ? prop.squareFootage.toLocaleString() : '?'} sqft`);
+
+            if (comps.value) {
+              sendProg('avm', `AVM acquired — Est. value $${comps.value.toLocaleString()}`);
+            }
+
+            if (rental.rentEstimate) {
+              sendProg('rent', `Rental estimate — $${rental.rentEstimate.toLocaleString()}/mo based on local comps`);
+            }
+
+            if (comps.comparables && Array.isArray(comps.comparables)) {
+              sendProg('comps', `Analyzed ${comps.comparables.length} comparable sales in the area`);
+            }
+
+            // Strategy-specific progress with data-driven ARV messaging
+            if ((body.strategy === 'flip' || body.strategy === 'brrrr') && calculatedMetrics) {
+              const userARV = body.arv || 0;
+              const compARV = arvAnalysisData?.arvEstimate;
+              const avmVal = comps.value || 0;
+              const arv = userARV || compARV || avmVal;
+
+              if (compARV && userARV) {
+                const deviation = Math.abs(userARV - compARV) / compARV;
+                if (deviation <= 0.05) {
+                  sendProg('arv', `ARV $${userARV.toLocaleString()} — aligns closely with ${arvAnalysisData?.compsUsed || 'local'} comp sales (comp ARV: $${compARV.toLocaleString()})`);
+                } else if (deviation <= 0.15) {
+                  sendProg('arv', `ARV $${userARV.toLocaleString()} — ${userARV > compARV ? 'above' : 'below'} comp-based estimate of $${compARV.toLocaleString()}. Verify scope of work.`);
+                } else {
+                  sendProg('arv', `ARV $${userARV.toLocaleString()} — significant variance from comp data ($${compARV.toLocaleString()}). Review comparable sales carefully.`);
+                }
+              } else if (arv) {
+                sendProg('arv', `ARV estimated at $${arv.toLocaleString()} from ${compARV ? `${arvAnalysisData?.compsUsed} comparable sales` : 'AVM data'}`);
+              }
+
+              const rehab = body.rehabCosts || 0;
+              if (rehab > 0) {
+                const maxOffer = arv > 0 ? Math.round(arv * 0.85 - rehab) : 0;
+                sendProg('rehab', `Rehab budget $${rehab.toLocaleString()} · ${maxOffer > 0 ? `Max allowable offer: $${maxOffer.toLocaleString()}` : 'Calculating max offer...'}`);
+              }
+
+              if (body.strategy === 'brrrr') {
+                const refiAmt = Math.round(arv * 0.75);
+                const equity = calculatedMetrics.cashReturned || 0;
+                sendProg('brrrr', `BRRRR analysis — Refi target $${refiAmt.toLocaleString()} at 75% ARV · Est. equity capture $${equity.toLocaleString()}`);
+              }
+            }
+
+            if (body.strategy === 'rental' && calculatedMetrics) {
+              const rent = calculatedMetrics.monthlyRent || 0;
+              const cashFlow = calculatedMetrics.cashFlow || 0;
+              sendProg('cashflow', `Cash flow model — $${rent.toLocaleString()}/mo rent · $${Math.round(cashFlow).toLocaleString()}/mo net cash flow`);
+            }
+
+            if (body.strategy === 'house-hack' && calculatedMetrics) {
+              const netCost = (calculatedMetrics as any).outOfPocketHousingCost || 0;
+              const rentalIncome = calculatedMetrics.monthlyRent || 0;
+              sendProg('househack', `House hack math — Net monthly cost $${Math.round(netCost).toLocaleString()}/mo after $${rentalIncome.toLocaleString()} rental offset`);
+            }
+
+            sendProg('ai', 'Running AI analysis — synthesizing all data points...');
+
+            // --- Call Claude (non-streaming for clean JSON output) ---
             const systemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
             const t_claudeStart = Date.now();
-            console.log(`[Generate] Starting Claude streaming call at +${t_claudeStart - t_streamStart}ms`);
+            console.log(`[Generate] Starting Claude call at +${t_claudeStart - t_streamStart}ms`);
 
-            const claudeStream = anthropic.messages.stream({
+            const claudeResponse = await anthropic.messages.create({
               model: CLAUDE_MODEL,
               max_tokens: 4000,
               temperature: 0.3,
@@ -779,39 +846,30 @@ export async function POST(request: NextRequest) {
               messages: [{ role: 'user' as const, content: context }]
             });
 
-            let fullText = '';
-            claudeStream.on('text', (text) => {
-              fullText += text;
-              send({ type: 'stream', text });
-            });
+            const fullText = claudeResponse.content
+              .filter((b: any) => b.type === 'text')
+              .map((b: any) => b.text)
+              .join('');
 
-            const finalMessage = await claudeStream.finalMessage();
             const t_claudeEnd = Date.now();
-            console.log(`[Generate] Claude streaming completed in ${t_claudeEnd - t_claudeStart}ms`);
-            console.log(`[Generate] Claude usage:`, finalMessage.usage);
-            console.log(`[Generate] Analysis text length: ${fullText.length}`);
+            console.log(`[Generate] Claude completed in ${t_claudeEnd - t_claudeStart}ms`);
+            console.log(`[Generate] Claude usage:`, claudeResponse.usage);
+            console.log(`[Generate] Response length: ${fullText.length}`);
 
-            send({ type: 'progress', step: 3, label: 'Running AI analysis', status: 'complete' });
+            sendProg('ai', 'AI analysis complete');
+            sendProg('save', 'Preparing your results...');
 
-            // Step 4: Parse and save results
-            send({ type: 'progress', step: 4, label: 'Preparing your results', status: 'active' });
-            const t_saveStart = Date.now();
-
+            // --- Parse and save ---
             const aiAnalysis = parseAnalysisResponse(fullText, body.strategy, calculatedMetrics);
             console.log('[Generate] Parsed analysis, financial_metrics:', aiAnalysis.financial_metrics);
 
-            // Extract ROI and profit
             const extractedRoi = aiAnalysis.financial_metrics?.roi;
             const extractedProfit = aiAnalysis.financial_metrics?.total_profit ||
                                     aiAnalysis.financial_metrics?.net_profit;
-            // Clamp ROI to fit DECIMAL(5,2) column: max 999.99
             const finalRoi = Math.min(extractedRoi ?? 0, 999.99);
             const finalProfit = Math.round(extractedProfit ?? 0);
-
-            // Extract ARV for flip strategies
             const extractedArv = aiAnalysis.financial_metrics?.arv;
 
-            // Build update data
             const updateData = {
               analysis_data: {
                 ...analysisRecord.analysis_data,
@@ -843,20 +901,18 @@ export async function POST(request: NextRequest) {
 
             if (updateError) {
               console.error('[Generate] Failed to update analysis:', updateError);
-              send({ type: 'error', message: 'Failed to save analysis results' });
+              sendLine(`ERROR:${JSON.stringify({ message: 'Failed to save analysis results' })}`);
               controller.close();
               return;
             }
 
-            // Update usage count (non-blocking)
-            console.log('[Generate] Incrementing usage count for user:', user.id);
+            // Update usage count
             const { error: usageUpdateError } = await supabase
               .rpc('increment_analysis_usage', { p_user_id: user.id });
 
             if (usageUpdateError) {
               console.error('[Generate] Failed to update usage count:', usageUpdateError);
             } else {
-              // Check 80% threshold for warning email (non-blocking)
               try {
                 const now = new Date();
                 const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -893,27 +949,24 @@ export async function POST(request: NextRequest) {
               }
             }
 
-            const t_saveEnd = Date.now();
-            console.log(`[Generate] DB save completed in ${t_saveEnd - t_saveStart}ms`);
-            console.log(`[Generate] TOTAL streaming time: ${t_saveEnd - t_streamStart}ms`);
+            console.log(`[Generate] DB save completed in ${Date.now() - t_claudeEnd}ms`);
+            console.log(`[Generate] TOTAL time: ${Date.now() - t_streamStart}ms`);
 
-            send({ type: 'progress', step: 4, label: 'Preparing your results', status: 'complete' });
-            send({
-              type: 'complete',
-              result: {
-                id: analysisRecord.id,
-                address: body.address,
-                strategy: body.strategy,
-                propertyData,
-                analysis: aiAnalysis,
-                timestamp: new Date().toISOString(),
-              }
-            });
+            sendProg('save', 'Results saved');
+
+            // Send the complete result — Claude JSON + server-parsed analysis
+            sendLine(`RESULT:${JSON.stringify({
+              id: analysisRecord.id,
+              address: body.address,
+              strategy: body.strategy,
+              analysis: aiAnalysis,
+              claudeRaw: fullText,
+              timestamp: new Date().toISOString(),
+            })}`);
 
             controller.close();
           } catch (error) {
             console.error('[Generate] Stream error:', error);
-            // Update analysis status to failed
             await supabase
               .from('analyzed_properties')
               .update({
@@ -925,17 +978,16 @@ export async function POST(request: NextRequest) {
               })
               .eq('id', analysisRecord.id);
 
-            send({ type: 'error', message: error instanceof Error ? error.message : 'Analysis generation failed' });
+            sendLine(`ERROR:${JSON.stringify({ message: error instanceof Error ? error.message : 'Analysis generation failed' })}`);
             controller.close();
           }
         }
       });
 
-      return new Response(stream, {
+      return new Response(v2Stream, {
         headers: {
-          'Content-Type': 'text/event-stream',
+          'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
           'X-Accel-Buffering': 'no',
         }
       });
@@ -1317,8 +1369,9 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
       initialLoanType: request.loanTerms?.loanType as 'hardMoney' | 'conventional' | undefined,
       initialInterestRate: request.loanTerms?.interestRate,
       refinanceInterestRate: 7, // Standard conventional rate
-      renovationMonths: parseInt((request as any).strategyDetails?.timeline) || 6,
-      closingCostPercent: 0.03
+      // V2 — accept holdingPeriod directly, fall back to strategyDetails.timeline
+      renovationMonths: (request as any).holdingPeriod || parseInt((request as any).strategyDetails?.timeline) || 6,
+      closingCostPercent: (request as any).closingCostsPercent ? (request as any).closingCostsPercent / 100 : 0.03
     };
     
     // Calculate BRRRR results
@@ -1494,8 +1547,9 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
     const monthlyHousingSavings = marketRentEquivalent - Math.max(effectiveMortgage, 0);
     const annualHousingSavings = monthlyHousingSavings * 12;
 
-    // Cash to close
-    const closingCosts = effectivePurchasePrice * 0.03;
+    // Cash to close — V2 accepts closingCostsPercent from client
+    const closingCostPct = (request as any).closingCostsPercent ? (request as any).closingCostsPercent / 100 : 0.03;
+    const closingCosts = effectivePurchasePrice * closingCostPct;
     const cashToClose = actualDownPayment + closingCosts;
 
     // Housing ROI (savings relative to investment)
@@ -1605,7 +1659,8 @@ Provide a house hack analysis focusing on the effective mortgage reduction and s
     // loanTerm = loan maturity (1-2 years for hard money)
     // timeline = actual project duration for holding costs (3-12 months)
     let holdingTimeInMonths = 6; // Default to 6 months for flips
-    const rawTimeline = (request as any).strategyDetails?.timeline;
+    // V2 — accept holdingPeriod directly, fall back to strategyDetails.timeline
+    const rawTimeline = (request as any).holdingPeriod || (request as any).strategyDetails?.timeline;
     if (rawTimeline) {
       const parsedTimeline = parseInt(rawTimeline);
       if (!isNaN(parsedTimeline) && parsedTimeline > 0 && parsedTimeline <= 18) {
