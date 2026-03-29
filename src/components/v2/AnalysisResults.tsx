@@ -452,6 +452,8 @@ function ProjectionChart({
 
   useEffect(() => {
     if (!chartLoaded || !canvasRef.current) return;
+    if (!calculations && !result) return;
+
     const Chart = (window as any).Chart;
     if (!Chart) return;
 
@@ -460,11 +462,11 @@ function ProjectionChart({
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
 
-    const fm = result.financial_metrics;
-    const v2m = result.metrics;
-
-    const chartConfig = buildChartConfig(strategy, calculations, fm, v2m);
-    if (!chartConfig) return;
+    const chartConfig = buildChartConfig(strategy, calculations, result);
+    if (!chartConfig) {
+      console.warn("buildChartConfig returned null for:", strategy);
+      return;
+    }
 
     chartRef.current = new Chart(ctx, chartConfig);
 
@@ -493,195 +495,441 @@ function ProjectionChart({
 
 function buildChartConfig(
   strategy: string,
-  calc: any,
-  fm: any,
-  v2m: any
+  calculations: any,
+  result: any
 ): any {
-  const baseOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "bottom" as const,
-        labels: { color: "#9994b8", font: { size: 12 } },
-      },
-      tooltip: {
-        backgroundColor: "#1a192b",
-        borderColor: "rgba(127,119,221,0.3)",
-        borderWidth: 1,
-        titleColor: "#f0eeff",
-        bodyColor: "#9994b8",
-        padding: 12,
-      },
-    },
-    scales: {
-      x: {
-        grid: { color: "rgba(127,119,221,0.08)" },
-        ticks: { color: "#3a3758" },
-      },
-      y: {
-        grid: { color: "rgba(127,119,221,0.08)" },
-        ticks: { color: "#3a3758" },
-      },
-    },
-  };
+  // Normalize field names from serverCalculations + parsedResult
+  const monthlyRent = calculations?.monthlyRent || 0;
+  const monthlyCashFlow =
+    calculations?.cashFlow || result?.cashFlow?.monthly || 0;
+  const annualCashFlow = monthlyCashFlow * 12;
+  const purchasePrice = result?.proForma?.purchasePrice || 0;
+  const appreciationRate = result?.annualAppreciationRate || 3;
+  const totalInvestment =
+    calculations?.totalInvestment || result?.proForma?.totalInvestment || 0;
+  const loanAmount = purchasePrice > 0 ? purchasePrice - totalInvestment : 0;
+  const interestRate = 7.5;
+  const monthlyRate = interestRate / 100 / 12;
 
-  if (strategy === "Fix & Flip") {
-    const arv = calc?.arv ?? fm?.arv ?? v2m?.arvEstimate ?? 0;
-    const purchase = calc?.purchasePrice ?? 0;
-    const rehab = calc?.rehabCost ?? calc?.renovationCosts ?? 0;
-    const loanAmt = calc?.totalLoan ?? calc?.acquisitionLoan ?? 0;
-    const monthlyRate = (calc?.hardMoneyRate ?? 12) / 100 / 12;
-    const pts = calc?.pointsCost ?? 0;
-    const holdPerMonth = calc?.monthlyHoldingCosts ?? 0;
-    const buyClose = calc?.closingCosts ?? 0;
-    const sellClose = Math.round(arv * 0.06);
+  const gridColor = "rgba(127,119,221,0.08)";
+  const tickColor = "#3a3758";
+  const tooltipBg = "#1a192b";
 
-    const labels: string[] = [];
-    const profitData: number[] = [];
-    const overrunData: number[] = [];
+  const ns =
+    strategy === "Buy & Hold"
+      ? "buy_hold"
+      : strategy === "Fix & Flip"
+        ? "fix_flip"
+        : strategy === "BRRRR"
+          ? "brrrr"
+          : strategy === "House Hack"
+            ? "house_hack"
+            : strategy?.toLowerCase().replace(" ", "_");
 
-    for (let m = 1; m <= 18; m++) {
-      labels.push(`${m}mo`);
-      const interest = loanAmt * monthlyRate * m;
-      const holding = holdPerMonth * m;
-      const total = purchase + rehab + interest + pts + holding + buyClose + sellClose;
-      profitData.push(Math.round(arv - total));
+  // ── BUY & HOLD: Wealth Building Projection ──
+  if (ns === "buy_hold" || ns === "rental") {
+    const years = [1, 2, 3, 4, 5, 10, 15, 20, 25, 30];
 
-      const totalOver = purchase + rehab * 1.25 + interest + pts + holding + buyClose + sellClose;
-      overrunData.push(Math.round(arv - totalOver));
-    }
-
-    return {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "Net Profit",
-            data: profitData,
-            borderColor: "#7F77DD",
-            backgroundColor: "rgba(127,119,221,0.1)",
-            fill: true,
-            tension: 0.3,
-          },
-          {
-            label: "25% Rehab Overrun",
-            data: overrunData,
-            borderColor: "#f09595",
-            backgroundColor: "rgba(240,149,149,0.05)",
-            fill: true,
-            borderDash: [5, 5],
-            tension: 0.3,
-          },
-        ],
-      },
-      options: baseOptions,
-    };
-  }
-
-  if (strategy === "Buy & Hold" || strategy === "BRRRR") {
-    const monthlyCF = fm?.monthly_cash_flow ?? v2m?.cashOnCash ?? 0;
-    const arv = calc?.arv ?? fm?.arv ?? v2m?.arvEstimate ?? 0;
-    const loanAmt = calc?.refiLoanAmount ?? calc?.loanAmount ?? 0;
-    const rate = 0.07 / 12;
-    const appreciation = 0.03;
-    const rentGrowth = 0.02;
-
-    const labels: string[] = [];
-    const equityData: number[] = [];
-    const cfData: number[] = [];
-
-    let balance = loanAmt;
-    let cumCF = 0;
-    let currentCF = monthlyCF * 12;
-
-    for (let y = 1; y <= 10; y++) {
-      labels.push(`Year ${y}`);
-      const propValue = arv * Math.pow(1 + appreciation, y);
-      // Approximate loan paydown
-      for (let m = 0; m < 12; m++) {
-        const interest = balance * rate;
-        const payment = loanAmt * (rate * Math.pow(1 + rate, 360)) / (Math.pow(1 + rate, 360) - 1);
+    const calcEquityFromPaydown = (year: number) => {
+      if (!purchasePrice || loanAmount <= 0) return 0;
+      let balance = loanAmount;
+      let totalPrincipal = 0;
+      const payment =
+        (loanAmount * monthlyRate) /
+        (1 - Math.pow(1 + monthlyRate, -360));
+      for (let i = 0; i < year * 12; i++) {
+        const interest = balance * monthlyRate;
         const principal = Math.max(0, payment - interest);
         balance = Math.max(0, balance - principal);
+        totalPrincipal += principal;
       }
-      equityData.push(Math.round(propValue - balance));
-      cumCF += currentCF;
-      cfData.push(Math.round(cumCF));
-      currentCF *= 1 + rentGrowth;
-    }
+      return Math.round(totalPrincipal);
+    };
+
+    const labels = years.map((y) => `Year ${y}`);
+    const appreciationData = years.map((y) =>
+      Math.round(purchasePrice * (Math.pow(1 + appreciationRate / 100, y) - 1))
+    );
+    const paydownData = years.map((y) => calcEquityFromPaydown(y));
+    const cashFlowData = years.map((y) => {
+      let total = 0;
+      for (let i = 1; i <= y; i++) {
+        total += Math.round(annualCashFlow * Math.pow(1.02, i - 1));
+      }
+      return total;
+    });
+    const totalData = years.map(
+      (_, i) => appreciationData[i] + paydownData[i] + cashFlowData[i]
+    );
 
     return {
-      type: "line",
+      type: "bar",
       data: {
         labels,
         datasets: [
           {
-            label: "Total Equity",
-            data: equityData,
-            borderColor: "#7F77DD",
-            backgroundColor: "rgba(127,119,221,0.1)",
-            fill: true,
-            tension: 0.3,
+            label: "Appreciation Equity",
+            data: appreciationData,
+            backgroundColor: "rgba(83,74,183,0.7)",
+            borderRadius: 4,
+            stack: "equity",
+          },
+          {
+            label: "Loan Paydown",
+            data: paydownData,
+            backgroundColor: "rgba(29,158,117,0.7)",
+            borderRadius: 4,
+            stack: "equity",
           },
           {
             label: "Cumulative Cash Flow",
-            data: cfData,
-            borderColor: "#1D9E75",
-            backgroundColor: "rgba(29,158,117,0.1)",
-            fill: true,
+            data: cashFlowData,
+            backgroundColor:
+              cashFlowData[0] >= 0
+                ? "rgba(127,119,221,0.5)"
+                : "rgba(240,149,149,0.5)",
+            borderRadius: 4,
+            stack: "equity",
+          },
+          {
+            label: "Total Wealth Impact",
+            data: totalData,
+            type: "line",
+            borderColor: "#f0eeff",
+            backgroundColor: "transparent",
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: "#f0eeff",
             tension: 0.3,
+            stack: undefined,
           },
         ],
       },
-      options: baseOptions,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#9994b8", font: { size: 11 }, padding: 16, boxWidth: 12 },
+          },
+          tooltip: {
+            backgroundColor: tooltipBg,
+            borderColor: "rgba(127,119,221,0.3)",
+            borderWidth: 1,
+            titleColor: "#f0eeff",
+            bodyColor: "#9994b8",
+            padding: 12,
+            callbacks: {
+              label: (ctx: any) => {
+                const v = ctx.raw;
+                return ` ${ctx.dataset.label}: ${v >= 0 ? "+" : ""}$${Math.abs(v).toLocaleString()}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { stacked: true, grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+          y: {
+            stacked: true,
+            grid: { color: gridColor },
+            ticks: {
+              color: tickColor,
+              font: { size: 11 },
+              callback: (v: any) => (Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`),
+            },
+          },
+        },
+      },
     };
   }
 
-  if (strategy === "House Hack") {
-    const netCost = calc?.netMonthlyCost ?? calc?.effectiveMortgage ?? 0;
-    const marketRent = calc?.marketRentEquivalent ?? calc?.occupiedUnitRent ?? 0;
+  // ── FIX & FLIP: Profit Sensitivity ──
+  if (ns === "fix_flip" || ns === "flip") {
+    const arv =
+      result?.metrics?.arvEstimate || calculations?.arv || purchasePrice * 1.2;
+    const rehabCost = result?.proForma?.rehabCost || calculations?.rehabCost || 0;
+    const loanAmt = calculations?.loanAmount || purchasePrice * 0.9;
+    const hmRate = 12;
+    const mInterest = loanAmt * (hmRate / 100 / 12);
+    const pts = calculations?.pointsCost || loanAmt * 0.02;
+    const buyClose = calculations?.buySideClosing || purchasePrice * 0.03;
+    const sellClose = arv * 0.06;
+    const mHolding = purchasePrice * 0.008 / 12;
 
-    const labels: string[] = [];
-    const rentingData: number[] = [];
-    const hackingData: number[] = [];
+    const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 18];
 
-    let rent = marketRent;
-    let cost = netCost;
-
-    for (let y = 1; y <= 10; y++) {
-      labels.push(`Year ${y}`);
-      rentingData.push(Math.round(rent * 12));
-      hackingData.push(Math.round(Math.max(0, cost) * 12));
-      rent *= 1.04; // 4% rent increase
-      cost *= 0.98; // tenant rents grow, effective cost drops
-    }
+    const calcProfit = (m: number, rehabMult = 1) => {
+      const rehab = rehabCost * rehabMult;
+      const interest = mInterest * m;
+      const holding = mHolding * m;
+      return Math.round(arv - purchasePrice - rehab - interest - pts - buyClose - holding - sellClose);
+    };
 
     return {
       type: "line",
       data: {
-        labels,
+        labels: months.map((m) => `${m}mo`),
         datasets: [
           {
-            label: "Cost of Renting",
-            data: rentingData,
-            borderColor: "#f09595",
-            backgroundColor: "rgba(240,149,149,0.05)",
+            label: "Base case profit",
+            data: months.map((m) => calcProfit(m)),
+            borderColor: "#7F77DD",
+            backgroundColor: "rgba(127,119,221,0.08)",
+            borderWidth: 2,
             fill: true,
             tension: 0.3,
+            pointRadius: 3,
           },
           {
-            label: "House Hack Cost",
-            data: hackingData,
-            borderColor: "#1D9E75",
-            backgroundColor: "rgba(29,158,117,0.1)",
+            label: "+25% rehab overrun",
+            data: months.map((m) => calcProfit(m, 1.25)),
+            borderColor: "#f09595",
+            backgroundColor: "rgba(240,149,149,0.05)",
+            borderWidth: 2,
+            borderDash: [5, 5],
             fill: true,
             tension: 0.3,
+            pointRadius: 3,
           },
         ],
       },
-      options: baseOptions,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#9994b8", font: { size: 11 }, padding: 16, boxWidth: 12 },
+          },
+          tooltip: {
+            backgroundColor: tooltipBg,
+            borderColor: "rgba(127,119,221,0.3)",
+            borderWidth: 1,
+            titleColor: "#f0eeff",
+            bodyColor: "#9994b8",
+            padding: 12,
+            callbacks: {
+              label: (ctx: any) => {
+                const v = ctx.raw;
+                return ` ${ctx.dataset.label}: ${v >= 0 ? "" : "-"}$${Math.abs(v).toLocaleString()}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: { color: tickColor, font: { size: 11 } },
+            title: { display: true, text: "Holding period", color: tickColor, font: { size: 11 } },
+          },
+          y: {
+            grid: { color: gridColor },
+            ticks: {
+              color: tickColor,
+              font: { size: 11 },
+              callback: (v: any) => (Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`),
+            },
+            title: { display: true, text: "Net profit", color: tickColor, font: { size: 11 } },
+          },
+        },
+      },
+    };
+  }
+
+  // ── BRRRR: Equity + Cash Flow Growth ──
+  if (ns === "brrrr") {
+    const arv =
+      result?.metrics?.arvEstimate || calculations?.arv || purchasePrice * 1.2;
+    const refiLoan = arv * 0.75;
+    const refiRate = 8.0;
+    const refiMonthlyRate = refiRate / 100 / 12;
+    const refiPayment =
+      (refiLoan * refiMonthlyRate) /
+      (1 - Math.pow(1 + refiMonthlyRate, -360));
+    const rent = monthlyRent;
+    const expenses = refiPayment + purchasePrice * 0.015 / 12;
+    const mCashFlow = rent - expenses;
+
+    const years = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+    const equityData = years.map((y) => {
+      const appreciation = arv * (Math.pow(1 + appreciationRate / 100, y) - 1);
+      let balance = refiLoan;
+      for (let m = 0; m < y * 12; m++) {
+        const interest = balance * refiMonthlyRate;
+        balance -= refiPayment - interest;
+      }
+      return Math.round(appreciation + (refiLoan - Math.max(0, balance)));
+    });
+
+    const cashFlowData = years.map((y) => {
+      let total = 0;
+      for (let i = 1; i <= y; i++) {
+        total += Math.round(mCashFlow * 12 * Math.pow(1.02, i - 1));
+      }
+      return total;
+    });
+
+    return {
+      type: "line",
+      data: {
+        labels: years.map((y) => `Year ${y}`),
+        datasets: [
+          {
+            label: "Cumulative equity",
+            data: equityData,
+            borderColor: "#7F77DD",
+            backgroundColor: "rgba(127,119,221,0.08)",
+            fill: true,
+            borderWidth: 2,
+            tension: 0.3,
+            yAxisID: "y",
+          },
+          {
+            label: "Cumulative cash flow",
+            data: cashFlowData,
+            borderColor: cashFlowData[0] >= 0 ? "#1D9E75" : "#f09595",
+            backgroundColor:
+              cashFlowData[0] >= 0
+                ? "rgba(29,158,117,0.06)"
+                : "rgba(240,149,149,0.06)",
+            fill: true,
+            borderWidth: 2,
+            tension: 0.3,
+            yAxisID: "y1",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#9994b8", font: { size: 11 }, padding: 16 },
+          },
+          tooltip: {
+            backgroundColor: tooltipBg,
+            borderColor: "rgba(127,119,221,0.3)",
+            borderWidth: 1,
+            titleColor: "#f0eeff",
+            bodyColor: "#9994b8",
+            padding: 12,
+            callbacks: {
+              label: (ctx: any) => {
+                const v = ctx.raw;
+                return ` ${ctx.dataset.label}: ${v >= 0 ? "+" : ""}$${Math.abs(v).toLocaleString()}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+          y: {
+            position: "left",
+            grid: { color: gridColor },
+            ticks: {
+              color: tickColor,
+              font: { size: 11 },
+              callback: (v: any) => `$${(v / 1000).toFixed(0)}k`,
+            },
+            title: { display: true, text: "Equity", color: tickColor },
+          },
+          y1: {
+            position: "right",
+            grid: { drawOnChartArea: false },
+            ticks: {
+              color: tickColor,
+              font: { size: 11 },
+              callback: (v: any) => `$${(v / 1000).toFixed(0)}k`,
+            },
+            title: { display: true, text: "Cash Flow", color: tickColor },
+          },
+        },
+      },
+    };
+  }
+
+  // ── HOUSE HACK: Cost vs Renting ──
+  if (ns === "house_hack" || ns === "househack") {
+    const netMonthlyCost =
+      calculations?.netMonthlyCost ||
+      result?.effectiveMonthlyCost ||
+      calculations?.outOfPocketHousingCost ||
+      0;
+    const marketRent = monthlyRent > 0 ? monthlyRent * 1.3 : 2000;
+
+    const years = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const rentingCost = years.map((y) =>
+      Math.round(marketRent * Math.pow(1.04, y - 1))
+    );
+    const hackCost = years.map((y) =>
+      Math.round(Math.max(0, netMonthlyCost) * Math.pow(0.98, y - 1))
+    );
+
+    return {
+      type: "line",
+      data: {
+        labels: years.map((y) => `Year ${y}`),
+        datasets: [
+          {
+            label: "Renting equivalent",
+            data: rentingCost,
+            borderColor: "#f09595",
+            backgroundColor: "rgba(240,149,149,0.05)",
+            borderWidth: 2,
+            tension: 0.3,
+            fill: false,
+          },
+          {
+            label: "Your monthly cost",
+            data: hackCost,
+            borderColor: "#1D9E75",
+            backgroundColor: "rgba(29,158,117,0.08)",
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: { color: "#9994b8", font: { size: 11 }, padding: 16 },
+          },
+          tooltip: {
+            backgroundColor: tooltipBg,
+            borderColor: "rgba(127,119,221,0.3)",
+            borderWidth: 1,
+            titleColor: "#f0eeff",
+            bodyColor: "#9994b8",
+            padding: 12,
+            callbacks: {
+              label: (ctx: any) =>
+                ` ${ctx.dataset.label}: $${ctx.raw.toLocaleString()}/mo`,
+            },
+          },
+        },
+        scales: {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { size: 11 } } },
+          y: {
+            grid: { color: gridColor },
+            ticks: {
+              color: tickColor,
+              font: { size: 11 },
+              callback: (v: any) => `$${v.toLocaleString()}/mo`,
+            },
+          },
+        },
+      },
     };
   }
 
