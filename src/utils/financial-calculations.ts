@@ -564,6 +564,11 @@ export interface FlipCalculationOutputs {
 
   // Financing details
   isHardMoney: boolean;
+  pointsCost: number;
+
+  // Max Allowable Offer
+  mao70: number;   // 70% rule (conservative investor target)
+  mao85: number;   // 85% rule (hard money ceiling)
 
   // Validation results
   validation: FlipValidationResult;
@@ -653,9 +658,9 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
 
   console.log('STEP 4: Calculating rehab funding with LTV check...');
 
-  // Hard money lenders cap total loan at 80% of ARV
+  // Hard money lenders cap total loan at 85% of ARV
   // If total loan needed exceeds this, investor must bring cash for the difference
-  const maxLTV = 0.80; // 80% of ARV
+  const maxLTV = 0.85; // 85% of ARV (hard money ceiling)
   const maxLoan = arv * maxLTV;
   const totalLoanNeeded = acquisitionLoan + renovationCosts;
 
@@ -702,18 +707,38 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     totalClosingCosts: `$${totalClosingCosts.toLocaleString()}`
   });
 
+  console.log('STEP 5.5: Calculating points cost...');
+
+  // Points charged on total loan amount upfront (paid from investor's pocket)
+  const pointsCost = Math.round(totalLoan * (points / 100));
+
+  console.log('Points Cost:', {
+    points: `${points}%`,
+    totalLoan: `$${totalLoan.toLocaleString()}`,
+    pointsCost: `$${pointsCost.toLocaleString()}`
+  });
+
   console.log('STEP 6: Calculating holding costs...');
 
   // Calculate holding costs using renovation timeline
   // Interest on FULL loan (acquisition + rehab funded by lender) — interest-only for hard money
   const monthlyInterest = (totalLoan * (interestRate / 100)) / 12;
 
-  const monthlyHoldingCosts = monthlyInterest;
+  // Non-interest holding costs: taxes, insurance, utilities
+  const monthlyPropertyTax = Math.round((purchasePrice * 0.012) / 12); // 1.2% annually
+  const monthlyInsurance = Math.round((purchasePrice * 0.004) / 12); // 0.4% annually
+  const monthlyUtilities = 200; // Utilities during renovation
+
+  const monthlyHoldingCosts = monthlyInterest + monthlyPropertyTax + monthlyInsurance + monthlyUtilities;
   const totalHoldingCosts = monthlyHoldingCosts * holdingMonths;
 
-  console.log('Holding Costs (Interest-Only on Full Loan):', {
+  console.log('Holding Costs:', {
     totalLoan: `$${totalLoan.toLocaleString()}`,
     monthlyInterest: `$${monthlyInterest.toFixed(2)}`,
+    monthlyPropertyTax: `$${monthlyPropertyTax}`,
+    monthlyInsurance: `$${monthlyInsurance}`,
+    monthlyUtilities: `$${monthlyUtilities}`,
+    monthlyTotal: `$${monthlyHoldingCosts.toFixed(2)}`,
     holdingMonths,
     totalHoldingCosts: `$${totalHoldingCosts.toFixed(2)}`
   });
@@ -730,12 +755,12 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   console.log('STEP 8: Calculating investment totals...');
 
   // CASH REQUIRED = What investor actually brings to closing (out of pocket)
-  // Hard money funds 90% of purchase + 100% of rehab (up to 80% ARV)
-  // Investor only brings: 10% down + closing costs + any LTV overage
-  const cashRequired = downPayment + totalClosingCosts + cashForRehab;
+  // Hard money funds 90% of purchase + 100% of rehab (up to 85% ARV)
+  // Investor only brings: 10% down + points + closing costs + any LTV overage + holding costs
+  const cashRequired = downPayment + pointsCost + totalClosingCosts + cashForRehab;
 
   // TOTAL PROJECT COST = all costs of the flip (for profit calculation)
-  const totalInvestment = purchasePrice + renovationCosts + totalHoldingCosts + totalClosingCosts + sellingCosts;
+  const totalInvestment = purchasePrice + renovationCosts + totalHoldingCosts + totalClosingCosts + pointsCost + sellingCosts;
 
   // TOTAL PROJECT COST alias
   const totalProjectCost = totalInvestment;
@@ -744,9 +769,9 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     cashRequired: `$${cashRequired.toLocaleString()} (what investor brings)`,
     cashRequiredBreakdown: {
       downPayment: `$${downPayment.toLocaleString()}`,
+      pointsCost: `$${pointsCost.toLocaleString()}`,
       closingCosts: `$${totalClosingCosts.toLocaleString()}`,
       cashForRehab: `$${cashForRehab.toLocaleString()}`,
-      holdingCosts: `$${totalHoldingCosts.toLocaleString()}`
     },
     totalInvestment: `$${totalInvestment.toLocaleString()} (all-in cost)`,
     totalProjectCost: `$${totalProjectCost.toLocaleString()} (including selling)`
@@ -754,8 +779,12 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
 
   console.log('STEP 9: Calculating returns...');
 
-  // NET PROFIT = ARV - Purchase - Rehab - Interest - Closing - Selling
-  const netProfit = arv - purchasePrice - renovationCosts - totalHoldingCosts - totalClosingCosts - sellingCosts;
+  // NET PROFIT = ARV - Purchase - Rehab - Interest - Points - Closing - Selling
+  const netProfit = arv - purchasePrice - renovationCosts - totalHoldingCosts - pointsCost - totalClosingCosts - sellingCosts;
+
+  // MAX ALLOWABLE OFFER calculations
+  const mao70 = Math.round(arv * 0.70 - renovationCosts); // 70% rule (conservative investor target)
+  const mao85 = Math.round(arv * 0.85 - renovationCosts); // 85% rule (hard money ceiling)
 
   // ROI = Net Profit / Cash Required (return on actual cash invested)
   const roi = cashRequired > 0 ? (netProfit / cashRequired) * 100 : 0;
@@ -850,13 +879,16 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     profitMargin,
     closingCosts: totalClosingCosts,
     closingCostsBreakdown: {
-      lenderPoints: 0,
-      lenderPointsPercent: 0,
+      lenderPoints: pointsCost,
+      lenderPointsPercent: points,
       originationFee: 0,
       titleEscrowMisc: 0,
       totalClosingCosts,
       totalClosingCostsPercent: purchasePrice > 0 ? (totalClosingCosts / purchasePrice) * 100 : 0
     },
+    pointsCost,
+    mao70,
+    mao85,
     isHardMoney,
     validation
   };

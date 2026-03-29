@@ -41,7 +41,7 @@ CRITICAL OUTPUT RULES:
 - dealScore: integer 1-10 based on the actual calculated metrics.
 
 JSON schema:
-{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"one sentence buy/pass/hold with confidence","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"short risk title","detail":"one sentence"}],"narrative":"2-3 sentences, plain text, no bullets","marketContext":"1-2 sentences on local market","dealScore":1-10}
+{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"one sentence buy/pass/hold with confidence","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"short risk title","detail":"one sentence"}],"narrative":"2-3 sentences, plain text, no bullets","marketContext":"1-2 sentences on local market","dealScore":1-10,"breakEvenArv":number|null,"capitalRecoveryPercent":number|null,"effectiveMonthlyCost":number|null,"grm":number|null,"fiveYearEquity":number|null,"annualAppreciationRate":3,"projectionNotes":"one sentence on biggest variable affecting long-term projections"}
 
 Rules:
 - capRate/cashOnCash are percentages as numbers (6.8 not 0.068)
@@ -833,6 +833,9 @@ export async function POST(request: NextRequest) {
 
             sendProg('ai', 'Running AI analysis — synthesizing all data points...');
 
+            // Send pre-computed calculations to client for the results component
+            sendLine(`CALCULATIONS:${JSON.stringify(calculatedMetrics)}`);
+
             // --- Call Claude (non-streaming for clean JSON output) ---
             const systemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
             const t_claudeStart = Date.now();
@@ -1445,6 +1448,9 @@ ${summary.recommendation}
 TIMELINE:
 ${timeline.map(t => `Year ${t.year}: ${t.description} - Cash Flow: $${t.cashFlow.toLocaleString()}`).join('\n')}
 
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
+
 Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition/renovation, refinance cash-out, and long-term rental returns.`;
 
     calculatedMetrics = {
@@ -1614,6 +1620,9 @@ ${effectiveMortgage <= 0 ? '- LIVE FREE: Tenants cover 100% of your housing cost
 
 IMPORTANT: This is a house hack analysis. The "effective mortgage" is the key metric, NOT traditional cash flow. A positive effective mortgage simply means you still pay something toward housing, but MUCH less than renting. This is a GOOD deal if the effective mortgage is significantly below market rent.
 
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
+
 Provide a house hack analysis focusing on the effective mortgage reduction and savings compared to renting.`;
 
     // For house hack, use effective mortgage and savings as the key metrics
@@ -1730,8 +1739,13 @@ SELLING COSTS:
 
 INVESTMENT SUMMARY:
 - Cash Required: $${Math.round(flipResults.cashRequired).toLocaleString()} (what investor brings)
+- Points Cost: $${Math.round(flipResults.pointsCost).toLocaleString()} (${flipInputs.points}% on total loan)
 - Total Investment: $${Math.round(flipResults.totalInvestment).toLocaleString()} (all-in cost)
 - Total Project Cost: $${Math.round(flipResults.totalProjectCost).toLocaleString()} (including selling)
+
+MAX ALLOWABLE OFFER (MAO):
+- 70% Rule (conservative): $${flipResults.mao70.toLocaleString()} ${purchasePrice <= flipResults.mao70 ? '✓ Purchase price is BELOW 70% MAO' : '⚠ Purchase price EXCEEDS 70% MAO'}
+- 85% Rule (HML ceiling): $${flipResults.mao85.toLocaleString()} ${purchasePrice <= flipResults.mao85 ? '✓ Purchase price is BELOW 85% MAO' : '⚠ Purchase price EXCEEDS 85% MAO'}
 
 EXIT STRATEGY:
 - After Repair Value (ARV): $${Math.round(estimatedARV).toLocaleString()}
@@ -1746,6 +1760,9 @@ ${flipResults.validation.errors.map(e => `- ${e}`).join('\n')}
 VALIDATION WARNINGS:
 ${flipResults.validation.warnings.map(w => `- ${w}`).join('\n')}
 ` : ''}
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
+
 Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, holding costs, and profit margins. Do NOT include rental income or cash flow calculations.`;
 
     calculatedMetrics = {
@@ -1876,6 +1893,9 @@ CASH FLOW ANALYSIS:
 - Cash-on-Cash Return: ${cashOnCash.toFixed(2)}%
 - Annual NOI: $${annualNOI.toLocaleString()}
 
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
+
 Provide a comprehensive analysis following the format specified. Make sure to include ALL the financial metrics in your response with the exact calculations shown above.`;
     
     calculatedMetrics = {
@@ -1888,6 +1908,32 @@ Provide a comprehensive analysis following the format specified. Make sure to in
       totalProfit: annualCashFlow * 5, // 5-year profit projection
       monthlyRent: monthlyRent // Add monthly rent to metrics
     };
+  }
+
+  // Calculation verification log (development only)
+  if (process.env.NODE_ENV === 'development') {
+    const afterRepairVal = request.arv || (comparables as any)?.value;
+    const rehabAmt = request.rehabCosts;
+    console.group('=== CALCULATION VERIFICATION ===');
+    console.log('Strategy:', request.strategy);
+    console.log('Inputs:', {
+      purchasePrice,
+      downPayment,
+      rehabCost: rehabAmt,
+      afterRepairValue: afterRepairVal,
+      monthlyRent: request.monthlyRent,
+      loanType: request.loanTerms?.loanType,
+      interestRate: request.loanTerms?.interestRate,
+      holdingMonths: (request as any).holdingPeriod || (request as any).strategyDetails?.timeline
+    });
+    console.log('Calculated outputs:', calculatedMetrics);
+    if (afterRepairVal) {
+      console.log('Max allowable offer (70% rule):',
+        Math.round(afterRepairVal * 0.70) - (rehabAmt || 0));
+      console.log('Max allowable offer (85% HML):',
+        Math.round(afterRepairVal * 0.85) - (rehabAmt || 0));
+    }
+    console.groupEnd();
   }
 
   return { context, calculatedMetrics };

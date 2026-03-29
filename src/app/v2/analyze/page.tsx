@@ -3,6 +3,8 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import NavBar from "@/components/v2/NavBar";
+import AnalysisResults from "@/components/v2/AnalysisResults";
+import { getSubscriptionWithUsage } from "@/lib/subscription/client";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -347,6 +349,10 @@ function AnalyzeContent() {
   const [analysisError, setAnalysisError] = useState("");
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [parsedResult, setParsedResult] = useState<AnalysisResult | null>(null);
+  const [serverCalculations, setServerCalculations] = useState<any>(null);
+  const [userTier, setUserTier] = useState<"free" | "pro" | "pro_max">("free");
+  const [isLoadingTier, setIsLoadingTier] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [progressSteps, setProgressSteps] = useState<
     Array<{ step: string; detail: string; timestamp: number }>
   >([]);
@@ -435,6 +441,41 @@ function AnalyzeContent() {
       cancelled = true;
     };
   }, [address]);
+
+  /* ---------- Load user subscription tier ------------------------ */
+
+  useEffect(() => {
+    const loadUserTier = async () => {
+      try {
+        const sub = await getSubscriptionWithUsage();
+        const tier = (sub?.subscription?.tier as string) || "free";
+
+        const v2Tier = (() => {
+          if (tier === "pro-plus" || tier === "pro_plus" || tier === "premium")
+            return "pro_max" as const;
+          if (tier === "pro" || tier === "professional") return "pro" as const;
+          return "free" as const;
+        })();
+
+        setUserTier(v2Tier);
+
+        // Also grab the user id for usage tracking
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) setUserId(user.id);
+      } catch (err) {
+        console.error("Failed to load user tier:", err);
+        setUserTier("free");
+      } finally {
+        setIsLoadingTier(false);
+      }
+    };
+
+    loadUserTier();
+  }, []);
 
   /* ---------- Strategy defaults ---------------------------------- */
 
@@ -719,6 +760,10 @@ function AnalyzeContent() {
               ]);
               setCurrentStep(evt.step);
             } catch {}
+          } else if (line.startsWith("CALCULATIONS:")) {
+            try {
+              setServerCalculations(JSON.parse(line.slice(13)));
+            } catch {}
           } else if (line.startsWith("RESULT:")) {
             fullResultJson = line.slice(7);
             gotCompleteEvent = true;
@@ -801,127 +846,7 @@ function AnalyzeContent() {
     }
   }
 
-  /* ---------- Derived values ------------------------------------- */
-  // Support both legacy (server-parsed) and V2 (Claude JSON) field names
-  const fm = parsedResult?.financial_metrics;
-  const v2m = parsedResult?.metrics;
-  const v2cf = parsedResult?.cashFlow;
-  const v2pf = parsedResult?.proForma;
-
-  const showArv =
-    selectedStrategy === "BRRRR" || selectedStrategy === "Fix & Flip";
-  const showEquityCapture = selectedStrategy === "BRRRR";
-
-  const metricCards: { label: string; value: string; color: string }[] = [];
-
-  const capRate = v2m?.capRate ?? fm?.cap_rate;
-  if (capRate != null)
-    metricCards.push({ label: "Cap Rate", value: fmtPct(capRate), color: "#f0eeff" });
-
-  const cashOnCash = v2m?.cashOnCash ?? fm?.cash_on_cash_return;
-  if (cashOnCash != null)
-    metricCards.push({ label: "Cash-on-Cash", value: fmtPct(cashOnCash), color: "#7F77DD" });
-
-  const monthlyCF = v2cf?.monthly ?? fm?.monthly_cash_flow;
-  if (monthlyCF != null)
-    metricCards.push({
-      label: "Monthly Cash Flow",
-      value: (monthlyCF >= 0 ? "+" : "-") + fmtCurrency(monthlyCF),
-      color: monthlyCF >= 0 ? "#1D9E75" : "#f09595",
-    });
-
-  const roi = v2m?.roi ?? fm?.roi;
-  if (roi != null)
-    metricCards.push({ label: "5-Year ROI", value: fmtPct(roi), color: "#f0eeff" });
-
-  const arvVal = v2m?.arvEstimate ?? v2pf?.arvEstimate ?? fm?.arv;
-  if (showArv && arvVal != null)
-    metricCards.push({ label: "ARV Estimate", value: fmtCurrency(arvVal), color: "#f0eeff" });
-
-  const equityCapture = v2m?.equityCapture ?? fm?.cash_returned;
-  if (showEquityCapture && equityCapture != null)
-    metricCards.push({ label: "Equity Capture", value: fmtCurrency(equityCapture), color: "#7F77DD" });
-
-  /* --- Pro forma rows (V2 fields preferred, legacy fallback) --- */
-  const proFormaRows: { label: string; value: string }[] = [];
-
-  const pfPurchase = v2pf?.purchasePrice;
-  if (pfPurchase != null)
-    proFormaRows.push({ label: "Purchase Price", value: fmtCurrency(pfPurchase) });
-
-  const pfRehab = v2pf?.rehabCost;
-  if (pfRehab != null)
-    proFormaRows.push({ label: "Rehab Cost", value: fmtCurrency(pfRehab) });
-
-  const totalInv = v2pf?.totalInvestment ?? fm?.total_investment;
-  if (totalInv != null)
-    proFormaRows.push({ label: "Total Investment", value: fmtCurrency(totalInv) });
-
-  if (showArv && arvVal != null && !proFormaRows.some((r) => r.label === "ARV Estimate"))
-    proFormaRows.push({ label: "ARV", value: fmtCurrency(arvVal) });
-
-  const grossRent = v2pf?.grossRent ?? fm?.monthly_rent;
-  if (grossRent != null)
-    proFormaRows.push({ label: "Gross Rent", value: fmtCurrency(grossRent) + "/mo" });
-
-  const vacancy = v2pf?.vacancy;
-  if (vacancy != null)
-    proFormaRows.push({ label: "Vacancy", value: fmtCurrency(vacancy) + "/mo" });
-
-  const noi = v2pf?.netOperatingIncome ?? fm?.annual_noi;
-  if (noi != null)
-    proFormaRows.push({ label: "Net Operating Income", value: fmtCurrency(noi) + "/yr" });
-
-  const debtService = v2pf?.annualDebtService;
-  if (debtService != null)
-    proFormaRows.push({ label: "Annual Debt Service", value: fmtCurrency(debtService) + "/yr" });
-
-  const holdingCosts = fm?.holding_costs;
-  if (holdingCosts != null && !v2pf)
-    proFormaRows.push({ label: "Holding Costs", value: fmtCurrency(holdingCosts) });
-
-  const totalProfit = fm?.total_profit;
-  if (totalProfit != null && !v2pf)
-    proFormaRows.push({ label: "Total Profit", value: fmtCurrency(totalProfit) });
-
-  /* --- Risk flags (V2 structured riskFlags preferred, legacy fallback) --- */
-  const riskItems: { severity: string; flag: string; detail?: string }[] = [];
-  if (parsedResult?.riskFlags && parsedResult.riskFlags.length > 0) {
-    parsedResult.riskFlags.forEach((rf) => {
-      riskItems.push({ severity: rf.severity, flag: rf.flag, detail: rf.detail });
-    });
-  } else if (parsedResult?.risks) {
-    parsedResult.risks.forEach((r) => {
-      const lower = r.toLowerCase();
-      let severity = "medium";
-      if (lower.includes("high") || lower.includes("significant") || lower.includes("major"))
-        severity = "high";
-      else if (lower.includes("low") || lower.includes("minor") || lower.includes("minimal"))
-        severity = "low";
-      riskItems.push({ severity, flag: r });
-    });
-  }
-
-  /* --- Deal score --- */
-  const dealScore = parsedResult?.dealScore;
-  let scoreColor = "#EF9F27";
-  let scoreLabel = "Moderate Deal";
-  let scoreSub =
-    "Acceptable returns with some risk factors. Negotiate hard on price.";
-  if (dealScore != null) {
-    if (dealScore >= 8) {
-      scoreColor = "#1D9E75";
-      scoreLabel = "Strong Deal";
-      scoreSub =
-        "Above-average returns for this market. Numbers support moving forward.";
-    } else if (dealScore <= 4) {
-      scoreColor = "#f09595";
-      scoreLabel = "Weak Deal";
-      scoreSub =
-        "Below-average returns. This deal needs significant price reduction to make sense.";
-    }
-  }
-
+  // Derived values for results are now inside AnalysisResults component
   const dataVerified = !!propertyData && !propertyError;
 
   /* ================================================================ */
@@ -1004,6 +929,46 @@ function AnalyzeContent() {
         >
           AI: {selectedModel.charAt(0).toUpperCase() + selectedModel.slice(1)}
         </span>
+
+        {!isLoadingTier && userTier === "pro" && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: "rgba(83,74,183,0.15)",
+              border: "0.5px solid rgba(127,119,221,0.3)",
+              borderRadius: 6,
+              padding: "3px 10px",
+              fontSize: 11,
+              color: "#9994b8",
+              marginTop: 6,
+              marginLeft: 6,
+            }}
+          >
+            Pro — Balanced model
+          </span>
+        )}
+
+        {!isLoadingTier && userTier === "pro_max" && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: "rgba(83,74,183,0.15)",
+              border: "0.5px solid rgba(127,119,221,0.5)",
+              borderRadius: 6,
+              padding: "3px 10px",
+              fontSize: 11,
+              color: "#c0baf0",
+              marginTop: 6,
+              marginLeft: 6,
+            }}
+          >
+            Pro Max — Max IQ model
+          </span>
+        )}
 
         {/* SECTION 1.5 — Property confirmation card */}
         {!hasAnalyzed && (
@@ -1819,9 +1784,10 @@ function AnalyzeContent() {
           </div>
         )}
 
-        {/* SECTION 6 — Parsed Results */}
+        {/* SECTION 6 — Results */}
         {!isAnalyzing && parsedResult && (
           <div className="mt-8">
+            {/* Results header */}
             <div className="mb-6 flex items-center justify-between">
               <span
                 className="flex items-center gap-2"
@@ -1846,250 +1812,99 @@ function AnalyzeContent() {
                 onClick={() => router.push("/v2")}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "#9994b8";
-                  e.currentTarget.style.borderColor =
-                    "rgba(127,119,221,0.5)";
+                  e.currentTarget.style.borderColor = "rgba(127,119,221,0.5)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = "#6b6690";
-                  e.currentTarget.style.borderColor =
-                    "rgba(127,119,221,0.25)";
+                  e.currentTarget.style.borderColor = "rgba(127,119,221,0.25)";
                 }}
               >
                 Run another analysis
               </button>
             </div>
 
-            {/* Deal Score */}
-            {dealScore != null && (
+            <AnalysisResults
+              result={parsedResult}
+              strategy={selectedStrategy}
+              address={address}
+              propertyData={editedProperty}
+              calculations={serverCalculations}
+              tier={userTier}
+              model="Claude Sonnet (Auto)"
+            />
+
+            {/* Sign-in nudge for free/anonymous users */}
+            {userTier === "free" && !isLoadingTier && (
               <div
-                className="mb-5 flex items-center"
                 style={{
-                  background: "#13121d",
-                  border: "0.5px solid rgba(127,119,221,0.15)",
+                  marginTop: 24,
+                  padding: "16px 20px",
+                  background: "rgba(83,74,183,0.08)",
+                  border: "0.5px solid rgba(127,119,221,0.2)",
                   borderRadius: 12,
-                  padding: "20px 22px",
-                  gap: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 16,
                 }}
               >
-                <div className="shrink-0 text-center">
-                  <p
-                    style={{
-                      fontSize: 48,
-                      fontWeight: 700,
-                      letterSpacing: "-2px",
-                      color: scoreColor,
-                      margin: 0,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {dealScore}
-                  </p>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "#3a3758",
-                      margin: "4px 0 0",
-                    }}
-                  >
-                    / 10 deal score
-                  </p>
-                </div>
                 <div>
-                  <p
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: scoreColor,
-                      margin: 0,
-                    }}
-                  >
-                    {scoreLabel}
-                  </p>
-                  <p
+                  <div
                     style={{
                       fontSize: 13,
-                      color: "#4e4a6a",
-                      marginTop: 4,
-                      lineHeight: 1.6,
+                      color: "#e8e6f0",
+                      fontWeight: 500,
+                      marginBottom: 3,
                     }}
                   >
-                    {scoreSub}
-                  </p>
+                    Save this analysis and unlock full results
+                  </div>
+                  <div style={{ fontSize: 12, color: "#4e4a6a" }}>
+                    Create a free account to save your history. Upgrade to
+                    Pro to remove the blur and unlock projections.
+                  </div>
+                </div>
+                <div
+                  style={{ display: "flex", gap: 8, flexShrink: 0 }}
+                >
+                  <button
+                    onClick={() =>
+                      (window.location.href = "/auth/signup")
+                    }
+                    style={{
+                      background: "#534AB7",
+                      color: "#f0eeff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "8px 18px",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Create free account →
+                  </button>
+                  <button
+                    onClick={() =>
+                      (window.location.href = "/auth/login")
+                    }
+                    style={{
+                      background: "transparent",
+                      color: "#9994b8",
+                      border: "0.5px solid rgba(127,119,221,0.25)",
+                      borderRadius: 8,
+                      padding: "8px 18px",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Sign in
+                  </button>
                 </div>
               </div>
             )}
-
-            {/* Recommendation banner */}
-            {parsedResult.recommendation && (
-              <div
-                className="mb-5"
-                style={{
-                  background: "rgba(29,158,117,0.08)",
-                  border: "0.5px solid rgba(29,158,117,0.25)",
-                  borderRadius: 12,
-                  padding: "14px 18px",
-                }}
-              >
-                <span
-                  className="flex items-start gap-2"
-                  style={{
-                    fontSize: 14,
-                    color: "#1D9E75",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  <span
-                    className="mt-1.5 inline-block shrink-0 rounded-full"
-                    style={{ width: 7, height: 7, background: "#1D9E75" }}
-                  />
-                  {parsedResult.recommendation}
-                </span>
-              </div>
-            )}
-
-            {metricCards.length > 0 && (
-              <div
-                className="mb-5 grid"
-                style={{
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(160px, 1fr))",
-                  gap: 10,
-                }}
-              >
-                {metricCards.map((mc) => (
-                  <MetricCard key={mc.label} {...mc} />
-                ))}
-              </div>
-            )}
-
-            {proFormaRows.length > 0 && (
-              <div
-                className="mb-5"
-                style={{
-                  background: "#13121d",
-                  border: "0.5px solid rgba(127,119,221,0.15)",
-                  borderRadius: 12,
-                  padding: "20px 22px",
-                }}
-              >
-                <p
-                  className="uppercase"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: "0.8px",
-                    color: "#3a3758",
-                    margin: "0 0 14px",
-                  }}
-                >
-                  Pro Forma
-                </p>
-                {proFormaRows.map((row, i) => (
-                  <ProFormaRow
-                    key={row.label}
-                    label={row.label}
-                    value={row.value}
-                    isLast={i === proFormaRows.length - 1}
-                  />
-                ))}
-              </div>
-            )}
-
-            {riskItems.length > 0 && (
-              <div className="mb-5">
-                <p
-                  className="uppercase"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: "0.8px",
-                    color: "#3a3758",
-                    margin: "0 0 12px",
-                  }}
-                >
-                  Risk Flags
-                </p>
-                {riskItems.map((ri, i) => (
-                  <RiskFlag
-                    key={i}
-                    severity={ri.severity}
-                    flag={ri.flag}
-                    detail={ri.detail}
-                    isLast={i === riskItems.length - 1}
-                  />
-                ))}
-              </div>
-            )}
-
-            {(parsedResult.narrative || parsedResult.summary || parsedResult.full_analysis) && (
-              <div
-                className="mb-5"
-                style={{
-                  background: "#13121d",
-                  border: "0.5px solid rgba(127,119,221,0.15)",
-                  borderRadius: 12,
-                  padding: "20px 22px",
-                }}
-              >
-                <p
-                  className="uppercase"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: "0.8px",
-                    color: "#3a3758",
-                    margin: "0 0 12px",
-                  }}
-                >
-                  AI Analysis
-                </p>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "#9994b8",
-                    lineHeight: 1.8,
-                    margin: 0,
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {parsedResult.narrative || parsedResult.full_analysis || parsedResult.summary || ""}
-                </p>
-              </div>
-            )}
-
-            {/* Market Context */}
-            {parsedResult.marketContext && (
-              <div
-                className="mb-5"
-                style={{
-                  background: "#13121d",
-                  border: "0.5px solid rgba(127,119,221,0.15)",
-                  borderRadius: 12,
-                  padding: "20px 22px",
-                }}
-              >
-                <p
-                  className="uppercase"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: "0.8px",
-                    color: "#3a3758",
-                    margin: "0 0 12px",
-                  }}
-                >
-                  Market Context
-                </p>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "#9994b8",
-                    lineHeight: 1.8,
-                    margin: 0,
-                  }}
-                >
-                  {parsedResult.marketContext}
-                </p>
-              </div>
-            )}
-
-            {/* TODO Prompt 13 — Free tier blur gate goes here */}
           </div>
         )}
 
