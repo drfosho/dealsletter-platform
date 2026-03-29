@@ -28,6 +28,25 @@ const anthropic = new Anthropic({
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
 console.log('[Generate] Anthropic client initialized, model:', CLAUDE_MODEL);
 
+// V2 — JSON schema enforcement appended to every strategy prompt
+const V2_JSON_SCHEMA_SUFFIX = `
+IMPORTANT: In addition to the analysis above, you must ALSO respond with a single valid JSON object at the END of your response, on its own line, prefixed with "---JSON---". No markdown. No code fences. Just the raw JSON object after that marker.
+
+Your JSON must follow this exact schema:
+
+{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"string — one sentence buy/pass/hold recommendation with confidence level","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"string — short risk title","detail":"string — one sentence explanation"}],"narrative":"string — 3 to 5 sentence investor-focused analysis summary. Write like a senior real estate analyst talking to an experienced investor. Be direct, reference the actual numbers, and give a clear opinion.","marketContext":"string — 2 to 3 sentences on the local market conditions relevant to this deal","dealScore":number between 1 and 10}
+
+Rules:
+- All number values should be rounded to 2 decimal places max
+- capRate and cashOnCash are percentages expressed as numbers (e.g. 6.8 not 0.068)
+- roi is the 5-year projected ROI as a percentage number
+- cashFlow.monthly is the net monthly cash flow in dollars (negative if property loses money)
+- If a metric does not apply to this strategy, return null
+- riskFlags array must have between 2 and 5 items
+- narrative must be plain text, no bullet points, no markdown
+- Do not include any fields not in this schema
+`;
+
 // Strategy-specific system prompts (extracted to module level for streaming access)
 const SYSTEM_PROMPTS: Record<string, string> = {
   brrrr: `You are a professional real estate investment analyst providing clear, actionable analysis.
@@ -60,7 +79,9 @@ RISKS: [3-5 specific risks as complete sentences]
 
 NEXT STEPS: [2-3 specific, actionable items]
 
-Use provided values verbatim. Write naturally without any formatting symbols.`,
+Use provided values verbatim. Write naturally without any formatting symbols.
+
+${V2_JSON_SCHEMA_SUFFIX}`,
 
   flip: `You are a professional real estate investment analyst providing clear, actionable analysis.
 
@@ -91,7 +112,9 @@ RISKS: [3-5 specific risks as complete sentences]
 
 EXIT STRATEGY: [Recommended exit approach and 2-3 action items]
 
-Write naturally in plain text. No markdown, bullets, or special formatting.`,
+Write naturally in plain text. No markdown, bullets, or special formatting.
+
+${V2_JSON_SCHEMA_SUFFIX}`,
 
   rental: `You are a professional real estate investment analyst providing clear, actionable analysis.
 
@@ -122,7 +145,9 @@ RISKS: [3-5 specific risks as complete sentences]
 
 NEXT STEPS: [2-3 specific, actionable items]
 
-Format monetary values with commas. Write in plain text without any formatting symbols.`,
+Format monetary values with commas. Write in plain text without any formatting symbols.
+
+${V2_JSON_SCHEMA_SUFFIX}`,
 
   'house-hack': `You are a professional real estate investment analyst providing clear, actionable analysis for house hacking strategies.
 
@@ -161,7 +186,9 @@ RISKS: [3-5 specific risks as complete sentences]
 
 NEXT STEPS: [2-3 specific, actionable items for getting started with house hacking]
 
-Format monetary values with commas. Write in plain text without any formatting symbols.`
+Format monetary values with commas. Write in plain text without any formatting symbols.
+
+${V2_JSON_SCHEMA_SUFFIX}`
 };
 
 export async function POST(request: NextRequest) {
@@ -431,7 +458,9 @@ export async function POST(request: NextRequest) {
     let estimatedValue = 0;
     
     console.log('\n--- STEP 5.1: Property Data Retrieval ---');
-    // Check if property data was passed from client (from wizard)
+    // Check if property data was passed from client (from wizard or V2)
+    // V2 — user-edited property data takes priority: the client merges edits
+    // on top of raw RentCast data before sending, so edited values win here.
     if ((body as any).propertyData) {
       console.log('Property data provided in request body');
       propertyData = (body as any).propertyData;
@@ -744,7 +773,7 @@ export async function POST(request: NextRequest) {
 
             const claudeStream = anthropic.messages.stream({
               model: CLAUDE_MODEL,
-              max_tokens: 3000,
+              max_tokens: 4000,
               temperature: 0.3,
               system: systemPrompt,
               messages: [{ role: 'user' as const, content: context }]
