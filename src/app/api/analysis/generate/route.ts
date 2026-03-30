@@ -5,8 +5,14 @@ import { rentCastService } from '@/services/rentcast';
 import { PropertyAnalysisRequest } from '@/types/rentcast';
 // These types are imported but not used in this file
 import { logError } from '@/utils/error-utils';
-import Anthropic from '@anthropic-ai/sdk';
 import { getAdminConfig } from '@/lib/admin-config';
+import {
+  selectModel,
+  callWithFallback,
+  claudeSonnet,
+  type UserTier,
+  type Strategy
+} from '@/lib/ai-providers';
 import { calculateBRRRR, type BRRRRInputs } from '@/utils/brrrr-calculator';
 import {
   parsePrice,
@@ -19,21 +25,22 @@ import {
   type FlipCalculationInputs
 } from '@/utils/financial-calculations';
 
-console.log('[Generate] Module loaded, Anthropic SDK available:', !!Anthropic);
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-});
-
-const CLAUDE_MODEL = 'claude-sonnet-4-6';
-console.log('[Generate] Anthropic client initialized, model:', CLAUDE_MODEL);
+console.log('[Generate] Module loaded, AI providers available');
 
 // V2 — JSON schema enforcement appended to every strategy prompt
 const V2_JSON_SCHEMA_SUFFIX = `
 
-CRITICAL OUTPUT RULES:
-- Your entire response must be one valid JSON object. Nothing else.
-- No markdown, no code fences, no explanation text before or after.
+CRITICAL: Your entire response must be a single raw JSON object.
+Rules that cannot be broken:
+- Start your response with { immediately
+- End your response with } immediately
+- No text before the opening {
+- No text after the closing }
+- No markdown code fences (no backticks)
+- No \`\`\`json or \`\`\` anywhere
+- No explanation text outside the JSON
+- The narrative and marketContext fields must be plain strings with no markdown formatting
+- If you include backticks anywhere your response will be rejected and the user will see an error
 - All numbers are already calculated for you in the FINANCIAL CALCULATIONS block — copy them directly into the JSON, do not recalculate.
 - narrative: EXACTLY 2-3 sentences. One on deal quality, one on the biggest risk, one on your recommendation. Reference specific numbers. No fluff. Write like a blunt senior investor.
 - marketContext: maximum 2 sentences about local market conditions.
@@ -196,6 +203,12 @@ ${V2_JSON_SCHEMA_SUFFIX}`
 };
 
 export async function POST(request: NextRequest) {
+  console.log('ENV CHECK:', {
+    hasOpenAI: !!process.env.OPENAI_API_KEY,
+    openAIKeyStart: process.env.OPENAI_API_KEY?.substring(0, 8) || 'MISSING',
+    hasXAI: !!process.env.XAI_API_KEY,
+    hasAnthropic: !!process.env.ANTHROPIC_API_KEY
+  });
   const t_total = Date.now();
   console.log('=== ANALYSIS GENERATION START ===');
   console.log('Timestamp:', new Date().toISOString());
@@ -296,7 +309,35 @@ export async function POST(request: NextRequest) {
 
     // Check if user is admin
     const adminConfig = getAdminConfig(user.email);
-    
+
+    // V2 tier for multi-model routing — always resolve before usage check
+    let resolvedV2Tier: UserTier = 'free';
+
+    try {
+      const { data: tierProfile } = await supabase
+        .from('user_profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single();
+
+      const rawTier = tierProfile?.subscription_tier?.toLowerCase() || 'free';
+
+      resolvedV2Tier = (() => {
+        if (rawTier === 'pro-plus' || rawTier === 'pro_plus' || rawTier === 'premium') return 'pro_max' as const;
+        if (rawTier === 'pro' || rawTier === 'professional') return 'pro' as const;
+        return 'free' as const;
+      })();
+
+      console.log('V2 tier resolved:', {
+        rawTier,
+        resolvedV2Tier,
+        isAdmin: adminConfig.bypassSubscriptionLimits
+      });
+    } catch (tierErr) {
+      console.error('Failed to resolve tier:', tierErr);
+      resolvedV2Tier = 'free';
+    }
+
     // Skip usage check for admins
     if (!adminConfig.bypassSubscriptionLimits) {
       // Check user's usage limits - try RPC first, fall back to direct query
@@ -320,7 +361,6 @@ export async function POST(request: NextRequest) {
           .single();
 
         const analysesUsed = usageRow?.analysis_count ?? 0;
-        // Check user_profiles first (updated by Stripe webhook), then subscriptions as fallback
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('subscription_tier')
@@ -836,27 +876,39 @@ export async function POST(request: NextRequest) {
             // Send pre-computed calculations to client for the results component
             sendLine(`CALCULATIONS:${JSON.stringify(calculatedMetrics)}`);
 
-            // --- Call Claude (non-streaming for clean JSON output) ---
+            // --- Call AI model via multi-model router ---
             const systemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
             const t_claudeStart = Date.now();
-            console.log(`[Generate] Starting Claude call at +${t_claudeStart - t_streamStart}ms`);
+            const modelSelection = selectModel(resolvedV2Tier, body.strategy as Strategy);
 
-            const claudeResponse = await anthropic.messages.create({
-              model: CLAUDE_MODEL,
-              max_tokens: 4000,
-              temperature: 0.3,
-              system: systemPrompt,
-              messages: [{ role: 'user' as const, content: context }]
-            });
+            console.log(`[Generate] Starting AI call at +${t_claudeStart - t_streamStart}ms`);
+            console.log(`[Generate] Model: ${modelSelection.primary.model} (${modelSelection.tierLabel})`);
 
-            const fullText = claudeResponse.content
-              .filter((b: any) => b.type === 'text')
-              .map((b: any) => b.text)
-              .join('');
+            // Send model info to client before analysis runs
+            sendLine(`MODEL:${JSON.stringify({
+              provider: modelSelection.primary.name,
+              model: modelSelection.primary.model,
+              tierLabel: modelSelection.tierLabel,
+              modelLabel: modelSelection.modelLabel
+            })}`);
+
+            const aiResponse = await callWithFallback(
+              modelSelection,
+              {
+                systemPrompt,
+                userMessage: context,
+                maxTokens: 4000,
+                temperature: 0.3
+              }
+            );
+
+            const fullText = aiResponse.text;
 
             const t_claudeEnd = Date.now();
-            console.log(`[Generate] Claude completed in ${t_claudeEnd - t_claudeStart}ms`);
-            console.log(`[Generate] Claude usage:`, claudeResponse.usage);
+            console.log(`[Generate] AI completed in ${aiResponse.latencyMs}ms`);
+            console.log(`[Generate] Provider: ${aiResponse.provider}, Model: ${aiResponse.model}`);
+            console.log(`[Generate] Tokens: ${aiResponse.inputTokens || '?'} in / ${aiResponse.outputTokens || '?'} out`);
+            console.log(`[Generate] Used fallback: ${aiResponse.usedFallback}`);
             console.log(`[Generate] Response length: ${fullText.length}`);
 
             sendProg('ai', 'AI analysis complete');
@@ -957,15 +1009,17 @@ export async function POST(request: NextRequest) {
 
             sendProg('save', 'Results saved');
 
-            // Send the complete result — Claude JSON + server-parsed analysis
-            sendLine(`RESULT:${JSON.stringify({
-              id: analysisRecord.id,
-              address: body.address,
-              strategy: body.strategy,
-              analysis: aiAnalysis,
-              claudeRaw: fullText,
-              timestamp: new Date().toISOString(),
-            })}`);
+            // Send raw Claude response directly — no wrapper object.
+            // The wrapper data (id, address, strategy) is already
+            // available client-side from state.
+            const resultText = fullText;
+            console.log('=== SENDING RESULT ===');
+            console.log('Result text length:', resultText.length);
+            console.log('First 200 chars:', resultText.substring(0, 200));
+            console.log('Last 200 chars:', resultText.substring(Math.max(0, resultText.length - 200)));
+            console.log('Starts with {:', resultText.trim().startsWith('{'));
+            console.log('Ends with }:', resultText.trim().endsWith('}'));
+            sendLine(`RESULT:${resultText}`);
 
             controller.close();
           } catch (error) {
@@ -1198,30 +1252,22 @@ NEXT STEPS: [2-3 specific, actionable items for getting started with house hacki
 Format monetary values with commas. Write in plain text without any formatting symbols.`
     };
 
-    const claudeRequest = {
-      model: CLAUDE_MODEL,
-      max_tokens: 3000,
-      temperature: 0.3,
-      system: systemPrompts[request.strategy] || systemPrompts.rental,
-      messages: [
-        {
-          role: "user" as const,
-          content: context
-        }
-      ]
-    };
-    
-    console.log('[generatePropertyAnalysis] Claude request prepared');
-    console.log('[generatePropertyAnalysis] Model:', claudeRequest.model);
-    console.log('[generatePropertyAnalysis] Max tokens:', claudeRequest.max_tokens);
-    
-    const response = await anthropic.messages.create(claudeRequest);
-    
-    console.log('[generatePropertyAnalysis] Claude response received');
-    console.log('[generatePropertyAnalysis] Response usage:', response.usage);
-    console.log('[generatePropertyAnalysis] Response model:', response.model);
-    
-    const analysisText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const legacySystemPrompt = systemPrompts[request.strategy] || systemPrompts.rental;
+
+    console.log('[generatePropertyAnalysis] Using claudeSonnet provider');
+
+    const legacyResponse = await claudeSonnet.call({
+      systemPrompt: legacySystemPrompt,
+      userMessage: context,
+      maxTokens: 3000,
+      temperature: 0.3
+    });
+
+    console.log('[generatePropertyAnalysis] AI response received');
+    console.log('[generatePropertyAnalysis] Provider:', legacyResponse.provider, 'Model:', legacyResponse.model);
+    console.log('[generatePropertyAnalysis] Latency:', legacyResponse.latencyMs + 'ms');
+
+    const analysisText = legacyResponse.text;
     console.log('[generatePropertyAnalysis] Analysis text length:', analysisText.length);
     console.log('[generatePropertyAnalysis] Raw Claude response preview:', analysisText.substring(0, 500) + '...');
     
@@ -1766,18 +1812,42 @@ These numbers were computed server-side with verified formulas. Copy them direct
 Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, holding costs, and profit margins. Do NOT include rental income or cash flow calculations.`;
 
     calculatedMetrics = {
-      totalInvestment: flipResults.cashRequired, // Use cash required for investment metric
+      // Core metrics (existing)
+      totalInvestment: flipResults.cashRequired,
       totalProfit: flipResults.netProfit,
       roi: flipResults.roi,
       holdingCosts: flipResults.holdingCosts,
-      // Fix & Flip specific metrics
       arv: estimatedARV,
       profitMargin: flipResults.profitMargin,
-      // Set rental-focused metrics to 0 or undefined for flips
       cashFlow: 0,
       capRate: 0,
-      cocReturn: flipResults.roi, // Use ROI instead
-      annualNOI: 0
+      cocReturn: flipResults.roi,
+      annualNOI: 0,
+
+      // Fix & Flip specific (needed for waterfall UI)
+      purchasePrice: effectivePurchasePrice || 0,
+      rehabCost: flipInputs.renovationCosts || 0,
+      rehabHoldback: flipResults.rehabHoldback || 0,
+      acquisitionLoan: flipResults.acquisitionLoan || 0,
+      totalLoan: flipResults.totalLoan || 0,
+      downPayment: flipResults.downPayment || 0,
+      pointsCost: flipResults.pointsCost || 0,
+      closingCosts: flipResults.closingCosts || 0,
+      sellingCosts: flipResults.sellingCosts || 0,
+      totalProjectCost: flipResults.totalProjectCost || 0,
+      netProfit: flipResults.netProfit || 0,
+      cashRequired: flipResults.cashRequired || 0,
+      mao70: flipResults.mao70 || 0,
+      mao85: flipResults.mao85 || 0,
+      isHardMoney: flipResults.isHardMoney || false,
+      holdingPeriodMonths: flipInputs.holdingPeriodMonths || 6,
+
+      // Calculated display values
+      loanAmount: flipResults.totalLoan || 0,
+      buySideClosing: flipResults.closingCosts || 0,
+      sellSideClosing: flipResults.sellingCosts || 0,
+      maxAllowableOffer70: flipResults.mao70 || 0,
+      maxAllowableOffer85: flipResults.mao85 || 0,
     };
 
     // Log the final validated results
@@ -2234,6 +2304,27 @@ interface FinancialData {
   // Fix & Flip specific metrics
   arv?: number;
   profitMargin?: number;
+  purchasePrice?: number;
+  rehabCost?: number;
+  rehabHoldback?: number;
+  acquisitionLoan?: number;
+  totalLoan?: number;
+  downPayment?: number;
+  pointsCost?: number;
+  closingCosts?: number;
+  sellingCosts?: number;
+  totalProjectCost?: number;
+  netProfit?: number;
+  cashRequired?: number;
+  mao70?: number;
+  mao85?: number;
+  isHardMoney?: boolean;
+  holdingPeriodMonths?: number;
+  loanAmount?: number;
+  buySideClosing?: number;
+  sellSideClosing?: number;
+  maxAllowableOffer70?: number;
+  maxAllowableOffer85?: number;
   // BRRRR-specific metrics
   cashReturned?: number;
   cashLeftInDeal?: number;

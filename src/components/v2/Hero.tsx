@@ -1,6 +1,6 @@
 import SearchBar from "@/components/v2/SearchBar";
 
-export default function Hero() {
+export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
   return (
     <section className="relative overflow-hidden" style={{ backgroundColor: "#0d0d14" }}>
       <style>{`
@@ -82,8 +82,14 @@ export default function Hero() {
 
         {/* Hint text */}
         <p className="mt-4" style={{ color: "#6b6888", fontSize: 14 }}>
-          <span style={{ color: "#7F77DD" }}>Free to start</span> — no account
-          needed for your first property analysis
+          {isLoggedIn ? (
+            "Enter any property address to run your analysis"
+          ) : (
+            <>
+              <span style={{ color: "#7F77DD" }}>Free to start</span> — no
+              account needed for your first property analysis
+            </>
+          )}
         </p>
 
         {/* Proof strip */}

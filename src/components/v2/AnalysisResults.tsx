@@ -1,6 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import {
+  Chart,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+  BarController,
+  LineController,
+} from "chart.js";
+
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+  BarController,
+  LineController
+);
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -422,7 +450,7 @@ function generateTakeaways(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Projection Chart (Chart.js via CDN)                                */
+/*  Projection Chart (Chart.js npm)                                    */
 /* ------------------------------------------------------------------ */
 
 function ProjectionChart({
@@ -436,44 +464,51 @@ function ProjectionChart({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef = useRef<any>(null);
-  const [chartLoaded, setChartLoaded] = useState(false);
 
   useEffect(() => {
-    if ((window as any).Chart) {
-      setChartLoaded(true);
-      return;
-    }
-    const script = document.createElement("script");
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js";
-    script.onload = () => setChartLoaded(true);
-    document.head.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    if (!chartLoaded || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     if (!calculations && !result) return;
 
-    const Chart = (window as any).Chart;
-    if (!Chart) return;
-
-    if (chartRef.current) chartRef.current.destroy();
+    // Destroy existing chart instance before creating new one
+    if (chartRef.current) {
+      chartRef.current.destroy();
+      chartRef.current = null;
+    }
 
     const ctx = canvasRef.current.getContext("2d");
     if (!ctx) return;
 
-    const chartConfig = buildChartConfig(strategy, calculations, result);
+    const chartConfig = buildChartConfig(
+      strategy,
+      calculations,
+      result,
+      (n: number) => `$${Math.round(n).toLocaleString()}`,
+      (n: number) => `${n.toFixed(1)}%`
+    );
+
     if (!chartConfig) {
-      console.warn("buildChartConfig returned null for:", strategy);
+      console.warn(
+        "buildChartConfig returned null. Strategy:",
+        strategy,
+        "Has calculations:", !!calculations,
+        "Has result:", !!result
+      );
       return;
     }
 
-    chartRef.current = new Chart(ctx, chartConfig);
+    try {
+      chartRef.current = new Chart(ctx, chartConfig as any);
+    } catch (err) {
+      console.error("Chart.js render error:", err);
+    }
 
     return () => {
-      if (chartRef.current) chartRef.current.destroy();
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
     };
-  }, [chartLoaded, strategy, calculations, result]);
+  }, [strategy, calculations, result]);
 
   return (
     <CardWrapper>
@@ -488,7 +523,9 @@ function ProjectionChart({
                 : "Wealth Building Projection"
         }
       />
-      <canvas ref={canvasRef} style={{ width: "100%", height: 300 }} />
+      <div style={{ position: "relative", width: "100%", height: "300px" }}>
+        <canvas ref={canvasRef} />
+      </div>
     </CardWrapper>
   );
 }
@@ -496,7 +533,9 @@ function ProjectionChart({
 function buildChartConfig(
   strategy: string,
   calculations: any,
-  result: any
+  result: any,
+  _fmtDollar?: (n: number) => string,
+  _fmtPct?: (n: number) => string,
 ): any {
   // Normalize field names from serverCalculations + parsedResult
   const monthlyRent = calculations?.monthlyRent || 0;

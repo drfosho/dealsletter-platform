@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useState, useEffect } from "react";
 import NavBar from "@/components/v2/NavBar";
 import AnalysisResults from "@/components/v2/AnalysisResults";
-import { getSubscriptionWithUsage } from "@/lib/subscription/client";
+import { createClient } from "@/lib/supabase/client";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -83,6 +83,17 @@ interface EditedProperty {
   estimatedRent: string;
   listPrice: string;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Tier mapping helper                                                */
+/* ------------------------------------------------------------------ */
+
+const mapToV2Tier = (tier: string): "free" | "pro" | "pro_max" => {
+  if (tier === "pro-plus" || tier === "pro_plus" || tier === "premium")
+    return "pro_max";
+  if (tier === "pro" || tier === "professional") return "pro";
+  return "free";
+};
 
 /* ------------------------------------------------------------------ */
 /*  Strategy data                                                      */
@@ -350,9 +361,16 @@ function AnalyzeContent() {
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [parsedResult, setParsedResult] = useState<AnalysisResult | null>(null);
   const [serverCalculations, setServerCalculations] = useState<any>(null);
+  const [modelInfo, setModelInfo] = useState<{
+    provider: string;
+    model: string;
+    tierLabel: string;
+    modelLabel: string;
+  } | null>(null);
   const [userTier, setUserTier] = useState<"free" | "pro" | "pro_max">("free");
   const [isLoadingTier, setIsLoadingTier] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [progressSteps, setProgressSteps] = useState<
     Array<{ step: string; detail: string; timestamp: number }>
   >([]);
@@ -447,27 +465,64 @@ function AnalyzeContent() {
   useEffect(() => {
     const loadUserTier = async () => {
       try {
-        const sub = await getSubscriptionWithUsage();
-        const tier = (sub?.subscription?.tier as string) || "free";
-
-        const v2Tier = (() => {
-          if (tier === "pro-plus" || tier === "pro_plus" || tier === "premium")
-            return "pro_max" as const;
-          if (tier === "pro" || tier === "professional") return "pro" as const;
-          return "free" as const;
-        })();
-
-        setUserTier(v2Tier);
-
-        // Also grab the user id for usage tracking
-        const { createClient } = await import("@/lib/supabase/client");
         const supabase = createClient();
+
+        // Step 1: Get session
         const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (user) setUserId(user.id);
-      } catch (err) {
-        console.error("Failed to load user tier:", err);
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError || !session?.user) {
+          setUserTier("free");
+          setIsLoadingTier(false);
+          return;
+        }
+
+        setUserId(session.user.id);
+        setIsLoggedIn(true);
+
+        // Step 2: Direct profile query — most reliable
+        const { data: profile, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("subscription_tier, subscription_status")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError) {
+          console.error(
+            "Tier lookup error:",
+            profileError.message,
+            "Code:",
+            profileError.code
+          );
+          // Check subscriptions table as fallback
+          const { data: sub, error: subError } = await supabase
+            .from("subscriptions")
+            .select("tier, status")
+            .eq("user_id", session.user.id)
+            .single();
+
+          if (subError || !sub) {
+            setUserTier("free");
+            setIsLoadingTier(false);
+            return;
+          }
+
+          // Map from subscriptions table
+          const tier = sub.tier || "free";
+          console.log("V2 tier loaded (subscriptions fallback):", tier, "→ mapped to:", mapToV2Tier(tier));
+          setUserTier(mapToV2Tier(tier));
+          setIsLoadingTier(false);
+          return;
+        }
+
+        // Step 3: Map to V2 tier
+        const tier = profile?.subscription_tier || "free";
+        console.log("V2 tier loaded:", tier, "→ mapped to:", mapToV2Tier(tier));
+        setUserTier(mapToV2Tier(tier));
+      } catch (err: any) {
+        console.error("loadUserTier unexpected error:", err);
         setUserTier("free");
       } finally {
         setIsLoadingTier(false);
@@ -545,69 +600,80 @@ function AnalyzeContent() {
 
   /* ---------- V2 JSON parser -------------------------------------- */
 
-  function parseAnalysisStream(raw: string): AnalysisResult | null {
+  const parseAnalysisStream = (raw: string): AnalysisResult | null => {
+    if (!raw || raw.trim().length === 0) return null;
+
+    const trimmed = raw.trim();
+
+    // Strategy 1: Aggressive clean then parse
     try {
-      // Strategy 1: Direct JSON parse
-      try {
-        const direct = JSON.parse(raw.trim());
-        if (direct && typeof direct === "object") return direct;
-      } catch {}
+      let cleaned = raw;
 
-      // Strategy 2: Strip SSE "data: " prefixes and rejoin
-      const sseStripped = raw
-        .split("\n")
-        .filter((line) => line.startsWith("data: "))
-        .map((line) => line.slice(6).trim())
-        .filter((line) => line && line !== "[DONE]")
-        .join("");
-
-      if (sseStripped.length > 0) {
-        try {
-          const parsed = JSON.parse(sseStripped);
-          if (parsed && typeof parsed === "object") return parsed;
-        } catch {}
+      // Remove BOM if present
+      if (cleaned.charCodeAt(0) === 0xfeff) {
+        cleaned = cleaned.slice(1);
       }
 
-      // Strategy 3: Find ---JSON--- marker (V2 prompt output)
-      const jsonMarkerIdx = raw.indexOf("---JSON---");
-      if (jsonMarkerIdx !== -1) {
-        const afterMarker = raw.slice(jsonMarkerIdx + 10).trim();
-        const jsonMatch = afterMarker.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed && typeof parsed === "object") return parsed;
-          } catch {}
+      // Trim all whitespace including \n \r \t
+      cleaned = cleaned.trim();
+
+      // Find the actual JSON boundaries
+      const firstBrace = cleaned.indexOf("{");
+      const lastBrace = cleaned.lastIndexOf("}");
+
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        const jsonStr = cleaned.slice(firstBrace, lastBrace + 1);
+        const parsed = JSON.parse(jsonStr);
+        if (parsed && typeof parsed === "object") {
+          // Unwrap if nested
+          if (parsed.analysis && typeof parsed.analysis === "object") {
+            return parsed.analysis;
+          }
+          return parsed;
         }
       }
-
-      // Strategy 4: Extract JSON object from surrounding text
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (parsed && typeof parsed === "object") return parsed;
-        } catch {}
-      }
-
-      // Strategy 5: Strip markdown code fences if present
-      const stripped = raw
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-      try {
-        const parsed = JSON.parse(stripped);
-        if (parsed && typeof parsed === "object") return parsed;
-      } catch {}
-
-      console.error("All parse strategies failed. Raw length:", raw.length);
-      console.error("Raw preview:", raw.substring(0, 500));
-      return null;
-    } catch (e) {
-      console.error("parseAnalysisStream error:", e);
-      return null;
+    } catch (e1) {
+      console.log("Strategy 1 failed:", (e1 as Error).message);
     }
-  }
+
+    // Strategy 2: Strip markdown fences
+    try {
+      const stripped = trimmed
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+      const parsed = JSON.parse(stripped);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch (e2) {
+      console.log("Strategy 2 failed:", (e2 as Error).message);
+    }
+
+    // Strategy 3: Find JSON object by braces
+    try {
+      const start = trimmed.indexOf("{");
+      const end = trimmed.lastIndexOf("}");
+      if (start !== -1 && end !== -1 && end > start) {
+        const extracted = trimmed.slice(start, end + 1);
+        const parsed = JSON.parse(extracted);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e3) {
+      console.log("Strategy 3 failed:", (e3 as Error).message);
+    }
+
+    // Log exactly why all strategies failed
+    console.error("All strategies failed");
+    console.error("Raw type:", typeof raw);
+    console.error("Raw length:", raw.length);
+    console.error(
+      "Char codes first 5:",
+      Array.from(raw.substring(0, 5)).map((c) => c.charCodeAt(0))
+    );
+    console.error("Trimmed first 100:", trimmed.substring(0, 100));
+
+    return null;
+  };
 
   /* ---------- Normalize result (handle camelCase + snake_case) ---- */
 
@@ -648,11 +714,6 @@ function AnalyzeContent() {
 
     // Use monthlyRent from state, or fall back to edited rent estimate
     const effectiveRent = monthlyRent || editedProperty.estimatedRent;
-
-    // Accumulate full streamed text for post-stream parsing
-    let accumulatedStreamText = "";
-    // Track whether we got a parsed result from the complete event
-    let gotCompleteEvent = false;
 
     try {
       const response = await fetch("/api/analysis/generate", {
@@ -733,7 +794,7 @@ function AnalyzeContent() {
       const decoder = new TextDecoder();
       if (!reader) throw new Error("No response stream");
 
-      let fullResultJson = "";
+      let rawBuffer = "";
       let lineBuffer = "";
 
       while (true) {
@@ -741,102 +802,117 @@ function AnalyzeContent() {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
+        rawBuffer += chunk;
         lineBuffer += chunk;
 
+        // Process complete lines in real time for progress events only
         const lines = lineBuffer.split("\n");
         lineBuffer = lines.pop() || "";
 
         for (const line of lines) {
           if (line.startsWith("PROGRESS:")) {
             try {
-              const evt = JSON.parse(line.slice(9));
+              const event = JSON.parse(line.slice(9));
+              if (event.type === "progress") {
+                setProgressSteps((prev) => [
+                  ...prev,
+                  {
+                    step: event.step,
+                    detail: event.detail,
+                    timestamp: Date.now(),
+                  },
+                ]);
+                setCurrentStep(event.step);
+              }
+            } catch {}
+          } else if (line.startsWith("MODEL:")) {
+            try {
+              const info = JSON.parse(line.slice(6));
+              setModelInfo(info);
               setProgressSteps((prev) => [
                 ...prev,
                 {
-                  step: evt.step,
-                  detail: evt.detail,
+                  step: "model",
+                  detail: `Running analysis with ${info.modelLabel}`,
                   timestamp: Date.now(),
                 },
               ]);
-              setCurrentStep(evt.step);
+              setCurrentStep("model");
             } catch {}
-          } else if (line.startsWith("CALCULATIONS:")) {
-            try {
-              setServerCalculations(JSON.parse(line.slice(13)));
-            } catch {}
-          } else if (line.startsWith("RESULT:")) {
-            fullResultJson = line.slice(7);
-            gotCompleteEvent = true;
-          } else if (line.startsWith("ERROR:")) {
-            try {
-              const err = JSON.parse(line.slice(6));
-              throw new Error(err.message || "Analysis failed");
-            } catch (e: any) {
-              if (e.message) throw e;
-              throw new Error("Analysis failed");
-            }
+          }
+          // Don't process RESULT or CALCULATIONS here —
+          // wait for complete buffer after stream ends
+        }
+      }
+
+      // Stream complete — process the full buffer
+      // for RESULT and CALCULATIONS which may be split across chunks
+      const allLines = rawBuffer.split("\n");
+      let fullResultJson = "";
+
+      for (const line of allLines) {
+        if (line.startsWith("CALCULATIONS:")) {
+          try {
+            const calc = JSON.parse(line.slice(13));
+            setServerCalculations(calc);
+          } catch {}
+        } else if (line.startsWith("RESULT:")) {
+          fullResultJson = line.slice(7);
+        } else if (line.startsWith("ERROR:")) {
+          try {
+            const err = JSON.parse(line.slice(6));
+            throw new Error(err.message);
+          } catch {
+            throw new Error("Analysis failed");
+          }
+        } else if (
+          fullResultJson &&
+          line.trim() &&
+          !line.startsWith("PROGRESS:") &&
+          !line.startsWith("MODEL:") &&
+          !line.startsWith("CALCULATIONS:") &&
+          !line.startsWith("ERROR:")
+        ) {
+          // Continuation of the JSON result split across lines
+          fullResultJson += line;
+        }
+      }
+
+      // Last resort extraction if RESULT line was split across chunks
+      if (!fullResultJson || fullResultJson.length < 10) {
+        const resultMarker = rawBuffer.indexOf("RESULT:");
+        if (resultMarker !== -1) {
+          const afterResult = rawBuffer.slice(resultMarker + 7);
+          const lastBrace = afterResult.lastIndexOf("}");
+          if (lastBrace !== -1) {
+            fullResultJson = afterResult.slice(0, lastBrace + 1);
           }
         }
       }
 
-      // Handle any remaining buffer
-      if (lineBuffer.startsWith("RESULT:")) {
-        fullResultJson = lineBuffer.slice(7);
-        gotCompleteEvent = true;
-      } else if (lineBuffer.startsWith("ERROR:")) {
-        try {
-          const err = JSON.parse(lineBuffer.slice(6));
-          throw new Error(err.message || "Analysis failed");
-        } catch (e: any) {
-          if (e.message) throw e;
-        }
-      }
+      setStreamText(fullResultJson);
 
-      // Parse the RESULT line
-      if (gotCompleteEvent && fullResultJson) {
-        try {
-          const resultObj = JSON.parse(fullResultJson);
+      console.log("V2 Analysis Debug:", {
+        rawBufferLength: rawBuffer.length,
+        fullResultJsonLength: fullResultJson.length,
+        firstResultChars: fullResultJson.substring(0, 100),
+      });
 
-          // The result contains both server-parsed analysis AND raw Claude text
-          const serverAnalysis = resultObj.analysis;
-          const claudeRaw = resultObj.claudeRaw || "";
-
-          // Set stream text for fallback display
-          if (claudeRaw) {
-            accumulatedStreamText = claudeRaw;
-            setStreamText(claudeRaw);
-          }
-
-          // Try to parse Claude's raw JSON output (V2 schema)
-          const v2Parsed = parseAnalysisStream(claudeRaw);
-
-          if (v2Parsed && v2Parsed.dealScore != null) {
-            // Claude returned valid V2 JSON — use it (richer data)
-            setParsedResult(normalizeResult(v2Parsed));
-          } else if (serverAnalysis) {
-            // Fall back to server-parsed analysis (legacy format)
-            setParsedResult(normalizeResult(serverAnalysis));
-          }
-        } catch (e) {
-          console.error("Failed to parse RESULT line:", e);
-        }
-      }
-
-      // Last resort if nothing worked
-      if (!gotCompleteEvent && accumulatedStreamText) {
-        const parsed = parseAnalysisStream(accumulatedStreamText);
+      if (fullResultJson) {
+        const parsed = parseAnalysisStream(fullResultJson);
         if (parsed) {
+          console.log(
+            "V2 parsed successfully, dealScore:",
+            parsed.dealScore
+          );
           setParsedResult(normalizeResult(parsed));
+        } else {
+          console.warn("parseAnalysisStream returned null");
+          console.log("Raw result:", fullResultJson);
         }
-      }
-
-      if (process.env.NODE_ENV === "development") {
-        console.group("V2 Analysis Debug");
-        console.log("Got complete event:", gotCompleteEvent);
-        console.log("Result JSON length:", fullResultJson.length);
-        console.log("Claude raw length:", accumulatedStreamText.length);
-        console.log("Parsed result set:", !!parsedResult);
-        console.groupEnd();
+      } else {
+        console.error("No RESULT line found in stream");
+        console.log("Full buffer preview:", rawBuffer.substring(0, 500));
       }
     } catch (err: any) {
       setAnalysisError(err.message || "Unknown error");
@@ -918,16 +994,19 @@ function AnalyzeContent() {
         </h1>
 
         <span
-          className="mt-1.5 inline-block"
+          className="mt-1.5 inline-flex items-center gap-1.5"
           style={{
-            background: "rgba(83,74,183,0.2)",
+            background: "rgba(83,74,183,0.15)",
+            border: "0.5px solid rgba(127,119,221,0.3)",
             color: "#9994b8",
             borderRadius: 6,
             padding: "3px 10px",
-            fontSize: 12,
+            fontSize: 11,
           }}
         >
-          AI: {selectedModel.charAt(0).toUpperCase() + selectedModel.slice(1)}
+          {modelInfo
+            ? modelInfo.modelLabel
+            : `AI: ${selectedModel.charAt(0).toUpperCase() + selectedModel.slice(1)}`}
         </span>
 
         {!isLoadingTier && userTier === "pro" && (
@@ -1830,11 +1909,11 @@ function AnalyzeContent() {
               propertyData={editedProperty}
               calculations={serverCalculations}
               tier={userTier}
-              model="Claude Sonnet (Auto)"
+              model={modelInfo?.modelLabel || "AI Analysis"}
             />
 
             {/* Sign-in nudge for free/anonymous users */}
-            {userTier === "free" && !isLoadingTier && (
+            {!isLoggedIn && userTier === "free" && !isLoadingTier && (
               <div
                 style={{
                   marginTop: 24,
@@ -1869,7 +1948,7 @@ function AnalyzeContent() {
                 >
                   <button
                     onClick={() =>
-                      (window.location.href = "/auth/signup")
+                      (window.location.href = "/v2/signup")
                     }
                     style={{
                       background: "#534AB7",
@@ -1887,7 +1966,7 @@ function AnalyzeContent() {
                   </button>
                   <button
                     onClick={() =>
-                      (window.location.href = "/auth/login")
+                      (window.location.href = "/v2/login")
                     }
                     style={{
                       background: "transparent",
