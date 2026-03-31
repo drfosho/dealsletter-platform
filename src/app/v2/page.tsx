@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import NavBar from "@/components/v2/NavBar";
+import Footer from "@/components/v2/Footer";
 import Hero from "@/components/v2/Hero";
 import AnalysisCard from "@/components/v2/AnalysisCard";
 import StrategyGrid from "@/components/v2/StrategyGrid";
@@ -26,21 +27,7 @@ export default function V2Page() {
       <StrategyGrid />
       <PricingSection />
 
-      {/* Footer */}
-      <footer
-        className="flex items-center justify-between"
-        style={{
-          padding: "24px 44px",
-          borderTop: "0.5px solid rgba(127,119,221,0.08)",
-        }}
-      >
-        <span style={{ fontSize: 12, color: "#2e2c48" }}>
-          © 2026 Dealsletter · dealsletter.io
-        </span>
-        <span style={{ fontSize: 12, color: "#2e2c48" }}>
-          Privacy · Terms
-        </span>
-      </footer>
+      <Footer />
     </div>
   );
 }

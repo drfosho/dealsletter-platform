@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/v2/NavBar";
+import Footer from "@/components/v2/Footer";
 
 /* ------------------------------------------------------------------ */
 /*  Types + data                                                       */
@@ -321,6 +322,8 @@ export default function StrategiesPage() {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }

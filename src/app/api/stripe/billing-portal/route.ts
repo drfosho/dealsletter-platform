@@ -57,7 +57,9 @@ export async function POST(_request: NextRequest) {
     }
 
     // Create a billing portal session
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/account/subscription`
+    const reqUrl = new URL(_request.url)
+    const returnPath = reqUrl.searchParams.get('returnPath') || '/account/subscription'
+    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${returnPath}`
     console.log('[BillingPortal] Return URL:', returnUrl)
 
     const session = await stripe.billingPortal.sessions.create({

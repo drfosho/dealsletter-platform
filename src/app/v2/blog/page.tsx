@@ -9,6 +9,7 @@ import {
   getPostsByCategory,
 } from "@/data/blog-posts";
 import NavBar from "@/components/v2/NavBar";
+import Footer from "@/components/v2/Footer";
 
 export default function V2BlogPage() {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -387,6 +388,8 @@ export default function V2BlogPage() {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }

@@ -10,6 +10,7 @@ const navLinks = [
   { label: "Strategies", href: "/v2/strategies" },
   { label: "Pricing", href: "/v2/pricing" },
   { label: "Blog", href: "/v2/blog" },
+  { label: "Real Estate Deals", href: "https://newsletter.dealsletter.io", external: true },
 ];
 
 export default function NavBar() {
@@ -125,18 +126,31 @@ export default function NavBar() {
       <div className="flex items-center" style={{ gap: 20 }}>
         {/* Nav links — always visible */}
         <div className="flex items-center" style={{ gap: 34 }}>
-          {navLinks.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              className="no-underline transition-colors"
-              style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {navLinks.map((link) =>
+            (link as any).external ? (
+              <span
+                key={link.label}
+                className="no-underline transition-colors"
+                style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
+                onClick={() => window.open(link.href, "_blank", "noopener")}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
+              >
+                {link.label}
+              </span>
+            ) : (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="no-underline transition-colors"
+                style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
+              >
+                {link.label}
+              </Link>
+            )
+          )}
         </div>
 
         {!isLoadingUser && !user && (

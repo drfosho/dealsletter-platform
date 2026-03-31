@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/v2/NavBar";
+import Footer from "@/components/v2/Footer";
 
 /* ------------------------------------------------------------------ */
 /*  Shared styles                                                      */
@@ -733,6 +734,8 @@ export default function PricingPage() {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 }
