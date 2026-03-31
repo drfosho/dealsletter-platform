@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Chart,
   CategoryScale,
@@ -526,6 +526,187 @@ function ProjectionChart({
       <div style={{ position: "relative", width: "100%", height: "300px" }}>
         <canvas ref={canvasRef} />
       </div>
+    </CardWrapper>
+  );
+}
+
+function ExpenseBreakdown({
+  expenseBreakdown,
+  expenseRates,
+  cashFlow,
+}: {
+  expenseBreakdown: any;
+  expenseRates: any;
+  cashFlow: number;
+}) {
+  const [expanded, setExpanded] = useState(true);
+
+  const rows = [
+    {
+      label: "Vacancy",
+      hint: `${expenseRates?.vacancyPercent || 5}%`,
+      value: expenseBreakdown.vacancy,
+    },
+    {
+      label: "Property Management",
+      hint: `${expenseRates?.managementPercent || 8}%`,
+      value: expenseBreakdown.management,
+    },
+    {
+      label: "Maintenance",
+      hint: `${expenseRates?.maintenancePercent || 5}%`,
+      value: expenseBreakdown.maintenance,
+    },
+    {
+      label: "CapEx Reserve",
+      hint: `${expenseRates?.capExPercent || 5}%`,
+      value: expenseBreakdown.capEx,
+    },
+    { label: "Property Tax", hint: null, value: expenseBreakdown.propertyTax },
+    { label: "Insurance", hint: null, value: expenseBreakdown.insurance },
+    ...(expenseBreakdown.hoa > 0
+      ? [{ label: "HOA", hint: null, value: expenseBreakdown.hoa }]
+      : []),
+  ];
+
+  const cf = cashFlow || 0;
+
+  return (
+    <CardWrapper>
+      <div
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: expanded ? 14 : 0,
+          cursor: "pointer",
+        }}
+      >
+        <SectionLabel text="Monthly Expense Stack" />
+        <span style={{ color: "#4e4a6a", fontSize: 12 }}>
+          {expanded ? "\u25B2" : "\u25BC"}
+        </span>
+      </div>
+
+      {expanded && (
+        <>
+          {rows.map((r, i) => (
+            <div
+              key={r.label}
+              className="flex items-center justify-between"
+              style={{
+                padding: "8px 0",
+                borderBottom:
+                  i < rows.length - 1
+                    ? "0.5px solid rgba(127,119,221,0.06)"
+                    : "none",
+              }}
+            >
+              <span style={{ fontSize: 13, color: "#4e4a6a" }}>
+                {r.label}
+                {r.hint && (
+                  <span
+                    style={{ fontSize: 11, color: "#3a3758", marginLeft: 6 }}
+                  >
+                    ({r.hint})
+                  </span>
+                )}
+              </span>
+              <span style={{ fontSize: 13, color: "#f09595" }}>
+                ${(r.value || 0).toLocaleString()}
+              </span>
+            </div>
+          ))}
+
+          {/* Subtotal */}
+          <div
+            className="flex items-center justify-between"
+            style={{
+              padding: "10px 0 8px",
+              borderTop: "0.5px solid rgba(127,119,221,0.15)",
+              marginTop: 4,
+            }}
+          >
+            <span
+              style={{ fontSize: 13, fontWeight: 600, color: "#f09595" }}
+            >
+              Total Operating Expenses
+            </span>
+            <span
+              style={{ fontSize: 13, fontWeight: 600, color: "#f09595" }}
+            >
+              ${(expenseBreakdown.totalOperating || 0).toLocaleString()}
+            </span>
+          </div>
+
+          {/* Separator */}
+          <div
+            style={{
+              height: 1,
+              background: "rgba(127,119,221,0.15)",
+              margin: "4px 0",
+            }}
+          />
+
+          {/* Mortgage */}
+          <div
+            className="flex items-center justify-between"
+            style={{ padding: "8px 0" }}
+          >
+            <span style={{ fontSize: 13, color: "#9994b8" }}>
+              Monthly Mortgage (P&I)
+            </span>
+            <span style={{ fontSize: 13, color: "#9994b8" }}>
+              ${(expenseBreakdown.mortgage || 0).toLocaleString()}
+            </span>
+          </div>
+
+          {/* Total */}
+          <div
+            className="flex items-center justify-between"
+            style={{
+              padding: "10px 0 0",
+              borderTop: "0.5px solid rgba(127,119,221,0.15)",
+            }}
+          >
+            <span
+              style={{ fontSize: 14, fontWeight: 700, color: "#f0eeff" }}
+            >
+              Total Monthly Outflow
+            </span>
+            <span
+              style={{ fontSize: 14, fontWeight: 700, color: "#f0eeff" }}
+            >
+              ${(expenseBreakdown.totalWithMortgage || 0).toLocaleString()}
+            </span>
+          </div>
+
+          {/* Cash flow pill */}
+          <div
+            style={{
+              marginTop: 12,
+              background:
+                cf >= 0
+                  ? "rgba(29,158,117,0.12)"
+                  : "rgba(240,149,149,0.12)",
+              border: `0.5px solid ${cf >= 0 ? "rgba(29,158,117,0.3)" : "rgba(240,149,149,0.3)"}`,
+              borderRadius: 8,
+              padding: "10px 14px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 13,
+                color: cf >= 0 ? "#1D9E75" : "#f09595",
+              }}
+            >
+              Net cash flow after all expenses:{" "}
+              {cf >= 0 ? "+" : ""}${cf.toLocaleString()}/mo
+            </span>
+          </div>
+        </>
+      )}
     </CardWrapper>
   );
 }
@@ -1332,6 +1513,15 @@ export default function AnalysisResults({
             </CardWrapper>
           );
         })()
+      )}
+
+      {/* === SECTION D.5: Expense Breakdown (Buy & Hold / House Hack) === */}
+      {(isBuyHold || isHouseHack) && calc?.expenseBreakdown && (
+        <ExpenseBreakdown
+          expenseBreakdown={calc.expenseBreakdown}
+          expenseRates={calc.expenseRates}
+          cashFlow={v2cf?.monthly ?? fm?.monthly_cash_flow ?? calc?.cashFlow ?? 0}
+        />
       )}
 
       {/* === SECTION D: Projection Chart === */}

@@ -5,6 +5,10 @@ import { Suspense, useState, useEffect } from "react";
 import NavBar from "@/components/v2/NavBar";
 import AnalysisResults from "@/components/v2/AnalysisResults";
 import { createClient } from "@/lib/supabase/client";
+import {
+  useProMaxAnalysis,
+  PRO_MAX_MODELS,
+} from "@/hooks/useProMaxAnalysis";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -93,6 +97,30 @@ const mapToV2Tier = (tier: string): "free" | "pro" | "pro_max" => {
     return "pro_max";
   if (tier === "pro" || tier === "professional") return "pro";
   return "free";
+};
+
+/* ------------------------------------------------------------------ */
+/*  Multifamily helper                                                 */
+/* ------------------------------------------------------------------ */
+
+const inferUnitCount = (propertyType: string): number => {
+  const pt = propertyType?.toLowerCase() || "";
+  if (pt.includes("duplex")) return 2;
+  if (pt.includes("triplex")) return 3;
+  if (
+    pt.includes("fourplex") ||
+    pt.includes("quadplex") ||
+    pt.includes("4-plex") ||
+    pt.includes("4 plex")
+  )
+    return 4;
+  if (
+    pt.includes("multi") ||
+    pt.includes("apartment") ||
+    pt.includes("5+")
+  )
+    return 0; // 0 = unknown, prompt user
+  return 1;
 };
 
 /* ------------------------------------------------------------------ */
@@ -376,6 +404,30 @@ function AnalyzeContent() {
   >([]);
   const [currentStep, setCurrentStep] = useState("");
 
+  // Multifamily rent roll
+  const [unitCount, setUnitCount] = useState<number>(1);
+  const [unitRents, setUnitRents] = useState<
+    Array<{
+      unitNumber: number;
+      bedrooms: string;
+      bathrooms: string;
+      monthlyRent: string;
+      notes: string;
+    }>
+  >([]);
+  const [isMultifamily, setIsMultifamily] = useState(false);
+
+  // Pro Max parallel analysis
+  const {
+    modelResults,
+    isRunning: isProMaxRunning,
+    completedCount,
+    totalModels,
+    resetResults: resetProMaxResults,
+    runParallelAnalysis,
+  } = useProMaxAnalysis();
+  const [proMaxMode, setProMaxMode] = useState(false);
+  const [expandedModel, setExpandedModel] = useState<string | null>(null);
 
   const apiStrategy = selectedStrategy
     ? ({
@@ -439,12 +491,66 @@ function AnalyzeContent() {
 
         setEditedProperty(edited);
 
-        // Pre-populate purchase price: listing price > AVM estimate
-        const prePrice = edited.listPrice || edited.estimatedValue;
-        if (prePrice) setPurchasePrice(prePrice);
+        // Only pre-populate purchase price from list price — never from AVM
+        // AVM is a valuation estimate, not a price
+        if (edited.listPrice && parseFloat(edited.listPrice) > 0) {
+          setPurchasePrice(edited.listPrice);
+        }
+        // If no list price, leave purchasePrice EMPTY so user must enter it
 
-        // Pre-populate monthly rent
-        if (edited.estimatedRent) setMonthlyRent(edited.estimatedRent);
+        // Initialize multifamily state from property type
+        const inferredUnits = inferUnitCount(
+          prop.propertyType || prop.type || ""
+        );
+
+        if (inferredUnits === 0) {
+          setUnitCount(4);
+          setIsMultifamily(true);
+        } else if (inferredUnits > 1) {
+          setUnitCount(inferredUnits);
+          setIsMultifamily(true);
+        } else {
+          setUnitCount(1);
+          setIsMultifamily(false);
+        }
+
+        const rentcastRentPerUnit = parseFloat(
+          String(rental.rentEstimate || rental.rent || "0")
+        );
+        const units = inferredUnits > 0 ? inferredUnits : 4;
+
+        if (units > 1) {
+          // Property-level beds/baths are TOTALS — divide by unit count
+          const totalBeds = prop.bedrooms || 0;
+          const totalBaths = prop.bathrooms || 0;
+          const bedsPerUnit =
+            totalBeds > 0 && units > 1
+              ? Math.max(1, Math.round(totalBeds / units))
+              : totalBeds || 2;
+          const bathsPerUnit =
+            totalBaths > 0 && units > 1
+              ? Math.max(1, Math.round(totalBaths / units))
+              : totalBaths || 1;
+
+          const initialUnits = Array.from({ length: units }, (_, i) => ({
+            unitNumber: i + 1,
+            bedrooms: String(bedsPerUnit),
+            bathrooms: String(bathsPerUnit),
+            monthlyRent:
+              rentcastRentPerUnit > 0
+                ? rentcastRentPerUnit.toString()
+                : "",
+            notes: "",
+          }));
+          setUnitRents(initialUnits);
+
+          if (rentcastRentPerUnit > 0) {
+            setMonthlyRent((rentcastRentPerUnit * units).toString());
+          }
+        } else {
+          // Pre-populate monthly rent for single-family
+          if (edited.estimatedRent) setMonthlyRent(edited.estimatedRent);
+        }
       } catch (err) {
         if (!cancelled) {
           setPropertyError("Failed to fetch property data");
@@ -521,6 +627,11 @@ function AnalyzeContent() {
         const tier = profile?.subscription_tier || "free";
         console.log("V2 tier loaded:", tier, "→ mapped to:", mapToV2Tier(tier));
         setUserTier(mapToV2Tier(tier));
+        console.log("TIER SET:", {
+          rawTier: tier,
+          mappedTier: mapToV2Tier(tier),
+          userId: session.user.id,
+        });
       } catch (err: any) {
         console.error("loadUserTier unexpected error:", err);
         setUserTier("free");
@@ -591,6 +702,48 @@ function AnalyzeContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStrategy]);
+
+  /* ---------- Multifamily sync ------------------------------------ */
+
+  useEffect(() => {
+    if (unitCount <= 1) {
+      setIsMultifamily(false);
+      setUnitRents([]);
+      return;
+    }
+
+    setIsMultifamily(true);
+
+    setUnitRents((prev) => {
+      if (unitCount > prev.length) {
+        const newUnits = Array.from(
+          { length: unitCount - prev.length },
+          (_, i) => ({
+            unitNumber: prev.length + i + 1,
+            bedrooms: "2",
+            bathrooms: "1",
+            monthlyRent: prev[0]?.monthlyRent || "",
+            notes: "",
+          })
+        );
+        return [...prev, ...newUnits];
+      } else {
+        return prev.slice(0, unitCount);
+      }
+    });
+  }, [unitCount]);
+
+  useEffect(() => {
+    if (!isMultifamily || unitRents.length === 0) return;
+
+    const total = unitRents.reduce((sum, unit) => {
+      return sum + (parseFloat(unit.monthlyRent) || 0);
+    }, 0);
+
+    if (total > 0) {
+      setMonthlyRent(total.toString());
+    }
+  }, [unitRents, isMultifamily]);
 
   /* ---------- Update edited property helper ---------------------- */
 
@@ -702,6 +855,11 @@ function AnalyzeContent() {
   /* ---------- API call ------------------------------------------- */
 
   async function handleAnalyze() {
+    console.log("HANDLE ANALYZE CALLED:", {
+      userTier,
+      isProMax: userTier === "pro_max",
+      selectedStrategy,
+    });
     if (!selectedStrategy || !purchasePrice) return;
 
     setIsAnalyzing(true);
@@ -714,6 +872,86 @@ function AnalyzeContent() {
 
     // Use monthlyRent from state, or fall back to edited rent estimate
     const effectiveRent = monthlyRent || editedProperty.estimatedRent;
+
+    // Pro Max — run parallel analysis across 3 models
+    if (userTier === "pro_max") {
+      setProMaxMode(true);
+      resetProMaxResults();
+
+      const fetchBody = {
+        address,
+        strategy: apiStrategy,
+        purchasePrice: parseFloat(purchasePrice) || 0,
+        downPayment:
+          (parseFloat(purchasePrice) || 0) *
+          ((parseFloat(downPayment) || 20) / 100),
+        loanTerms: {
+          interestRate: parseFloat(interestRate) || 7.5,
+          loanTerm: parseFloat(loanTerm) || 30,
+          loanType:
+            loanType.includes("Hard Money") || loanType.includes("Private Money")
+              ? "hardMoney"
+              : "conventional",
+          points: parseFloat(points) || 0,
+        },
+        rehabCosts: rehabCost ? parseFloat(rehabCost) : undefined,
+        arv: afterRepairValue ? parseFloat(afterRepairValue) : undefined,
+        holdingPeriod: holdingMonths ? parseFloat(holdingMonths) : undefined,
+        strategyDetails: {
+          timeline: holdingMonths || undefined,
+          exitStrategy: selectedStrategy === "BRRRR" ? "75" : undefined,
+          downPaymentPercent: parseFloat(downPayment) || undefined,
+        },
+        closingCostsPercent: parseFloat(closingCosts) || 3,
+        units: unitCount,
+        monthlyRent: effectiveRent ? parseFloat(effectiveRent) : undefined,
+        propertyData: propertyData
+          ? {
+              ...propertyData,
+              property: {
+                ...(propertyData.property || {}),
+                bedrooms: parseFloat(editedProperty.beds) || propertyData.property?.bedrooms,
+                bathrooms: parseFloat(editedProperty.baths) || propertyData.property?.bathrooms,
+                squareFootage: parseFloat(editedProperty.sqft) || propertyData.property?.squareFootage,
+                yearBuilt: parseFloat(editedProperty.yearBuilt) || propertyData.property?.yearBuilt,
+                propertyType: editedProperty.propertyType || propertyData.property?.propertyType,
+              },
+              rental: {
+                ...(propertyData.rental || {}),
+                rentEstimate: parseFloat(editedProperty.estimatedRent) || propertyData.rental?.rentEstimate,
+              },
+              comparables: {
+                ...(propertyData.comparables || {}),
+                value: parseFloat(editedProperty.estimatedValue) || propertyData.comparables?.value,
+              },
+            }
+          : undefined,
+        ...(isMultifamily && unitRents.length > 0
+          ? {
+              unitBreakdown: unitRents.map((u) => ({
+                unitNumber: u.unitNumber,
+                bedrooms: parseFloat(u.bedrooms) || 2,
+                bathrooms: parseFloat(u.bathrooms) || 1,
+                monthlyRent: parseFloat(u.monthlyRent) || 0,
+                notes: u.notes,
+              })),
+            }
+          : {}),
+      };
+
+      try {
+        await runParallelAnalysis(fetchBody, parseAnalysisStream, normalizeResult);
+      } catch (err: any) {
+        setAnalysisError(err.message || "Parallel analysis failed");
+        setHasAnalyzed(false);
+      } finally {
+        setIsAnalyzing(false);
+      }
+      return;
+    }
+
+    // Standard single-model flow (free / pro)
+    setProMaxMode(false);
 
     try {
       const response = await fetch("/api/analysis/generate", {
@@ -744,8 +982,19 @@ function AnalyzeContent() {
             downPaymentPercent: parseFloat(downPayment) || undefined,
           },
           closingCostsPercent: parseFloat(closingCosts) || 3,
-          units: 1,
+          units: unitCount,
           monthlyRent: effectiveRent ? parseFloat(effectiveRent) : undefined,
+          ...(isMultifamily && unitRents.length > 0
+            ? {
+                unitBreakdown: unitRents.map((u) => ({
+                  unitNumber: u.unitNumber,
+                  bedrooms: parseFloat(u.bedrooms) || 2,
+                  bathrooms: parseFloat(u.bathrooms) || 1,
+                  monthlyRent: parseFloat(u.monthlyRent) || 0,
+                  notes: u.notes,
+                })),
+              }
+            : {}),
           // V2 — pass full RentCast data + user-edited overrides
           propertyData: propertyData
             ? {
@@ -1568,6 +1817,12 @@ function AnalyzeContent() {
               <div className="mb-3 flex gap-3">
                 {inp("Purchase Price", purchasePrice, setPurchasePrice, {
                   placeholder: editedProperty.listPrice || editedProperty.estimatedValue || "e.g. 450000",
+                  helper:
+                    !purchasePrice && !editedProperty.listPrice && editedProperty.estimatedValue
+                      ? `RentCast AVM: $${parseFloat(editedProperty.estimatedValue).toLocaleString()} — reference only`
+                      : !purchasePrice && !editedProperty.listPrice
+                        ? "No active listing found. Enter your target price."
+                        : undefined,
                 })}
                 {inp("Down Payment %", downPayment, setDownPayment, {
                   helper: dpHelper[loanType] || dpHelper[loanType.split(" ")[0]] || "",
@@ -1616,23 +1871,314 @@ function AnalyzeContent() {
               )}
 
               {showRentalRow && (
-                <div className="mb-3 flex gap-3">
-                  {inp(
-                    isHouseHack ? "Total Rental Income / Mo" : "Est. Monthly Rent",
-                    monthlyRent,
-                    setMonthlyRent,
-                    {
-                      placeholder: editedProperty.estimatedRent || "e.g. 2800",
-                      helper: isHouseHack ? "Income from rented units/rooms" : undefined,
-                    }
+                <>
+                  {/* Unit count + rent inputs */}
+                  <div className="mb-3 flex gap-3">
+                    {/* Unit count */}
+                    <div style={{ width: 100, flexShrink: 0 }}>
+                      <label style={fieldLabelStyle}>Units</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={unitCount}
+                        onChange={(e) =>
+                          setUnitCount(parseInt(e.target.value) || 1)
+                        }
+                        className="v2-input w-full"
+                        style={{
+                          background: "#13121d",
+                          border: "0.5px solid rgba(127,119,221,0.2)",
+                          borderRadius: 8,
+                          padding: "10px 14px",
+                          color: "#e8e6f0",
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+
+                    {/* Single rent input (when not multifamily) */}
+                    {!isMultifamily && (
+                      <>
+                        {inp(
+                          isHouseHack
+                            ? "Total Rental Income / Mo"
+                            : "Est. Monthly Rent",
+                          monthlyRent,
+                          setMonthlyRent,
+                          {
+                            placeholder:
+                              editedProperty.estimatedRent || "e.g. 2800",
+                            helper: isHouseHack
+                              ? "Income from rented units/rooms"
+                              : undefined,
+                          }
+                        )}
+                      </>
+                    )}
+
+                    {/* Total rent display (when multifamily) */}
+                    {isMultifamily && (
+                      <div className="flex-1">
+                        <label style={fieldLabelStyle}>
+                          Total Monthly Rent
+                        </label>
+                        <div
+                          style={{
+                            background: "#13121d",
+                            border: "0.5px solid rgba(127,119,221,0.2)",
+                            borderRadius: 8,
+                            padding: "10px 14px",
+                            color: parseFloat(monthlyRent) > 0
+                              ? "#1D9E75"
+                              : "#4e4a6a",
+                            fontSize: 14,
+                            fontWeight: 600,
+                          }}
+                        >
+                          ${(parseFloat(monthlyRent) || 0).toLocaleString()}
+                          /mo
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            color: "#3a3758",
+                            marginTop: 4,
+                            display: "block",
+                          }}
+                        >
+                          Sum of rent roll below
+                        </span>
+                      </div>
+                    )}
+
+                    {inp("Property Tax / Year", propertyTax, setPropertyTax, {
+                      placeholder: "e.g. 6000",
+                    })}
+                    {inp("Insurance / Year", insurance, setInsurance, {
+                      placeholder: "e.g. 1800",
+                    })}
+                  </div>
+
+                  {/* Rent Roll table */}
+                  {isMultifamily && unitRents.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 8,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 11,
+                            textTransform: "uppercase",
+                            letterSpacing: "1px",
+                            color: "#3a3758",
+                          }}
+                        >
+                          Rent Roll
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color:
+                              parseFloat(monthlyRent) > 0
+                                ? "#1D9E75"
+                                : "#4e4a6a",
+                          }}
+                        >
+                          Total: $
+                          {(parseFloat(monthlyRent) || 0).toLocaleString()}
+                          /mo
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          background: "#0d0d14",
+                          border: "0.5px solid rgba(127,119,221,0.15)",
+                          borderRadius: 10,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {/* Header */}
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "48px 64px 64px 1fr 110px",
+                            gap: 8,
+                            padding: "8px 14px",
+                            background: "rgba(127,119,221,0.06)",
+                            fontSize: 10,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.6px",
+                            color: "#3a3758",
+                          }}
+                        >
+                          <span>Unit</span>
+                          <span>Beds</span>
+                          <span>Baths</span>
+                          <span>Notes</span>
+                          <span style={{ textAlign: "right" }}>Rent/Mo</span>
+                        </div>
+
+                        {/* Rows */}
+                        {unitRents.map((unit, idx) => {
+                          const cellInput: React.CSSProperties = {
+                            background: "transparent",
+                            border: "none",
+                            borderBottom:
+                              "0.5px solid rgba(127,119,221,0.2)",
+                            borderRadius: 0,
+                            padding: "4px 6px",
+                            color: "#e8e6f0",
+                            fontSize: 13,
+                            width: "100%",
+                            outline: "none",
+                            fontFamily: "inherit",
+                          };
+
+                          const updateUnit = (
+                            field: string,
+                            value: string
+                          ) => {
+                            setUnitRents((prev) =>
+                              prev.map((u, i) =>
+                                i === idx
+                                  ? { ...u, [field]: value }
+                                  : u
+                              )
+                            );
+                          };
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns:
+                                  "48px 64px 64px 1fr 110px",
+                                gap: 8,
+                                padding: "10px 14px",
+                                alignItems: "center",
+                                borderTop:
+                                  idx > 0
+                                    ? "0.5px solid rgba(127,119,221,0.08)"
+                                    : "none",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: "#4e4a6a",
+                                }}
+                              >
+                                Unit {unit.unitNumber}
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="10"
+                                step="1"
+                                value={unit.bedrooms}
+                                onChange={(e) =>
+                                  updateUnit("bedrooms", e.target.value)
+                                }
+                                placeholder="2"
+                                style={cellInput}
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                max="10"
+                                step="0.5"
+                                value={unit.bathrooms}
+                                onChange={(e) =>
+                                  updateUnit("bathrooms", e.target.value)
+                                }
+                                placeholder="1"
+                                style={cellInput}
+                              />
+                              <input
+                                type="text"
+                                value={unit.notes}
+                                onChange={(e) =>
+                                  updateUnit("notes", e.target.value)
+                                }
+                                placeholder="e.g. renovated, corner unit"
+                                style={cellInput}
+                              />
+                              <div style={{ position: "relative" }}>
+                                <span
+                                  style={{
+                                    position: "absolute",
+                                    left: 6,
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    color: "#4e4a6a",
+                                    fontSize: 13,
+                                    pointerEvents: "none",
+                                  }}
+                                >
+                                  $
+                                </span>
+                                <input
+                                  type="number"
+                                  value={unit.monthlyRent}
+                                  onChange={(e) =>
+                                    updateUnit(
+                                      "monthlyRent",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="0"
+                                  style={{
+                                    ...cellInput,
+                                    paddingLeft: 18,
+                                    fontWeight: 600,
+                                    textAlign: "right",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Apply to all button */}
+                      {unitRents.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const firstRent =
+                              unitRents[0]?.monthlyRent || "";
+                            setUnitRents((prev) =>
+                              prev.map((u) => ({
+                                ...u,
+                                monthlyRent: firstRent,
+                              }))
+                            );
+                          }}
+                          style={{
+                            fontSize: 12,
+                            color: "#534AB7",
+                            cursor: "pointer",
+                            background: "transparent",
+                            border: "none",
+                            padding: "6px 0",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          &uarr;&darr; Apply Unit 1 rent to all units
+                        </button>
+                      )}
+                    </div>
                   )}
-                  {inp("Property Tax / Year", propertyTax, setPropertyTax, {
-                    placeholder: "e.g. 6000",
-                  })}
-                  {inp("Insurance / Year", insurance, setInsurance, {
-                    placeholder: "e.g. 1800",
-                  })}
-                </div>
+                </>
               )}
 
               {/* Closing costs row */}
@@ -1657,7 +2203,12 @@ function AnalyzeContent() {
         {selectedStrategy && !hasAnalyzed && (
           <button
             onClick={handleAnalyze}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || !purchasePrice || purchasePrice === "0"}
+            title={
+              !purchasePrice || purchasePrice === "0"
+                ? "Enter a purchase price to run analysis"
+                : undefined
+            }
             className="cursor-pointer transition-colors"
             style={{
               marginTop: 24,
@@ -1668,8 +2219,8 @@ function AnalyzeContent() {
               fontSize: 15,
               fontWeight: 500,
               border: "none",
-              opacity: isAnalyzing ? 0.5 : 1,
-              cursor: isAnalyzing ? "not-allowed" : "pointer",
+              opacity: isAnalyzing || !purchasePrice || purchasePrice === "0" ? 0.4 : 1,
+              cursor: isAnalyzing || !purchasePrice || purchasePrice === "0" ? "not-allowed" : "pointer",
             }}
             onMouseEnter={(e) => {
               if (!isAnalyzing) e.currentTarget.style.background = "#6258cc";
@@ -1812,10 +2363,16 @@ function AnalyzeContent() {
                           <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
                         </>
                       )}
-                      {(ps.step === "ai" || ps.step === "save") && (
+                      {ps.step === "model" && (
                         <>
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          <rect x="2" y="2" width="8" height="8" rx="2" />
+                          <rect x="14" y="2" width="8" height="8" rx="2" />
+                          <rect x="2" y="14" width="8" height="8" rx="2" />
+                          <path d="M14 18h8M18 14v8" />
                         </>
+                      )}
+                      {(ps.step === "ai" || ps.step === "save") && (
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                       )}
                     </svg>
                   </div>
@@ -1863,8 +2420,24 @@ function AnalyzeContent() {
           </div>
         )}
 
-        {/* SECTION 6 — Results */}
-        {!isAnalyzing && parsedResult && (
+        {/* SECTION 6 — Pro Max comparison / expanded view */}
+        {proMaxMode ? (
+          <ProMaxComparisonView
+            modelResults={modelResults}
+            completedCount={completedCount}
+            totalModels={totalModels}
+            PRO_MAX_MODELS={PRO_MAX_MODELS}
+            expandedModel={expandedModel}
+            setExpandedModel={setExpandedModel}
+            selectedStrategy={selectedStrategy}
+            address={address}
+            editedProperty={editedProperty}
+            userTier={userTier}
+          />
+        ) : null}
+
+        {/* SECTION 6 — Results (standard single-model) */}
+        {!proMaxMode && !isAnalyzing && parsedResult && (
           <div className="mt-8">
             {/* Results header */}
             <div className="mb-6 flex items-center justify-between">
@@ -2060,6 +2633,798 @@ function AnalyzeContent() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Pro Max Comparison View                                            */
+/* ------------------------------------------------------------------ */
+
+function ProMaxComparisonView({
+  modelResults,
+  completedCount,
+  totalModels,
+  PRO_MAX_MODELS: models,
+  expandedModel,
+  setExpandedModel,
+  selectedStrategy,
+  address,
+  editedProperty,
+  userTier,
+}: {
+  modelResults: any[];
+  completedCount: number;
+  totalModels: number;
+  PRO_MAX_MODELS: any[];
+  expandedModel: string | null;
+  setExpandedModel: (id: string | null) => void;
+  selectedStrategy: string;
+  address: string;
+  editedProperty: any;
+  userTier: string;
+}) {
+  const allComplete = completedCount === totalModels;
+
+  // Expanded single-model view
+  if (expandedModel) {
+    const model = models.find((m: any) => m.id === expandedModel);
+    const result = modelResults.find((r: any) => r.modelId === expandedModel);
+
+    return (
+      <div style={{ marginTop: 32 }}>
+        <button
+          onClick={() => setExpandedModel(null)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "transparent",
+            border: "none",
+            color: "#534AB7",
+            fontSize: 13,
+            cursor: "pointer",
+            padding: "0 0 20px 0",
+            fontFamily: "inherit",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path
+              d="M9 2L4 7l5 5"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Back to comparison
+        </button>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 20,
+            padding: "12px 16px",
+            background: "#13121d",
+            border: `0.5px solid ${model?.color}40`,
+            borderRadius: 10,
+          }}
+        >
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: model?.color,
+              flexShrink: 0,
+            }}
+          />
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#e8e6f0" }}>
+              {model?.label}
+            </span>
+            <span style={{ fontSize: 12, color: "#4e4a6a", marginLeft: 8 }}>
+              {model?.roleLabel} — {model?.roleDescription}
+            </span>
+          </div>
+          {result?.latencyMs && (
+            <div style={{ marginLeft: "auto", fontSize: 11, color: "#3a3758" }}>
+              {(result.latencyMs / 1000).toFixed(1)}s
+            </div>
+          )}
+        </div>
+
+        {result?.parsedResult ? (
+          <AnalysisResults
+            result={result.parsedResult}
+            strategy={selectedStrategy}
+            address={address}
+            propertyData={editedProperty}
+            calculations={result.serverCalculations}
+            tier={userTier as any}
+            model={model?.label || ""}
+          />
+        ) : (
+          <div
+            style={{ textAlign: "center", padding: 48, color: "#4e4a6a", fontSize: 14 }}
+          >
+            {result?.status === "error"
+              ? `Analysis failed: ${result.error}`
+              : "Analysis in progress..."}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Default: three-column comparison view
+  return (
+    <div style={{ marginTop: 32 }}>
+      <style>{`
+        @keyframes v2-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes v2-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+        @keyframes v2-stepIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 20,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: "#e8e6f0",
+              letterSpacing: "-0.3px",
+              marginBottom: 4,
+            }}
+          >
+            {allComplete ? "Max IQ Analysis Complete" : "Running Max IQ Analysis..."}
+          </div>
+          <div style={{ fontSize: 13, color: "#4e4a6a" }}>
+            {allComplete
+              ? "All 3 models complete \u2014 click any card to view full analysis"
+              : `${completedCount} of ${totalModels} models complete`}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {models.map((m: any, i: number) => (
+            <div
+              key={m.id}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background:
+                  modelResults[i]?.status === "complete"
+                    ? m.color
+                    : modelResults[i]?.status === "error"
+                      ? "#f09595"
+                      : "rgba(127,119,221,0.2)",
+                border:
+                  modelResults[i]?.status === "loading"
+                    ? `2px solid ${m.color}`
+                    : "none",
+                animation:
+                  modelResults[i]?.status === "loading"
+                    ? "v2-pulse 1.5s ease infinite"
+                    : "none",
+                transition: "all 0.3s",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Three model cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 12,
+        }}
+      >
+        {models.map((model: any, index: number) => {
+          const result = modelResults[index];
+          const isComplete = result?.status === "complete";
+          const isError = result?.status === "error";
+          const isLoading = result?.status === "loading";
+
+          return (
+            <div
+              key={model.id}
+              onClick={() => {
+                if (isComplete) setExpandedModel(model.id);
+              }}
+              style={{
+                background: "#13121d",
+                border: `0.5px solid ${
+                  isComplete
+                    ? model.color + "50"
+                    : isError
+                      ? "rgba(240,149,149,0.3)"
+                      : "rgba(127,119,221,0.15)"
+                }`,
+                borderRadius: 14,
+                padding: "18px 20px",
+                cursor: isComplete ? "pointer" : "default",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                if (isComplete) {
+                  e.currentTarget.style.borderColor = model.color + "80";
+                  e.currentTarget.style.background = "#1a192b";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (isComplete) {
+                  e.currentTarget.style.borderColor = model.color + "50";
+                  e.currentTarget.style.background = "#13121d";
+                }
+              }}
+            >
+              {/* Model header */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  marginBottom: 14,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#e8e6f0",
+                      letterSpacing: "-0.2px",
+                      marginBottom: 3,
+                    }}
+                  >
+                    {model.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: model.color, fontWeight: 500 }}>
+                    {model.roleLabel}
+                  </div>
+                </div>
+                {isComplete && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-end",
+                      gap: 4,
+                    }}
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={model.color}
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    {result?.latencyMs && (
+                      <span style={{ fontSize: 10, color: "#3a3758" }}>
+                        {(result.latencyMs / 1000).toFixed(1)}s
+                      </span>
+                    )}
+                  </div>
+                )}
+                {isLoading && (
+                  <div
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: "50%",
+                      border: `2px solid ${model.color}`,
+                      borderTopColor: "transparent",
+                      animation: "v2-spin 0.8s linear infinite",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                {isError && (
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#f09595"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 8v4M12 16h.01" />
+                  </svg>
+                )}
+              </div>
+
+              {/* Progress steps */}
+              <div style={{ minHeight: 100, maxHeight: 180, overflowY: "auto" }}>
+                {result?.progressSteps?.map((step: any, i: number) => (
+                  <div
+                    key={i}
+                    style={{
+                      fontSize: 11,
+                      color:
+                        i === result.progressSteps.length - 1 && isLoading
+                          ? "#9994b8"
+                          : "#4e4a6a",
+                      padding: "4px 0",
+                      lineHeight: 1.5,
+                      borderBottom: "0.5px solid rgba(127,119,221,0.05)",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 6,
+                      animation: "v2-stepIn 0.3s ease forwards",
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: model.color,
+                        flexShrink: 0,
+                        fontSize: 10,
+                        marginTop: 2,
+                      }}
+                    >
+                      &rsaquo;
+                    </span>
+                    {step.detail}
+                  </div>
+                ))}
+                {isLoading &&
+                  (result?.progressSteps?.length === 0 ? (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#3a3758",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: model.color,
+                          animation: "v2-pulse 1s infinite",
+                        }}
+                      />
+                      Connecting to {model.label}...
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#3a3758",
+                        marginTop: 4,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: model.color,
+                          animation: "v2-pulse 1s infinite",
+                        }}
+                      />
+                      Synthesizing analysis...
+                    </div>
+                  ))}
+                {isError && (
+                  <div style={{ fontSize: 11, color: "#f09595", marginTop: 4 }}>
+                    {result.error}
+                  </div>
+                )}
+              </div>
+
+              {/* Deal score + metrics preview when complete */}
+              {isComplete && result?.parsedResult && (
+                <div style={{ marginTop: 12 }}>
+                  <div
+                    style={{
+                      height: 0.5,
+                      background: "rgba(127,119,221,0.1)",
+                      marginBottom: 12,
+                    }}
+                  />
+                  {/* Strategy-aware metric preview */}
+                  {(() => {
+                    const r = result.parsedResult;
+                    const calc = result.serverCalculations;
+                    const strat = selectedStrategy;
+
+                    const secondMetric = (() => {
+                      if (strat === "Fix & Flip" || strat === "flip") {
+                        return {
+                          label: "Net Profit",
+                          value:
+                            calc?.netProfit != null
+                              ? `$${Math.abs(calc.netProfit).toLocaleString()}`
+                              : r?.proForma?.netProfit != null
+                                ? `$${Math.abs(r.proForma.netProfit).toLocaleString()}`
+                                : "\u2014",
+                          color:
+                            (calc?.netProfit || r?.proForma?.netProfit || 0) >= 0
+                              ? "#1D9E75"
+                              : "#f09595",
+                        };
+                      }
+                      if (strat === "BRRRR" || strat === "brrrr") {
+                        return {
+                          label: "Cash-on-Cash",
+                          value:
+                            r?.metrics?.cashOnCash != null
+                              ? `${r.metrics.cashOnCash.toFixed(1)}%`
+                              : "\u2014",
+                          color: "#7F77DD",
+                        };
+                      }
+                      if (strat === "House Hack" || strat === "house-hack") {
+                        return {
+                          label: "Mo. Savings",
+                          value:
+                            calc?.monthlyHousingSavings != null
+                              ? `$${Math.abs(calc.monthlyHousingSavings).toLocaleString()}`
+                              : "\u2014",
+                          color: "#1D9E75",
+                        };
+                      }
+                      // Buy & Hold default
+                      const cf = r?.cashFlow?.monthly ?? calc?.cashFlow;
+                      return {
+                        label: "Cash Flow",
+                        value:
+                          cf != null
+                            ? `${cf >= 0 ? "+" : "-"}$${Math.abs(cf).toLocaleString()}/mo`
+                            : "\u2014",
+                        color: (cf ?? 0) >= 0 ? "#1D9E75" : "#f09595",
+                      };
+                    })();
+
+                    return (
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 8,
+                          marginBottom: 12,
+                        }}
+                      >
+                        {/* Deal Score — always shown */}
+                        <div
+                          style={{
+                            background: "rgba(83,74,183,0.08)",
+                            borderRadius: 8,
+                            padding: "8px 10px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#3a3758",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              marginBottom: 4,
+                            }}
+                          >
+                            Deal Score
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 20,
+                              fontWeight: 700,
+                              letterSpacing: "-0.5px",
+                              color:
+                                (r?.dealScore ?? 0) >= 7
+                                  ? "#1D9E75"
+                                  : (r?.dealScore ?? 0) >= 5
+                                    ? "#EF9F27"
+                                    : "#f09595",
+                            }}
+                          >
+                            {r?.dealScore ?? "\u2014"}
+                            <span
+                              style={{
+                                fontSize: 12,
+                                color: "#3a3758",
+                                fontWeight: 400,
+                              }}
+                            >
+                              /10
+                            </span>
+                          </div>
+                        </div>
+                        {/* Strategy-specific metric */}
+                        <div
+                          style={{
+                            background: "rgba(83,74,183,0.08)",
+                            borderRadius: 8,
+                            padding: "8px 10px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: "#3a3758",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              marginBottom: 4,
+                            }}
+                          >
+                            {secondMetric.label}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 16,
+                              fontWeight: 700,
+                              letterSpacing: "-0.3px",
+                              color: secondMetric.color,
+                            }}
+                          >
+                            {secondMetric.value}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {result.parsedResult.recommendation && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#6b6690",
+                        lineHeight: 1.5,
+                        borderTop: "0.5px solid rgba(127,119,221,0.08)",
+                        paddingTop: 10,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical" as any,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {result.parsedResult.recommendation}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      marginTop: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 4,
+                      fontSize: 12,
+                      color: model.color,
+                      fontWeight: 500,
+                    }}
+                  >
+                    View full analysis
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                      <path
+                        d="M5 2l5 5-5 5"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Consensus summary when all complete */}
+      {allComplete && (() => {
+        const scores = modelResults
+          .map((r) => r.parsedResult?.dealScore)
+          .filter((s: any) => s != null);
+        if (scores.length < 2) return null;
+        const min = Math.min(...scores);
+        const max = Math.max(...scores);
+        const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
+        const variance = max - min;
+
+        return (
+          <div
+            style={{
+              marginTop: 16,
+              padding: "14px 18px",
+              background: "#13121d",
+              border: "0.5px solid rgba(127,119,221,0.15)",
+              borderRadius: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 24,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
+                  color: "#3a3758",
+                  marginBottom: 4,
+                }}
+              >
+                Avg Deal Score
+              </div>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color:
+                    avg >= 7 ? "#1D9E75" : avg >= 5 ? "#EF9F27" : "#f09595",
+                  letterSpacing: "-0.5px",
+                }}
+              >
+                {avg.toFixed(1)}
+              </div>
+            </div>
+            <div>
+              <div
+                style={{
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
+                  color: "#3a3758",
+                  marginBottom: 4,
+                }}
+              >
+                Score Range
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#9994b8" }}>
+                {min} &ndash; {max}
+              </div>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
+                  color: "#3a3758",
+                  marginBottom: 4,
+                }}
+              >
+                Model Consensus
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color:
+                    variance <= 1
+                      ? "#1D9E75"
+                      : variance <= 3
+                        ? "#EF9F27"
+                        : "#f09595",
+                }}
+              >
+                {variance === 0
+                  ? "All models agree"
+                  : variance <= 1
+                    ? "Strong consensus"
+                    : variance <= 3
+                      ? "Moderate variance"
+                      : "High variance \u2014 review each model"}
+              </div>
+            </div>
+            {/* Strategy-relevant avg metric */}
+            {(() => {
+              if (
+                selectedStrategy === "Fix & Flip" ||
+                selectedStrategy === "flip"
+              ) {
+                const profits = modelResults
+                  .map(
+                    (r: any) =>
+                      r.serverCalculations?.netProfit ??
+                      r.parsedResult?.proForma?.netProfit
+                  )
+                  .filter((p: any) => p != null);
+                if (profits.length === 0) return null;
+                const avgProfit =
+                  profits.reduce((a: number, b: number) => a + b, 0) /
+                  profits.length;
+                return (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.8px",
+                        color: "#3a3758",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Avg Net Profit
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: avgProfit >= 0 ? "#1D9E75" : "#f09595",
+                      }}
+                    >
+                      ${Math.abs(Math.round(avgProfit)).toLocaleString()}
+                    </div>
+                  </div>
+                );
+              }
+              const cashFlows = modelResults
+                .map(
+                  (r: any) =>
+                    r.parsedResult?.cashFlow?.monthly ??
+                    r.serverCalculations?.cashFlow
+                )
+                .filter((c: any) => c != null);
+              if (cashFlows.length === 0) return null;
+              const avgCashFlow =
+                cashFlows.reduce((a: number, b: number) => a + b, 0) /
+                cashFlows.length;
+              return (
+                <div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.8px",
+                      color: "#3a3758",
+                      marginBottom: 4,
+                    }}
+                  >
+                    Avg Cash Flow
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: avgCashFlow >= 0 ? "#1D9E75" : "#f09595",
+                    }}
+                  >
+                    {avgCashFlow >= 0 ? "+" : "-"}$
+                    {Math.abs(Math.round(avgCashFlow)).toLocaleString()}/mo
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{ fontSize: 12, color: "#3a3758" }}>
+              Click any card above &rarr;
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

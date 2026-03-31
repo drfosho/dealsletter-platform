@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import NavBar from "@/components/v2/NavBar";
 import Hero from "@/components/v2/Hero";
@@ -10,65 +9,19 @@ import StrategyGrid from "@/components/v2/StrategyGrid";
 import PricingSection from "@/components/v2/PricingSection";
 
 export default function V2Page() {
-  const [authChecked, setAuthChecked] = useState(false);
-  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const supabase = createClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (session?.user) {
-          router.replace("/v2/dashboard");
-          return;
-        }
-
-        setAuthChecked(true);
-      } catch {
-        setAuthChecked(true);
-      }
-    };
-
-    checkAuth();
-  }, [router]);
-
-  if (!authChecked) {
-    return (
-      <div
-        style={{
-          background: "#0d0d14",
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <style>{`
-          @keyframes v2-landing-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.3; transform: scale(0.75); }
-          }
-        `}</style>
-        <div
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: "#534AB7",
-            animation: "v2-landing-pulse 1s infinite",
-          }}
-        />
-      </div>
-    );
-  }
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session?.user);
+    });
+  }, []);
 
   return (
     <div className="flex flex-col" style={{ backgroundColor: "#0d0d14" }}>
       <NavBar />
-      <Hero isLoggedIn={false} />
+      <Hero isLoggedIn={isLoggedIn} />
       <AnalysisCard />
       <StrategyGrid />
       <PricingSection />

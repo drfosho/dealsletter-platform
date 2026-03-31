@@ -6,10 +6,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const navLinks = [
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Strategies", href: "#strategies" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Blog", href: "/blog" },
+  { label: "How it works", href: "/v2/how-it-works" },
+  { label: "Strategies", href: "/v2/strategies" },
+  { label: "Pricing", href: "/v2/pricing" },
+  { label: "Blog", href: "/v2/blog" },
 ];
 
 export default function NavBar() {

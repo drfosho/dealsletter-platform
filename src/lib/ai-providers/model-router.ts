@@ -7,8 +7,8 @@ import {
   Strategy,
 } from "./types";
 import { claudeSonnet, claudeOpus } from "./anthropic-provider";
-import { gpt4oMini, gpt41 } from "./openai-provider";
-import { grokFast } from "./grok-provider";
+import { gpt4oMini, gpt41, gpt4o } from "./openai-provider";
+import { grokFast, grok3 } from "./grok-provider";
 
 // Strategy → model mapping for Pro tier auto-routing
 // Claude Sonnet: BRRRR, Buy & Hold (deep contextual reasoning)
@@ -33,8 +33,39 @@ const PRO_AUTO_LABELS: Record<Strategy, string> = {
 
 export function selectModel(
   tier: UserTier,
-  strategy: Strategy
+  strategy: Strategy,
+  modelOverride?: string
 ): ModelSelection {
+  // If a specific model is requested (Pro Max parallel calls), use it directly
+  if (modelOverride) {
+    switch (modelOverride) {
+      case "claude-opus-4-6":
+        return {
+          primary: claudeOpus,
+          fallback: claudeSonnet,
+          tierLabel: "Max IQ",
+          modelLabel: "Claude Opus 4.6",
+        };
+      case "gpt-4o":
+        return {
+          primary: gpt4o,
+          fallback: gpt41,
+          tierLabel: "Max IQ",
+          modelLabel: "GPT-4o",
+        };
+      case "grok-3":
+      case "grok-3-latest":
+        return {
+          primary: grok3,
+          fallback: grokFast,
+          tierLabel: "Max IQ",
+          modelLabel: "Grok 3",
+        };
+      default:
+        break;
+    }
+  }
+
   switch (tier) {
     case "free":
       return {

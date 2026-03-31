@@ -22,6 +22,7 @@ import {
   calculateMonthlyRevenue,
   validateInputs as validateFinancialInputs,
   calculateFlipReturns,
+  calculateMonthlyExpenses,
   type FlipCalculationInputs
 } from '@/utils/financial-calculations';
 
@@ -57,6 +58,40 @@ Rules:
 - null for metrics that don't apply to this strategy
 - Round numbers to 2 decimal places max
 `;
+
+// Pro Max role-specific prompt modifiers — appended when a modelOverride is active
+const MODEL_ROLE_SUFFIXES: Record<string, Record<string, string>> = {
+  'claude-opus-4-6': {
+    brrrr: `\nYOUR ROLE — RISK ANALYST:\nYou are a conservative institutional investor stress-testing this BRRRR deal before committing capital. Your job is to find every way this deal can go wrong.\n\nFocus your analysis on:\n- Rehab cost overruns: what if costs run 20-30% over?\n- Refinance risk: what if the appraisal comes in below projected ARV? What LTV does that produce?\n- Vacancy during rehab and stabilization period\n- Whether the rent truly supports the DSCR refi payment\n- Exit risk if the refi doesn't pencil out\n- Market-specific risks for this zip code\n- Is the equity capture real or paper equity?\n\nYour dealScore should reflect the DOWNSIDE CASE not the base case. If the deal only works if everything goes right, score it 4-6.\nYour narrative must identify the single biggest risk that could kill this deal. Be direct and blunt.\nWrite like a skeptical LP reviewing a GP's pitch deck.`,
+    flip: `\nYOUR ROLE — RISK ANALYST:\nYou are a hard money lender evaluating whether to fund this flip. Your job is to identify every risk that could prevent repayment.\n\nFocus your analysis on:\n- Is the ARV achievable? Comp support is everything.\n- Rehab budget: is it realistic for this scope? Flag if it seems low for the market.\n- Holding period risk: what if it takes 3 months longer to sell than projected?\n- Days on market in this zip code — is this a liquid market?\n- Contractor risk and execution complexity\n- What does the deal look like with 25% rehab overrun?\n- At what purchase price does this deal break even?\n\nYour dealScore should reflect execution risk heavily. A deal with strong numbers but high execution risk should score 4-6.\nYour narrative must state whether YOU would fund this deal as a hard money lender.`,
+    rental: `\nYOUR ROLE — RISK ANALYST:\nYou are a conservative buy-and-hold investor evaluating this rental for long-term hold. Your job is to identify every reason this property could underperform.\n\nFocus your analysis on:\n- Is the rent estimate realistic or optimistic? Check against the comp data provided.\n- Expense ratio: is the maintenance rate enough for the age and condition of this property?\n- What happens to cash flow if vacancy hits 10% instead of 5%?\n- Is the cap rate above or below the local cost of debt? Negative leverage kills deals.\n- Property tax trajectory — has it been reassessed recently?\n- Rent growth prospects vs expense inflation\n- What does Year 3-5 cash flow look like with realistic rent increases?\n\nYour dealScore should be based on the RISK-ADJUSTED return, not the best case.\nYour narrative must answer: at what purchase price does this deal make sense?`,
+    'house-hack': `\nYOUR ROLE — RISK ANALYST:\nYou are evaluating this house hack for an owner-occupant buyer. Identify every risk they need to understand before committing.\n\nFocus your analysis on:\n- Vacancy risk: what if a unit sits vacant for 2-3 months between tenants?\n- Is the rental income assumption realistic for this specific neighborhood?\n- FHA vs conventional: what are the true costs of each path including MI?\n- Landlord responsibilities the buyer may not be prepared for\n- Resale risk if they need to move in 2-3 years\n- What is the true effective monthly cost in a worst-case scenario?\n\nBe honest about the risks. A house hack that barely breaks even is still a valid strategy — but the buyer needs to know what they're signing up for.`
+  },
+  'gpt-4o': {
+    brrrr: `\nYOUR ROLE — DEAL SPONSOR:\nYou are a real estate GP presenting this BRRRR opportunity to your investment committee. Write with conviction and clarity.\n\nFocus your analysis on:\n- The investment thesis: why does this deal make sense as a BRRRR strategy specifically?\n- Value creation: where is the equity being manufactured? Is it real and defensible?\n- The refi outcome: what does the stabilized cash flow look like after the DSCR refi?\n- Capital efficiency: how much cash is left in the deal after refi vs recycled?\n- Why this market and this property type makes sense for a long-term hold\n- The upside case: what does this asset look like in 5 years?\n\nYour dealScore should reflect the opportunity on a risk-adjusted basis. Write your narrative like an investment memo — clear thesis, supporting data, decisive recommendation. Use investor language.`,
+    flip: `\nYOUR ROLE — DEAL SPONSOR:\nYou are presenting this flip opportunity to an experienced investor looking for their next project. Make the case clearly.\n\nFocus your analysis on:\n- The profit opportunity and why it exists\n- Is the buy price below the 70% MAO? That's the headline.\n- Scope of work: is this a cosmetic flip or a heavy rehab? Frame it correctly.\n- The comparable sales story — does the ARV have strong comp support?\n- Time to profit: how quickly can an experienced operator execute this?\n- What makes this deal better than the alternatives in this market right now?\n\nYour dealScore should reflect the opportunity size and comp support. Write your narrative like you're pitching this deal to a partner over coffee — direct, confident, data-backed. Lead with the profit potential.`,
+    rental: `\nYOUR ROLE — DEAL SPONSOR:\nYou are presenting this rental property to a buy-and-hold investor building a long-term portfolio.\n\nFocus your analysis on:\n- The income story: is this a cash flow play, appreciation play, or both?\n- How does this property fit into a portfolio context?\n- The quality of the tenant demand in this submarket\n- Long-term wealth building: what does the 10-year picture look like?\n- Financing strategy: is 25% down the right move or is there a better structure?\n- Why an investor should buy THIS property in THIS market at THIS price point\n\nYour dealScore should reflect the long-term investment quality. Write your narrative like a quarterly investor letter — professional, clear, with a decisive recommendation. End with a specific action item.`,
+    'house-hack': `\nYOUR ROLE — DEAL SPONSOR:\nYou are a buyer's agent presenting this house hack to a first-time investor who wants to reduce their housing cost.\n\nFocus your analysis on:\n- The lifestyle + investment thesis: this buyer lives nearly for free while building equity — make that case clearly\n- Monthly cost comparison: renting vs house hacking with real numbers\n- Path to portfolio: how does this house hack set up their next purchase?\n- Financing efficiency: FHA at 3.5% down is massive capital leverage\n- The upside: in 3-5 years they either keep it as a pure rental or sell with significant equity\n- Why NOW is the right time to execute this strategy\n\nWrite your narrative to inspire action. This is often a life-changing move for a new investor — convey that clearly.`
+  },
+  'grok-3-latest': {
+    brrrr: `\nYOUR ROLE — QUANTITATIVE ANALYST:\nYou are a financial modeling analyst stress-testing this BRRRR deal's numbers. Your job is pure mathematical precision.\n\nFocus your analysis on:\n- Verify all calculations against the inputs provided. Flag any that seem off.\n- Phase 1 cost basis: purchase + rehab + carrying costs + points = total basis. Calculate exactly.\n- Phase 2 refi: at 75% LTV of ARV, what is the exact refi loan amount? Does it cover the basis? What cash is left in?\n- Post-refi DSCR: monthly rent / (PITIA) must be >= 1.25. Calculate this ratio exactly.\n- Cash-on-cash after refi with exact expense stack\n- IRR estimate for 5-year hold with 3% annual appreciation\n- Sensitivity: If ARV comes in at 90%, what happens? At 85%?\n\nYour dealScore must be based purely on quantitative benchmarks: CoC > 8% = strong (8-10), CoC 5-8% = acceptable (5-7), CoC < 5% = weak (1-4).\nYour narrative should be data-dense. Reference specific numbers in every sentence.`,
+    flip: `\nYOUR ROLE — QUANTITATIVE ANALYST:\nYou are a financial modeling analyst evaluating this flip's return profile. Numbers only — no narrative fluff.\n\nFocus your analysis on:\n- Verify the MAO calculation: (ARV x 0.70) - rehab = conservative MAO. (ARV x 0.85) - rehab = hard money ceiling. Is the purchase price below both?\n- Exact profit calculation: ARV - purchase - rehab - interest - points - buy closing - sell closing - holding costs = net profit\n- ROI on cash invested (not total project): net profit / cash out of pocket\n- Break-even ARV: what is the minimum sale price to return capital?\n- Sensitivity: If ARV is 5% lower, profit = ? If rehab runs 20% over, profit = ? If hold extends 3 months, profit = ?\n- Annualized ROI: (ROI / hold months) x 12\n\nYour dealScore benchmarks: ROI > 20% annualized = strong (8-10), ROI 12-20% = acceptable (5-7), ROI < 12% = weak (1-4).\nNarrative = sensitivity table + one-line verdict.`,
+    rental: `\nYOUR ROLE — QUANTITATIVE ANALYST:\nYou are a financial modeling analyst building the investment case for this rental property from first principles.\n\nFocus your analysis on:\n- Verify the expense stack: tax + insurance + vacancy + maintenance + management + capEx = what % of gross rent goes to expenses?\n- NOI = gross rent - ALL operating expenses (not including mortgage)\n- Cap rate = NOI / purchase price. Is this above 5%?\n- Cash-on-cash = annual cash flow / cash invested (down + closing)\n- Debt service coverage: NOI / annual mortgage payment — should be > 1.0\n- 5-year return model: equity from appreciation (3% annual) + principal paydown + cumulative cash flow = total return\n- GRM = purchase price / annual gross rent. Good deals: GRM < 12.\n\nNarrative = exact numbers, benchmark comparisons, and one-line verdict on whether the math works at this price.`,
+    'house-hack': `\nYOUR ROLE — QUANTITATIVE ANALYST:\nYou are modeling the true financial benefit of this house hack versus renting equivalent space.\n\nFocus your analysis on:\n- True monthly cost to owner: mortgage + tax + insurance - rental income = effective monthly housing cost\n- Renting equivalent: what would it cost to rent a comparable unit? The difference is the monthly savings.\n- Annual wealth creation: principal paydown (year 1) + appreciation (3% of purchase price) + cash savings vs renting = total first-year benefit\n- Break-even rent: rental income needed to make mortgage payment = 0\n- FHA MI cost: exact monthly mortgage insurance premium (loan amount x 0.85% / 12)\n- 5-year equity build: down payment + principal paid + appreciation gain = net equity\n- Annualized return on down payment: (year 1 wealth creation / down payment) x 100\n\nNarrative = side-by-side comparison of rent vs house hack costs, then verdict on whether the numbers justify the purchase.`
+  }
+};
+
+const getModelRoleSuffix = (modelId: string | undefined, strategy: string): string => {
+  if (!modelId) return '';
+  const roleSuffixes = MODEL_ROLE_SUFFIXES[modelId];
+  if (!roleSuffixes) return '';
+  const strategyKey = strategy === 'rental' ? 'rental'
+    : strategy === 'flip' ? 'flip'
+    : strategy === 'brrrr' ? 'brrrr'
+    : strategy === 'house-hack' ? 'house-hack'
+    : 'rental';
+  return roleSuffixes[strategyKey] || '';
+};
 
 // Strategy-specific system prompts (extracted to module level for streaming access)
 const SYSTEM_PROMPTS: Record<string, string> = {
@@ -447,6 +482,13 @@ export async function POST(request: NextRequest) {
     const parsedLoanTerm = parseInteger(body.loanTerms?.loanTerm);
     const parsedUnits = parseInteger(body.units) || 1;
     const parsedMonthlyRent = parsePrice(body.monthlyRent);
+    const unitBreakdown = (body as any).unitBreakdown as Array<{
+      unitNumber: number;
+      bedrooms: number;
+      bathrooms: number;
+      monthlyRent: number;
+      notes: string;
+    }> | undefined;
 
     console.log('\n--- STEP 4.1: Financial Input Validation ---');
     console.log('Parsed financial values:', {
@@ -877,12 +919,21 @@ export async function POST(request: NextRequest) {
             sendLine(`CALCULATIONS:${JSON.stringify(calculatedMetrics)}`);
 
             // --- Call AI model via multi-model router ---
-            const systemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
+            const baseSystemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
             const t_claudeStart = Date.now();
-            const modelSelection = selectModel(resolvedV2Tier, body.strategy as Strategy);
+
+            // Read optional model override for Pro Max parallel execution
+            const modelOverride = (body as any).modelOverride as string | undefined;
+            // Security: only Pro Max users can override
+            const allowedOverride = resolvedV2Tier === 'pro_max' ? modelOverride : undefined;
+            const modelSelection = selectModel(resolvedV2Tier, body.strategy as Strategy, allowedOverride);
+
+            // Apply role-specific suffix for Pro Max parallel models
+            const roleSuffix = allowedOverride ? getModelRoleSuffix(allowedOverride, body.strategy) : '';
+            const systemPrompt = roleSuffix ? baseSystemPrompt + '\n\n' + roleSuffix : baseSystemPrompt;
 
             console.log(`[Generate] Starting AI call at +${t_claudeStart - t_streamStart}ms`);
-            console.log(`[Generate] Model: ${modelSelection.primary.model} (${modelSelection.tierLabel})`);
+            console.log(`[Generate] Model: ${modelSelection.primary.model} (${modelSelection.tierLabel})${roleSuffix ? ' [role suffix applied]' : ''}`);
 
             // Send model info to client before analysis runs
             sendLine(`MODEL:${JSON.stringify({
@@ -1911,32 +1962,99 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
     });
 
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
-    
-    // Calculate additional metrics for better analysis
-    // Using same rates as fix & flip for consistency
-    const propertyTaxes = Math.round((effectivePurchasePrice * 0.012) / 12); // 1.2% annually
-    const insurance = Math.round((effectivePurchasePrice * 0.0035) / 12); // 0.35% annually
-    const hoa = 0; // Could be added as parameter
-    const maintenance = Math.round(monthlyRent * 0.1); // 10% of rent for maintenance
-    const propertyManagement = Math.round(monthlyRent * 0.08); // 8% for management
-    const vacancy = Math.round(monthlyRent * 0.05); // 5% vacancy factor
-    
-    const totalExpenses = monthlyPayment + propertyTaxes + insurance + hoa + maintenance + propertyManagement + vacancy;
-    const monthlyCashFlow = monthlyRent - totalExpenses;
+
+    // Use shared expense utility + CapEx reserve
+    const expenseRates = {
+      propertyTaxRate: 0.012,
+      insuranceRate: 0.0035,
+      maintenancePercent: 0.05,
+      managementPercent: 0.08,
+      vacancyPercent: 0.05,
+      hoaMonthly: 0,
+    };
+
+    const baseMonthlyExpenses = calculateMonthlyExpenses(
+      effectivePurchasePrice,
+      monthlyRent,
+      expenseRates
+    );
+
+    // CapEx reserve — 5% of rent for capital expenditures
+    const capExPercent = 5;
+    const monthlyCapEx = Math.round(monthlyRent * (capExPercent / 100));
+    const totalMonthlyExpenses = baseMonthlyExpenses + monthlyCapEx;
+
+    const monthlyCashFlow = monthlyRent - monthlyPayment - totalMonthlyExpenses;
     const annualCashFlow = monthlyCashFlow * 12;
-    const capRate = effectivePurchasePrice > 0 ? ((monthlyRent * 12 - (propertyTaxes + insurance + maintenance) * 12) / effectivePurchasePrice * 100) : 0;
+
+    // NOI = Gross Rent - ALL operating expenses (no mortgage)
+    const annualNOI = (monthlyRent * 12) - (totalMonthlyExpenses * 12);
+    const capRate = effectivePurchasePrice > 0 ? (annualNOI / effectivePurchasePrice * 100) : 0;
     const cashOnCash = downPayment > 0 ? (annualCashFlow / downPayment * 100) : 0;
+
+    // Expense breakdown for UI display
+    const propertyTaxes = Math.round((effectivePurchasePrice * expenseRates.propertyTaxRate) / 12);
+    const insurance = Math.round((effectivePurchasePrice * expenseRates.insuranceRate) / 12);
+    const maintenance = Math.round(monthlyRent * expenseRates.maintenancePercent);
+    const propertyManagement = Math.round(monthlyRent * expenseRates.managementPercent);
+    const vacancy = Math.round(monthlyRent * expenseRates.vacancyPercent);
+
+    const expenseBreakdown = {
+      mortgage: Math.round(monthlyPayment),
+      propertyTax: propertyTaxes,
+      insurance,
+      maintenance,
+      management: propertyManagement,
+      vacancy,
+      capEx: monthlyCapEx,
+      hoa: expenseRates.hoaMonthly,
+      totalOperating: Math.round(totalMonthlyExpenses),
+      totalWithMortgage: Math.round(totalMonthlyExpenses + monthlyPayment),
+    };
     
-    const annualNOI = (monthlyRent * 12) - ((propertyTaxes + insurance + maintenance) * 12);
-    
+    // Build income section with optional unit breakdown
+    const unitBreakdown = (request as any).unitBreakdown as Array<{
+      unitNumber: number;
+      bedrooms: number;
+      bathrooms: number;
+      monthlyRent: number;
+      notes: string;
+    }> | undefined;
+
+    let incomeSection = '';
+    if (units > 1) {
+      incomeSection += `\n- Number of Units: ${units}`;
+      if (unitBreakdown && unitBreakdown.length > 0) {
+        const totalFromBreakdown = unitBreakdown.reduce((sum, u) => sum + u.monthlyRent, 0);
+        incomeSection += `\n- Total Monthly Rent: $${totalFromBreakdown.toLocaleString()}`;
+        incomeSection += `\n- Rent Roll:`;
+        unitBreakdown.forEach(u => {
+          incomeSection += `\n  Unit ${u.unitNumber}: ${u.bedrooms}bd/${u.bathrooms}ba — $${u.monthlyRent.toLocaleString()}/mo${u.notes ? ` (${u.notes})` : ''}`;
+        });
+        incomeSection += `\n- Average Rent Per Unit: $${Math.round(totalFromBreakdown / units).toLocaleString()}`;
+      } else {
+        incomeSection += `\n- Rent Per Unit: $${Math.round(rentPerUnit).toLocaleString()}/month`;
+        incomeSection += `\n- Total Monthly Rent: $${monthlyRent.toLocaleString()}`;
+      }
+      incomeSection += `\n- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}`;
+    } else {
+      incomeSection += `\n- Monthly Rent: $${monthlyRent.toLocaleString()}`;
+      incomeSection += `\n- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}`;
+    }
+
+    // Price source context for Claude
+    const hasListPrice = !!(request as any).listPrice || !!(propertyData as any)?.listing?.price;
+    const priceSource = hasListPrice ? 'active listing price' : 'user-entered price (no active listing found)';
+    const estimatedValue = (propertyData as any)?.comparables?.value || 0;
+
+    context += `\nPrice Source: ${priceSource}`;
+    if (!hasListPrice && estimatedValue > 0) {
+      context += `\nNote: No active listing price was found for this property. The purchase price of $${effectivePurchasePrice.toLocaleString()} was entered by the user. Do not flag this as "purchasing at AVM" or "negative equity from day one" unless the entered price genuinely exceeds the estimated market value by more than 10%. The RentCast AVM of $${estimatedValue.toLocaleString()} should be used as a reference point, not assumed to be the asking price.`;
+    }
+
     context += `\n\nKEY CALCULATIONS:
 INCOME:
-- Monthly Rent: $${monthlyRent.toLocaleString()}
-${units > 1 ? `- Number of Units: ${units}
-- Rent Per Unit: $${Math.round(rentPerUnit).toLocaleString()}/month
-- Total Monthly Rent: $${monthlyRent.toLocaleString()}
-- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}` : `- Monthly Rent: $${monthlyRent.toLocaleString()}
-- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}`}
+- Monthly Rent: $${monthlyRent.toLocaleString()}${incomeSection}
 
 FINANCING:
 - Purchase Price: $${effectivePurchasePrice.toLocaleString()}
@@ -1951,10 +2069,12 @@ MONTHLY EXPENSES:
 - Mortgage Payment (P&I): $${monthlyPayment.toLocaleString()}
 - Property Taxes: $${propertyTaxes.toLocaleString()}
 - Insurance: $${insurance.toLocaleString()}
-- Maintenance (10%): $${maintenance.toLocaleString()}
+- Maintenance (5%): $${maintenance.toLocaleString()}
 - Property Management (8%): $${propertyManagement.toLocaleString()}
 - Vacancy Reserve (5%): $${vacancy.toLocaleString()}
-- Total Monthly Expenses: $${totalExpenses.toLocaleString()}
+- CapEx Reserve (5%): $${monthlyCapEx.toLocaleString()}
+- Total Operating Expenses: $${Math.round(totalMonthlyExpenses).toLocaleString()}
+- Total Monthly Outflow (incl. mortgage): $${Math.round(totalMonthlyExpenses + monthlyPayment).toLocaleString()}
 
 CASH FLOW ANALYSIS:
 - Monthly Cash Flow: $${monthlyCashFlow.toLocaleString()} ${monthlyCashFlow < 0 ? '(NEGATIVE)' : '(POSITIVE)'}
@@ -1969,14 +2089,33 @@ These numbers were computed server-side with verified formulas. Copy them direct
 Provide a comprehensive analysis following the format specified. Make sure to include ALL the financial metrics in your response with the exact calculations shown above.`;
     
     calculatedMetrics = {
-      cashFlow: monthlyCashFlow,
-      capRate: capRate,
-      cocReturn: cashOnCash,
-      roi: cashOnCash * 5, // Simple 5-year projection
+      cashFlow: Math.round(monthlyCashFlow),
+      capRate: Math.round(capRate * 100) / 100,
+      cocReturn: Math.round(cashOnCash * 100) / 100,
+      roi: Math.round(cashOnCash * 5 * 100) / 100,
       totalInvestment: downPayment + (request.rehabCosts || 0) + pointsCost,
-      annualNOI: annualNOI,
-      totalProfit: annualCashFlow * 5, // 5-year profit projection
-      monthlyRent: monthlyRent // Add monthly rent to metrics
+      annualNOI: Math.round(annualNOI),
+      totalProfit: Math.round(annualCashFlow * 5),
+      monthlyRent: Math.round(monthlyRent),
+      // Multifamily data
+      units: units,
+      rentPerUnit: units > 1 ? Math.round(monthlyRent / units) : Math.round(monthlyRent),
+      unitBreakdown: unitBreakdown || null,
+      isMultifamily: units > 1,
+      // Full expense breakdown
+      expenseBreakdown,
+      expenseRates: {
+        vacancyPercent: expenseRates.vacancyPercent * 100,
+        managementPercent: expenseRates.managementPercent * 100,
+        maintenancePercent: expenseRates.maintenancePercent * 100,
+        capExPercent,
+        propertyTaxRate: expenseRates.propertyTaxRate * 100,
+        insuranceRate: expenseRates.insuranceRate * 100,
+      },
+      grossMonthlyRent: Math.round(monthlyRent),
+      effectiveGrossRent: Math.round(monthlyRent * (1 - expenseRates.vacancyPercent)),
+      monthlyMortgage: Math.round(monthlyPayment),
+      totalMonthlyExpenses: Math.round(totalMonthlyExpenses),
     };
   }
 
@@ -2333,6 +2472,18 @@ interface FinancialData {
   // House Hack-specific metrics
   outOfPocketHousingCost?: number;
   monthlyHousingSavings?: number;
+  // Multifamily metrics
+  units?: number;
+  rentPerUnit?: number;
+  unitBreakdown?: any;
+  isMultifamily?: boolean;
+  // Expense breakdown
+  expenseBreakdown?: any;
+  expenseRates?: any;
+  grossMonthlyRent?: number;
+  effectiveGrossRent?: number;
+  monthlyMortgage?: number;
+  totalMonthlyExpenses?: number;
 }
 
 function extractFinancialData(text: string): FinancialData {
