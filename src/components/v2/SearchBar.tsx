@@ -1,23 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AddressSearchInput from "@/components/property-search/AddressSearchInput";
 
-const models = [
-  { id: "auto", label: "Auto" },
-  { id: "speed", label: "Speed" },
-  { id: "balanced", label: "Balanced", locked: true },
-  { id: "max-iq", label: "Max IQ", locked: true },
-] as const;
+interface SearchBarProps {
+  userTier?: "free" | "pro" | "pro_max" | null;
+  onModelChange?: (model: string) => void;
+}
 
-type ModelId = (typeof models)[number]["id"];
-
-export default function SearchBar() {
+export default function SearchBar({
+  userTier = null,
+  onModelChange,
+}: SearchBarProps) {
   const router = useRouter();
   const [selectedAddress, setSelectedAddress] = useState("");
   const [selectedPlaceId, setSelectedPlaceId] = useState("");
-  const [selectedModel, setSelectedModel] = useState<ModelId>("auto");
+  const [hoveredChip, setHoveredChip] = useState<string | null>(null);
+
+  const defaultModel = (() => {
+    if (userTier === "pro_max") return "max";
+    if (userTier === "pro") return "balanced";
+    return "speed";
+  })();
+
+  const [selectedModel, setSelectedModel] = useState(defaultModel);
+
+  useEffect(() => {
+    let def = "speed";
+    if (userTier === "pro_max") def = "max";
+    else if (userTier === "pro") def = "balanced";
+    setSelectedModel(def);
+    onModelChange?.(def);
+  }, [userTier]);
+
+  const chips = [
+    {
+      id: "speed",
+      label: "Speed",
+      description: "GPT-4o-mini \u2014 fastest",
+      available: true,
+    },
+    {
+      id: "balanced",
+      label: "Balanced",
+      description: "Claude Sonnet / GPT-4.1",
+      available: userTier === "pro" || userTier === "pro_max",
+      upgradeHint: "Upgrade to Pro to unlock",
+    },
+    {
+      id: "max",
+      label: "Max IQ",
+      description:
+        userTier === "pro_max" ? "3 models parallel" : "Pro Max only",
+      available: userTier === "pro_max",
+      upgradeHint: "Upgrade to Pro Max to unlock",
+    },
+  ];
 
   function handleSubmit() {
     if (!selectedAddress.trim()) return;
@@ -74,7 +113,6 @@ export default function SearchBar() {
           className="relative flex items-center"
           style={{ padding: "18px 56px 18px 20px" }}
         >
-          {/* Search icon */}
           <svg
             width="18"
             height="18"
@@ -100,7 +138,6 @@ export default function SearchBar() {
             />
           </div>
 
-          {/* Submit button */}
           <button
             onClick={handleSubmit}
             className="absolute flex items-center justify-center transition-colors"
@@ -139,12 +176,7 @@ export default function SearchBar() {
         </div>
 
         {/* Divider */}
-        <div
-          style={{
-            height: 0.5,
-            background: "rgba(127,119,221,0.12)",
-          }}
-        />
+        <div style={{ height: 0.5, background: "rgba(127,119,221,0.12)" }} />
 
         {/* Bottom row — model selector */}
         <div className="flex items-center gap-3 px-4 py-2.5">
@@ -161,41 +193,88 @@ export default function SearchBar() {
           </span>
 
           <div className="flex items-center gap-1">
-            {models.map((model) => {
-              const isActive = selectedModel === model.id;
+            {chips.map((chip) => {
+              const isSelected = selectedModel === chip.id;
+              const isAvailable = chip.available;
+
               return (
-                <button
-                  key={model.id}
-                  onClick={() => setSelectedModel(model.id)}
-                  className="whitespace-nowrap rounded-md px-2.5 py-1 font-medium transition-colors"
-                  style={{
-                    background: isActive
-                      ? "rgba(83,74,183,0.25)"
-                      : "transparent",
-                    border: isActive
-                      ? "0.5px solid rgba(127,119,221,0.45)"
-                      : "0.5px solid transparent",
-                    color: isActive ? "#c0baf0" : "#4e4a6a",
-                    fontSize: 13,
-                    cursor: "pointer",
+                <div
+                  key={chip.id}
+                  style={{ position: "relative", display: "inline-flex" }}
+                  onMouseEnter={() => {
+                    if (!isAvailable) setHoveredChip(chip.id);
                   }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) e.currentTarget.style.color = "#8882b8";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) e.currentTarget.style.color = "#4e4a6a";
-                  }}
+                  onMouseLeave={() => setHoveredChip(null)}
                 >
-                  {model.label}
-                  {"locked" in model && model.locked && (
-                    <span
-                      className="ml-1 inline-block"
-                      style={{ fontSize: 9, opacity: 0.45 }}
+                  <button
+                    onClick={() => {
+                      if (!isAvailable) {
+                        router.push("/v2/pricing");
+                        return;
+                      }
+                      setSelectedModel(chip.id);
+                      onModelChange?.(chip.id);
+                    }}
+                    style={{
+                      fontSize: 13,
+                      padding: "4px 12px",
+                      borderRadius: 6,
+                      cursor: isAvailable ? "pointer" : "default",
+                      transition: "all 0.15s",
+                      fontFamily: "inherit",
+                      fontWeight: 500,
+                      background:
+                        isSelected && isAvailable
+                          ? "rgba(83,74,183,0.25)"
+                          : "transparent",
+                      border: `0.5px solid ${isSelected && isAvailable ? "rgba(127,119,221,0.45)" : "transparent"}`,
+                      color: isSelected && isAvailable
+                        ? "#c0baf0"
+                        : isAvailable
+                          ? "#4e4a6a"
+                          : "#2e2c48",
+                      opacity: isAvailable ? 1 : 0.5,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected && isAvailable)
+                        e.currentTarget.style.color = "#8882b8";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected && isAvailable)
+                        e.currentTarget.style.color = "#4e4a6a";
+                    }}
+                  >
+                    {chip.label}
+                    {!isAvailable && (
+                      <span style={{ fontSize: 9, opacity: 0.4, marginLeft: 2 }}>
+                        &#x1F512;
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Tooltip for locked chips */}
+                  {hoveredChip === chip.id && !isAvailable && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "calc(100% + 6px)",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        background: "#1a192b",
+                        border: "0.5px solid rgba(127,119,221,0.3)",
+                        borderRadius: 6,
+                        padding: "6px 10px",
+                        fontSize: 11,
+                        color: "#9994b8",
+                        whiteSpace: "nowrap",
+                        zIndex: 10,
+                        pointerEvents: "none",
+                      }}
                     >
-                      🔒
-                    </span>
+                      {chip.upgradeHint}
+                    </div>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>

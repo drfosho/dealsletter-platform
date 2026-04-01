@@ -420,6 +420,7 @@ export default function DashboardPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [greetingText, setGreetingText] = useState("Welcome back.");
+  const [selectedModel, setSelectedModel] = useState<string>("speed");
   const router = useRouter();
 
   /* ---------- Init ------------------------------------------------ */
@@ -547,18 +548,26 @@ export default function DashboardPage() {
       ? `You've analyzed ${totalCount} ${totalCount === 1 ? "property" : "properties"}. Here's where you left off.`
       : "Enter an address below to run your first AI-powered deal analysis.";
 
-  const tierPillText =
-    userTier === "pro_max"
-      ? "Pro Max \u00B7 Max IQ model \u00B7 Unlimited analyses"
-      : userTier === "pro"
-        ? "Pro \u00B7 Balanced model \u00B7 Unlimited analyses"
-        : "Free plan \u00B7 3 analyses/month";
+  const tierPillText = (() => {
+    const tierName =
+      userTier === "pro_max" ? "Pro Max" : userTier === "pro" ? "Pro" : "Free";
+    const modelName =
+      selectedModel === "max"
+        ? "Max IQ \u2014 3 models"
+        : selectedModel === "balanced"
+          ? "Balanced model"
+          : "Speed model";
+    const limit =
+      userTier === "free" ? "Blurred results" : "Unlimited analyses";
+    return `${tierName} \u00B7 ${modelName} \u00B7 ${limit}`;
+  })();
+
   const tierDotColor =
-    userTier === "pro_max"
-      ? "#7F77DD"
-      : userTier === "pro"
-        ? "#1D9E75"
-        : "#534AB7";
+    selectedModel === "max"
+      ? "#EF9F27"
+      : selectedModel === "balanced"
+        ? "#7F77DD"
+        : "#6b6690";
 
   /* ---------- Render ---------------------------------------------- */
 
@@ -658,7 +667,10 @@ export default function DashboardPage() {
             Analyze a property
           </span>
           <div style={{ maxWidth: 600, margin: "0 auto" }}>
-            <SearchBar />
+            <SearchBar
+              userTier={userTier as any}
+              onModelChange={(m) => setSelectedModel(m)}
+            />
           </div>
         </div>
 

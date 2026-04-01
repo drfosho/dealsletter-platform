@@ -77,7 +77,7 @@ export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
 
         {/* Search bar placeholder */}
         <div className="mt-10 w-full">
-          <SearchBar />
+          <SearchBar userTier={null} />
         </div>
 
         {/* Hint text */}

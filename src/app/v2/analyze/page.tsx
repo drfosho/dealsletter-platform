@@ -343,7 +343,8 @@ function AnalyzeContent() {
   const router = useRouter();
 
   const address = searchParams.get("address") || "";
-  const selectedModel = searchParams.get("model") || "auto";
+  const requestedModel = searchParams.get("model") || "speed";
+  const [selectedModel, setSelectedModel] = useState("speed");
 
   /* --- Property data states --- */
   const [propertyData, setPropertyData] = useState<any>(null);
@@ -703,6 +704,26 @@ function AnalyzeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStrategy]);
 
+  /* ---------- Validate model for tier ----------------------------- */
+
+  useEffect(() => {
+    if (isLoadingTier) return;
+
+    const isAllowed =
+      requestedModel === "speed" ||
+      (requestedModel === "balanced" &&
+        (userTier === "pro" || userTier === "pro_max")) ||
+      (requestedModel === "max" && userTier === "pro_max");
+
+    if (isAllowed) {
+      setSelectedModel(requestedModel);
+    } else {
+      if (userTier === "pro_max") setSelectedModel("max");
+      else if (userTier === "pro") setSelectedModel("balanced");
+      else setSelectedModel("speed");
+    }
+  }, [userTier, isLoadingTier, requestedModel]);
+
   /* ---------- Multifamily sync ------------------------------------ */
 
   useEffect(() => {
@@ -873,8 +894,8 @@ function AnalyzeContent() {
     // Use monthlyRent from state, or fall back to edited rent estimate
     const effectiveRent = monthlyRent || editedProperty.estimatedRent;
 
-    // Pro Max — run parallel analysis across 3 models
-    if (userTier === "pro_max") {
+    // Pro Max parallel — only when user selected Max IQ model
+    if (userTier === "pro_max" && selectedModel === "max") {
       setProMaxMode(true);
       resetProMaxResults();
 
@@ -956,7 +977,7 @@ function AnalyzeContent() {
     try {
       const response = await fetch("/api/analysis/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-V2-Request": "true" },
         body: JSON.stringify({
           address,
           strategy: apiStrategy,
@@ -1031,6 +1052,8 @@ function AnalyzeContent() {
                 },
               }
             : undefined,
+          // Model override for speed selection by pro/pro_max users
+          ...(selectedModel === "speed" ? { modelOverride: "gpt-4o-mini" } : {}),
         }),
       });
 
@@ -1110,8 +1133,22 @@ function AnalyzeContent() {
         } else if (line.startsWith("ERROR:")) {
           try {
             const err = JSON.parse(line.slice(6));
-            throw new Error(err.message);
-          } catch {
+            if (err.code === "RATE_LIMITED") {
+              const minutes = err.retryAfter
+                ? Math.ceil(err.retryAfter / 60)
+                : 60;
+              throw new Error(
+                `Rate limit reached. Please wait ${minutes} minute${minutes === 1 ? "" : "s"} before running another analysis.`
+              );
+            }
+            throw new Error(err.message || "Analysis failed");
+          } catch (parseErr) {
+            if (
+              parseErr instanceof Error &&
+              parseErr.message.includes("Rate limit")
+            ) {
+              throw parseErr;
+            }
             throw new Error("Analysis failed");
           }
         } else if (
@@ -1242,21 +1279,28 @@ function AnalyzeContent() {
           {address || "No address provided"}
         </h1>
 
-        <span
-          className="mt-1.5 inline-flex items-center gap-1.5"
-          style={{
-            background: "rgba(83,74,183,0.15)",
-            border: "0.5px solid rgba(127,119,221,0.3)",
-            color: "#9994b8",
-            borderRadius: 6,
-            padding: "3px 10px",
-            fontSize: 11,
-          }}
-        >
-          {modelInfo
-            ? modelInfo.modelLabel
-            : `AI: ${selectedModel.charAt(0).toUpperCase() + selectedModel.slice(1)}`}
-        </span>
+        {!isLoadingTier && (
+          <span
+            suppressHydrationWarning
+            className="mt-1.5 inline-flex items-center gap-1.5"
+            style={{
+              background: "rgba(83,74,183,0.15)",
+              border: "0.5px solid rgba(127,119,221,0.3)",
+              color: "#9994b8",
+              borderRadius: 6,
+              padding: "3px 10px",
+              fontSize: 11,
+            }}
+          >
+            {modelInfo
+              ? modelInfo.modelLabel
+              : selectedModel === "max"
+                ? "Max IQ \u2014 Opus \u00B7 GPT-4o \u00B7 Grok 3"
+                : selectedModel === "balanced"
+                  ? "Balanced (Auto-routed)"
+                  : "GPT-4o-mini (Speed)"}
+          </span>
+        )}
 
         {!isLoadingTier && userTier === "pro" && (
           <span
@@ -2615,22 +2659,74 @@ function AnalyzeContent() {
 
         {/* ERROR STATE */}
         {analysisError && (
-          <div
-            className="mt-8"
-            style={{
-              padding: 20,
-              background: "rgba(162,45,45,0.1)",
-              border: "0.5px solid rgba(162,45,45,0.3)",
-              borderRadius: 12,
-            }}
-          >
-            <p style={{ fontSize: 14, color: "#f09595", margin: 0 }}>
-              Something went wrong: {analysisError}
-            </p>
-            <p style={{ fontSize: 12, color: "#6b3a3a", marginTop: 6 }}>
-              Please try again or go back to search
-            </p>
-          </div>
+          analysisError.includes("Rate limit") ? (
+            <div
+              className="mt-8"
+              style={{
+                padding: 24,
+                background: "rgba(239,159,39,0.08)",
+                border: "0.5px solid rgba(239,159,39,0.3)",
+                borderRadius: 14,
+                textAlign: "center",
+              }}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#EF9F27"
+                strokeWidth="2"
+                strokeLinecap="round"
+                style={{ margin: "0 auto 12px", display: "block" }}
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#EF9F27", marginBottom: 6 }}>
+                Slow down a bit
+              </div>
+              <div style={{ fontSize: 14, color: "#6b6690", lineHeight: 1.6, marginBottom: 16 }}>
+                {analysisError}
+              </div>
+              <button
+                onClick={() => {
+                  setAnalysisError("");
+                  setHasAnalyzed(false);
+                }}
+                style={{
+                  background: "rgba(239,159,39,0.15)",
+                  border: "0.5px solid rgba(239,159,39,0.3)",
+                  color: "#EF9F27",
+                  borderRadius: 8,
+                  padding: "8px 20px",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Try again
+              </button>
+            </div>
+          ) : (
+            <div
+              className="mt-8"
+              style={{
+                padding: 20,
+                background: "rgba(162,45,45,0.1)",
+                border: "0.5px solid rgba(162,45,45,0.3)",
+                borderRadius: 12,
+              }}
+            >
+              <p style={{ fontSize: 14, color: "#f09595", margin: 0 }}>
+                Something went wrong: {analysisError}
+              </p>
+              <p style={{ fontSize: 12, color: "#6b3a3a", marginTop: 6 }}>
+                Please try again or go back to search
+              </p>
+            </div>
+          )
         )}
       </main>
     </div>

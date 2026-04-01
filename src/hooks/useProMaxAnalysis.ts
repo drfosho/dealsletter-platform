@@ -111,7 +111,7 @@ export function useProMaxAnalysis() {
         try {
           const response = await fetch("/api/analysis/generate", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "X-V2-Request": "true" },
             body: JSON.stringify({
               ...fetchBody,
               modelOverride: model.id,

@@ -7,6 +7,11 @@ import { PropertyAnalysisRequest } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
 import { getAdminConfig } from '@/lib/admin-config';
 import {
+  checkRateLimit,
+  recordAnalysisRequest,
+  getIpFromRequest,
+} from '@/lib/v2-rate-limiter';
+import {
   selectModel,
   callWithFallback,
   claudeSonnet,
@@ -475,6 +480,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // V2 rate limiting — applies to all requests, fails open on error
+    const ipAddress = getIpFromRequest(request);
+    const isParallel = !!(body as any).modelOverride && resolvedV2Tier === 'pro_max';
+
+    const rateLimitResult = await checkRateLimit({
+      userId: user?.id || null,
+      ipAddress,
+      tier: resolvedV2Tier,
+      modelType: isParallel ? 'parallel' : 'single',
+    });
+
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            const encoder = new TextEncoder();
+            controller.enqueue(
+              encoder.encode(
+                `ERROR:${JSON.stringify({
+                  message: rateLimitResult.reason,
+                  retryAfter: rateLimitResult.retryAfter,
+                  code: 'RATE_LIMITED',
+                })}\n`
+              )
+            );
+            controller.close();
+          },
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'text/plain',
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit || 0),
+            'X-RateLimit-Remaining': '0',
+          },
+        }
+      );
+    }
+
+    // Record request (fire and forget)
+    recordAnalysisRequest({
+      userId: user?.id || null,
+      ipAddress,
+      tier: resolvedV2Tier,
+      modelType: isParallel ? 'parallel' : 'single',
+      strategy: body.strategy,
+    }).catch(console.error);
+
     // Validate financial inputs using centralized validation
     const parsedPurchasePrice = parsePrice(body.purchasePrice);
     const parsedDownPayment = parsePrice(body.downPayment);
@@ -922,10 +976,15 @@ export async function POST(request: NextRequest) {
             const baseSystemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
             const t_claudeStart = Date.now();
 
-            // Read optional model override for Pro Max parallel execution
+            // Read optional model override
             const modelOverride = (body as any).modelOverride as string | undefined;
-            // Security: only Pro Max users can override
-            const allowedOverride = resolvedV2Tier === 'pro_max' ? modelOverride : undefined;
+            // Security: any tier can request speed, only Pro Max can override to premium models
+            const allowedOverride = (() => {
+              if (!modelOverride) return undefined;
+              if (modelOverride === 'gpt-4o-mini') return modelOverride;
+              if (resolvedV2Tier === 'pro_max') return modelOverride;
+              return undefined;
+            })();
             const modelSelection = selectModel(resolvedV2Tier, body.strategy as Strategy, allowedOverride);
 
             // Apply role-specific suffix for Pro Max parallel models

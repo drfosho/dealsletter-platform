@@ -36,9 +36,16 @@ export function selectModel(
   strategy: Strategy,
   modelOverride?: string
 ): ModelSelection {
-  // If a specific model is requested (Pro Max parallel calls), use it directly
+  // If a specific model is requested, use it directly
   if (modelOverride) {
     switch (modelOverride) {
+      case "gpt-4o-mini":
+        return {
+          primary: gpt4oMini,
+          fallback: grokFast,
+          tierLabel: "Speed",
+          modelLabel: "GPT-4o-mini",
+        };
       case "claude-opus-4-6":
         return {
           primary: claudeOpus,
