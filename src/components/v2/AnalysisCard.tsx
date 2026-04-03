@@ -32,7 +32,27 @@ export default function AnalysisCard() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 780, margin: "0 auto", padding: "20px 40px 60px" }}>
+    <div className="analysis-card-section" style={{ maxWidth: 780, margin: "0 auto", padding: "20px 40px 60px" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .analysis-card-section {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .analysis-card-header {
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+          .analysis-card-footer {
+            flex-direction: column !important;
+            gap: 8px !important;
+            align-items: flex-start !important;
+          }
+          .analysis-card-footer .ml-auto {
+            margin-left: 0 !important;
+          }
+        }
+      `}</style>
       {/* Eyebrow */}
       <p
         className="uppercase"
@@ -61,7 +81,7 @@ export default function AnalysisCard() {
       >
         {/* Header */}
         <div
-          className="flex items-start justify-between"
+          className="analysis-card-header flex items-start justify-between"
           style={{
             padding: "22px 26px",
             borderBottom: "0.5px solid rgba(127,119,221,0.1)",
@@ -150,7 +170,7 @@ export default function AnalysisCard() {
 
         {/* Footer */}
         <div
-          className="flex items-center"
+          className="analysis-card-footer flex items-center"
           style={{
             padding: "16px 26px",
             gap: 8,

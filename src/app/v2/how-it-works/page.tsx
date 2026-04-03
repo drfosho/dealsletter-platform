@@ -258,25 +258,59 @@ export default function HowItWorksPage() {
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, backgroundImage: "radial-gradient(circle, rgba(127,119,221,0.07) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
       <NavBar />
 
-      <main style={{ position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto", padding: "72px 24px 80px" }}>
+      <main className="page-main" style={{ position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto", padding: "72px 24px 80px" }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .page-main {
+              padding-left: 16px !important;
+              padding-right: 16px !important;
+            }
+            .page-headline {
+              font-size: 28px !important;
+              letter-spacing: -0.5px !important;
+            }
+            .step-grid {
+              grid-template-columns: 1fr !important;
+              gap: 20px !important;
+            }
+            .step-number-col {
+              display: none !important;
+            }
+            .step-content {
+              order: 1 !important;
+            }
+            .step-visual {
+              order: 2 !important;
+            }
+            .step-wrapper {
+              margin-bottom: 48px !important;
+            }
+            .timeline-line {
+              display: none !important;
+            }
+            .model-cards-grid {
+              grid-template-columns: 1fr !important;
+            }
+          }
+        `}</style>
         {/* SECTION 1 — Header */}
         <div style={{ textAlign: "center" }}>
           <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "1.5px", color: "#3C3489", marginBottom: 14 }}>How it works</p>
-          <h1 style={{ fontSize: 42, fontWeight: 700, color: "#f0eeff", letterSpacing: "-1.2px", marginBottom: 12, marginTop: 0 }}>From address to analysis in 30 seconds.</h1>
+          <h1 className="page-headline" style={{ fontSize: 42, fontWeight: 700, color: "#f0eeff", letterSpacing: "-1.2px", marginBottom: 12, marginTop: 0 }}>From address to analysis in 30 seconds.</h1>
           <p style={{ fontSize: 16, color: "#4e4a6a", maxWidth: 560, margin: "0 auto 72px", lineHeight: 1.6 }}>Stop copy-pasting into ChatGPT. Enter any address and we handle everything &mdash; property data, financial modeling, and AI analysis.</p>
         </div>
 
         {/* SECTION 2 — Timeline */}
         <div style={{ position: "relative" }}>
           {/* Vertical line */}
-          <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "linear-gradient(to bottom, rgba(127,119,221,0.4), rgba(127,119,221,0.05))", transform: "translateX(-0.5px)", zIndex: 0 }} />
+          <div className="timeline-line" style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, background: "linear-gradient(to bottom, rgba(127,119,221,0.4), rgba(127,119,221,0.05))", transform: "translateX(-0.5px)", zIndex: 0 }} />
 
           {stepsData.map((step, i) => {
             const isOdd = i % 2 === 0;
             const { Visual } = step;
 
             const contentBlock = (
-              <div style={{ padding: "0 32px" }}>
+              <div className="step-content" style={{ padding: "0 32px" }}>
                 <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "1.5px", color: "#534AB7", marginBottom: 10 }}>{step.label}</div>
                 <h3 style={{ fontSize: 22, fontWeight: 700, color: "#f0eeff", letterSpacing: "-0.5px", marginBottom: 10, marginTop: 0 }}>{step.title}</h3>
                 <p style={{ fontSize: 14, color: "#6b6690", lineHeight: 1.8, marginBottom: 16 }}>{step.description}</p>
@@ -287,12 +321,12 @@ export default function HowItWorksPage() {
             );
 
             return (
-              <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", alignItems: "center", marginBottom: 80, position: "relative" }}>
-                {isOdd ? contentBlock : <Visual />}
-                <div style={{ display: "flex", justifyContent: "center" }}>
+              <div key={i} className="step-grid step-wrapper" style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr", alignItems: "center", marginBottom: 80, position: "relative" }}>
+                {isOdd ? contentBlock : <div className="step-visual"><Visual /></div>}
+                <div className="step-number-col" style={{ display: "flex", justifyContent: "center" }}>
                   <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#13121d", border: "1px solid rgba(127,119,221,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: "#7F77DD", position: "relative", zIndex: 2 }}>{i + 1}</div>
                 </div>
-                {isOdd ? <Visual /> : contentBlock}
+                {isOdd ? <div className="step-visual"><Visual /></div> : contentBlock}
               </div>
             );
           })}
@@ -303,7 +337,7 @@ export default function HowItWorksPage() {
           <h2 style={{ fontSize: 28, fontWeight: 700, color: "#f0eeff", letterSpacing: "-0.5px", marginBottom: 8 }}>The right AI for every deal.</h2>
           <p style={{ fontSize: 14, color: "#4e4a6a", marginBottom: 40 }}>Your plan determines which AI models power your analysis. Every tier gets unlimited analyses on all 4 strategies.</p>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, textAlign: "left" }}>
+          <div className="model-cards-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, textAlign: "left" }}>
             {/* Speed */}
             <div style={{ background: "#13121d", border: "0.5px solid rgba(127,119,221,0.15)", borderRadius: 14, padding: "22px 20px" }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9994b8" strokeWidth="2" strokeLinecap="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>

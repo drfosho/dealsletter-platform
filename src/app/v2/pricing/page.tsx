@@ -205,6 +205,7 @@ export default function PricingPage() {
       <NavBar />
 
       <main
+        className="pricing-main"
         style={{
           position: "relative",
           zIndex: 1,
@@ -213,6 +214,27 @@ export default function PricingPage() {
           padding: "72px 24px 80px",
         }}
       >
+        <style>{`
+          @media (max-width: 768px) {
+            .pricing-grid {
+              grid-template-columns: 1fr !important;
+            }
+            .pricing-table-grid {
+              display: none !important;
+            }
+            .pricing-main {
+              padding: 48px 16px 64px !important;
+            }
+            .pricing-headline {
+              font-size: 28px !important;
+            }
+            .billing-toggle {
+              flex-wrap: wrap !important;
+              justify-content: center !important;
+            }
+          }
+        `}</style>
+
         {/* SECTION 1 — Header */}
         <div style={{ textAlign: "center" }}>
           <p
@@ -227,6 +249,7 @@ export default function PricingPage() {
             Pricing
           </p>
           <h1
+            className="pricing-headline"
             style={{
               fontSize: 42,
               fontWeight: 700,
@@ -245,6 +268,7 @@ export default function PricingPage() {
 
         {/* SECTION 2 — Billing toggle */}
         <div
+          className="billing-toggle"
           style={{
             display: "flex",
             alignItems: "center",
@@ -309,6 +333,7 @@ export default function PricingPage() {
 
         {/* SECTION 3 — Tier cards */}
         <div
+          className="pricing-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
@@ -510,6 +535,7 @@ export default function PricingPage() {
           </p>
 
           <div
+            className="pricing-table-grid"
             style={{
               background: "#13121d",
               border: "0.5px solid rgba(127,119,221,0.15)",

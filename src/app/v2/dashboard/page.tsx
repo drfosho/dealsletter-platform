@@ -579,6 +579,27 @@ export default function DashboardPage() {
           to { opacity: 0.8; }
         }
       `}</style>
+      <style>{`
+        @media (max-width: 768px) {
+          .analyses-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .stats-row-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .dashboard-main {
+            padding: 32px 16px 48px !important;
+          }
+          .dashboard-header {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .greeting-text {
+            font-size: 28px !important;
+          }
+        }
+      `}</style>
 
       {/* Dot grid */}
       <div
@@ -596,6 +617,7 @@ export default function DashboardPage() {
       <NavBar />
 
       <main
+        className="dashboard-main"
         style={{
           position: "relative",
           zIndex: 1,
@@ -607,6 +629,7 @@ export default function DashboardPage() {
         {/* Section 1 — Greeting */}
         <div style={{ textAlign: "center", marginBottom: 52 }}>
           <h1
+            className="greeting-text"
             style={{
               fontSize: 38,
               fontWeight: 700,
@@ -689,6 +712,7 @@ export default function DashboardPage() {
               Recent analyses
             </div>
             <div
+              className="analyses-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, 1fr)",
@@ -705,6 +729,7 @@ export default function DashboardPage() {
         {!isLoadingAnalyses && recentAnalyses.length > 0 && (
           <>
             <div
+              className="dashboard-header"
               style={{
                 display: "flex",
                 justifyContent: "space-between",
@@ -731,6 +756,7 @@ export default function DashboardPage() {
             </div>
 
             <div
+              className="analyses-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, 1fr)",
@@ -757,6 +783,7 @@ export default function DashboardPage() {
 
             {/* Section 4 — Stats */}
             <div
+              className="stats-row-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, 1fr)",

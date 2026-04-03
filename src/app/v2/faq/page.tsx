@@ -204,7 +204,21 @@ export default function V2FaqPage() {
       />
       <NavBar />
 
+      <style>{`
+        @media (max-width: 768px) {
+          .page-main {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .page-headline {
+            font-size: 28px !important;
+            letter-spacing: -0.5px !important;
+          }
+        }
+      `}</style>
+
       <main
+        className="page-main"
         style={{
           position: "relative",
           zIndex: 1,
@@ -228,6 +242,7 @@ export default function V2FaqPage() {
             FAQ
           </p>
           <h1
+            className="page-headline"
             style={{
               fontSize: 42,
               fontWeight: 700,

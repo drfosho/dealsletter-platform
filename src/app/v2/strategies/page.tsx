@@ -190,11 +190,37 @@ export default function StrategiesPage() {
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, backgroundImage: "radial-gradient(circle, rgba(127,119,221,0.07) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
       <NavBar />
 
-      <main style={{ position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto", padding: "72px 24px 80px" }}>
+      <main className="page-main" style={{ position: "relative", zIndex: 1, maxWidth: 900, margin: "0 auto", padding: "72px 24px 80px" }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .page-main {
+              padding-left: 16px !important;
+              padding-right: 16px !important;
+            }
+            .page-headline {
+              font-size: 28px !important;
+              letter-spacing: -0.5px !important;
+            }
+            .strategy-detail-grid {
+              grid-template-columns: 1fr !important;
+              gap: 32px !important;
+            }
+            .strategy-metrics-grid {
+              grid-template-columns: 1fr 1fr !important;
+            }
+            .strategy-comparison-table > div {
+              font-size: 12px !important;
+            }
+            .strategy-comparison-table > div > span {
+              font-size: 12px !important;
+              padding: 8px 6px !important;
+            }
+          }
+        `}</style>
         {/* SECTION 1 — Header */}
         <div style={{ textAlign: "center" }}>
           <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "1.5px", color: "#3C3489", marginBottom: 14 }}>Investment Strategies</p>
-          <h1 style={{ fontSize: 42, fontWeight: 700, color: "#f0eeff", letterSpacing: "-1.2px", marginBottom: 12, marginTop: 0 }}>Every strategy. One platform.</h1>
+          <h1 className="page-headline" style={{ fontSize: 42, fontWeight: 700, color: "#f0eeff", letterSpacing: "-1.2px", marginBottom: 12, marginTop: 0 }}>Every strategy. One platform.</h1>
           <p style={{ fontSize: 16, color: "#4e4a6a", maxWidth: 520, margin: "0 auto 56px", lineHeight: 1.6 }}>Dealsletter is built for how real estate investors actually think. Pick your playbook and get an analysis built specifically for it.</p>
         </div>
 
@@ -234,7 +260,7 @@ export default function StrategiesPage() {
         </div>
 
         {/* SECTION 3 — Strategy detail panel */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "start", marginBottom: 64 }}>
+        <div className="strategy-detail-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "start", marginBottom: 64 }}>
           {/* Left column */}
           <div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(83,74,183,0.15)", border: "0.5px solid rgba(127,119,221,0.3)", borderRadius: 8, padding: "6px 14px", fontSize: 12, color: "#9994b8", marginBottom: 20 }}>
@@ -260,7 +286,7 @@ export default function StrategiesPage() {
           <div>
             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "1px", color: "#3a3758", marginBottom: 16 }}>Key metrics we analyze</div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+            <div className="strategy-metrics-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
               {s.metrics.map((m) => (
                 <div key={m.label} style={{ background: "#13121d", border: "0.5px solid rgba(127,119,221,0.12)", borderRadius: 10, padding: "14px 16px" }}>
                   <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#3a3758", marginBottom: 6 }}>{m.label}</div>
@@ -294,7 +320,7 @@ export default function StrategiesPage() {
           <h2 style={{ fontSize: 28, fontWeight: 700, color: "#f0eeff", marginBottom: 8 }}>Not sure which strategy fits?</h2>
           <p style={{ fontSize: 14, color: "#4e4a6a", marginBottom: 32 }}>Here&apos;s how the four strategies compare across the dimensions that matter most.</p>
 
-          <div style={{ background: "#13121d", border: "0.5px solid rgba(127,119,221,0.15)", borderRadius: 16, overflow: "hidden", textAlign: "left" }}>
+          <div className="strategy-comparison-table" style={{ background: "#13121d", border: "0.5px solid rgba(127,119,221,0.15)", borderRadius: 16, overflow: "hidden", textAlign: "left" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr", padding: "14px 24px", background: "rgba(127,119,221,0.06)", borderBottom: "0.5px solid rgba(127,119,221,0.1)" }}>
               <span />
               {["BRRRR", "Fix & Flip", "Buy & Hold", "House Hack"].map((h) => (

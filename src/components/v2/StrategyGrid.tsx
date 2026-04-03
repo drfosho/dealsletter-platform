@@ -76,9 +76,28 @@ export default function StrategyGrid() {
   return (
     <section
       ref={sectionRef}
-      className="w-full text-center"
+      className="strategy-home-section w-full text-center"
       style={{ padding: "10px 44px 64px" }}
     >
+      <style>{`
+        @media (max-width: 768px) {
+          .strategy-home-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .strategy-home-section {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .strategy-home-heading {
+            font-size: 24px !important;
+          }
+        }
+        @media (max-width: 390px) {
+          .strategy-home-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       {/* Eyebrow */}
       <p
         className="uppercase"
@@ -101,6 +120,7 @@ export default function StrategyGrid() {
           color: "#f0eeff",
           marginBottom: 8,
         }}
+        className="strategy-home-heading"
       >
         Built for every real estate playbook
       </h2>
@@ -119,7 +139,7 @@ export default function StrategyGrid() {
 
       {/* Grid */}
       <div
-        className="mx-auto grid"
+        className="strategy-home-grid mx-auto grid"
         style={{
           maxWidth: 900,
           gridTemplateColumns: "repeat(4, 1fr)",

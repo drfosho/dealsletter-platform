@@ -1248,12 +1248,62 @@ function AnalyzeContent() {
           border-color: rgba(127,119,221,0.5) !important;
           outline: none;
         }
+        @media (max-width: 768px) {
+          .property-grid-4 {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+          .property-grid-3 {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+          .strategy-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .inputs-row {
+            flex-direction: column !important;
+          }
+          .deal-params-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+          .rent-roll-table {
+            grid-template-columns: 40px 60px 60px 1fr 90px !important;
+            font-size: 12px !important;
+          }
+          .rent-roll-table input {
+            font-size: 12px !important;
+            padding: 3px 4px !important;
+          }
+          .analyze-main {
+            padding: 24px 16px 48px !important;
+          }
+          .analyze-back-row {
+            margin-bottom: 16px !important;
+          }
+          .analyze-header h1 {
+            font-size: 18px !important;
+            letter-spacing: -0.3px !important;
+          }
+          .quick-inputs-row {
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+        }
+        @media (max-width: 390px) {
+          .property-grid-4 {
+            grid-template-columns: 1fr !important;
+          }
+          .rent-roll-table {
+            grid-template-columns: 36px 50px 50px 1fr 80px !important;
+          }
+        }
       `}</style>
 
       <NavBar />
 
       <main
-        className="mx-auto w-full"
+        className="analyze-main mx-auto w-full"
         style={{ maxWidth: 860, padding: "40px 24px" }}
       >
         {/* SECTION 1 — Header */}
@@ -1420,7 +1470,7 @@ function AnalyzeContent() {
               <>
                 {/* Row 1 — physical details */}
                 <div
-                  className="grid"
+                  className="grid property-grid-4"
                   style={{
                     gridTemplateColumns: "1fr 1fr 1fr 1fr",
                     gap: 12,
@@ -1474,7 +1524,7 @@ function AnalyzeContent() {
 
                 {/* Row 2 — financial data */}
                 <div
-                  className="grid"
+                  className="grid property-grid-3"
                   style={{
                     gridTemplateColumns: "1fr 1fr 1fr",
                     gap: 12,
@@ -1672,7 +1722,7 @@ function AnalyzeContent() {
             </p>
 
             <div
-              className="grid"
+              className="grid strategy-grid"
               style={{ gridTemplateColumns: "1fr 1fr", gap: 10 }}
             >
               {strategies.map((s) => {
@@ -2041,6 +2091,7 @@ function AnalyzeContent() {
                         </span>
                       </div>
 
+                      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', margin: '0 -4px', padding: '0 4px' }}>
                       <div
                         style={{
                           background: "#0d0d14",
@@ -2051,6 +2102,7 @@ function AnalyzeContent() {
                       >
                         {/* Header */}
                         <div
+                          className="rent-roll-table"
                           style={{
                             display: "grid",
                             gridTemplateColumns: "48px 64px 64px 1fr 110px",
@@ -2102,6 +2154,7 @@ function AnalyzeContent() {
                           return (
                             <div
                               key={idx}
+                              className="rent-roll-table"
                               style={{
                                 display: "grid",
                                 gridTemplateColumns:
@@ -2191,6 +2244,7 @@ function AnalyzeContent() {
                             </div>
                           );
                         })}
+                      </div>
                       </div>
 
                       {/* Apply to all button */}
@@ -2871,10 +2925,25 @@ function ProMaxComparisonView({
           from { opacity: 0; transform: translateY(4px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @media (max-width: 768px) {
+          .promax-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .promax-consensus {
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+          .results-header-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+        }
       `}</style>
 
       {/* Header */}
       <div
+        className="results-header-row"
         style={{
           display: "flex",
           alignItems: "center",
@@ -2931,6 +3000,7 @@ function ProMaxComparisonView({
 
       {/* Three model cards */}
       <div
+        className="promax-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
@@ -3352,6 +3422,7 @@ function ProMaxComparisonView({
 
         return (
           <div
+            className="promax-consensus"
             style={{
               marginTop: 16,
               padding: "14px 18px",

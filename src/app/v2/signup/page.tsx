@@ -143,6 +143,17 @@ export default function SignupPage() {
         position: "relative",
       }}
     >
+      <style>{`
+        @media (max-width: 480px) {
+          .auth-card {
+            padding: 28px 20px !important;
+            border-radius: 16px !important;
+          }
+          .auth-wrapper {
+            padding: 16px !important;
+          }
+        }
+      `}</style>
       {/* Purple glow */}
       <div
         style={{
@@ -161,6 +172,7 @@ export default function SignupPage() {
 
       {/* Content */}
       <div
+        className="auth-wrapper"
         style={{
           position: "relative",
           zIndex: 1,
@@ -229,6 +241,7 @@ export default function SignupPage() {
 
         {/* Auth Card */}
         <div
+          className="auth-card"
           style={{
             background: "#13121d",
             border: "0.5px solid rgba(127,119,221,0.25)",

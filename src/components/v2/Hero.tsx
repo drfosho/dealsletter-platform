@@ -2,11 +2,35 @@ import SearchBar from "@/components/v2/SearchBar";
 
 export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
   return (
-    <section className="relative overflow-hidden" style={{ backgroundColor: "#0d0d14" }}>
+    <section className="hero-section relative overflow-hidden" style={{ backgroundColor: "#0d0d14" }}>
       <style>{`
         @keyframes v2-pulse-dot {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.5; transform: scale(0.75); }
+        }
+        @media (max-width: 768px) {
+          .hero-section {
+            min-height: auto !important;
+          }
+          .hero-content {
+            padding-top: 48px !important;
+            padding-bottom: 40px !important;
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+          }
+          .hero-badge {
+            margin-bottom: 24px !important;
+          }
+          .hero-glow {
+            width: 300px !important;
+            height: 200px !important;
+            opacity: 0.5 !important;
+          }
+        }
+        @media (max-width: 390px) {
+          .hero-content {
+            padding-top: 36px !important;
+          }
         }
       `}</style>
 
@@ -22,7 +46,7 @@ export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
 
       {/* Purple glow behind headline */}
       <div
-        className="pointer-events-none absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2"
+        className="hero-glow pointer-events-none absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2"
         style={{
           width: "700px",
           height: "500px",
@@ -32,10 +56,10 @@ export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
       />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-28 text-center">
+      <div className="hero-content relative z-10 mx-auto flex max-w-3xl flex-col items-center px-6 pb-20 pt-28 text-center">
         {/* Badge */}
         <div
-          className="mb-10 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm"
+          className="hero-badge mb-10 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm"
           style={{
             borderColor: "rgba(127,119,221,0.3)",
             backgroundColor: "rgba(127,119,221,0.08)",

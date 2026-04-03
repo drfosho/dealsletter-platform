@@ -39,6 +39,7 @@ export default function V2BlogPage() {
       <NavBar />
 
       <main
+        className="blog-main page-main"
         style={{
           position: "relative",
           zIndex: 1,
@@ -47,6 +48,27 @@ export default function V2BlogPage() {
           padding: "72px 24px 80px",
         }}
       >
+        <style>{`
+          @media (max-width: 768px) {
+            .featured-post-card {
+              flex-direction: column !important;
+            }
+            .featured-post-image {
+              width: 100% !important;
+              height: 200px !important;
+            }
+            .blog-grid {
+              grid-template-columns: 1fr !important;
+            }
+            .blog-main {
+              padding: 48px 16px 64px !important;
+            }
+            .page-headline {
+              font-size: 28px !important;
+              letter-spacing: -0.5px !important;
+            }
+          }
+        `}</style>
         {/* Header */}
         <p
           style={{
@@ -60,6 +82,7 @@ export default function V2BlogPage() {
           Blog
         </p>
         <h1
+          className="page-headline"
           style={{
             fontSize: 42,
             fontWeight: 700,
@@ -134,6 +157,7 @@ export default function V2BlogPage() {
         {/* Featured post */}
         {featured && (
           <div
+            className="featured-post-card"
             onClick={() => router.push(`/v2/blog/${featured.slug}`)}
             style={{
               background: "#13121d",
@@ -154,6 +178,7 @@ export default function V2BlogPage() {
           >
             {hasRealImage(featured.imageUrl) && (
               <div
+                className="featured-post-image"
                 style={{
                   width: "40%",
                   minHeight: 220,
@@ -236,6 +261,7 @@ export default function V2BlogPage() {
         {/* Post grid */}
         {rest.length > 0 && (
           <div
+            className="blog-grid"
             style={{
               display: "grid",
               gridTemplateColumns:

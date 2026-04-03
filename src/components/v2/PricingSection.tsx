@@ -98,9 +98,23 @@ export default function PricingSection() {
   return (
     <section
       ref={sectionRef}
-      className="w-full text-center"
+      className="pricing-home-section w-full text-center"
       style={{ padding: "20px 44px 64px" }}
     >
+      <style>{`
+        @media (max-width: 768px) {
+          .pricing-home-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .pricing-home-section {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .pricing-home-heading {
+            font-size: 24px !important;
+          }
+        }
+      `}</style>
       {/* Eyebrow */}
       <p
         className="uppercase"
@@ -123,6 +137,7 @@ export default function PricingSection() {
           color: "#f0eeff",
           marginBottom: 8,
         }}
+        className="pricing-home-heading"
       >
         Start free. Upgrade your AI when you&apos;re ready.
       </h2>
@@ -135,7 +150,7 @@ export default function PricingSection() {
 
       {/* Grid */}
       <div
-        className="mx-auto grid"
+        className="pricing-home-grid mx-auto grid"
         style={{
           maxWidth: 740,
           gridTemplateColumns: "repeat(3, 1fr)",

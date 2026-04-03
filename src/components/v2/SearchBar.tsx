@@ -80,7 +80,7 @@ export default function SearchBar({
           padding: 0 !important;
         }
         .v2-searchbar-wrapper input::placeholder {
-          color: #3a3758 !important;
+          color: #4e4a6a !important;
         }
         .v2-searchbar-wrapper input:focus {
           ring: none !important;
@@ -97,13 +97,27 @@ export default function SearchBar({
           border-color: rgba(127,119,221,0.65) !important;
           box-shadow: 0 0 0 3px rgba(83,74,183,0.1);
         }
+        @media (max-width: 390px) {
+          .model-chip-row {
+            gap: 3px !important;
+            padding: 8px 10px !important;
+          }
+          .model-chip {
+            font-size: 11px !important;
+            padding: 3px 8px !important;
+          }
+          .model-label {
+            font-size: 10px !important;
+            margin-right: 3px !important;
+          }
+        }
       `}</style>
 
       <div
         className="v2-search-box transition-all"
         style={{
           background: "#13121d",
-          border: "1px solid rgba(127,119,221,0.3)",
+          border: "1px solid rgba(127,119,221,0.4)",
           borderRadius: 16,
           overflow: "hidden",
         }}
@@ -123,6 +137,7 @@ export default function SearchBar({
             strokeLinecap="round"
             strokeLinejoin="round"
             className="mr-3 shrink-0"
+            style={{ opacity: 0.7 }}
           >
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -176,16 +191,16 @@ export default function SearchBar({
         </div>
 
         {/* Divider */}
-        <div style={{ height: 0.5, background: "rgba(127,119,221,0.12)" }} />
+        <div style={{ height: 0.5, background: "rgba(127,119,221,0.18)" }} />
 
         {/* Bottom row — model selector */}
-        <div className="flex items-center gap-3 px-4 py-2.5">
+        <div className="model-chip-row flex items-center gap-3 px-4 py-2.5">
           <span
-            className="shrink-0 uppercase"
+            className="model-label shrink-0 uppercase"
             style={{
               fontSize: 12,
               letterSpacing: "0.06em",
-              color: "#3a3758",
+              color: "#6b6690",
               fontWeight: 600,
             }}
           >
@@ -207,6 +222,7 @@ export default function SearchBar({
                   onMouseLeave={() => setHoveredChip(null)}
                 >
                   <button
+                    className="model-chip"
                     onClick={() => {
                       if (!isAvailable) {
                         router.push("/v2/pricing");
@@ -231,22 +247,22 @@ export default function SearchBar({
                       color: isSelected && isAvailable
                         ? "#c0baf0"
                         : isAvailable
-                          ? "#4e4a6a"
-                          : "#2e2c48",
-                      opacity: isAvailable ? 1 : 0.5,
+                          ? "#9994b8"
+                          : "#4e4a6a",
+                      opacity: isAvailable ? 1 : 0.6,
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && isAvailable)
-                        e.currentTarget.style.color = "#8882b8";
+                        e.currentTarget.style.color = "#c0baf0";
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected && isAvailable)
-                        e.currentTarget.style.color = "#4e4a6a";
+                        e.currentTarget.style.color = "#9994b8";
                     }}
                   >
                     {chip.label}
                     {!isAvailable && (
-                      <span style={{ fontSize: 9, opacity: 0.4, marginLeft: 2 }}>
+                      <span style={{ fontSize: 9, opacity: 0.5, marginLeft: 2, color: "#4e4a6a" }}>
                         &#x1F512;
                       </span>
                     )}

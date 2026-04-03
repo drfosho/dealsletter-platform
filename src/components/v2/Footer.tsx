@@ -49,6 +49,7 @@ export default function Footer() {
 
   return (
     <footer
+      className="footer-outer"
       style={{
         borderTop: "0.5px solid rgba(127,119,221,0.1)",
         background: "#0d0d14",
@@ -56,9 +57,29 @@ export default function Footer() {
         marginTop: "auto",
       }}
     >
+      <style>{`
+        @media (max-width: 768px) {
+          .footer-columns {
+            display: none !important;
+          }
+          .footer-top-row {
+            flex-direction: column !important;
+            gap: 20px !important;
+          }
+          .footer-bottom-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 8px !important;
+          }
+          .footer-outer {
+            padding: 32px 20px 24px !important;
+          }
+        }
+      `}</style>
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         {/* Row 1 */}
         <div
+          className="footer-top-row"
           style={{
             display: "flex",
             justifyContent: "space-between",
@@ -120,7 +141,7 @@ export default function Footer() {
           </div>
 
           {/* Link columns */}
-          <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
+          <div className="footer-columns" style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
             {columns.map((col) => (
               <div key={col.label}>
                 <div
@@ -159,6 +180,7 @@ export default function Footer() {
 
         {/* Row 2 */}
         <div
+          className="footer-bottom-row"
           style={{
             display: "flex",
             justifyContent: "space-between",

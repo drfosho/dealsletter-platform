@@ -95,7 +95,25 @@ export default function V2ContactPage() {
       />
       <NavBar />
 
+      <style>{`
+        @media (max-width: 768px) {
+          .page-main {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .page-headline {
+            font-size: 28px !important;
+            letter-spacing: -0.5px !important;
+          }
+          .contact-grid {
+            grid-template-columns: 1fr !important;
+            gap: 32px !important;
+          }
+        }
+      `}</style>
+
       <main
+        className="page-main"
         style={{
           position: "relative",
           zIndex: 1,
@@ -118,6 +136,7 @@ export default function V2ContactPage() {
           Contact
         </p>
         <h1
+          className="page-headline"
           style={{
             fontSize: 42,
             fontWeight: 700,
@@ -144,6 +163,7 @@ export default function V2ContactPage() {
 
         {/* Two column layout */}
         <div
+          className="contact-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",

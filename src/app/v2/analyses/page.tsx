@@ -209,18 +209,39 @@ export default function V2AnalysesPage() {
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, backgroundImage: "radial-gradient(circle, rgba(127,119,221,0.07) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
       <NavBar />
 
-      <main style={{ position: "relative", zIndex: 1, maxWidth: 960, margin: "0 auto", padding: "48px 24px 80px", flex: 1 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .page-main {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .page-headline {
+            font-size: 28px !important;
+            letter-spacing: -0.5px !important;
+          }
+          .analyses-filter-bar {
+            flex-direction: column !important;
+          }
+          .analyses-filter-bar input,
+          .analyses-filter-bar select {
+            width: 100% !important;
+            min-width: unset !important;
+          }
+        }
+      `}</style>
+
+      <main className="page-main" style={{ position: "relative", zIndex: 1, maxWidth: 960, margin: "0 auto", padding: "48px 24px 80px", flex: 1 }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 700, color: "#f0eeff", letterSpacing: "-0.8px", margin: 0 }}>Analysis History</h1>
+            <h1 className="page-headline" style={{ fontSize: 28, fontWeight: 700, color: "#f0eeff", letterSpacing: "-0.8px", margin: 0 }}>Analysis History</h1>
             <p style={{ fontSize: 14, color: "#4e4a6a", marginTop: 4 }}>{total} properties analyzed</p>
           </div>
           <button onClick={() => router.push("/v2")} style={{ background: "#534AB7", color: "#f0eeff", padding: "9px 20px", borderRadius: 9, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", fontFamily: "inherit" }}>+ New Analysis</button>
         </div>
 
         {/* Filter bar */}
-        <div style={{ background: "#13121d", border: "0.5px solid rgba(127,119,221,0.15)", borderRadius: 14, padding: "16px 20px", marginBottom: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="analyses-filter-bar" style={{ background: "#13121d", border: "0.5px solid rgba(127,119,221,0.15)", borderRadius: 14, padding: "16px 20px", marginBottom: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <input type="text" placeholder="Search by address..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 200 }} onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(127,119,221,0.5)")} onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(127,119,221,0.2)")} />
           <select value={strategyFilter} onChange={(e) => setStrategyFilter(e.target.value)} style={{ ...inputStyle, width: 160 }}>
             <option value="all">All strategies</option>

@@ -222,7 +222,24 @@ export default function V2AccountPage() {
       />
       <NavBar />
 
+      <style>{`
+        @media (max-width: 768px) {
+          .page-main {
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
+          .page-headline {
+            font-size: 28px !important;
+            letter-spacing: -0.5px !important;
+          }
+          .account-stats-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+      `}</style>
+
       <main
+        className="page-main"
         style={{
           position: "relative",
           zIndex: 1,
@@ -242,6 +259,7 @@ export default function V2AccountPage() {
           }}
         >
           <h1
+            className="page-headline"
             style={{
               fontSize: 28,
               fontWeight: 700,
@@ -396,6 +414,7 @@ export default function V2AccountPage() {
               </div>
 
               <div
+                className="account-stats-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr 1fr",
@@ -555,6 +574,7 @@ export default function V2AccountPage() {
               </div>
 
               <div
+                className="account-stats-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr 1fr",

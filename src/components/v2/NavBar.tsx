@@ -20,6 +20,7 @@ export default function NavBar() {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     function onScroll() {
@@ -83,15 +84,55 @@ export default function NavBar() {
 
   return (
     <nav
-      className="sticky top-0 z-50 flex w-full items-center justify-between transition-all duration-300"
-      style={{
-        padding: "22px 44px",
-        borderBottom: "0.5px solid rgba(127,119,221,0.15)",
-        background: scrolled ? "rgba(13,13,20,0.85)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
-        WebkitBackdropFilter: scrolled ? "blur(12px)" : "none",
-      }}
+      className={`nav-outer ${scrolled ? 'scrolled' : ''}`}
     >
+      <style>{`
+        @media (min-width: 769px) {
+          .nav-desktop-links { display: flex; }
+          .nav-mobile-menu-btn { display: none; }
+          .nav-mobile-menu { display: none !important; }
+        }
+        @media (max-width: 768px) {
+          .nav-desktop-links { display: none; }
+          .nav-mobile-menu-btn { display: flex; }
+          .nav-outer { padding: 16px 20px; }
+        }
+        .nav-outer {
+          padding: 22px 44px;
+          background: transparent;
+          border-bottom: 0.5px solid rgba(127,119,221,0.15);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          transition: all 0.3s;
+        }
+        .nav-outer.scrolled {
+          background: rgba(13,13,20,0.85);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+        .nav-mobile-menu {
+          display: none;
+          flex-direction: column;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #0d0d14;
+          z-index: 200;
+          padding: 24px;
+          overflow-y: auto;
+        }
+        .nav-mobile-menu.open {
+          display: flex;
+        }
+      `}</style>
+
       {/* Left — Logo */}
       <Link href="/v2" className="flex items-center gap-2.5 no-underline">
         <div
@@ -123,7 +164,7 @@ export default function NavBar() {
       </Link>
 
       {/* Right — Nav links + auth */}
-      <div className="flex items-center" style={{ gap: 20 }}>
+      <div className="nav-desktop-links flex items-center" style={{ gap: 20 }}>
         {/* Nav links — always visible */}
         <div className="flex items-center" style={{ gap: 34 }}>
           {navLinks.map((link) =>
@@ -333,6 +374,96 @@ export default function NavBar() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Hamburger button */}
+      <button
+        className="nav-mobile-menu-btn"
+        onClick={() => setMenuOpen(!menuOpen)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '8px',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        aria-label="Toggle menu"
+      >
+        {menuOpen ? (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0eeff" strokeWidth="2" strokeLinecap="round">
+            <path d="M18 6L6 18M6 6l12 12"/>
+          </svg>
+        ) : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0eeff" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        )}
+      </button>
+
+      {/* Full-screen mobile menu */}
+      <div className={`nav-mobile-menu ${menuOpen ? 'open' : ''}`}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: 28, height: 28, background: '#3C3489', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="1" width="6" height="7" rx="1.5" fill="#c8c3f0" />
+                <rect x="9" y="1" width="6" height="4" rx="1.5" fill="#c8c3f0" />
+                <rect x="1" y="10" width="6" height="5" rx="1.5" fill="#9994b8" />
+                <rect x="9" y="7" width="6" height="8" rx="1.5" fill="#9994b8" />
+              </svg>
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 600, color: '#f0eeff' }}>Dealsletter</span>
+          </div>
+          <button onClick={() => setMenuOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0eeff" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        {navLinks.map((link) => (
+          <div
+            key={link.label}
+            onClick={() => {
+              setMenuOpen(false);
+              if ((link as any).external) {
+                window.open(link.href, '_blank', 'noopener');
+              } else {
+                router.push(link.href);
+              }
+            }}
+            style={{
+              fontSize: 22,
+              fontWeight: 600,
+              color: '#e8e6f0',
+              padding: '16px 0',
+              borderBottom: '0.5px solid rgba(127,119,221,0.1)',
+              cursor: 'pointer',
+              letterSpacing: '-0.3px',
+            }}
+          >
+            {link.label}
+          </div>
+        ))}
+
+        <div style={{ marginTop: 'auto', paddingTop: '40px' }}>
+          {!isLoadingUser && user ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div onClick={() => { setMenuOpen(false); router.push('/v2'); }} style={{ fontSize: 16, color: '#9994b8', padding: '14px 20px', background: 'rgba(83,74,183,0.1)', borderRadius: 12, cursor: 'pointer' }}>+ New Analysis</div>
+              <div onClick={() => { setMenuOpen(false); router.push('/v2/account'); }} style={{ fontSize: 16, color: '#9994b8', padding: '14px 20px', background: 'rgba(83,74,183,0.1)', borderRadius: 12, cursor: 'pointer' }}>My Account</div>
+              <div onClick={() => { setMenuOpen(false); router.push('/v2/pricing'); }} style={{ fontSize: 16, color: '#9994b8', padding: '14px 20px', background: 'rgba(83,74,183,0.1)', borderRadius: 12, cursor: 'pointer' }}>Pricing &amp; Plans</div>
+              <div onClick={() => { handleSignOut(); setMenuOpen(false); }} style={{ fontSize: 16, color: '#f09595', padding: '14px 20px', cursor: 'pointer' }}>Sign out</div>
+            </div>
+          ) : !isLoadingUser ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button onClick={() => { setMenuOpen(false); router.push('/v2/signup'); }} style={{ background: '#534AB7', color: '#f0eeff', border: 'none', borderRadius: 12, padding: 16, fontSize: 16, fontWeight: 600, cursor: 'pointer', width: '100%', fontFamily: 'inherit' }}>Start free &rarr;</button>
+              <button onClick={() => { setMenuOpen(false); router.push('/v2/login'); }} style={{ background: 'transparent', color: '#9994b8', border: '0.5px solid rgba(127,119,221,0.3)', borderRadius: 12, padding: 16, fontSize: 16, cursor: 'pointer', width: '100%', fontFamily: 'inherit' }}>Sign in</button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </nav>
   );
