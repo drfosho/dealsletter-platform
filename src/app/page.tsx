@@ -385,8 +385,8 @@ export default function Home() {
               </span>
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-primary mb-4 tracking-tight leading-[1.1]">
-              Analyze real estate deals
-              <span className="block bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">that actually work.</span>
+              Analyze any real estate deal
+              <span className="block bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">with AI.</span>
             </h1>
             <p className="text-lg md:text-xl text-primary/70 mb-4 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
               AI-Powered Property Analysis for Real Estate Investors & Agents
