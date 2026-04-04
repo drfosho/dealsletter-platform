@@ -66,7 +66,7 @@ export default function SearchBar({
   }
 
   return (
-    <div className="relative mx-auto w-full" style={{ maxWidth: 640 }}>
+    <div className="relative mx-auto w-full" style={{ width: '100%', maxWidth: 640, boxSizing: 'border-box' }}>
       <style>{`
         .v2-searchbar-wrapper input {
           color: #e8e6f0 !important;
@@ -120,12 +120,13 @@ export default function SearchBar({
           border: "1px solid rgba(127,119,221,0.4)",
           borderRadius: 16,
           overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
         {/* Top row — address input */}
         <div
           className="relative flex items-center"
-          style={{ padding: "18px 56px 18px 20px" }}
+          style={{ padding: "14px 52px 14px 16px" }}
         >
           <svg
             width="18"
@@ -157,14 +158,22 @@ export default function SearchBar({
             onClick={handleSubmit}
             className="absolute flex items-center justify-center transition-colors"
             style={{
+              position: 'absolute',
               right: 12,
-              top: 14,
+              top: '50%',
+              transform: 'translateY(-50%)',
               width: 36,
               height: 36,
               background: "#534AB7",
               borderRadius: 10,
               border: "none",
               cursor: "pointer",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.background = "#6258cc")

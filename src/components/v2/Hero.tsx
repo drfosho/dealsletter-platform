@@ -2,7 +2,7 @@ import SearchBar from "@/components/v2/SearchBar";
 
 export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
   return (
-    <section className="hero-section relative overflow-hidden" style={{ backgroundColor: "#0d0d14" }}>
+    <section className="hero-section relative overflow-hidden" style={{ backgroundColor: "#0d0d14", width: "100%", maxWidth: "100vw" }}>
       <style>{`
         @keyframes v2-pulse-dot {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -11,6 +11,8 @@ export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
         @media (max-width: 768px) {
           .hero-section {
             min-height: auto !important;
+            overflow: hidden !important;
+            position: relative !important;
           }
           .hero-content {
             padding-top: 48px !important;
@@ -22,9 +24,16 @@ export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
             margin-bottom: 24px !important;
           }
           .hero-glow {
-            width: 300px !important;
-            height: 200px !important;
-            opacity: 0.5 !important;
+            display: none !important;
+          }
+          .hero-sub-headline {
+            font-size: 22px !important;
+            line-height: 1.2 !important;
+          }
+          .hero-proof-strip {
+            gap: 6px !important;
+            font-size: 12px !important;
+            margin-top: 20px !important;
           }
         }
         @media (max-width: 390px) {
@@ -83,7 +92,7 @@ export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
           <span style={{ color: "#7F77DD" }}>real estate deal.</span>
           <br />
           <span
-            className="text-3xl font-semibold sm:text-4xl lg:text-5xl"
+            className="hero-sub-headline text-3xl font-semibold sm:text-4xl lg:text-5xl"
             style={{ color: "#9994b8" }}
           >
             With every leading AI model.
@@ -118,7 +127,7 @@ export default function Hero({ isLoggedIn }: { isLoggedIn?: boolean }) {
 
         {/* Proof strip */}
         <div
-          className="mt-12 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
+          className="hero-proof-strip mt-12 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
 
           style={{ color: "#7a7693", fontSize: 14 }}
         >

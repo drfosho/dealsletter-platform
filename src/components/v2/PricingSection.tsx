@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 
 type FeatureStyle = "check" | "partial" | "excluded";
 
@@ -74,30 +73,8 @@ const tiers: Tier[] = [
 ];
 
 export default function PricingSection() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section
-      ref={sectionRef}
       className="pricing-home-section w-full text-center"
       style={{ padding: "20px 44px 64px" }}
     >
@@ -105,13 +82,20 @@ export default function PricingSection() {
         @media (max-width: 768px) {
           .pricing-home-grid {
             grid-template-columns: 1fr !important;
+            gap: 10px !important;
           }
           .pricing-home-section {
-            padding-left: 16px !important;
-            padding-right: 16px !important;
+            padding: 32px 16px 40px !important;
           }
           .pricing-home-heading {
             font-size: 24px !important;
+          }
+          .pricing-home-subhead {
+            font-size: 14px !important;
+            margin-bottom: 24px !important;
+          }
+          .pricing-tier-card {
+            padding: 20px 18px !important;
           }
         }
       `}</style>
@@ -143,7 +127,7 @@ export default function PricingSection() {
       </h2>
 
       {/* Subheading */}
-      <p style={{ fontSize: 15, color: "#4e4a6a", marginBottom: 36 }}>
+      <p className="pricing-home-subhead" style={{ fontSize: 15, color: "#4e4a6a", marginBottom: 36 }}>
         We gate by model quality — not analysis count. The more you invest, the
         smarter your underwriting.
       </p>
@@ -157,10 +141,10 @@ export default function PricingSection() {
           gap: 14,
         }}
       >
-        {tiers.map((tier, i) => (
+        {tiers.map((tier) => (
           <div
             key={tier.name}
-            className="flex flex-col text-left"
+            className="pricing-tier-card flex flex-col text-left"
             style={{
               background: tier.featured ? "#191728" : "#13121d",
               border: tier.featured
@@ -168,9 +152,8 @@ export default function PricingSection() {
                 : "0.5px solid rgba(127,119,221,0.15)",
               borderRadius: 14,
               padding: "26px 22px",
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(20px)",
-              transition: `opacity 0.45s ease ${i * 100}ms, transform 0.45s ease ${i * 100}ms`,
+              opacity: 1,
+              transform: "translateY(0)",
             }}
           >
             {/* Badge */}

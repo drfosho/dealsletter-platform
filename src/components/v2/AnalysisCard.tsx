@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
 const metrics = [
   { label: "Cap Rate", value: "6.8%", color: "#f0eeff" },
   { label: "Cash-on-Cash", value: "9.2%", color: "#7F77DD" },
@@ -10,34 +8,12 @@ const metrics = [
 ] as const;
 
 export default function AnalysisCard() {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div className="analysis-card-section" style={{ maxWidth: 780, margin: "0 auto", padding: "20px 40px 60px" }}>
       <style>{`
         @media (max-width: 768px) {
           .analysis-card-section {
-            padding-left: 16px !important;
-            padding-right: 16px !important;
+            padding: 16px 16px 40px !important;
           }
           .analysis-card-header {
             flex-direction: column !important;
@@ -50,6 +26,15 @@ export default function AnalysisCard() {
           }
           .analysis-card-footer .ml-auto {
             margin-left: 0 !important;
+          }
+          .metrics-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .metrics-grid > div {
+            padding: 16px !important;
+          }
+          .metrics-grid p:last-child {
+            font-size: 22px !important;
           }
         }
       `}</style>
@@ -68,15 +53,13 @@ export default function AnalysisCard() {
 
       {/* Card */}
       <div
-        ref={cardRef}
         className="overflow-hidden"
         style={{
           background: "#13121d",
           border: "0.5px solid rgba(127,119,221,0.2)",
           borderRadius: 16,
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(16px)",
-          transition: "opacity 0.5s ease, transform 0.5s ease",
+          opacity: 1,
+          transform: "translateY(0)",
         }}
       >
         {/* Header */}
@@ -122,7 +105,7 @@ export default function AnalysisCard() {
 
         {/* Metrics grid */}
         <div
-          className="grid"
+          className="metrics-grid grid"
           style={{
             gridTemplateColumns: "1fr 1fr",
           }}

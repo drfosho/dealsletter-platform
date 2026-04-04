@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
 const strategies = [
   {
     icon: (
@@ -52,30 +50,8 @@ const strategies = [
 ] as const;
 
 export default function StrategyGrid() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section
-      ref={sectionRef}
       className="strategy-home-section w-full text-center"
       style={{ padding: "10px 44px 64px" }}
     >
@@ -83,18 +59,28 @@ export default function StrategyGrid() {
         @media (max-width: 768px) {
           .strategy-home-grid {
             grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
           }
           .strategy-home-section {
-            padding-left: 16px !important;
-            padding-right: 16px !important;
+            padding: 20px 16px 40px !important;
           }
           .strategy-home-heading {
-            font-size: 24px !important;
+            font-size: 22px !important;
+            margin-bottom: 6px !important;
+          }
+          .strategy-card {
+            padding: 16px 14px !important;
+          }
+          .strategy-card p:first-of-type {
+            font-size: 14px !important;
+          }
+          .strategy-card p:last-of-type {
+            font-size: 12px !important;
           }
         }
         @media (max-width: 390px) {
           .strategy-home-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: 1fr 1fr !important;
           }
         }
       `}</style>
@@ -146,18 +132,18 @@ export default function StrategyGrid() {
           gap: 14,
         }}
       >
-        {strategies.map((s, i) => (
+        {strategies.map((s) => (
           <div
             key={s.name}
-            className="cursor-pointer text-left"
+            className="strategy-card cursor-pointer text-left"
             style={{
               background: "#13121d",
               border: "0.5px solid rgba(127,119,221,0.15)",
               borderRadius: 12,
               padding: "26px 22px",
-              opacity: visible ? 1 : 0,
-              transform: visible ? "translateY(0)" : "translateY(20px)",
-              transition: `opacity 0.45s ease ${i * 80}ms, transform 0.45s ease ${i * 80}ms, border-color 0.2s`,
+              opacity: 1,
+              transform: "translateY(0)",
+              transition: "border-color 0.2s",
             }}
             onMouseEnter={(e) =>
               (e.currentTarget.style.borderColor = "rgba(127,119,221,0.4)")

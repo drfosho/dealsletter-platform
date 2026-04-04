@@ -18,9 +18,17 @@ export default function NavBar() {
   const [user, setUser] = useState<any>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     function onScroll() {
@@ -87,16 +95,6 @@ export default function NavBar() {
       className={`nav-outer ${scrolled ? 'scrolled' : ''}`}
     >
       <style>{`
-        @media (min-width: 769px) {
-          .nav-desktop-links { display: flex; }
-          .nav-mobile-menu-btn { display: none; }
-          .nav-mobile-menu { display: none !important; }
-        }
-        @media (max-width: 768px) {
-          .nav-desktop-links { display: none; }
-          .nav-mobile-menu-btn { display: flex; }
-          .nav-outer { padding: 16px 20px; }
-        }
         .nav-outer {
           padding: 22px 44px;
           background: transparent;
@@ -115,6 +113,11 @@ export default function NavBar() {
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
         }
+        @media (max-width: 768px) {
+          .nav-outer {
+            padding: 16px 20px;
+          }
+        }
         .nav-mobile-menu {
           display: none;
           flex-direction: column;
@@ -130,6 +133,11 @@ export default function NavBar() {
         }
         .nav-mobile-menu.open {
           display: flex;
+        }
+        @media (max-width: 768px) {
+          .nav-desktop-links-wrapper {
+            display: none !important;
+          }
         }
       `}</style>
 
@@ -163,245 +171,254 @@ export default function NavBar() {
         </span>
       </Link>
 
-      {/* Right — Nav links + auth */}
-      <div className="nav-desktop-links flex items-center" style={{ gap: 20 }}>
-        {/* Nav links — always visible */}
-        <div className="flex items-center" style={{ gap: 34 }}>
-          {navLinks.map((link) =>
-            (link as any).external ? (
-              <span
-                key={link.label}
-                className="no-underline transition-colors"
-                style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
-                onClick={() => window.open(link.href, "_blank", "noopener")}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
-              >
-                {link.label}
-              </span>
-            ) : (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="no-underline transition-colors"
-                style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
-              >
-                {link.label}
-              </Link>
-            )
-          )}
-        </div>
-
-        {!isLoadingUser && !user && (
-          /* Logged out */
-          <div className="flex items-center" style={{ gap: 20 }}>
-            <Link
-              href="/v2/login"
-              className="no-underline transition-colors"
-              style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
-            >
-              Sign in
-            </Link>
-
-            <Link
-              href="/v2/signup"
-              className="inline-block no-underline transition-colors"
-              style={{
-                background: "#534AB7",
-                color: "#f0eeff",
-                padding: "9px 22px",
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: 500,
-                border: "none",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "#6258cc")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "#534AB7")
-              }
-            >
-              Start free
-            </Link>
+      {/* Right — Desktop nav links + auth */}
+      <div className="nav-desktop-links-wrapper">
+      {!isMobile && (
+        <div className="flex items-center" style={{ gap: 20 }}>
+          {/* Nav links */}
+          <div className="flex items-center" style={{ gap: 34 }}>
+            {navLinks.map((link) =>
+              (link as any).external ? (
+                <span
+                  key={link.label}
+                  className="no-underline transition-colors"
+                  style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
+                  onClick={() => window.open(link.href, "_blank", "noopener")}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
+                >
+                  {link.label}
+                </span>
+              ) : (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="no-underline transition-colors"
+                  style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
+                >
+                  {link.label}
+                </Link>
+              )
+            )}
           </div>
-        )}
 
-        {!isLoadingUser && user && (
-          /* Logged in */
-          <div className="flex items-center" style={{ gap: 20 }}>
-            <button
-              onClick={() => router.push("/v2")}
-              style={{
-                background: "transparent",
-                border: "0.5px solid rgba(127,119,221,0.3)",
-                borderRadius: 8,
-                padding: "7px 16px",
-                color: "#9994b8",
-                fontSize: 13,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#c0baf0";
-                e.currentTarget.style.borderColor = "rgba(127,119,221,0.5)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#9994b8";
-                e.currentTarget.style.borderColor = "rgba(127,119,221,0.3)";
-              }}
-            >
-              + New Analysis
-            </button>
+          {!isLoadingUser && !user && (
+            /* Logged out */
+            <div className="flex items-center" style={{ gap: 20 }}>
+              <Link
+                href="/v2/login"
+                className="no-underline transition-colors"
+                style={{ fontSize: 14, color: "#6b6690", cursor: "pointer" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
+              >
+                Sign in
+              </Link>
 
-            {/* Avatar + dropdown */}
-            <div ref={menuRef} style={{ position: "relative" }}>
-              <div
-                onClick={() => setShowMenu(!showMenu)}
+              <Link
+                href="/v2/signup"
+                className="inline-block no-underline transition-colors"
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  background: "rgba(83,74,183,0.3)",
-                  border: "1px solid rgba(127,119,221,0.4)",
-                  color: "#c0baf0",
+                  background: "#534AB7",
+                  color: "#f0eeff",
+                  padding: "9px 22px",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  border: "none",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#6258cc")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "#534AB7")
+                }
+              >
+                Start free
+              </Link>
+            </div>
+          )}
+
+          {!isLoadingUser && user && (
+            /* Logged in */
+            <div className="flex items-center" style={{ gap: 20 }}>
+              <button
+                onClick={() => router.push("/v2")}
+                style={{
+                  background: "transparent",
+                  border: "0.5px solid rgba(127,119,221,0.3)",
+                  borderRadius: 8,
+                  padding: "7px 16px",
+                  color: "#9994b8",
                   fontSize: 13,
-                  fontWeight: 600,
                   cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  fontFamily: "inherit",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#c0baf0";
+                  e.currentTarget.style.borderColor = "rgba(127,119,221,0.5)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "#9994b8";
+                  e.currentTarget.style.borderColor = "rgba(127,119,221,0.3)";
                 }}
               >
-                {user.email?.[0]?.toUpperCase() || "U"}
-              </div>
+                + New Analysis
+              </button>
 
-              {showMenu && (
+              {/* Avatar + dropdown */}
+              <div ref={menuRef} style={{ position: "relative" }}>
                 <div
+                  onClick={() => setShowMenu(!showMenu)}
                   style={{
-                    position: "absolute",
-                    top: 40,
-                    right: 0,
-                    zIndex: 100,
-                    background: "#13121d",
-                    border: "0.5px solid rgba(127,119,221,0.25)",
-                    borderRadius: 10,
-                    padding: 6,
-                    minWidth: 180,
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: "rgba(83,74,183,0.3)",
+                    border: "1px solid rgba(127,119,221,0.4)",
+                    color: "#c0baf0",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  {/* Email */}
-                  <div
-                    style={{
-                      padding: "8px 12px",
-                      fontSize: 12,
-                      color: "#4e4a6a",
-                      borderBottom: "0.5px solid rgba(127,119,221,0.1)",
-                      marginBottom: 4,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {user.email}
-                  </div>
-
-                  <button
-                    style={menuItemStyle}
-                    onClick={() => {
-                      setShowMenu(false);
-                      router.push("/v2/account");
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background =
-                        "rgba(127,119,221,0.1)";
-                      e.currentTarget.style.color = "#c0baf0";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "#9994b8";
-                    }}
-                  >
-                    My Account
-                  </button>
-
-                  <button
-                    style={menuItemStyle}
-                    onClick={() => {
-                      setShowMenu(false);
-                      router.push("/v2/pricing");
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background =
-                        "rgba(127,119,221,0.1)";
-                      e.currentTarget.style.color = "#c0baf0";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                      e.currentTarget.style.color = "#9994b8";
-                    }}
-                  >
-                    Pricing & Plans
-                  </button>
-
-                  <div
-                    style={{
-                      height: 0.5,
-                      background: "rgba(127,119,221,0.1)",
-                      margin: "4px 0",
-                    }}
-                  />
-
-                  <button
-                    style={{ ...menuItemStyle, color: "#f09595" }}
-                    onClick={handleSignOut}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background =
-                        "rgba(162,45,45,0.1)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "transparent";
-                    }}
-                  >
-                    Sign out
-                  </button>
+                  {user.email?.[0]?.toUpperCase() || "U"}
                 </div>
-              )}
+
+                {showMenu && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 40,
+                      right: 0,
+                      zIndex: 100,
+                      background: "#13121d",
+                      border: "0.5px solid rgba(127,119,221,0.25)",
+                      borderRadius: 10,
+                      padding: 6,
+                      minWidth: 180,
+                    }}
+                  >
+                    {/* Email */}
+                    <div
+                      style={{
+                        padding: "8px 12px",
+                        fontSize: 12,
+                        color: "#4e4a6a",
+                        borderBottom: "0.5px solid rgba(127,119,221,0.1)",
+                        marginBottom: 4,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {user.email}
+                    </div>
+
+                    <button
+                      style={menuItemStyle}
+                      onClick={() => {
+                        setShowMenu(false);
+                        router.push("/v2/account");
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "rgba(127,119,221,0.1)";
+                        e.currentTarget.style.color = "#c0baf0";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "#9994b8";
+                      }}
+                    >
+                      My Account
+                    </button>
+
+                    <button
+                      style={menuItemStyle}
+                      onClick={() => {
+                        setShowMenu(false);
+                        router.push("/v2/pricing");
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "rgba(127,119,221,0.1)";
+                        e.currentTarget.style.color = "#c0baf0";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "#9994b8";
+                      }}
+                    >
+                      Pricing & Plans
+                    </button>
+
+                    <div
+                      style={{
+                        height: 0.5,
+                        background: "rgba(127,119,221,0.1)",
+                        margin: "4px 0",
+                      }}
+                    />
+
+                    <button
+                      style={{ ...menuItemStyle, color: "#f09595" }}
+                      onClick={handleSignOut}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background =
+                          "rgba(162,45,45,0.1)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
       </div>
 
-      {/* Hamburger button */}
-      <button
-        className="nav-mobile-menu-btn"
-        onClick={() => setMenuOpen(!menuOpen)}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '8px',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        aria-label="Toggle menu"
-      >
-        {menuOpen ? (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0eeff" strokeWidth="2" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12"/>
-          </svg>
-        ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0eeff" strokeWidth="2" strokeLinecap="round">
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        )}
-      </button>
+      {/* Hamburger button — mobile only */}
+      {isMobile && (
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px',
+            zIndex: 300,
+            WebkitTapHighlightColor: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            touchAction: 'manipulation',
+          }}
+          aria-label="Toggle menu"
+        >
+          {menuOpen ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0eeff" strokeWidth="2" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0eeff" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          )}
+        </button>
+      )}
 
       {/* Full-screen mobile menu */}
       <div className={`nav-mobile-menu ${menuOpen ? 'open' : ''}`}>

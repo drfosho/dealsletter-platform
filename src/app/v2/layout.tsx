@@ -11,5 +11,25 @@ export default function V2Layout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return (
+    <>
+      <style>{`
+        .v2-root {
+          overflow-x: hidden;
+          max-width: 100vw;
+        }
+        *, *::before, *::after {
+          box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+          body {
+            overflow-x: hidden;
+          }
+        }
+      `}</style>
+      <div className="v2-root">
+        {children}
+      </div>
+    </>
+  );
 }
