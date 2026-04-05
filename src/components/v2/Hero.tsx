@@ -25,93 +25,121 @@ export default function Hero({
         backgroundColor: '#0d0d14',
         width: '100%',
         overflowX: 'hidden',
-        padding: '32px 20px 40px',
+        padding: '40px 20px 44px',
         position: 'relative'
       }}>
-        {/* Subtle dot grid */}
+        {/* Dot grid */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: 'radial-gradient(circle, rgba(127,119,221,0.1) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, rgba(127,119,221,0.12) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
           pointerEvents: 'none'
         }}/>
 
+        {/* Subtle glow */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '280px',
+          height: '200px',
+          background: 'radial-gradient(ellipse, rgba(83,74,183,0.15) 0%, transparent 70%)',
+          pointerEvents: 'none'
+        }}/>
+
         <div style={{ position: 'relative', zIndex: 1 }}>
+
           {/* Badge */}
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 8,
+            gap: 7,
             borderRadius: 20,
-            border: '0.5px solid rgba(127,119,221,0.3)',
-            backgroundColor: 'rgba(127,119,221,0.08)',
-            color: '#c4bfef',
-            padding: '6px 14px',
+            border: '0.5px solid rgba(127,119,221,0.35)',
+            backgroundColor: 'rgba(127,119,221,0.1)',
+            color: '#9994b8',
+            padding: '5px 14px',
             fontSize: 12,
-            marginBottom: 20
+            marginBottom: 24,
+            letterSpacing: '0.2px'
           }}>
             <span style={{
               display: 'inline-block',
-              width: 7,
-              height: 7,
+              width: 6,
+              height: 6,
               borderRadius: '50%',
-              backgroundColor: '#7F77DD'
+              backgroundColor: '#7F77DD',
+              flexShrink: 0
             }}/>
             Multi-model AI — now in beta
           </div>
 
           {/* Headline */}
-          <h1 style={{
-            fontSize: 36,
-            fontWeight: 700,
-            lineHeight: 1.15,
-            letterSpacing: '-1px',
-            marginBottom: 16,
-            color: '#f0eeff'
-          }}>
-            Analyze any{' '}
-            <span style={{ color: '#7F77DD' }}>
+          <div style={{ marginBottom: 18 }}>
+            <h1 style={{
+              fontSize: 38,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              letterSpacing: '-1.2px',
+              color: '#f0eeff',
+              margin: 0
+            }}>
+              Analyze any
+            </h1>
+            <h1 style={{
+              fontSize: 38,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              letterSpacing: '-1.2px',
+              color: '#7F77DD',
+              margin: '2px 0'
+            }}>
               real estate deal.
-            </span>
-            <br/>
-            <span style={{
-              fontSize: 26,
+            </h1>
+            <h2 style={{
+              fontSize: 22,
               fontWeight: 600,
-              color: '#9994b8'
+              lineHeight: 1.2,
+              letterSpacing: '-0.5px',
+              color: '#9994b8',
+              margin: '8px 0 0'
             }}>
               With every leading AI model.
-            </span>
-          </h1>
+            </h2>
+          </div>
 
           {/* Subheading */}
           <p style={{
             fontSize: 15,
-            color: '#6b6690',
-            lineHeight: 1.65,
-            marginBottom: 28
+            color: '#5e5a82',
+            lineHeight: 1.7,
+            marginBottom: 32,
+            maxWidth: 340
           }}>
             Stop copy-pasting into ChatGPT.
-            Enter any address. Get cap rate,
+            Enter any address and get cap rate,
             cash flow & ROI in 30 seconds.
           </p>
 
           {/* Search bar */}
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 12 }}>
             <SearchBar userTier={null} />
           </div>
 
           {/* Hint */}
           <p style={{
             fontSize: 13,
-            color: '#6b6888',
-            marginBottom: 24
+            color: '#4e4a6a',
+            marginBottom: 32,
+            lineHeight: 1.5
           }}>
             {isLoggedIn ? (
               'Enter any property address to analyze'
             ) : (
               <>
-                <span style={{ color: '#7F77DD' }}>
+                <span style={{ color: '#534AB7', fontWeight: 500 }}>
                   Free to start
                 </span>
                 {' '}— no account needed
@@ -119,20 +147,47 @@ export default function Hero({
             )}
           </p>
 
-          {/* Proof strip */}
+          {/* Divider */}
+          <div style={{
+            height: '0.5px',
+            background: 'rgba(127,119,221,0.12)',
+            marginBottom: 20
+          }}/>
+
+          {/* Proof strip — vertical on mobile */}
           <div style={{
             display: 'flex',
-            flexWrap: 'wrap',
-            gap: '6px 12px',
-            fontSize: 12,
-            color: '#7a7693'
+            flexDirection: 'column',
+            gap: 10
           }}>
-            <span>10,000+ properties analyzed</span>
-            <span style={{ color: '#7F77DD' }}>·</span>
-            <span>BRRRR · Fix & Flip · Buy & Hold · House Hack</span>
-            <span style={{ color: '#7F77DD' }}>·</span>
-            <span>Results in under 30 seconds</span>
+            {[
+              '10,000+ properties analyzed',
+              'BRRRR · Fix & Flip · Buy & Hold · House Hack',
+              'Results in under 30 seconds'
+            ].map((item, i) => (
+              <div key={i} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}>
+                <div style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  backgroundColor: '#534AB7',
+                  flexShrink: 0
+                }}/>
+                <span style={{
+                  fontSize: 13,
+                  color: '#6b6690',
+                  lineHeight: 1.4
+                }}>
+                  {item}
+                </span>
+              </div>
+            ))}
           </div>
+
         </div>
       </section>
     )
