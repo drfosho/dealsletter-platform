@@ -11,9 +11,13 @@ export default function AnalysisCard() {
   return (
     <div className="analysis-card-section" style={{ maxWidth: 780, margin: "0 auto", padding: "20px 40px 60px" }}>
       <style>{`
+        .metrics-grid {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr !important;
+        }
         @media (max-width: 768px) {
           .analysis-card-section {
-            padding: 16px 16px 40px !important;
+            padding: 16px 16px 32px !important;
           }
           .analysis-card-header {
             flex-direction: column !important;
@@ -28,13 +32,14 @@ export default function AnalysisCard() {
             margin-left: 0 !important;
           }
           .metrics-grid {
+            display: grid !important;
             grid-template-columns: 1fr 1fr !important;
           }
           .metrics-grid > div {
-            padding: 16px !important;
+            padding: 14px 16px !important;
           }
-          .metrics-grid p:last-child {
-            font-size: 22px !important;
+          .metric-value {
+            font-size: 20px !important;
           }
         }
       `}</style>
@@ -106,9 +111,6 @@ export default function AnalysisCard() {
         {/* Metrics grid */}
         <div
           className="metrics-grid grid"
-          style={{
-            gridTemplateColumns: "1fr 1fr",
-          }}
         >
           {metrics.map((m, i) => (
             <div
@@ -137,6 +139,7 @@ export default function AnalysisCard() {
                 {m.label}
               </p>
               <p
+                className="metric-value"
                 style={{
                   fontSize: 28,
                   fontWeight: 700,

@@ -79,13 +79,18 @@ export default function PricingSection() {
       style={{ padding: "20px 44px 64px" }}
     >
       <style>{`
+        .pricing-home-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 14px;
+        }
         @media (max-width: 768px) {
           .pricing-home-grid {
             grid-template-columns: 1fr !important;
             gap: 10px !important;
           }
           .pricing-home-section {
-            padding: 32px 16px 40px !important;
+            padding: 32px 16px 32px !important;
           }
           .pricing-home-heading {
             font-size: 24px !important;
@@ -137,8 +142,6 @@ export default function PricingSection() {
         className="pricing-home-grid mx-auto grid"
         style={{
           maxWidth: 740,
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 14,
         }}
       >
         {tiers.map((tier) => (

@@ -56,13 +56,17 @@ export default function StrategyGrid() {
       style={{ padding: "10px 44px 64px" }}
     >
       <style>{`
+        .strategy-home-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+        }
         @media (max-width: 768px) {
           .strategy-home-grid {
             grid-template-columns: 1fr 1fr !important;
             gap: 10px !important;
           }
           .strategy-home-section {
-            padding: 20px 16px 40px !important;
+            padding: 20px 16px 32px !important;
           }
           .strategy-home-heading {
             font-size: 22px !important;
@@ -128,7 +132,6 @@ export default function StrategyGrid() {
         className="strategy-home-grid mx-auto grid"
         style={{
           maxWidth: 900,
-          gridTemplateColumns: "repeat(4, 1fr)",
           gap: 14,
         }}
       >
