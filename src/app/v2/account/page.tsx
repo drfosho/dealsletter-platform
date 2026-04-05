@@ -591,7 +591,7 @@ export default function V2AccountPage() {
                 <div style={cellStyle}>
                   <div style={cellLabel}>Monthly limit</div>
                   <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
-                    {isAdmin || limit >= 9999 ? "Unlimited" : limit}
+                    {isAdmin || usageInfo?.tier_limit >= 999999 || usageInfo?.tier_limit == null ? "Unlimited" : usageInfo?.tier_limit || 0}
                   </div>
                 </div>
                 <div style={cellStyle}>
@@ -601,7 +601,7 @@ export default function V2AccountPage() {
                       fontSize: 18,
                       fontWeight: 700,
                       color:
-                        isAdmin || limit >= 9999
+                        isAdmin || usageInfo?.tier_limit >= 999999 || usageInfo?.tier_limit == null
                           ? "#1D9E75"
                           : pct < 60
                             ? "#1D9E75"
@@ -610,13 +610,13 @@ export default function V2AccountPage() {
                               : "#f09595",
                     }}
                   >
-                    {isAdmin || limit >= 9999 ? "\u221E" : remaining}
+                    {isAdmin || usageInfo?.tier_limit >= 999999 || usageInfo?.tier_limit == null ? "\u221E" : usageInfo?.remaining || 0}
                   </div>
                 </div>
               </div>
 
               {/* Progress bar */}
-              {!isAdmin && limit > 0 && limit < 9999 && (
+              {!isAdmin && usageInfo?.tier_limit < 999999 && usageInfo?.tier_limit != null && (
                 <div style={{ marginTop: 0 }}>
                   <div
                     style={{

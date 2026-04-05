@@ -125,8 +125,12 @@ export default function SearchBar({
       >
         {/* Top row — address input */}
         <div
-          className="relative flex items-center"
-          style={{ padding: "14px 52px 14px 16px" }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '12px 16px',
+            gap: '10px',
+          }}
         >
           <svg
             width="18"
@@ -137,14 +141,14 @@ export default function SearchBar({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="mr-3 shrink-0"
+            className="shrink-0"
             style={{ opacity: 0.7 }}
           >
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
 
-          <div className="v2-searchbar-wrapper flex-1">
+          <div className="v2-searchbar-wrapper" style={{ flex: 1, minWidth: 0 }}>
             <AddressSearchInput
               onAddressSelect={(address, placeId) => {
                 setSelectedAddress(address);
@@ -156,14 +160,10 @@ export default function SearchBar({
 
           <button
             onClick={handleSubmit}
-            className="absolute flex items-center justify-center transition-colors"
+            className="flex items-center justify-center transition-colors"
             style={{
-              position: 'absolute',
-              right: 12,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               background: "#534AB7",
               borderRadius: 10,
               border: "none",
@@ -172,6 +172,7 @@ export default function SearchBar({
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
+              marginLeft: 'auto',
               touchAction: 'manipulation',
               WebkitTapHighlightColor: 'transparent',
             }}

@@ -76,10 +76,19 @@ export default function Hero({
             Multi-model AI — now in beta
           </div>
 
+          {/* Accent line */}
+          <div style={{
+            width: 32,
+            height: 2,
+            background: '#534AB7',
+            borderRadius: 2,
+            marginBottom: 16
+          }}/>
+
           {/* Headline */}
           <div style={{ marginBottom: 18 }}>
             <h1 style={{
-              fontSize: 38,
+              fontSize: 40,
               fontWeight: 700,
               lineHeight: 1.1,
               letterSpacing: '-1.2px',
@@ -89,7 +98,7 @@ export default function Hero({
               Analyze any
             </h1>
             <h1 style={{
-              fontSize: 38,
+              fontSize: 40,
               fontWeight: 700,
               lineHeight: 1.1,
               letterSpacing: '-1.2px',
@@ -99,11 +108,11 @@ export default function Hero({
               real estate deal.
             </h1>
             <h2 style={{
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: 600,
               lineHeight: 1.2,
               letterSpacing: '-0.5px',
-              color: '#9994b8',
+              color: '#7F77DD',
               margin: '8px 0 0'
             }}>
               With every leading AI model.
@@ -113,7 +122,7 @@ export default function Hero({
           {/* Subheading */}
           <p style={{
             fontSize: 15,
-            color: '#5e5a82',
+            color: '#9994b8',
             lineHeight: 1.7,
             marginBottom: 32,
             maxWidth: 340
@@ -124,7 +133,7 @@ export default function Hero({
           </p>
 
           {/* Search bar */}
-          <div style={{ marginBottom: 12 }}>
+          <div style={{ marginBottom: 16 }}>
             <SearchBar userTier={null} />
           </div>
 
@@ -150,40 +159,32 @@ export default function Hero({
           {/* Divider */}
           <div style={{
             height: '0.5px',
-            background: 'rgba(127,119,221,0.12)',
+            background: 'rgba(127,119,221,0.08)',
             marginBottom: 20
           }}/>
 
-          {/* Proof strip — vertical on mobile */}
+          {/* Proof strip — pill badges */}
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
-            gap: 10
+            flexWrap: 'wrap',
+            gap: 8,
+            marginTop: 4
           }}>
             {[
-              '10,000+ properties analyzed',
-              'BRRRR · Fix & Flip · Buy & Hold · House Hack',
-              'Results in under 30 seconds'
+              '10K+ properties analyzed',
+              'BRRRR · Flip · Buy & Hold · Hack',
+              'Under 30 second results'
             ].map((item, i) => (
               <div key={i} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8
+                background: 'rgba(83,74,183,0.08)',
+                border: '0.5px solid rgba(127,119,221,0.2)',
+                borderRadius: 20,
+                padding: '4px 12px',
+                fontSize: 11,
+                color: '#6b6690',
+                letterSpacing: '0.1px'
               }}>
-                <div style={{
-                  width: 4,
-                  height: 4,
-                  borderRadius: '50%',
-                  backgroundColor: '#534AB7',
-                  flexShrink: 0
-                }}/>
-                <span style={{
-                  fontSize: 13,
-                  color: '#6b6690',
-                  lineHeight: 1.4
-                }}>
-                  {item}
-                </span>
+                {item}
               </div>
             ))}
           </div>
