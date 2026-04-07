@@ -2852,38 +2852,81 @@ function ProMaxComparisonView({
 
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
             marginBottom: 20,
-            padding: "12px 16px",
-            background: "#13121d",
-            border: `0.5px solid ${model?.color}40`,
-            borderRadius: 10,
+            padding: "16px 20px",
+            background: model?.bgColor || "#13121d",
+            border: `0.5px solid ${model?.borderColor || model?.color + "40"}`,
+            borderRadius: 12,
           }}
         >
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: model?.color,
-              flexShrink: 0,
-            }}
-          />
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#e8e6f0" }}>
-              {model?.label}
-            </span>
-            <span style={{ fontSize: 12, color: "#4e4a6a", marginLeft: 8 }}>
-              {model?.roleLabel} — {model?.roleDescription}
-            </span>
-          </div>
-          {result?.latencyMs && (
-            <div style={{ marginLeft: "auto", fontSize: 11, color: "#3a3758" }}>
-              {(result.latencyMs / 1000).toFixed(1)}s
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: `${model?.accentColor || model?.color}26`,
+                  color: model?.accentColor || model?.color,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                {model?.icon || ""}
+              </div>
+              <div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#e8e6f0" }}>
+                  {model?.label}
+                </span>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    marginLeft: 8,
+                    background: `${model?.accentColor || model?.color}1F`,
+                    border: `0.5px solid ${model?.accentColor || model?.color}4D`,
+                    borderRadius: 20,
+                    padding: "1px 10px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: model?.accentColor || model?.color,
+                    letterSpacing: "0.3px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {model?.roleLabel}
+                </div>
+              </div>
             </div>
-          )}
+            {result?.latencyMs && (
+              <div style={{ fontSize: 11, color: "#3a3758" }}>
+                {(result.latencyMs / 1000).toFixed(1)}s
+              </div>
+            )}
+          </div>
+          <div style={{ fontSize: 12, color: "#4e4a6a", lineHeight: 1.5 }}>
+            {model?.roleDescription}
+          </div>
+        </div>
+
+        {/* Narrative title */}
+        <div
+          style={{
+            fontSize: 11,
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            color: model?.accentColor || model?.color,
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 14 }}>{model?.icon || ""}</span>
+          {model?.narrativeTitle || "Analysis"}
         </div>
 
         {result?.parsedResult ? (
@@ -3020,112 +3063,134 @@ function ProMaxComparisonView({
                 if (isComplete) setExpandedModel(model.id);
               }}
               style={{
-                background: "#13121d",
+                background: model.bgColor || "#13121d",
                 border: `0.5px solid ${
                   isComplete
-                    ? model.color + "50"
+                    ? model.borderColor || model.color + "50"
                     : isError
                       ? "rgba(240,149,149,0.3)"
-                      : "rgba(127,119,221,0.15)"
+                      : model.borderColor || "rgba(127,119,221,0.15)"
                 }`,
                 borderRadius: 14,
-                padding: "18px 20px",
+                overflow: "hidden",
                 cursor: isComplete ? "pointer" : "default",
                 transition: "all 0.2s",
               }}
               onMouseEnter={(e) => {
                 if (isComplete) {
-                  e.currentTarget.style.borderColor = model.color + "80";
+                  e.currentTarget.style.borderColor = (model.accentColor || model.color) + "60";
                   e.currentTarget.style.background = "#1a192b";
                 }
               }}
               onMouseLeave={(e) => {
                 if (isComplete) {
-                  e.currentTarget.style.borderColor = model.color + "50";
-                  e.currentTarget.style.background = "#13121d";
+                  e.currentTarget.style.borderColor = model.borderColor || model.color + "50";
+                  e.currentTarget.style.background = model.bgColor || "#13121d";
                 }
               }}
             >
               {/* Model header */}
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  marginBottom: 14,
+                  background: `${model.accentColor || model.color}14`,
+                  borderBottom: `0.5px solid ${model.borderColor || model.color + "40"}`,
+                  padding: "14px 16px",
                 }}
               >
-                <div>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      color: "#e8e6f0",
-                      letterSpacing: "-0.2px",
-                      marginBottom: 3,
-                    }}
-                  >
-                    {model.label}
-                  </div>
-                  <div style={{ fontSize: 11, color: model.color, fontWeight: 500 }}>
-                    {model.roleLabel}
-                  </div>
-                </div>
-                {isComplete && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-end",
-                      gap: 4,
-                    }}
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke={model.color}
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        background: `${model.accentColor || model.color}26`,
+                        color: model.accentColor || model.color,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginRight: 8,
+                        flexShrink: 0,
+                      }}
                     >
-                      <path d="M20 6L9 17l-5-5" />
-                    </svg>
-                    {result?.latencyMs && (
-                      <span style={{ fontSize: 10, color: "#3a3758" }}>
-                        {(result.latencyMs / 1000).toFixed(1)}s
-                      </span>
-                    )}
+                      {model.icon || ""}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#e8e6f0" }}>
+                      {model.label}
+                    </span>
                   </div>
-                )}
-                {isLoading && (
-                  <div
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: "50%",
-                      border: `2px solid ${model.color}`,
-                      borderTopColor: "transparent",
-                      animation: "v2-spin 0.8s linear infinite",
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                {isError && (
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#f09595"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M12 8v4M12 16h.01" />
-                  </svg>
-                )}
+                  {isComplete && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={model.accentColor || model.color}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <path d="M20 6L9 17l-5-5" />
+                      </svg>
+                      {result?.latencyMs && (
+                        <span style={{ fontSize: 10, color: "#3a3758" }}>
+                          {(result.latencyMs / 1000).toFixed(1)}s
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {isLoading && (
+                    <div
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: "50%",
+                        border: `2px solid ${model.accentColor || model.color}`,
+                        borderTopColor: "transparent",
+                        animation: "v2-spin 0.8s linear infinite",
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  {isError && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f09595" strokeWidth="2" strokeLinecap="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 8v4M12 16h.01" />
+                    </svg>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    background: `${model.accentColor || model.color}1F`,
+                    border: `0.5px solid ${model.accentColor || model.color}4D`,
+                    borderRadius: 20,
+                    padding: "2px 10px",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: model.accentColor || model.color,
+                    letterSpacing: "0.3px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {model.roleLabel}
+                </div>
+                <div style={{ fontSize: 11, color: "#4e4a6a", lineHeight: 1.4, marginTop: 4 }}>
+                  {model.roleDescription}
+                </div>
               </div>
+
+              {/* Card body */}
+              <div style={{ padding: "14px 16px" }}>
 
               {/* Progress steps */}
               <div style={{ minHeight: 100, maxHeight: 180, overflowY: "auto" }}>
@@ -3312,9 +3377,9 @@ function ProMaxComparisonView({
                               color:
                                 (r?.dealScore ?? 0) >= 7
                                   ? "#1D9E75"
-                                  : (r?.dealScore ?? 0) >= 5
-                                    ? "#EF9F27"
-                                    : "#f09595",
+                                  : (r?.dealScore ?? 0) <= 4
+                                    ? "#f09595"
+                                    : model.accentColor || "#EF9F27",
                             }}
                           >
                             {r?.dealScore ?? "\u2014"}
@@ -3327,6 +3392,18 @@ function ProMaxComparisonView({
                             >
                               /10
                             </span>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                              color: model.accentColor || model.color,
+                              marginTop: 4,
+                              opacity: 0.8,
+                            }}
+                          >
+                            {model.scoreLabel || "Deal Score"}
                           </div>
                         </div>
                         {/* Strategy-specific metric */}
@@ -3404,6 +3481,7 @@ function ProMaxComparisonView({
                   </div>
                 </div>
               )}
+              </div>{/* end card body */}
             </div>
           );
         })}
@@ -3421,6 +3499,7 @@ function ProMaxComparisonView({
         const variance = max - min;
 
         return (
+          <>
           <div
             className="promax-consensus"
             style={{
@@ -3590,6 +3669,28 @@ function ProMaxComparisonView({
               Click any card above &rarr;
             </div>
           </div>
+          <div
+            style={{
+              marginTop: 12,
+              padding: "10px 14px",
+              background: "rgba(83,74,183,0.06)",
+              borderRadius: 8,
+              fontSize: 12,
+              color: "#6b6690",
+              lineHeight: 1.5,
+            }}
+          >
+            {variance === 0
+              ? "\u26A1 Rare: all three models agree exactly. High conviction signal."
+              : variance <= 1
+                ? "\u2713 Strong consensus \u2014 The Skeptic, Sponsor, and Quant all see this deal similarly."
+                : variance <= 2
+                  ? "~ Moderate variance \u2014 some disagreement between risk and opportunity perspectives."
+                  : variance <= 3
+                    ? "\u26A0 Notable variance \u2014 The Skeptic sees more risk than the Sponsor sees opportunity. Dig deeper."
+                    : "\u26A0 High variance \u2014 fundamental disagreement between models. Proceed with caution."}
+          </div>
+          </>
         );
       })()}
     </div>
