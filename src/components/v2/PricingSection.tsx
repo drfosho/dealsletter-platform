@@ -28,7 +28,7 @@ const tiers: Tier[] = [
     modelLabel: "Speed model only",
     features: [
       { text: "Property data pull on any address", style: "check" },
-      { text: "3 analyses per month", style: "check" },
+      { text: "Unlimited analyses on Speed model", style: "check" },
       { text: "All 4 investment strategies", style: "check" },
       { text: "Risk flags & AI narrative blurred", style: "partial" },
       { text: "No PDF export or saved history", style: "excluded" },
@@ -49,10 +49,9 @@ const tiers: Tier[] = [
       { text: "Auto model routing per strategy", style: "check" },
       { text: "All 4 strategies", style: "check" },
       { text: "Save history + PDF & Excel export", style: "check" },
-      { text: "Speed model available for faster runs", style: "check" },
     ],
     note: "One good deal analysis pays for a full year of this subscription.",
-    cta: "Start Pro \u2014 7 days free",
+    cta: "Start Pro \u2192",
     featured: true,
   },
   {
@@ -306,6 +305,10 @@ export default function PricingSection() {
                     color: "#f0eeff",
                     fontSize: 14,
                     fontWeight: 500,
+                    fontFamily: "inherit",
+                  }}
+                  onClick={() => {
+                    window.location.href = "/v2/pricing";
                   }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.background = "#6258cc")
@@ -326,6 +329,14 @@ export default function PricingSection() {
                     borderRadius: 8,
                     color: "#9994b8",
                     fontSize: 14,
+                    fontFamily: "inherit",
+                  }}
+                  onClick={() => {
+                    if (tier.name === "Free") {
+                      window.location.href = "/v2/signup";
+                    } else {
+                      window.location.href = "/v2/pricing";
+                    }
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor =
@@ -348,7 +359,7 @@ export default function PricingSection() {
 
       {/* Footer note */}
       <p style={{ marginTop: 24, fontSize: 13, color: "#2e2c48" }}>
-        All plans include a 7-day free trial. No credit card required to start.
+        Free plan requires no credit card. Paid plans billed monthly or annually.
       </p>
     </section>
   );
