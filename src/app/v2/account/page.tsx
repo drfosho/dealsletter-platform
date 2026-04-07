@@ -88,36 +88,17 @@ export default function V2AccountPage() {
   const handleManageBilling = async () => {
     setIsLoadingBilling(true);
     try {
-      const res = await fetch(
-        "/api/stripe/billing-portal?returnPath=/v2/account",
-        { method: "POST" }
-      );
-      if (res.ok) {
-        const { url } = await res.json();
-        window.location.href = url;
-      }
-    } catch (err) {
-      console.error("Billing portal error:", err);
-    } finally {
-      setIsLoadingBilling(false);
-    }
-  };
-
-  const handleCancelSubscription = async () => {
-    // Send to billing portal where user can cancel themselves
-    setIsLoadingBilling(true);
-    try {
-      const res = await fetch('/api/stripe/billing-portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ returnPath: '/v2/account' })
+      const res = await fetch("/api/stripe/billing-portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnPath: "/v2/account" }),
       });
       if (res.ok) {
         const { url } = await res.json();
         window.location.href = url;
       }
     } catch (err) {
-      console.error('Portal error:', err);
+      console.error("Portal error:", err);
     } finally {
       setIsLoadingBilling(false);
     }
@@ -558,7 +539,7 @@ export default function V2AccountPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={handleCancelSubscription}
+                        onClick={handleManageBilling}
                         disabled={isLoadingBilling}
                         style={{
                           background: "transparent",

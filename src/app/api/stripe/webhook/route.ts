@@ -649,6 +649,36 @@ export async function POST(request: NextRequest) {
           } else {
             console.log('[Webhook] subscription.updated - ✅ User profile updated');
 
+            // Send upgrade welcome email if tier improved
+            const newTier = updateResult.subscription_tier;
+            try {
+              const isUpgrade = newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium' || newTier === 'pro';
+              const isCancelling = subscription.cancel_at_period_end;
+
+              if (isUpgrade && !isCancelling) {
+                let emailToSend: string | undefined;
+                try {
+                  const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
+                  emailToSend = customer.email || undefined;
+                } catch {}
+
+                if (emailToSend) {
+                  const interval = subscription.items?.data?.[0]?.plan?.interval || 'month';
+                  const billingPeriod = interval === 'year' ? 'yearly' : 'monthly';
+
+                  if (newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium') {
+                    await sendV2ProMaxWelcomeEmail(emailToSend, undefined, billingPeriod);
+                    console.log('[Webhook] ✉️ Pro Max upgrade welcome email sent');
+                  } else if (newTier === 'pro') {
+                    await sendV2ProWelcomeEmail(emailToSend, undefined, billingPeriod);
+                    console.log('[Webhook] ✉️ Pro upgrade welcome email sent');
+                  }
+                }
+              }
+            } catch (emailErr) {
+              console.error('[Webhook] Upgrade email failed:', emailErr);
+            }
+
             // Send cancellation email when subscription is set to cancel at period end
             if (subscription.cancel_at_period_end) {
               let customerEmail: string | null = null;
