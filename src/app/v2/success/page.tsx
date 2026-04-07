@@ -1,13 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import NavBar from '@/components/v2/NavBar'
 
 export default function SuccessPage() {
-  const router = useRouter()
-  const [countdown, setCountdown] = useState(5)
+  const [countdown, setCountdown] = useState(8)
   const [tierConfirmed, setTierConfirmed] = useState(false)
   const [tierName, setTierName] = useState<string | null>(null)
 
@@ -70,14 +68,14 @@ export default function SuccessPage() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer)
-          router.push('/v2/dashboard')
+          window.location.href = '/v2/dashboard'
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [router])
+  }, [])
 
   return (
     <div style={{
@@ -192,7 +190,7 @@ export default function SuccessPage() {
           </div>
 
           <button
-            onClick={() => router.push('/v2/dashboard')}
+            onClick={() => window.location.href = '/v2/dashboard'}
             style={{
               width: '100%',
               background: '#534AB7',
