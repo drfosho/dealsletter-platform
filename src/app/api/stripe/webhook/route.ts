@@ -3,6 +3,11 @@ import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import Stripe from 'stripe';
 import { sendCancellationEmail, sendSubscriptionEmail } from '@/lib/email';
+import {
+  sendProWelcomeEmail as sendV2ProWelcomeEmail,
+  sendProMaxWelcomeEmail as sendV2ProMaxWelcomeEmail,
+  sendV2CancellationEmail,
+} from '@/lib/v2-emails';
 
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
@@ -338,6 +343,31 @@ export async function POST(request: NextRequest) {
               id: updateResult.id,
               newTier: updateResult.subscription_tier
             });
+
+            // Send V2 welcome email based on tier
+            const newTier = updateResult.subscription_tier;
+            try {
+              let emailToSend: string | undefined;
+              const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
+              emailToSend = customer.email || undefined;
+
+              if (emailToSend && newTier) {
+                const firstName = subscription.metadata?.firstName || undefined;
+                const interval = subscription.items?.data?.[0]?.plan?.interval || 'month';
+                const billingPeriod = interval === 'year' ? 'yearly' : 'monthly';
+
+                if (newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium') {
+                  await sendV2ProMaxWelcomeEmail(emailToSend, firstName, billingPeriod);
+                  console.log('[Webhook] ✉️ V2 Pro Max welcome email sent');
+                } else if (newTier === 'pro') {
+                  await sendV2ProWelcomeEmail(emailToSend, firstName, billingPeriod);
+                  console.log('[Webhook] ✉️ V2 Pro welcome email sent');
+                }
+              }
+            } catch (emailErr) {
+              // Never fail webhook due to email error
+              console.error('[Webhook] V2 email send failed:', emailErr);
+            }
           }
         } else {
           console.error('[Webhook] subscription.created - ❌ Could not find user for subscription:', subscription.id);
@@ -632,11 +662,18 @@ export async function POST(request: NextRequest) {
                 const accessUntil = new Date(periodEndISO).toLocaleDateString('en-US', {
                   month: 'long', day: 'numeric', year: 'numeric'
                 });
+
+                // Send V2 cancellation email
+                sendV2CancellationEmail(customerEmail, undefined, accessUntil)
+                  .then(() => console.log('[Webhook] ✉️ V2 cancellation email sent'))
+                  .catch(err => console.error('[Webhook] V2 cancellation email error:', err));
+
+                // Also send V1 cancellation email as fallback
                 sendCancellationEmail({
                   email: customerEmail,
                   planName: tierName === 'pro' ? 'Pro' : tierName === 'pro-plus' ? 'Pro Plus' : 'Pro',
                   accessUntil,
-                }).catch(err => console.error('[Webhook] Cancellation email error:', err));
+                }).catch(err => console.error('[Webhook] V1 Cancellation email error:', err));
               }
             }
           }
