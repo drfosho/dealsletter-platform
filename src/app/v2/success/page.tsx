@@ -10,34 +10,32 @@ export default function SuccessPage() {
   const [countdown, setCountdown] = useState(12)
   const [tierConfirmed, setTierConfirmed] = useState(false)
   const [tierName, setTierName] = useState<string | null>(null)
+  const [redirectTarget, setRedirectTarget] = useState('/v2/dashboard?upgraded=true')
+  const [sessionChecked, setSessionChecked] = useState(false)
 
-  // Restore session — user arrives from Stripe's domain
-  // so the Supabase cookie may not be active yet
+  // Check session — user arrives from Stripe's domain
+  // so the Supabase cookie may not be active
   useEffect(() => {
-    const restoreSession = async () => {
+    const handleSession = async () => {
       const supabase = createClient()
 
-      let attempts = 0
-      const tryGetSession = async (): Promise<boolean> => {
-        const { data: { session } } = await supabase.auth.getSession()
+      // Wait 2 seconds for cookies to settle
+      await new Promise(r => setTimeout(r, 2000))
 
-        if (session) {
-          console.log('Session restored')
-          return true
-        }
+      const { data: { session } } = await supabase.auth.getSession()
 
-        attempts++
-        if (attempts < 5) {
-          await new Promise(r => setTimeout(r, 1000))
-          return tryGetSession()
-        }
-        return false
+      if (!session) {
+        // No session — store intent and send to login
+        localStorage.setItem('post_login_redirect', '/v2/dashboard?upgraded=true')
+        localStorage.setItem('just_subscribed', 'true')
+        setRedirectTarget('/v2/login')
+      } else {
+        setRedirectTarget('/v2/dashboard?upgraded=true')
       }
-
-      await tryGetSession()
+      setSessionChecked(true)
     }
 
-    restoreSession()
+    handleSession()
   }, [])
 
   // Poll for tier update
@@ -89,14 +87,16 @@ export default function SuccessPage() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer)
-          router.push('/v2/dashboard?upgraded=true')
+          if (sessionChecked) {
+            router.push(redirectTarget)
+          }
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [router])
+  }, [router, sessionChecked, redirectTarget])
 
   return (
     <div style={{
@@ -197,21 +197,35 @@ export default function SuccessPage() {
             Welcome to Dealsletter. Let&apos;s analyze some deals.
           </p>
 
-          {/* Countdown */}
-          <div style={{
-            background: 'rgba(83,74,183,0.08)',
-            border: '0.5px solid rgba(127,119,221,0.2)',
-            borderRadius: 12,
-            padding: '14px 20px',
-            marginBottom: 20,
-            fontSize: 14,
-            color: '#9994b8'
-          }}>
-            Redirecting to dashboard in {countdown} second{countdown !== 1 ? 's' : ''}...
-          </div>
+          {/* Countdown / login message */}
+          {redirectTarget.includes('login') ? (
+            <div style={{
+              background: 'rgba(83,74,183,0.08)',
+              border: '0.5px solid rgba(127,119,221,0.2)',
+              borderRadius: 12,
+              padding: '14px 20px',
+              marginBottom: 20,
+              fontSize: 14,
+              color: '#9994b8'
+            }}>
+              Please log in to access your new plan. Your subscription is active and ready.
+            </div>
+          ) : (
+            <div style={{
+              background: 'rgba(83,74,183,0.08)',
+              border: '0.5px solid rgba(127,119,221,0.2)',
+              borderRadius: 12,
+              padding: '14px 20px',
+              marginBottom: 20,
+              fontSize: 14,
+              color: '#9994b8'
+            }}>
+              Redirecting to dashboard in {countdown} second{countdown !== 1 ? 's' : ''}...
+            </div>
+          )}
 
           <button
-            onClick={() => router.push('/v2/dashboard?upgraded=true')}
+            onClick={() => router.push(redirectTarget)}
             style={{
               width: '100%',
               background: '#534AB7',
@@ -225,7 +239,9 @@ export default function SuccessPage() {
               fontFamily: 'inherit'
             }}
           >
-            Go to dashboard &rarr;
+            {redirectTarget.includes('login')
+              ? 'Log in to access your plan \u2192'
+              : 'Go to dashboard \u2192'}
           </button>
         </div>
       </div>

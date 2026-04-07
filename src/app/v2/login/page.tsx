@@ -44,6 +44,11 @@ function LoginContent() {
       }
 
       if (data.session) {
+        const justSubscribed = localStorage.getItem("just_subscribed") === "true";
+        if (justSubscribed) {
+          localStorage.removeItem("just_subscribed");
+        }
+
         const destination =
           searchParams?.get("redirect") ||
           localStorage.getItem("post_login_redirect") ||
