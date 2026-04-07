@@ -44,12 +44,12 @@ function LoginContent() {
       }
 
       if (data.session) {
-        const redirectTo =
+        const destination =
           searchParams?.get("redirect") ||
           localStorage.getItem("post_login_redirect") ||
-          "/v2/analyze";
+          "/v2/dashboard";
         localStorage.removeItem("post_login_redirect");
-        window.location.href = redirectTo;
+        window.location.href = destination;
       } else {
         setAuthError("An unexpected error occurred. Please try again.");
       }

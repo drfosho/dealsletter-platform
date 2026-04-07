@@ -43,6 +43,7 @@ export default function V2AccountPage() {
   const [usageInfo, setUsageInfo] = useState<any>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isLoadingBilling, setIsLoadingBilling] = useState(false);
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
 
   /* ---------- Load data ------------------------------------------- */
 
@@ -63,6 +64,15 @@ export default function V2AccountPage() {
       try {
         const res = await fetch("/api/analysis/usage");
         if (res.ok) setUsageInfo(await res.json());
+
+        // Check cancel_at_period_end from user_profiles table
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("cancel_at_period_end, current_period_end")
+          .eq("id", session.user.id)
+          .single();
+
+        setCancelAtPeriodEnd(profile?.cancel_at_period_end || false);
       } catch (err) {
         console.error("Failed to load usage:", err);
       } finally {
@@ -512,29 +522,67 @@ export default function V2AccountPage() {
                         Upgrade to Pro Max
                       </button>
                     )}
-                    <button
-                      onClick={handleCancelSubscription}
-                      style={{
-                        background: "transparent",
-                        border: "0.5px solid rgba(127,119,221,0.15)",
-                        color: "#6b6690",
-                        padding: "10px 20px",
-                        borderRadius: 9,
-                        fontSize: 13,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = "#f09595";
-                        e.currentTarget.style.borderColor = "rgba(162,45,45,0.2)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = "#6b6690";
-                        e.currentTarget.style.borderColor = "rgba(127,119,221,0.15)";
-                      }}
-                    >
-                      Cancel subscription →
-                    </button>
+                    {cancelAtPeriodEnd ? (
+                      <div style={{ width: "100%" }}>
+                        <div style={{
+                          background: "rgba(239,159,39,0.08)",
+                          border: "0.5px solid rgba(239,159,39,0.25)",
+                          borderRadius: 10,
+                          padding: "12px 16px",
+                          marginBottom: 10,
+                          fontSize: 13,
+                          color: "#EF9F27",
+                          lineHeight: 1.5,
+                        }}>
+                          Your subscription will end on{" "}
+                          {formatDate(usageInfo?.current_period_end)}.
+                          You still have full access until then.
+                        </div>
+                        <button
+                          onClick={handleManageBilling}
+                          disabled={isLoadingBilling}
+                          style={{
+                            background: "rgba(29,158,117,0.12)",
+                            border: "0.5px solid rgba(29,158,117,0.3)",
+                            color: "#1D9E75",
+                            borderRadius: 9,
+                            padding: "10px 20px",
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          {isLoadingBilling ? "Opening..." : "Resume subscription \u2192"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={isLoadingBilling}
+                        style={{
+                          background: "transparent",
+                          border: "0.5px solid rgba(127,119,221,0.15)",
+                          color: "#6b6690",
+                          borderRadius: 9,
+                          padding: "10px 20px",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = "#f09595";
+                          e.currentTarget.style.borderColor = "rgba(162,45,45,0.2)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = "#6b6690";
+                          e.currentTarget.style.borderColor = "rgba(127,119,221,0.15)";
+                        }}
+                      >
+                        Cancel subscription &rarr;
+                      </button>
+                    )}
                   </>
                 )}
               </div>

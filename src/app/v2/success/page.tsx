@@ -1,17 +1,60 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import NavBar from '@/components/v2/NavBar'
 
-function SuccessContent() {
+export default function SuccessPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const sessionId = searchParams?.get('session_id')
   const [countdown, setCountdown] = useState(5)
+  const [tierConfirmed, setTierConfirmed] = useState(false)
+  const [tierName, setTierName] = useState<string | null>(null)
 
+  // Poll for tier update
   useEffect(() => {
-    // Countdown then redirect to dashboard
+    let attempts = 0
+    const maxAttempts = 10
+
+    const pollTier = async () => {
+      try {
+        const res = await fetch('/api/analysis/usage')
+        if (res.ok) {
+          const data = await res.json()
+          const tier = data.subscription_tier
+          const status = data.subscription_status
+
+          if (status === 'active' && tier !== 'free' && tier != null) {
+            const displayName =
+              tier === 'pro_plus' || tier === 'pro-plus' || tier === 'premium'
+                ? 'Pro Max'
+                : 'Pro'
+            setTierName(displayName)
+            setTierConfirmed(true)
+            return true
+          }
+        }
+      } catch {}
+      return false
+    }
+
+    const poll = async () => {
+      const confirmed = await pollTier()
+      if (!confirmed) {
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 1000)
+        } else {
+          // Give up polling, proceed anyway
+          setTierConfirmed(true)
+        }
+      }
+    }
+
+    poll()
+  }, [])
+
+  // Countdown redirect
+  useEffect(() => {
     const timer = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
@@ -50,7 +93,7 @@ function SuccessContent() {
           width: '100%',
           textAlign: 'center'
         }}>
-          {/* Success checkmark */}
+          {/* Success icon */}
           <div style={{
             width: 64,
             height: 64,
@@ -70,16 +113,50 @@ function SuccessContent() {
             </svg>
           </div>
 
-          {/* Heading */}
           <h1 style={{
             fontSize: 28,
             fontWeight: 700,
             color: '#f0eeff',
             letterSpacing: '-0.6px',
-            marginBottom: 10
+            marginBottom: 8
           }}>
-            You're all set!
+            You&apos;re all set!
           </h1>
+
+          {/* Tier confirmation */}
+          {tierConfirmed && tierName && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(29,158,117,0.1)',
+              border: '0.5px solid rgba(29,158,117,0.3)',
+              borderRadius: 20,
+              padding: '4px 14px',
+              fontSize: 13,
+              color: '#1D9E75',
+              marginBottom: 16
+            }}>
+              &#10003; {tierName} plan activated
+            </div>
+          )}
+
+          {!tierConfirmed && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(83,74,183,0.1)',
+              border: '0.5px solid rgba(127,119,221,0.2)',
+              borderRadius: 20,
+              padding: '4px 14px',
+              fontSize: 13,
+              color: '#9994b8',
+              marginBottom: 16
+            }}>
+              Activating your plan...
+            </div>
+          )}
 
           <p style={{
             fontSize: 15,
@@ -87,9 +164,7 @@ function SuccessContent() {
             lineHeight: 1.6,
             marginBottom: 32
           }}>
-            Your subscription is active.
-            Welcome to Dealsletter — let's
-            analyze some deals.
+            Welcome to Dealsletter. Let&apos;s analyze some deals.
           </p>
 
           {/* Countdown */}
@@ -97,16 +172,14 @@ function SuccessContent() {
             background: 'rgba(83,74,183,0.08)',
             border: '0.5px solid rgba(127,119,221,0.2)',
             borderRadius: 12,
-            padding: '16px 20px',
-            marginBottom: 24,
+            padding: '14px 20px',
+            marginBottom: 20,
             fontSize: 14,
             color: '#9994b8'
           }}>
-            Redirecting to dashboard
-            in {countdown} second{countdown !== 1 ? 's' : ''}...
+            Redirecting to dashboard in {countdown} second{countdown !== 1 ? 's' : ''}...
           </div>
 
-          {/* Manual redirect button */}
           <button
             onClick={() => router.push('/v2/dashboard')}
             style={{
@@ -122,18 +195,10 @@ function SuccessContent() {
               fontFamily: 'inherit'
             }}
           >
-            Go to dashboard →
+            Go to dashboard &rarr;
           </button>
         </div>
       </div>
     </div>
-  )
-}
-
-export default function SuccessPage() {
-  return (
-    <Suspense>
-      <SuccessContent />
-    </Suspense>
   )
 }

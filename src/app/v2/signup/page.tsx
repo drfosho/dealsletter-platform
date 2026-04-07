@@ -252,20 +252,15 @@ export default function SignupPage() {
         >
           {isSuccess ? (
             /* ---- Success State ---- */
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
+            <div style={{ textAlign: "center", padding: "8px 0" }}>
+              {/* Email icon */}
               <div
                 style={{
                   width: 56,
                   height: 56,
                   borderRadius: "50%",
-                  background: "rgba(29,158,117,0.15)",
-                  border: "1.5px solid rgba(29,158,117,0.4)",
+                  background: "rgba(83,74,183,0.12)",
+                  border: "0.5px solid rgba(127,119,221,0.3)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -277,62 +272,81 @@ export default function SignupPage() {
                   height="24"
                   viewBox="0 0 24 24"
                   fill="none"
+                  stroke="#7F77DD"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                 >
-                  <path
-                    d="M4 12L9 17L20 6"
-                    stroke="#1D9E75"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
                 </svg>
               </div>
+
               <h2
                 style={{
                   fontSize: 22,
                   fontWeight: 700,
                   color: "#f0eeff",
-                  textAlign: "center",
-                  margin: 0,
+                  letterSpacing: "-0.4px",
+                  marginBottom: 8,
                 }}
               >
-                Account created!
+                Check your email
               </h2>
+
               <p
                 style={{
                   fontSize: 14,
-                  color: "#4e4a6a",
-                  textAlign: "center",
-                  maxWidth: 280,
-                  lineHeight: 1.6,
-                  margin: "10px auto 24px",
+                  color: "#6b6690",
+                  lineHeight: 1.7,
+                  marginBottom: 24,
                 }}
               >
-                Check your email to confirm your account, then sign in to start
-                analyzing deals.
+                We sent a confirmation link to{" "}
+                <span style={{ color: "#9994b8" }}>{email}</span>. Click the
+                link to activate your account and get started.
               </p>
+
+              <div
+                style={{
+                  background: "rgba(83,74,183,0.06)",
+                  border: "0.5px solid rgba(127,119,221,0.15)",
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  fontSize: 13,
+                  color: "#4e4a6a",
+                  lineHeight: 1.6,
+                  marginBottom: 24,
+                  textAlign: "left",
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 500,
+                    color: "#6b6690",
+                    marginBottom: 6,
+                  }}
+                >
+                  Didn&apos;t get it?
+                </div>
+                Check your spam folder. The email comes from{" "}
+                <span style={{ color: "#9994b8" }}>noreply@dealsletter.io</span>
+              </div>
+
               <button
                 onClick={() => router.push("/v2/login")}
                 style={{
                   width: "100%",
-                  background: "#534AB7",
-                  color: "#f0eeff",
-                  padding: 13,
+                  background: "transparent",
+                  border: "0.5px solid rgba(127,119,221,0.3)",
+                  color: "#9994b8",
                   borderRadius: 10,
-                  fontSize: 15,
-                  fontWeight: 500,
-                  border: "none",
+                  padding: "12px",
+                  fontSize: 14,
                   cursor: "pointer",
                   fontFamily: "inherit",
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#6258cc")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#534AB7")
-                }
               >
-                Go to sign in &rarr;
+                Back to sign in
               </button>
             </div>
           ) : (
