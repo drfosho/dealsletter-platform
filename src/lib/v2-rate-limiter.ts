@@ -17,13 +17,13 @@ export interface RateLimitConfig {
 }
 
 const RATE_LIMITS = {
-  free: { perHour: 5, perDay: 20 },
-  pro: { perHour: 20, perDay: 100 },
+  free: { perHour: 10, perDay: 40 },
+  pro: { perHour: 30, perDay: 80 },
   pro_max: {
-    perHour: 30,
-    perDay: 150,
-    parallelPerHour: 10,
-    parallelPerDay: 50,
+    perHour: 40,
+    perDay: 100,
+    parallelPerHour: 8,
+    parallelPerDay: 20,
   },
 };
 
