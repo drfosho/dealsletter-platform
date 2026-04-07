@@ -126,10 +126,17 @@ export default function PricingPage() {
     fetch('/api/analysis/usage')
       .then(r => r.json())
       .then(data => {
+        console.log('Pricing page usage data:', {
+          tier: data.subscription_tier,
+          status: data.subscription_status,
+          raw: data
+        });
         setUserTier(data.subscription_tier || null);
         setUserStatus(data.subscription_status || null);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.log('Usage fetch error:', err);
+      });
   }, []);
 
   const isCurrentPlan = (tierName: 'pro' | 'pro_max'): boolean => {
@@ -145,16 +152,30 @@ export default function PricingPage() {
 
   const handleSubscribe = async (tier: 'pro' | 'pro_max') => {
     setIsSubscribing(tier);
+    console.log('handleSubscribe called:', {
+      tier,
+      userTier,
+      userStatus,
+      isActive: userStatus === 'active',
+      isNotFree: userTier !== 'free'
+    });
+
     try {
-      // First check if user has active subscription
       const usageRes = await fetch('/api/analysis/usage');
       if (usageRes.ok) {
         const usage = await usageRes.json();
+        console.log('Live usage check:', {
+          tier: usage.subscription_tier,
+          status: usage.subscription_status
+        });
+
         const currentTier = usage.subscription_tier || 'free';
         const isActive = usage.subscription_status === 'active';
 
-        // If already subscribed to any paid plan, send to billing portal
+        console.log('Should redirect to portal?', isActive && currentTier !== 'free');
+
         if (isActive && currentTier !== 'free' && currentTier !== null) {
+          console.log('Redirecting to portal...');
           const portalRes = await fetch('/api/stripe/billing-portal', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -162,13 +183,17 @@ export default function PricingPage() {
           });
           if (portalRes.ok) {
             const { url } = await portalRes.json();
+            console.log('Portal URL:', url);
             window.location.href = url;
             return;
+          } else {
+            console.log('Portal failed:', await portalRes.text());
           }
         }
       }
 
-      // Not subscribed — create new checkout session
+      // Continue to checkout...
+      console.log('Creating checkout session...');
       const res = await fetch('/api/v2/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
