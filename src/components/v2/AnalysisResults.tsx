@@ -1173,6 +1173,48 @@ export default function AnalysisResults({
   const v2m = result.metrics;
   const v2cf = result.cashFlow;
 
+  // Determine model personality for Pro Max section reordering
+  const modelPersonality = (() => {
+    if (model?.includes("Opus")) return {
+      role: "skeptic" as const,
+      accentColor: "#f09595",
+      badgeColor: "rgba(240,149,149,0.15)",
+      badgeBorder: "rgba(240,149,149,0.3)",
+      narrativeTitle: "RISK ASSESSMENT",
+      scoreLabel: "DOWNSIDE CASE",
+      sectionOrder: ["score", "risks", "narrative", "metrics", "proforma", "chart", "market"],
+    };
+    if (model?.includes("GPT-4o") && !model?.includes("mini")) return {
+      role: "sponsor" as const,
+      accentColor: "#1D9E75",
+      badgeColor: "rgba(29,158,117,0.15)",
+      badgeBorder: "rgba(29,158,117,0.3)",
+      narrativeTitle: "INVESTMENT THESIS",
+      scoreLabel: "OPPORTUNITY RATING",
+      sectionOrder: ["score", "narrative", "metrics", "proforma", "chart", "risks", "market"],
+    };
+    if (model?.includes("Grok")) return {
+      role: "quant" as const,
+      accentColor: "#7F77DD",
+      badgeColor: "rgba(127,119,221,0.15)",
+      badgeBorder: "rgba(127,119,221,0.3)",
+      narrativeTitle: "QUANTITATIVE MODEL",
+      scoreLabel: "QUANTITATIVE RATING",
+      sectionOrder: ["score", "metrics", "proforma", "chart", "narrative", "risks", "market"],
+    };
+    return {
+      role: "default" as const,
+      accentColor: "#7F77DD",
+      badgeColor: "rgba(127,119,221,0.15)",
+      badgeBorder: "rgba(127,119,221,0.3)",
+      narrativeTitle: "AI ANALYSIS",
+      scoreLabel: null as string | null,
+      sectionOrder: ["score", "metrics", "proforma", "chart", "risks", "narrative", "market"],
+    };
+  })();
+
+  const isProMax = tier === "pro_max" && model != null;
+
   const isFlip = strategy === "Fix & Flip";
   const isBRRRR = strategy === "BRRRR";
   const isBuyHold = strategy === "Buy & Hold";
@@ -1347,9 +1389,12 @@ export default function AnalysisResults({
   /*  RENDER                                                           */
   /* ================================================================ */
 
-  return (
-    <div className="mt-8">
-      {/* === SECTION A: Deal Score === */}
+  /* ================================================================ */
+  /*  Section elements for personality-based ordering                   */
+  /* ================================================================ */
+
+  const ScoreSection = (
+    <div key="score">
       {dealScore != null && (
         <div
           className="mb-5 flex items-center"
@@ -1377,6 +1422,22 @@ export default function AnalysisResults({
             <p style={{ fontSize: 13, color: "#3a3758", margin: "4px 0 0" }}>
               / 10 deal score
             </p>
+            {isProMax && modelPersonality.scoreLabel && (
+              <div
+                style={{
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                  color: modelPersonality.accentColor,
+                  textAlign: "center",
+                  marginTop: 6,
+                  fontWeight: 600,
+                  opacity: 0.9,
+                }}
+              >
+                {modelPersonality.scoreLabel}
+              </div>
+            )}
           </div>
           <div className="flex-1">
             <p style={{ fontSize: 16, fontWeight: 600, color: scoreColor, margin: 0 }}>
@@ -1385,7 +1446,6 @@ export default function AnalysisResults({
             <p style={{ fontSize: 13, color: "#4e4a6a", marginTop: 4, lineHeight: 1.6 }}>
               {scoreSub}
             </p>
-            {/* Score bar */}
             <div
               style={{
                 marginTop: 10,
@@ -1418,7 +1478,6 @@ export default function AnalysisResults({
         </div>
       )}
 
-      {/* Recommendation banner */}
       {result.recommendation && (
         <div
           className="mb-5"
@@ -1446,8 +1505,11 @@ export default function AnalysisResults({
           )}
         </div>
       )}
+    </div>
+  );
 
-      {/* === SECTION B: Key Metrics Grid === */}
+  const MetricsSection = (
+    <div key="metrics">
       {metrics.length > 0 && (
         <div
           className="mb-5 grid"
@@ -1461,8 +1523,11 @@ export default function AnalysisResults({
           ))}
         </div>
       )}
+    </div>
+  );
 
-      {/* === SECTION C: Pro Forma === */}
+  const ProFormaSection = (
+    <div key="proforma">
       {isFlip && calc ? (
         <CardWrapper>
           <SectionLabel text="Pro Forma — Flip Waterfall" />
@@ -1488,7 +1553,6 @@ export default function AnalysisResults({
           <ProFormaRow label="ROI on Cash" value={pct(calc.roi)} bold isLast />
         </CardWrapper>
       ) : (
-        // Generic pro forma for other strategies
         (() => {
           const rows: { label: string; value: string }[] = [];
           const ti = calc?.totalInvestment ?? fm?.total_investment;
@@ -1515,7 +1579,6 @@ export default function AnalysisResults({
         })()
       )}
 
-      {/* === SECTION D.5: Expense Breakdown (Buy & Hold / House Hack) === */}
       {(isBuyHold || isHouseHack) && calc?.expenseBreakdown && (
         <ExpenseBreakdown
           expenseBreakdown={calc.expenseBreakdown}
@@ -1523,13 +1586,40 @@ export default function AnalysisResults({
           cashFlow={v2cf?.monthly ?? fm?.monthly_cash_flow ?? calc?.cashFlow ?? 0}
         />
       )}
+    </div>
+  );
 
-      {/* === SECTION D: Projection Chart === */}
+  const ChartSection = (
+    <div key="chart">
       <TierGate tier={tier} requiredTier="pro" label="5-year projections available on Pro">
         <ProjectionChart strategy={strategy} calculations={calc} result={result} />
       </TierGate>
+    </div>
+  );
 
-      {/* === SECTION E: Risk Flags === */}
+  const RisksSection = (
+    <div key="risks">
+      {modelPersonality.role === "skeptic" && isProMax && riskItems.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 12,
+            padding: "10px 14px",
+            background: "rgba(240,149,149,0.08)",
+            border: "0.5px solid rgba(240,149,149,0.2)",
+            borderRadius: 8,
+            fontSize: 12,
+            color: "#f09595",
+            fontWeight: 500,
+            letterSpacing: "0.3px",
+          }}
+        >
+          <span>{"\u26A0"}</span>
+          Risk factors identified — review before proceeding
+        </div>
+      )}
       {riskItems.length > 0 && (
         <div className="mb-5">
           <SectionLabel text="Risk Flags" />
@@ -1559,13 +1649,37 @@ export default function AnalysisResults({
           ))}
         </div>
       )}
+    </div>
+  );
 
-      {/* === SECTION F: AI Narrative + Takeaways === */}
+  const NarrativeSection = (
+    <div key="narrative">
       <TierGate tier={tier} requiredTier="pro" label="Full AI narrative available on Pro">
         {(result.narrative || result.full_analysis || result.summary) && (
           <CardWrapper>
-            <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
-              <SectionLabel text="AI Analysis" />
+            <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {isProMax && (
+                  <span style={{ fontSize: 13, color: modelPersonality.accentColor }}>
+                    {modelPersonality.role === "skeptic"
+                      ? "\u26A0"
+                      : modelPersonality.role === "sponsor"
+                        ? "\u2191"
+                        : "\u2211"}
+                  </span>
+                )}
+                <span
+                  style={{
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: "1.2px",
+                    color: isProMax ? modelPersonality.accentColor : "#534AB7",
+                    fontWeight: 600,
+                  }}
+                >
+                  {isProMax ? modelPersonality.narrativeTitle : "AI Analysis"}
+                </span>
+              </div>
               {model && (
                 <span
                   style={{
@@ -1592,7 +1706,23 @@ export default function AnalysisResults({
               {result.narrative || result.full_analysis || result.summary || ""}
             </p>
 
-            {/* Key Takeaways */}
+            {modelPersonality.role === "sponsor" && isProMax && result.recommendation && (
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: "12px 16px",
+                  background: "rgba(29,158,117,0.08)",
+                  border: "0.5px solid rgba(29,158,117,0.2)",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: "#1D9E75",
+                  fontWeight: 500,
+                }}
+              >
+                {"\u2191"} {result.recommendation}
+              </div>
+            )}
+
             {takeaways.length > 0 && (
               <div style={{ marginTop: 12 }}>
                 {takeaways.map((t, i) => (
@@ -1604,7 +1734,7 @@ export default function AnalysisResults({
                       borderTop: i === 0 ? "0.5px solid rgba(127,119,221,0.08)" : "none",
                     }}
                   >
-                    <span style={{ color: "#7F77DD", fontSize: 14, lineHeight: 1.6 }}>›</span>
+                    <span style={{ color: "#7F77DD", fontSize: 14, lineHeight: 1.6 }}>{"\u203A"}</span>
                     <span style={{ fontSize: 13, color: "#9994b8", lineHeight: 1.6 }}>
                       {t}
                     </span>
@@ -1615,8 +1745,11 @@ export default function AnalysisResults({
           </CardWrapper>
         )}
       </TierGate>
+    </div>
+  );
 
-      {/* === SECTION G: Market Context === */}
+  const MarketSection = (
+    <div key="market">
       <TierGate tier={tier} requiredTier="pro" label="Market analysis available on Pro">
         {result.marketContext && (
           <CardWrapper>
@@ -1627,6 +1760,28 @@ export default function AnalysisResults({
           </CardWrapper>
         )}
       </TierGate>
+    </div>
+  );
+
+  /* ================================================================ */
+  /*  RENDER                                                           */
+  /* ================================================================ */
+
+  return (
+    <div className="mt-8">
+      {/* Render sections in personality-based order */}
+      {modelPersonality.sectionOrder.map((sectionKey) => {
+        switch (sectionKey) {
+          case "score": return ScoreSection;
+          case "metrics": return MetricsSection;
+          case "proforma": return ProFormaSection;
+          case "chart": return ChartSection;
+          case "risks": return RisksSection;
+          case "narrative": return NarrativeSection;
+          case "market": return MarketSection;
+          default: return null;
+        }
+      })}
 
       {/* === Pro Max Upgrade CTA for Pro users === */}
       {tier === "pro" && (
@@ -1705,7 +1860,6 @@ export default function AnalysisResults({
             Multi-Model Comparison
           </div>
           <p style={{ fontSize: 13, color: "#3a3758", margin: 0 }}>
-            {/* TODO: Wire up in multi-model prompt */}
             Run same deal on multiple AI models to compare outputs — available when multi-model routing is enabled.
           </p>
         </div>
