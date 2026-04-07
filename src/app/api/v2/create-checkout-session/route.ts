@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get('host')}`
 
     // Build checkout session params
     const checkoutParams: Stripe.Checkout.SessionCreateParams = {

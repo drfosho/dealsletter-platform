@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/v2/NavBar";
 import Footer from "@/components/v2/Footer";
@@ -117,10 +117,58 @@ const tableRows = [
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isSubscribing, setIsSubscribing] = useState<string | null>(null);
+  const [userTier, setUserTier] = useState<string | null>(null);
+  const [userStatus, setUserStatus] = useState<string | null>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    fetch('/api/analysis/usage')
+      .then(r => r.json())
+      .then(data => {
+        setUserTier(data.subscription_tier || null);
+        setUserStatus(data.subscription_status || null);
+      })
+      .catch(() => {});
+  }, []);
+
+  const isCurrentPlan = (tierName: 'pro' | 'pro_max'): boolean => {
+    if (userStatus !== 'active') return false;
+    if (tierName === 'pro') {
+      return userTier === 'pro' || userTier === 'professional';
+    }
+    if (tierName === 'pro_max') {
+      return userTier === 'pro_plus' || userTier === 'pro-plus' || userTier === 'premium';
+    }
+    return false;
+  };
+
   const handleSubscribe = async (tier: 'pro' | 'pro_max') => {
+    setIsSubscribing(tier);
     try {
+      // First check if user has active subscription
+      const usageRes = await fetch('/api/analysis/usage');
+      if (usageRes.ok) {
+        const usage = await usageRes.json();
+        const currentTier = usage.subscription_tier || 'free';
+        const isActive = usage.subscription_status === 'active';
+
+        // If already subscribed to any paid plan, send to billing portal
+        if (isActive && currentTier !== 'free' && currentTier !== null) {
+          const portalRes = await fetch('/api/stripe/billing-portal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ returnPath: '/v2/pricing' })
+          });
+          if (portalRes.ok) {
+            const { url } = await portalRes.json();
+            window.location.href = url;
+            return;
+          }
+        }
+      }
+
+      // Not subscribed — create new checkout session
       const res = await fetch('/api/v2/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,20 +176,22 @@ export default function PricingPage() {
           tier,
           billingPeriod: isAnnual ? 'yearly' : 'monthly'
         })
-      })
+      });
 
       if (!res.ok) {
-        const err = await res.json()
-        console.error('Checkout error:', err)
-        return
+        const err = await res.json();
+        console.error('Checkout error:', err);
+        setIsSubscribing(null);
+        return;
       }
 
-      const { url } = await res.json()
+      const { url } = await res.json();
       if (url) {
-        window.location.href = url
+        window.location.href = url;
       }
     } catch (err) {
-      console.error('Checkout failed:', err)
+      console.error('Checkout failed:', err);
+      setIsSubscribing(null);
     }
   }
 
@@ -453,18 +503,35 @@ export default function PricingPage() {
             >
               Balanced model &mdash; Claude Sonnet &amp; GPT-4.1
             </div>
-            <button
-              style={ctaFilled}
-              onClick={() => handleSubscribe('pro')}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "#6258cc")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "#534AB7")
-              }
-            >
-              Start Pro →
-            </button>
+            {isCurrentPlan('pro') ? (
+              <div style={{
+                width: '100%',
+                padding: '12px',
+                textAlign: 'center',
+                fontSize: 13,
+                color: '#1D9E75',
+                background: 'rgba(29,158,117,0.08)',
+                border: '0.5px solid rgba(29,158,117,0.2)',
+                borderRadius: 10,
+                marginBottom: 8,
+              }}>
+                &#10003; Your current plan
+              </div>
+            ) : (
+              <button
+                style={{ ...ctaFilled, opacity: isSubscribing ? 0.7 : 1 }}
+                disabled={isSubscribing !== null}
+                onClick={() => handleSubscribe('pro')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#6258cc")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "#534AB7")
+                }
+              >
+                {isSubscribing === 'pro' ? 'Redirecting...' : 'Start Pro \u2192'}
+              </button>
+            )}
             {proSave && (
               <div
                 style={{
@@ -513,18 +580,35 @@ export default function PricingPage() {
             >
               Max IQ &mdash; Claude Opus &middot; GPT-4o &middot; Grok 3
             </div>
-            <button
-              style={ctaFilled}
-              onClick={() => handleSubscribe('pro_max')}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "#6258cc")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "#534AB7")
-              }
-            >
-              Start Pro Max →
-            </button>
+            {isCurrentPlan('pro_max') ? (
+              <div style={{
+                width: '100%',
+                padding: '12px',
+                textAlign: 'center',
+                fontSize: 13,
+                color: '#1D9E75',
+                background: 'rgba(29,158,117,0.08)',
+                border: '0.5px solid rgba(29,158,117,0.2)',
+                borderRadius: 10,
+                marginBottom: 8,
+              }}>
+                &#10003; Your current plan
+              </div>
+            ) : (
+              <button
+                style={{ ...ctaFilled, opacity: isSubscribing ? 0.7 : 1 }}
+                disabled={isSubscribing !== null}
+                onClick={() => handleSubscribe('pro_max')}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "#6258cc")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "#534AB7")
+                }
+              >
+                {isSubscribing === 'pro_max' ? 'Redirecting...' : 'Start Pro Max \u2192'}
+              </button>
+            )}
             <div style={{ height: 8 }} />
             <div
               style={{

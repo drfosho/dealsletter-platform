@@ -128,9 +128,13 @@ export default function V2AccountPage() {
   const isPaid = tierName === "Pro" || tierName === "Pro Max";
   const isTrialing = usageInfo?.subscription_status === "trialing";
   const used = usageInfo?.analyses_used || 0;
-  const limit = usageInfo?.tier_limit || 0;
-  const remaining = usageInfo?.remaining || 0;
-  const pct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
+
+  const throttleLabel = (() => {
+    const t = usageInfo?.subscription_tier || 'free';
+    if (t === 'pro_max' || t === 'pro_plus' || t === 'pro-plus') return '30/hr \u00b7 150/day';
+    if (t === 'pro' || t === 'professional') return '20/hr \u00b7 100/day';
+    return '5/hr \u00b7 20/day';
+  })();
 
   const firstName =
     user?.user_metadata?.full_name?.split(" ")[0] ||
@@ -555,7 +559,6 @@ export default function V2AccountPage() {
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr 1fr",
                   gap: 16,
-                  marginBottom: limit > 0 && !isAdmin ? 16 : 0,
                 }}
               >
                 <div style={cellStyle}>
@@ -565,90 +568,59 @@ export default function V2AccountPage() {
                   </div>
                 </div>
                 <div style={cellStyle}>
-                  <div style={cellLabel}>Monthly limit</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
-                    {isAdmin || usageInfo?.tier_limit >= 999999 || usageInfo?.tier_limit == null ? "Unlimited" : usageInfo?.tier_limit || 0}
+                  <div style={cellLabel}>Throttle limit</div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "#9994b8",
+                    }}
+                  >
+                    {throttleLabel}
                   </div>
                 </div>
                 <div style={cellStyle}>
-                  <div style={cellLabel}>Remaining</div>
-                  <div
-                    style={{
-                      fontSize: 18,
-                      fontWeight: 700,
-                      color:
-                        isAdmin || usageInfo?.tier_limit >= 999999 || usageInfo?.tier_limit == null
-                          ? "#1D9E75"
-                          : pct < 60
-                            ? "#1D9E75"
-                            : pct < 80
-                              ? "#EF9F27"
-                              : "#f09595",
-                    }}
-                  >
-                    {isAdmin || usageInfo?.tier_limit >= 999999 || usageInfo?.tier_limit == null ? "\u221E" : usageInfo?.remaining || 0}
+                  <div style={cellLabel}>This month</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
+                    {used}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#3a3758" }}>
+                    analyses this month
                   </div>
                 </div>
               </div>
 
-              {/* Progress bar */}
-              {!isAdmin && usageInfo?.tier_limit < 999999 && usageInfo?.tier_limit != null && (
-                <div style={{ marginTop: 0 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: 8,
-                      fontSize: 12,
-                      color: "#3a3758",
-                    }}
-                  >
-                    <span>Monthly usage</span>
-                    <span>
-                      {used} / {limit} analyses
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      height: 6,
-                      borderRadius: 3,
-                      background: "rgba(127,119,221,0.1)",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${pct.toFixed(1)}%`,
-                        borderRadius: 3,
-                        background:
-                          pct < 60
-                            ? "#1D9E75"
-                            : pct < 80
-                              ? "#EF9F27"
-                              : "#f09595",
-                        transition: "width 0.3s ease",
-                      }}
-                    />
-                  </div>
-                  {remaining === 0 && !isPaid && (
-                    <div
-                      style={{
-                        marginTop: 12,
-                        background: "rgba(162,45,45,0.08)",
-                        border: "0.5px solid rgba(162,45,45,0.2)",
-                        borderRadius: 8,
-                        padding: "10px 14px",
-                        fontSize: 13,
-                        color: "#f09595",
-                      }}
-                    >
-                      You&apos;ve used all your analyses this month. Upgrade to
-                      Pro for unlimited analyses.
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Info box */}
+              <div
+                style={{
+                  background: "rgba(83,74,183,0.06)",
+                  border: "0.5px solid rgba(127,119,221,0.12)",
+                  borderRadius: 10,
+                  padding: "14px 16px",
+                  marginTop: 16,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#7F77DD"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  style={{ flexShrink: 0, marginTop: 1 }}
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                <span style={{ fontSize: 13, color: "#6b6690" }}>
+                  Analyses are unlimited on your plan. Rate limits apply to prevent abuse &mdash; {throttleLabel} maximum.
+                </span>
+              </div>
             </div>
 
             {/* D — Quick actions */}
