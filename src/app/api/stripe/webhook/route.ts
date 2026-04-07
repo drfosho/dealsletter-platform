@@ -7,6 +7,14 @@ import { sendCancellationEmail, sendSubscriptionEmail } from '@/lib/email';
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
 
+// V2 price ID mapping
+const V2_PRICE_TIERS: Record<string, string> = {
+  [process.env.STRIPE_PRICE_V2_PRO_MONTHLY!]: 'pro',
+  [process.env.STRIPE_PRICE_V2_PRO_YEARLY!]: 'pro',
+  [process.env.STRIPE_PRICE_V2_PRO_MAX_MONTHLY!]: 'pro_plus',
+  [process.env.STRIPE_PRICE_V2_PRO_MAX_YEARLY!]: 'pro_plus',
+};
+
 // Map Stripe tier names to our database tier names
 function mapTierName(stripeTier: string): string {
   console.log('[Webhook] mapTierName - Input:', stripeTier);
@@ -276,8 +284,19 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
-          const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
-          const tierName = mapTierName(stripeTierName);
+          // Check V2 price IDs first
+          const createdPriceId = subscription.items?.data?.[0]?.price?.id;
+          let tierName = V2_PRICE_TIERS[createdPriceId || ''];
+          let stripeTierName: string;
+
+          if (tierName) {
+            stripeTierName = tierName;
+            console.log('[Webhook] subscription.created - V2 price detected:', createdPriceId, '→', tierName);
+          } else {
+            // Fall back to existing V1 logic
+            stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
+            tierName = mapTierName(stripeTierName);
+          }
           const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
           console.log('[Webhook] subscription.created - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
@@ -368,9 +387,20 @@ export async function POST(request: NextRequest) {
           }
 
           if (userId) {
-            // Get tier from metadata
-            const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || session.metadata?.tierName || 'PRO';
-            const tierName = mapTierName(stripeTierName);
+            // Check V2 price IDs first
+            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+            const checkoutPriceId = lineItems.data[0]?.price?.id;
+            let tierName = V2_PRICE_TIERS[checkoutPriceId || ''];
+            let stripeTierName: string;
+
+            if (tierName) {
+              stripeTierName = tierName;
+              console.log('[Webhook] checkout.completed - V2 price detected:', checkoutPriceId, '→', tierName);
+            } else {
+              // Fall back to existing V1 logic
+              stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || session.metadata?.tierName || 'PRO';
+              tierName = mapTierName(stripeTierName);
+            }
             const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
             console.log('[Webhook] checkout.completed - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
@@ -539,8 +569,19 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
-          const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
-          const tierName = mapTierName(stripeTierName);
+          // Check V2 price IDs first
+          const updatedPriceId = subscription.items?.data?.[0]?.price?.id;
+          let tierName = V2_PRICE_TIERS[updatedPriceId || ''];
+          let stripeTierName: string;
+
+          if (tierName) {
+            stripeTierName = tierName;
+            console.log('[Webhook] subscription.updated - V2 price detected:', updatedPriceId, '→', tierName);
+          } else {
+            // Fall back to existing V1 logic
+            stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
+            tierName = mapTierName(stripeTierName);
+          }
           const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
           console.log('[Webhook] subscription.updated - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);

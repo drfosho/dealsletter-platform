@@ -33,13 +33,6 @@ const formatDate = (iso: string | null): string => {
   });
 };
 
-const CANCEL_REASONS = [
-  "Too expensive",
-  "Not using it enough",
-  "Missing a feature I need",
-  "Just taking a break",
-];
-
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
@@ -50,11 +43,6 @@ export default function V2AccountPage() {
   const [usageInfo, setUsageInfo] = useState<any>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isLoadingBilling, setIsLoadingBilling] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [showCancelFeedback, setShowCancelFeedback] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [cancelError, setCancelError] = useState("");
 
   /* ---------- Load data ------------------------------------------- */
 
@@ -106,41 +94,23 @@ export default function V2AccountPage() {
   };
 
   const handleCancelSubscription = async () => {
-    setIsCancelling(true);
-    setCancelError("");
+    // Send to billing portal where user can cancel themselves
+    setIsLoadingBilling(true);
     try {
-      const res = await fetch("/api/stripe/cancel-subscription", {
-        method: "POST",
+      const res = await fetch('/api/stripe/billing-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnPath: '/v2/account' })
       });
       if (res.ok) {
-        setShowCancelConfirm(false);
-        setShowCancelFeedback(true);
-      } else {
-        setCancelError(
-          "Cancellation failed. Please try again or contact support."
-        );
+        const { url } = await res.json();
+        window.location.href = url;
       }
-    } catch {
-      setCancelError("Something went wrong. Please try again.");
+    } catch (err) {
+      console.error('Portal error:', err);
     } finally {
-      setIsCancelling(false);
+      setIsLoadingBilling(false);
     }
-  };
-
-  const handleCancelFeedback = async () => {
-    try {
-      if (cancelReason) {
-        await fetch("/api/subscription/cancel-feedback", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: cancelReason }),
-        });
-      }
-    } catch {}
-    setShowCancelFeedback(false);
-    setCancelReason("");
-    const res = await fetch("/api/analysis/usage");
-    if (res.ok) setUsageInfo(await res.json());
   };
 
   const handleSignOut = async () => {
@@ -539,10 +509,10 @@ export default function V2AccountPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => setShowCancelConfirm(true)}
+                      onClick={handleCancelSubscription}
                       style={{
                         background: "transparent",
-                        border: "0.5px solid rgba(162,45,45,0.2)",
+                        border: "0.5px solid rgba(127,119,221,0.15)",
                         color: "#6b6690",
                         padding: "10px 20px",
                         borderRadius: 9,
@@ -550,10 +520,16 @@ export default function V2AccountPage() {
                         cursor: "pointer",
                         fontFamily: "inherit",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = "#f09595")}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "#6b6690")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = "#f09595";
+                        e.currentTarget.style.borderColor = "rgba(162,45,45,0.2)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = "#6b6690";
+                        e.currentTarget.style.borderColor = "rgba(127,119,221,0.15)";
+                      }}
                     >
-                      Cancel subscription
+                      Cancel subscription →
                     </button>
                   </>
                 )}
@@ -803,271 +779,6 @@ export default function V2AccountPage() {
 
       <Footer />
 
-      {/* E — Cancel confirmation modal */}
-      {showCancelConfirm && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 100,
-            background: "rgba(13,13,20,0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              background: "#13121d",
-              border: "0.5px solid rgba(162,45,45,0.3)",
-              borderRadius: 20,
-              padding: 32,
-              maxWidth: 440,
-              width: "100%",
-            }}
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#EF9F27"
-              strokeWidth="2"
-              strokeLinecap="round"
-              style={{ marginBottom: 12 }}
-            >
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            <h2
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: "#f0eeff",
-                marginBottom: 8,
-                marginTop: 0,
-              }}
-            >
-              Cancel your subscription?
-            </h2>
-            <p
-              style={{
-                fontSize: 14,
-                color: "#6b6690",
-                lineHeight: 1.6,
-                marginBottom: 20,
-              }}
-            >
-              Your {tierName} plan stays active until{" "}
-              {formatDate(usageInfo?.current_period_end)}. After that you&apos;ll
-              move to the Free plan.
-            </p>
-            <div
-              style={{ fontSize: 13, color: "#3a3758", marginBottom: 12 }}
-            >
-              You will lose access to:
-            </div>
-            {[
-              "Full AI analysis \u2014 results will be blurred",
-              "PDF & Excel export",
-              "Saved analysis history",
-              tierName === "Pro"
-                ? "Balanced model (Claude Sonnet / GPT-4.1)"
-                : "Max IQ model access",
-              ...(tierName === "Pro Max"
-                ? ["Multi-model comparison view"]
-                : []),
-            ].map((item) => (
-              <div
-                key={item}
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  marginBottom: 6,
-                }}
-              >
-                <span style={{ color: "#f09595", fontSize: 12, flexShrink: 0 }}>
-                  &times;
-                </span>
-                <span style={{ fontSize: 13, color: "#6b6690" }}>{item}</span>
-              </div>
-            ))}
-
-            {cancelError && (
-              <div
-                style={{
-                  marginTop: 16,
-                  background: "rgba(162,45,45,0.1)",
-                  border: "0.5px solid rgba(162,45,45,0.3)",
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  color: "#f09595",
-                  fontSize: 13,
-                }}
-              >
-                {cancelError}
-              </div>
-            )}
-
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                marginTop: 20,
-              }}
-            >
-              <button
-                onClick={() => setShowCancelConfirm(false)}
-                style={{
-                  flex: 1,
-                  background: "#534AB7",
-                  color: "#f0eeff",
-                  padding: 12,
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                Keep my plan
-              </button>
-              <button
-                onClick={handleCancelSubscription}
-                disabled={isCancelling}
-                style={{
-                  flex: 1,
-                  background: "transparent",
-                  border: "0.5px solid rgba(162,45,45,0.3)",
-                  color: "#f09595",
-                  padding: 12,
-                  borderRadius: 10,
-                  fontSize: 14,
-                  cursor: isCancelling ? "not-allowed" : "pointer",
-                  opacity: isCancelling ? 0.5 : 1,
-                  fontFamily: "inherit",
-                }}
-              >
-                {isCancelling ? "Cancelling..." : "Cancel subscription"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* F — Cancel feedback modal */}
-      {showCancelFeedback && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 100,
-            background: "rgba(13,13,20,0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              background: "#13121d",
-              border: "0.5px solid rgba(127,119,221,0.25)",
-              borderRadius: 20,
-              padding: 32,
-              maxWidth: 440,
-              width: "100%",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: "#f0eeff",
-                marginBottom: 6,
-                marginTop: 0,
-              }}
-            >
-              Sorry to see you go.
-            </h2>
-            <p
-              style={{
-                fontSize: 14,
-                color: "#6b6690",
-                lineHeight: 1.6,
-                marginBottom: 24,
-              }}
-            >
-              Your plan stays active until the end of your billing period. Mind
-              telling us why you&apos;re leaving? It helps us improve.
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-                marginBottom: 16,
-              }}
-            >
-              {CANCEL_REASONS.map((reason) => (
-                <button
-                  key={reason}
-                  onClick={() => setCancelReason(reason)}
-                  style={{
-                    background:
-                      cancelReason === reason
-                        ? "rgba(83,74,183,0.2)"
-                        : "rgba(83,74,183,0.08)",
-                    border: `0.5px solid ${cancelReason === reason ? "rgba(127,119,221,0.5)" : "rgba(127,119,221,0.15)"}`,
-                    borderRadius: 10,
-                    padding: "14px 16px",
-                    cursor: "pointer",
-                    textAlign: "center",
-                    fontSize: 13,
-                    color:
-                      cancelReason === reason ? "#c0baf0" : "#6b6690",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {reason}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={handleCancelFeedback}
-              style={{
-                width: "100%",
-                background: "#534AB7",
-                color: "#f0eeff",
-                padding: 12,
-                borderRadius: 10,
-                fontSize: 14,
-                fontWeight: 500,
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              Done
-            </button>
-            <div
-              onClick={handleCancelFeedback}
-              style={{
-                fontSize: 12,
-                color: "#3a3758",
-                textAlign: "center",
-                marginTop: 10,
-                cursor: "pointer",
-              }}
-            >
-              Skip
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -119,6 +119,32 @@ export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const router = useRouter();
 
+  const handleSubscribe = async (tier: 'pro' | 'pro_max') => {
+    try {
+      const res = await fetch('/api/v2/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tier,
+          billingPeriod: isAnnual ? 'yearly' : 'monthly'
+        })
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        console.error('Checkout error:', err)
+        return
+      }
+
+      const { url } = await res.json()
+      if (url) {
+        window.location.href = url
+      }
+    } catch (err) {
+      console.error('Checkout failed:', err)
+    }
+  }
+
   const proPrice = isAnnual ? "$290" : "$29";
   const proSub = isAnnual ? "per year" : "/month";
   const proBelow = isAnnual ? "$24/mo billed annually" : null;
@@ -429,7 +455,7 @@ export default function PricingPage() {
             </div>
             <button
               style={ctaFilled}
-              onClick={() => router.push("/v2/signup?plan=pro")}
+              onClick={() => handleSubscribe('pro')}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.background = "#6258cc")
               }
@@ -437,7 +463,7 @@ export default function PricingPage() {
                 (e.currentTarget.style.background = "#534AB7")
               }
             >
-              Start 7-day free trial
+              Start Pro →
             </button>
             {proSave && (
               <div
@@ -489,7 +515,7 @@ export default function PricingPage() {
             </div>
             <button
               style={ctaFilled}
-              onClick={() => router.push("/v2/signup?plan=pro_max")}
+              onClick={() => handleSubscribe('pro_max')}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.background = "#6258cc")
               }
@@ -497,7 +523,7 @@ export default function PricingPage() {
                 (e.currentTarget.style.background = "#534AB7")
               }
             >
-              Start 7-day free trial
+              Start Pro Max →
             </button>
             <div style={{ height: 8 }} />
             <div
