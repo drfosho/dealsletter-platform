@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import Stripe from 'stripe';
-import { sendCancellationEmail, sendSubscriptionEmail } from '@/lib/email';
+import { sendCancellationEmail } from '@/lib/email';
 import {
   sendProWelcomeEmail as sendV2ProWelcomeEmail,
   sendProMaxWelcomeEmail as sendV2ProMaxWelcomeEmail,
@@ -474,18 +474,20 @@ export async function POST(request: NextRequest) {
               } else {
                 console.log('[Webhook] checkout.completed - ✅ Created profile with tier:', tierName);
 
-                // Send subscription confirmation email
+                // Send V2 welcome email based on tier
                 if (customer.email) {
-                  console.log('[Webhook] checkout.completed - Sending subscription email to', customer.email);
-                  sendSubscriptionEmail({
-                    email: customer.email,
-                    tier: tierName,
-                    billingDate: periodEndISO ? new Date(periodEndISO).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
-                  }).then(sent => {
-                    console.log('[Webhook] checkout.completed - Subscription email sent:', sent);
-                  }).catch(err => {
-                    console.error('[Webhook] checkout.completed - Subscription email error:', err);
-                  });
+                  const billingPeriod = session.metadata?.billingPeriod || 'monthly';
+                  try {
+                    if (tierName === 'pro_plus' || tierName === 'pro-plus' || tierName === 'premium') {
+                      await sendV2ProMaxWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro Max welcome email sent');
+                    } else if (tierName === 'pro') {
+                      await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                    }
+                  } catch (emailErr) {
+                    console.error('[Webhook] checkout.completed - V2 email error:', emailErr);
+                  }
                 }
               }
             } else {
@@ -522,18 +524,20 @@ export async function POST(request: NextRequest) {
                   newTier: updateResult?.subscription_tier
                 });
 
-                // Send subscription confirmation email
+                // Send V2 welcome email based on tier
                 if (customer.email) {
-                  console.log('[Webhook] checkout.completed - Sending subscription email to', customer.email);
-                  sendSubscriptionEmail({
-                    email: customer.email,
-                    tier: tierName,
-                    billingDate: periodEndISO ? new Date(periodEndISO).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
-                  }).then(sent => {
-                    console.log('[Webhook] checkout.completed - Subscription email sent:', sent);
-                  }).catch(err => {
-                    console.error('[Webhook] checkout.completed - Subscription email error:', err);
-                  });
+                  const billingPeriod = session.metadata?.billingPeriod || 'monthly';
+                  try {
+                    if (tierName === 'pro_plus' || tierName === 'pro-plus' || tierName === 'premium') {
+                      await sendV2ProMaxWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro Max welcome email sent');
+                    } else if (tierName === 'pro') {
+                      await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                    }
+                  } catch (emailErr) {
+                    console.error('[Webhook] checkout.completed - V2 email error:', emailErr);
+                  }
                 }
               }
             }

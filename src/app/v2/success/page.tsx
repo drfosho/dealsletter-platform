@@ -1,22 +1,43 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import NavBar from '@/components/v2/NavBar'
 
 export default function SuccessPage() {
+  const router = useRouter()
   const [countdown, setCountdown] = useState(12)
   const [tierConfirmed, setTierConfirmed] = useState(false)
   const [tierName, setTierName] = useState<string | null>(null)
 
-  // Refresh session on mount — user arrives from Stripe's domain
+  // Restore session — user arrives from Stripe's domain
   // so the Supabase cookie may not be active yet
   useEffect(() => {
-    const refreshSession = async () => {
+    const restoreSession = async () => {
       const supabase = createClient()
-      await supabase.auth.getSession()
+
+      let attempts = 0
+      const tryGetSession = async (): Promise<boolean> => {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session) {
+          console.log('Session restored')
+          return true
+        }
+
+        attempts++
+        if (attempts < 5) {
+          await new Promise(r => setTimeout(r, 1000))
+          return tryGetSession()
+        }
+        return false
+      }
+
+      await tryGetSession()
     }
-    refreshSession()
+
+    restoreSession()
   }, [])
 
   // Poll for tier update
@@ -68,14 +89,14 @@ export default function SuccessPage() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer)
-          window.location.href = '/v2/dashboard?upgraded=true'
+          router.push('/v2/dashboard?upgraded=true')
           return 0
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(timer)
-  }, [])
+  }, [router])
 
   return (
     <div style={{
@@ -190,7 +211,7 @@ export default function SuccessPage() {
           </div>
 
           <button
-            onClick={() => window.location.href = '/v2/dashboard?upgraded=true'}
+            onClick={() => router.push('/v2/dashboard?upgraded=true')}
             style={{
               width: '100%',
               background: '#534AB7',

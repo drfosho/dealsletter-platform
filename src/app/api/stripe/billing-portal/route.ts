@@ -29,7 +29,10 @@ export async function POST(_request: NextRequest) {
       returnPath = '/v2/account'
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://dealsletter.io'
+    const requestUrl = new URL(_request.url)
+    const host = requestUrl.host
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const appUrl = `${protocol}://${host}`
     const returnUrl = `${appUrl}${returnPath}`
     console.log('[BillingPortal] Return URL:', returnUrl)
 
