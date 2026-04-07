@@ -79,7 +79,11 @@ export async function POST(request: Request) {
       }
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get('host')}`
+    const host = request.headers.get('host') || ''
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`
+
+    console.log('Checkout session appUrl:', appUrl)
 
     // Build checkout session params
     const checkoutParams: Stripe.Checkout.SessionCreateParams = {
@@ -91,7 +95,7 @@ export async function POST(request: Request) {
           quantity: 1
         }
       ],
-      success_url: `${appUrl}/v2/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${appUrl}/v2/success?session_id={CHECKOUT_SESSION_ID}&source=checkout`,
       cancel_url: `${appUrl}/v2/pricing`,
       allow_promotion_codes: true,
       billing_address_collection: 'auto',

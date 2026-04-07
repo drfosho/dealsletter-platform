@@ -318,7 +318,7 @@ function TierGate({
           {label}
         </p>
         <button
-          onClick={() => (window.location.href = "/pricing")}
+          onClick={() => (window.location.href = "/v2/pricing")}
           style={{
             background: "#534AB7",
             color: "#f0eeff",
@@ -1627,6 +1627,65 @@ export default function AnalysisResults({
           </CardWrapper>
         )}
       </TierGate>
+
+      {/* === Pro Max Upgrade CTA for Pro users === */}
+      {tier === "pro" && (
+        <div
+          style={{
+            margin: "24px 0",
+            padding: "20px 24px",
+            background: "rgba(239,159,39,0.06)",
+            border: "0.5px solid rgba(239,159,39,0.2)",
+            borderRadius: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#EF9F27",
+                marginBottom: 4,
+              }}
+            >
+              Get 3 independent AI opinions on this deal
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: "#6b6690",
+                lineHeight: 1.5,
+              }}
+            >
+              Pro Max runs Claude Opus, GPT-4o, and Grok 3 simultaneously — each with a different
+              analytical lens. See where they agree and where they don&apos;t.
+            </div>
+          </div>
+          <button
+            onClick={() => (window.location.href = "/v2/pricing")}
+            style={{
+              background: "rgba(239,159,39,0.15)",
+              border: "0.5px solid rgba(239,159,39,0.4)",
+              color: "#EF9F27",
+              borderRadius: 9,
+              padding: "9px 18px",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              flexShrink: 0,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Upgrade to Pro Max &rarr;
+          </button>
+        </div>
+      )}
 
       {/* === SECTION I: Multi-Model Scaffold === */}
       {tier === "pro_max" && (

@@ -2559,7 +2559,7 @@ function AnalyzeContent() {
                   padding: "7px 16px",
                   fontSize: 13,
                 }}
-                onClick={() => router.push("/v2")}
+                onClick={() => router.push("/v2/dashboard")}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "#9994b8";
                   e.currentTarget.style.borderColor = "rgba(127,119,221,0.5)";
@@ -2675,7 +2675,7 @@ function AnalyzeContent() {
                   padding: "7px 16px",
                   fontSize: 13,
                 }}
-                onClick={() => router.push("/v2")}
+                onClick={() => router.push("/v2/dashboard")}
               >
                 Run another analysis
               </button>

@@ -244,6 +244,23 @@ export default function NavBar() {
           {!isLoadingUser && user && (
             /* Logged in */
             <div className="flex items-center" style={{ gap: 20 }}>
+              <span
+                onClick={() => router.push("/v2/dashboard")}
+                style={{
+                  fontSize: 14,
+                  color: "#6b6690",
+                  cursor: "pointer",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "#b0acd8")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "#6b6690")
+                }
+              >
+                Dashboard
+              </span>
               <button
                 onClick={() => router.push("/v2")}
                 style={{
@@ -469,6 +486,7 @@ export default function NavBar() {
         <div style={{ marginTop: 'auto', paddingTop: '40px' }}>
           {!isLoadingUser && user ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div onClick={() => { setMenuOpen(false); router.push('/v2/dashboard'); }} style={{ fontSize: 16, color: '#9994b8', padding: '14px 20px', background: 'rgba(83,74,183,0.1)', borderRadius: 12, cursor: 'pointer' }}>Dashboard</div>
               <div onClick={() => { setMenuOpen(false); router.push('/v2'); }} style={{ fontSize: 16, color: '#9994b8', padding: '14px 20px', background: 'rgba(83,74,183,0.1)', borderRadius: 12, cursor: 'pointer' }}>+ New Analysis</div>
               <div onClick={() => { setMenuOpen(false); router.push('/v2/account'); }} style={{ fontSize: 16, color: '#9994b8', padding: '14px 20px', background: 'rgba(83,74,183,0.1)', borderRadius: 12, cursor: 'pointer' }}>My Account</div>
               <div onClick={() => { setMenuOpen(false); router.push('/v2/pricing'); }} style={{ fontSize: 16, color: '#9994b8', padding: '14px 20px', background: 'rgba(83,74,183,0.1)', borderRadius: 12, cursor: 'pointer' }}>Pricing &amp; Plans</div>

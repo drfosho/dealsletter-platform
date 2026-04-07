@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import NavBar from '@/components/v2/NavBar'
 
 export default function SuccessPage() {
@@ -9,6 +10,16 @@ export default function SuccessPage() {
   const [countdown, setCountdown] = useState(5)
   const [tierConfirmed, setTierConfirmed] = useState(false)
   const [tierName, setTierName] = useState<string | null>(null)
+
+  // Refresh session on mount — user arrives from Stripe's domain
+  // so the Supabase cookie may not be active yet
+  useEffect(() => {
+    const refreshSession = async () => {
+      const supabase = createClient()
+      await supabase.auth.getSession()
+    }
+    refreshSession()
+  }, [])
 
   // Poll for tier update
   useEffect(() => {
