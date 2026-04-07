@@ -95,28 +95,15 @@ export default function Footer() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
+                gap: 10,
                 marginBottom: 10,
               }}
             >
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  background: "#3C3489",
-                  borderRadius: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="1" width="6" height="7" rx="1.5" fill="#c8c3f0" />
-                  <rect x="9" y="1" width="6" height="4" rx="1.5" fill="#c8c3f0" />
-                  <rect x="1" y="10" width="6" height="5" rx="1.5" fill="#9994b8" />
-                  <rect x="9" y="7" width="6" height="8" rx="1.5" fill="#9994b8" />
-                </svg>
-              </div>
+              <img
+                src="/logos/logomark-34.png"
+                alt="Dealsletter"
+                style={{ width: 28, height: 28, objectFit: "contain" }}
+              />
               <span
                 style={{
                   fontSize: 16,

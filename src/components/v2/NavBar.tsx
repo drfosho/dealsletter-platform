@@ -143,22 +143,11 @@ export default function NavBar() {
 
       {/* Left — Logo */}
       <Link href="/v2" className="flex items-center gap-2.5 no-underline">
-        <div
-          className="flex items-center justify-center"
-          style={{
-            width: 34,
-            height: 34,
-            background: "#3C3489",
-            borderRadius: 8,
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="1" y="1" width="6" height="7" rx="1.5" fill="#c8c3f0" />
-            <rect x="9" y="1" width="6" height="4" rx="1.5" fill="#c8c3f0" />
-            <rect x="1" y="10" width="6" height="5" rx="1.5" fill="#9994b8" />
-            <rect x="9" y="7" width="6" height="8" rx="1.5" fill="#9994b8" />
-          </svg>
-        </div>
+        <img
+          src="/logos/logomark-34.png"
+          alt="Dealsletter"
+          style={{ width: 34, height: 34, objectFit: "contain" }}
+        />
         <span
           style={{
             fontSize: 19,
@@ -441,14 +430,7 @@ export default function NavBar() {
       <div className={`nav-mobile-menu ${menuOpen ? 'open' : ''}`}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: 28, height: 28, background: '#3C3489', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="1" width="6" height="7" rx="1.5" fill="#c8c3f0" />
-                <rect x="9" y="1" width="6" height="4" rx="1.5" fill="#c8c3f0" />
-                <rect x="1" y="10" width="6" height="5" rx="1.5" fill="#9994b8" />
-                <rect x="9" y="7" width="6" height="8" rx="1.5" fill="#9994b8" />
-              </svg>
-            </div>
+            <img src="/logos/logomark-34.png" alt="Dealsletter" style={{ width: 28, height: 28, objectFit: 'contain' }} />
             <span style={{ fontSize: 18, fontWeight: 600, color: '#f0eeff' }}>Dealsletter</span>
           </div>
           <button onClick={() => setMenuOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px' }}>

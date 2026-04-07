@@ -34,33 +34,13 @@ const emailWrapper = (content: string) => `
           <!-- Header -->
           <tr>
             <td style="padding-bottom: 32px;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <div style="
-                      display: inline-flex;
-                      align-items: center;
-                      gap: 10px;
-                    ">
-                      <div style="
-                        width: 32px;
-                        height: 32px;
-                        background: #3C3489;
-                        border-radius: 8px;
-                        display: inline-block;
-                      "></div>
-                      <span style="
-                        font-size: 18px;
-                        font-weight: 600;
-                        color: #f0eeff;
-                        letter-spacing: -0.4px;
-                        vertical-align: middle;
-                        margin-left: 10px;
-                      ">Dealsletter</span>
-                    </div>
-                  </td>
-                </tr>
-              </table>
+              <div style="margin-bottom: 24px;">
+                <img
+                  src="https://dealsletter.io/logos/wordmark-transparent.png"
+                  alt="Dealsletter"
+                  style="height: 36px; width: auto;"
+                />
+              </div>
             </td>
           </tr>
 
