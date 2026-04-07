@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import NavBar from '@/components/v2/NavBar'
 
 export default function SuccessPage() {
-  const [countdown, setCountdown] = useState(8)
+  const [countdown, setCountdown] = useState(12)
   const [tierConfirmed, setTierConfirmed] = useState(false)
   const [tierName, setTierName] = useState<string | null>(null)
 
@@ -68,7 +68,7 @@ export default function SuccessPage() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer)
-          window.location.href = '/v2/dashboard'
+          window.location.href = '/v2/dashboard?upgraded=true'
           return 0
         }
         return prev - 1
@@ -190,7 +190,7 @@ export default function SuccessPage() {
           </div>
 
           <button
-            onClick={() => window.location.href = '/v2/dashboard'}
+            onClick={() => window.location.href = '/v2/dashboard?upgraded=true'}
             style={{
               width: '100%',
               background: '#534AB7',

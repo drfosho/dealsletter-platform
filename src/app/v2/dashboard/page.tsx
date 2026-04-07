@@ -494,6 +494,43 @@ export default function DashboardPage() {
     init();
   }, [router]);
 
+  // If arriving from checkout/success, poll until tier updates
+  useEffect(() => {
+    const fromCheckout =
+      document.referrer.includes("/v2/success") ||
+      window.location.search.includes("upgraded=true");
+
+    if (!fromCheckout) return;
+
+    let attempts = 0;
+    const maxAttempts = 15;
+    const initialTier = userTier;
+
+    const poll = async () => {
+      attempts++;
+      try {
+        const res = await fetch("/api/analysis/usage");
+        if (res.ok) {
+          const data = await res.json();
+          const tier = data.subscription_tier;
+          const status = data.subscription_status;
+
+          if (status === "active" && tier !== "free" && tier !== initialTier) {
+            window.location.reload();
+            return;
+          }
+        }
+      } catch {}
+
+      if (attempts < maxAttempts) {
+        setTimeout(poll, 2000);
+      }
+    };
+
+    const timer = setTimeout(poll, 5000);
+    return () => clearTimeout(timer);
+  }, [userTier]);
+
   /* ---------- Actions --------------------------------------------- */
 
   const toggleFavorite = async (id: string, newValue: boolean) => {
