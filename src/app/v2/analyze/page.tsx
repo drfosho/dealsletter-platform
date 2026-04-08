@@ -660,15 +660,6 @@ function AnalyzeContent() {
 
         const data = await res.json();
 
-        console.log('Saved analysis raw data:', {
-          ai_analysis: data.ai_analysis,
-          analysis_data: data.analysis_data,
-          narrative: data.ai_analysis?.narrative,
-          full_analysis: data.ai_analysis?.full_analysis,
-          strategy: data.strategy,
-          deal_type: data.deal_type
-        });
-
         // Set strategy
         const strategyMap: Record<string, string> = {
           rental: "Buy & Hold",
@@ -680,33 +671,126 @@ function AnalyzeContent() {
           strategyMap[data.strategy] || data.deal_type || "Buy & Hold";
         setSelectedStrategy(strategyLabel);
 
-        // Build result object from saved data
+        // full_analysis is a JSON string that needs parsing
+        let parsedFullAnalysis: any = {};
+        try {
+          if (data.full_analysis && typeof data.full_analysis === "string") {
+            parsedFullAnalysis = JSON.parse(data.full_analysis);
+          } else if (typeof data.full_analysis === "object") {
+            parsedFullAnalysis = data.full_analysis;
+          }
+        } catch {
+          parsedFullAnalysis = {};
+        }
+
+        // Also try parsing ai_analysis.summary
+        let parsedSummary: any = {};
+        try {
+          const summary = data.ai_analysis?.summary;
+          if (summary && typeof summary === "string") {
+            parsedSummary = JSON.parse(summary);
+          } else if (typeof summary === "object") {
+            parsedSummary = summary || {};
+          }
+        } catch {
+          parsedSummary = {};
+        }
+
         const analysisData = data.analysis_data || {};
         const aiAnalysis = data.ai_analysis || {};
 
         const savedResult: AnalysisResult = {
-          dealScore: analysisData.dealScore ?? aiAnalysis.dealScore ?? undefined,
-          narrative: aiAnalysis.narrative || analysisData.narrative || aiAnalysis.full_analysis || undefined,
-          riskFlags: aiAnalysis.riskFlags || analysisData.riskFlags || undefined,
-          risks: aiAnalysis.risks || undefined,
-          metrics: aiAnalysis.metrics || analysisData.metrics || undefined,
-          financial_metrics: aiAnalysis.financial_metrics || undefined,
-          cashFlow: aiAnalysis.cashFlow || analysisData.cashFlow || undefined,
-          proForma: aiAnalysis.proForma || analysisData.proForma || undefined,
-          recommendation: aiAnalysis.recommendation || analysisData.recommendation || undefined,
-          marketContext: aiAnalysis.marketContext || analysisData.marketContext || undefined,
+          dealScore:
+            parsedFullAnalysis.dealScore ||
+            parsedSummary.dealScore ||
+            analysisData.dealScore ||
+            undefined,
+
+          narrative:
+            parsedFullAnalysis.narrative ||
+            parsedSummary.narrative ||
+            parsedFullAnalysis.analysis ||
+            parsedSummary.analysis ||
+            parsedFullAnalysis.recommendation ||
+            parsedSummary.recommendation ||
+            undefined,
+
+          riskFlags:
+            parsedFullAnalysis.riskFlags ||
+            parsedSummary.riskFlags ||
+            aiAnalysis.risks ||
+            analysisData.riskFlags ||
+            [],
+
+          metrics:
+            parsedFullAnalysis.metrics ||
+            parsedSummary.metrics ||
+            aiAnalysis.financial_metrics ||
+            analysisData.metrics ||
+            {},
+
+          cashFlow:
+            parsedFullAnalysis.cashFlow ||
+            parsedSummary.cashFlow ||
+            analysisData.cashFlow ||
+            undefined,
+
+          proForma:
+            parsedFullAnalysis.proForma ||
+            parsedSummary.proForma ||
+            analysisData.proForma ||
+            undefined,
+
+          recommendation:
+            parsedFullAnalysis.recommendation ||
+            parsedSummary.recommendation ||
+            analysisData.recommendation ||
+            undefined,
+
+          marketContext:
+            parsedFullAnalysis.marketContext ||
+            parsedSummary.marketContext ||
+            analysisData.marketContext ||
+            undefined,
         };
 
         // Build calculations from saved data
         const savedCalculations = {
-          purchasePrice: data.purchase_price,
-          cashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow ?? analysisData.cashFlow?.monthly,
-          roi: data.roi,
-          netProfit: data.profit,
-          arv: analysisData.arv ?? aiAnalysis.financial_metrics?.arv,
-          capRate: aiAnalysis.financial_metrics?.cap_rate,
-          cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return,
-          totalInvestment: aiAnalysis.financial_metrics?.total_investment,
+          purchasePrice:
+            data.purchase_price ||
+            analysisData.purchasePrice ||
+            parsedFullAnalysis.purchasePrice,
+          cashFlow:
+            parsedFullAnalysis.cashFlow?.monthly ||
+            parsedSummary.cashFlow?.monthly ||
+            analysisData.cashFlow?.monthly ||
+            aiAnalysis.financial_metrics?.monthly_cash_flow,
+          roi:
+            data.roi ||
+            parsedFullAnalysis.roi ||
+            parsedSummary.roi,
+          netProfit:
+            data.profit ||
+            parsedFullAnalysis.netProfit ||
+            parsedSummary.netProfit,
+          arv:
+            analysisData.arv ||
+            parsedFullAnalysis.arv ||
+            parsedSummary.arv ||
+            aiAnalysis.financial_metrics?.arv,
+          capRate:
+            parsedFullAnalysis.capRate ||
+            parsedSummary.capRate ||
+            aiAnalysis.financial_metrics?.cap_rate,
+          cashOnCash:
+            parsedFullAnalysis.cashOnCash ||
+            parsedSummary.cashOnCash ||
+            aiAnalysis.financial_metrics?.cash_on_cash_return,
+          totalInvestment:
+            parsedFullAnalysis.totalInvestment ||
+            parsedSummary.totalInvestment ||
+            aiAnalysis.financial_metrics?.total_investment ||
+            analysisData.totalCashInvested,
         };
 
         // Build property data from saved
