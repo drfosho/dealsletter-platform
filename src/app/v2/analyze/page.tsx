@@ -365,11 +365,16 @@ function AnalyzeContent() {
   const [propertyError, setPropertyError] = useState("");
   const [arvAnalysis, setArvAnalysis] = useState<{
     arvEstimate: number | null;
+    arvLow?: number | null;
+    arvMid?: number | null;
+    arvHigh?: number | null;
     compsUsed: number;
     confidence: string;
     pricePerSqft: number | null;
+    pricePerSqftRange?: { low: number; high: number } | null;
     avm: number | null;
     note: string;
+    distressedExcluded?: number;
   } | null>(null);
 
   /* --- Analysis states --- */
@@ -1892,70 +1897,107 @@ function AnalyzeContent() {
                 {arvAnalysis && arvAnalysis.arvEstimate && (
                   <div
                     style={{
-                      background: "rgba(127,119,221,0.05)",
-                      border: "0.5px solid rgba(127,119,221,0.15)",
-                      borderRadius: 10,
-                      padding: "14px 16px",
-                      marginTop: 14,
-                      marginBottom: 14,
+                      background: "rgba(83,74,183,0.06)",
+                      border: "0.5px solid rgba(127,119,221,0.2)",
+                      borderRadius: 12,
+                      padding: "16px 18px",
+                      marginTop: 16,
                     }}
                   >
-                    <div className="flex items-center justify-between">
-                      <span style={fieldLabelStyle}>Comp-Based ARV</span>
-                      <span
+                    {/* Header */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "1px", color: "#3a3758", marginBottom: 4 }}>
+                          Comp-Based ARV
+                        </div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: "#f0eeff", letterSpacing: "-0.5px" }}>
+                          ${(arvAnalysis.arvMid ?? arvAnalysis.arvEstimate)?.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#4e4a6a", marginTop: 2 }}>mid-point estimate</div>
+                      </div>
+                      <div
                         style={{
-                          fontSize: 18,
-                          fontWeight: 700,
-                          color: "#f0eeff",
-                        }}
-                      >
-                        $
-                        {arvAnalysis.arvEstimate.toLocaleString("en-US")}
-                      </span>
-                    </div>
-                    <div
-                      className="flex items-center justify-between"
-                      style={{ marginTop: 8 }}
-                    >
-                      <span style={{ fontSize: 12, color: "#4e4a6a" }}>
-                        {arvAnalysis.note}
-                      </span>
-                      <span
-                        style={{
+                          background: arvAnalysis.confidence === "high" ? "rgba(29,158,117,0.12)" : arvAnalysis.confidence === "medium" ? "rgba(239,159,39,0.12)" : "rgba(240,149,149,0.12)",
+                          border: `0.5px solid ${arvAnalysis.confidence === "high" ? "rgba(29,158,117,0.3)" : arvAnalysis.confidence === "medium" ? "rgba(239,159,39,0.3)" : "rgba(240,149,149,0.3)"}`,
+                          borderRadius: 20,
+                          padding: "3px 10px",
                           fontSize: 11,
-                          borderRadius: 4,
-                          padding: "2px 8px",
-                          background:
-                            arvAnalysis.confidence === "high"
-                              ? "rgba(29,158,117,0.15)"
-                              : arvAnalysis.confidence === "medium"
-                                ? "rgba(186,117,23,0.15)"
-                                : "rgba(162,45,45,0.15)",
-                          color:
-                            arvAnalysis.confidence === "high"
-                              ? "#1D9E75"
-                              : arvAnalysis.confidence === "medium"
-                                ? "#EF9F27"
-                                : "#f09595",
+                          color: arvAnalysis.confidence === "high" ? "#1D9E75" : arvAnalysis.confidence === "medium" ? "#EF9F27" : "#f09595",
+                          fontWeight: 500,
                         }}
                       >
                         {arvAnalysis.confidence} confidence
-                      </span>
+                      </div>
                     </div>
-                    {arvAnalysis.pricePerSqft && (
-                      <p
-                        style={{
-                          fontSize: 11,
-                          color: "#3a3758",
-                          marginTop: 6,
-                        }}
-                      >
-                        ${arvAnalysis.pricePerSqft}/sqft avg
-                        {arvAnalysis.avm
-                          ? ` · AVM: $${arvAnalysis.avm.toLocaleString("en-US")}`
-                          : ""}
-                      </p>
+
+                    {/* ARV Range */}
+                    {arvAnalysis.arvLow != null && arvAnalysis.arvHigh != null && (
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 11, color: "#3a3758", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+                          ARV Range
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                          {[
+                            { label: "Conservative", value: arvAnalysis.arvLow, color: "#f09595" },
+                            { label: "Mid", value: arvAnalysis.arvMid ?? arvAnalysis.arvEstimate, color: "#f0eeff" },
+                            { label: "Optimistic", value: arvAnalysis.arvHigh, color: "#1D9E75" },
+                          ].map((item) => (
+                            <div
+                              key={item.label}
+                              onClick={() => setAfterRepairValue(String(item.value))}
+                              style={{
+                                background: "#13121d",
+                                border: "0.5px solid rgba(127,119,221,0.15)",
+                                borderRadius: 8,
+                                padding: "8px 10px",
+                                cursor: "pointer",
+                                transition: "border-color 0.15s",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(127,119,221,0.4)")}
+                              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(127,119,221,0.15)")}
+                              title={`Use ${item.label} ARV`}
+                            >
+                              <div style={{ fontSize: 10, color: "#3a3758", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 3 }}>
+                                {item.label}
+                              </div>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: item.color }}>
+                                ${item.value?.toLocaleString()}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#3a3758", marginTop: 6 }}>
+                          Click any value to use as ARV
+                        </div>
+                      </div>
                     )}
+
+                    {/* Stats row */}
+                    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: "#4e4a6a", paddingTop: 10, borderTop: "0.5px solid rgba(127,119,221,0.08)" }}>
+                      {arvAnalysis.pricePerSqft && (
+                        <span>
+                          ${arvAnalysis.pricePerSqft}/sqft avg
+                          {arvAnalysis.pricePerSqftRange && (
+                            <span style={{ color: "#3a3758" }}>
+                              {" "}(${arvAnalysis.pricePerSqftRange.low}&ndash;${arvAnalysis.pricePerSqftRange.high})
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {arvAnalysis.avm && (
+                        <span>AVM: ${arvAnalysis.avm.toLocaleString()}</span>
+                      )}
+                      {(arvAnalysis.distressedExcluded ?? 0) > 0 && (
+                        <span style={{ color: "#EF9F27" }}>
+                          {"\u26A0"} {arvAnalysis.distressedExcluded} distressed sale{arvAnalysis.distressedExcluded! > 1 ? "s" : ""} excluded
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Note */}
+                    <div style={{ fontSize: 11, color: "#3a3758", marginTop: 8 }}>
+                      {arvAnalysis.note}
+                    </div>
                   </div>
                 )}
 
