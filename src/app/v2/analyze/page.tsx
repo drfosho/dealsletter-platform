@@ -660,6 +660,15 @@ function AnalyzeContent() {
 
         const data = await res.json();
 
+        console.log('Saved analysis raw data:', {
+          ai_analysis: data.ai_analysis,
+          analysis_data: data.analysis_data,
+          narrative: data.ai_analysis?.narrative,
+          full_analysis: data.ai_analysis?.full_analysis,
+          strategy: data.strategy,
+          deal_type: data.deal_type
+        });
+
         // Set strategy
         const strategyMap: Record<string, string> = {
           rental: "Buy & Hold",
