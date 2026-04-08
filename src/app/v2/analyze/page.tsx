@@ -556,6 +556,19 @@ function AnalyzeContent() {
           // Pre-populate monthly rent for single-family
           if (edited.estimatedRent) setMonthlyRent(edited.estimatedRent);
         }
+
+        // Auto-fill property tax from RentCast if available
+        const rentcastTax = prop.propertyTaxes;
+        if (rentcastTax && parseFloat(String(rentcastTax)) > 0) {
+          setPropertyTax(String(Math.round(parseFloat(String(rentcastTax)))));
+        }
+
+        // Estimate insurance as 0.35% of property value if not set
+        const propValue = comparables.value || edited.estimatedValue;
+        if (propValue && parseFloat(String(propValue)) > 0) {
+          const estimatedInsurance = Math.round(parseFloat(String(propValue)) * 0.0035);
+          setInsurance(String(estimatedInsurance));
+        }
       } catch (err) {
         if (!cancelled) {
           setPropertyError("Failed to fetch property data");
@@ -1464,7 +1477,7 @@ function AnalyzeContent() {
             gap: 10px !important;
           }
           .rent-roll-table {
-            grid-template-columns: 40px 60px 60px 1fr 90px !important;
+            grid-template-columns: 40px 60px 60px 1fr 90px 30px !important;
             font-size: 12px !important;
           }
           .rent-roll-table input {
@@ -1491,7 +1504,7 @@ function AnalyzeContent() {
             grid-template-columns: 1fr !important;
           }
           .rent-roll-table {
-            grid-template-columns: 36px 50px 50px 1fr 80px !important;
+            grid-template-columns: 36px 50px 50px 1fr 80px 28px !important;
           }
         }
       `}</style>
@@ -2307,6 +2320,9 @@ function AnalyzeContent() {
                           fontSize: 14,
                         }}
                       />
+                      <div style={{ fontSize: 11, color: "#3a3758", marginTop: 4, lineHeight: 1.4 }}>
+                        Adjust count or use trash icon to remove a unit
+                      </div>
                     </div>
 
                     {/* Single rent input (when not multifamily) */}
@@ -2373,12 +2389,90 @@ function AnalyzeContent() {
                       </div>
                     )}
 
-                    {inp("Property Tax / Year", propertyTax, setPropertyTax, {
-                      placeholder: "e.g. 6000",
-                    })}
-                    {inp("Insurance / Year", insurance, setInsurance, {
-                      placeholder: "e.g. 1800",
-                    })}
+                    <div className="flex-1">
+                      <label style={fieldLabelStyle}>Property Tax / Year</label>
+                      <input
+                        type="number"
+                        value={propertyTax}
+                        onChange={(e) => setPropertyTax(e.target.value)}
+                        placeholder="e.g. 6000"
+                        className="v2-input w-full"
+                        style={{
+                          background: "#13121d",
+                          border: "0.5px solid rgba(127,119,221,0.2)",
+                          borderRadius: 8,
+                          padding: "10px 14px",
+                          color: "#e8e6f0",
+                          fontSize: 14,
+                          fontFamily: "inherit",
+                          outline: "none",
+                          boxSizing: "border-box" as const,
+                          width: "100%",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+                        {propertyData?.property?.propertyTaxes && (
+                          <button
+                            type="button"
+                            onClick={() => setPropertyTax(String(Math.round(parseFloat(propertyData.property.propertyTaxes))))}
+                            style={{ background: "rgba(83,74,183,0.1)", border: "0.5px solid rgba(127,119,221,0.25)", borderRadius: 6, padding: "3px 10px", fontSize: 11, color: "#9994b8", cursor: "pointer", fontFamily: "inherit" }}
+                          >
+                            Use RentCast: ${Math.round(parseFloat(propertyData.property.propertyTaxes)).toLocaleString()}/yr
+                          </button>
+                        )}
+                        {(editedProperty.estimatedValue || purchasePrice) && parseFloat(purchasePrice || editedProperty.estimatedValue) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setPropertyTax(String(Math.round(parseFloat(purchasePrice || editedProperty.estimatedValue) * 0.012)))}
+                            style={{ background: "rgba(83,74,183,0.1)", border: "0.5px solid rgba(127,119,221,0.25)", borderRadius: 6, padding: "3px 10px", fontSize: 11, color: "#9994b8", cursor: "pointer", fontFamily: "inherit" }}
+                          >
+                            Estimate 1.2%: ${Math.round(parseFloat(purchasePrice || editedProperty.estimatedValue) * 0.012).toLocaleString()}/yr
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <label style={fieldLabelStyle}>Insurance / Year</label>
+                      <input
+                        type="number"
+                        value={insurance}
+                        onChange={(e) => setInsurance(e.target.value)}
+                        placeholder="e.g. 1800"
+                        className="v2-input w-full"
+                        style={{
+                          background: "#13121d",
+                          border: "0.5px solid rgba(127,119,221,0.2)",
+                          borderRadius: 8,
+                          padding: "10px 14px",
+                          color: "#e8e6f0",
+                          fontSize: 14,
+                          fontFamily: "inherit",
+                          outline: "none",
+                          boxSizing: "border-box" as const,
+                          width: "100%",
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
+                        {(editedProperty.estimatedValue || purchasePrice) && parseFloat(purchasePrice || editedProperty.estimatedValue) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setInsurance(String(Math.round(parseFloat(purchasePrice || editedProperty.estimatedValue) * 0.0035)))}
+                            style={{ background: "rgba(83,74,183,0.1)", border: "0.5px solid rgba(127,119,221,0.25)", borderRadius: 6, padding: "3px 10px", fontSize: 11, color: "#9994b8", cursor: "pointer", fontFamily: "inherit" }}
+                          >
+                            Estimate 0.35%: ${Math.round(parseFloat(purchasePrice || editedProperty.estimatedValue) * 0.0035).toLocaleString()}/yr
+                          </button>
+                        )}
+                        {(editedProperty.estimatedValue || purchasePrice) && parseFloat(purchasePrice || editedProperty.estimatedValue) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setInsurance(String(Math.round(parseFloat(purchasePrice || editedProperty.estimatedValue) * 0.005)))}
+                            style={{ background: "rgba(83,74,183,0.1)", border: "0.5px solid rgba(127,119,221,0.25)", borderRadius: 6, padding: "3px 10px", fontSize: 11, color: "#9994b8", cursor: "pointer", fontFamily: "inherit" }}
+                          >
+                            Conservative 0.5%: ${Math.round(parseFloat(purchasePrice || editedProperty.estimatedValue) * 0.005).toLocaleString()}/yr
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Rent Roll table */}
@@ -2432,7 +2526,7 @@ function AnalyzeContent() {
                           className="rent-roll-table"
                           style={{
                             display: "grid",
-                            gridTemplateColumns: "48px 64px 64px 1fr 110px",
+                            gridTemplateColumns: "48px 64px 64px 1fr 110px 36px",
                             gap: 8,
                             padding: "8px 14px",
                             background: "rgba(127,119,221,0.06)",
@@ -2447,6 +2541,7 @@ function AnalyzeContent() {
                           <span>Baths</span>
                           <span>Notes</span>
                           <span style={{ textAlign: "right" }}>Rent/Mo</span>
+                          <span></span>
                         </div>
 
                         {/* Rows */}
@@ -2485,7 +2580,7 @@ function AnalyzeContent() {
                               style={{
                                 display: "grid",
                                 gridTemplateColumns:
-                                  "48px 64px 64px 1fr 110px",
+                                  "48px 64px 64px 1fr 110px 36px",
                                 gap: 8,
                                 padding: "10px 14px",
                                 alignItems: "center",
@@ -2567,6 +2662,40 @@ function AnalyzeContent() {
                                     textAlign: "right",
                                   }}
                                 />
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                {unitRents.length > 1 && (
+                                  <button
+                                    onClick={() => {
+                                      const newRents = unitRents.filter((_, i) => i !== idx);
+                                      setUnitRents(newRents);
+                                      setUnitCount(newRents.length);
+                                      setUnitCountRaw(String(newRents.length));
+                                    }}
+                                    style={{
+                                      background: "transparent",
+                                      border: "none",
+                                      cursor: "pointer",
+                                      padding: 4,
+                                      color: "#3a3758",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      borderRadius: 4,
+                                      transition: "color 0.15s",
+                                    }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.color = "#f09595")}
+                                    onMouseLeave={(e) => (e.currentTarget.style.color = "#3a3758")}
+                                    title="Remove unit"
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                      <polyline points="3 6 5 6 21 6" />
+                                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                      <path d="M10 11v6M14 11v6" />
+                                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                    </svg>
+                                  </button>
+                                )}
                               </div>
                             </div>
                           );
