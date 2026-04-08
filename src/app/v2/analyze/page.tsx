@@ -420,6 +420,7 @@ function AnalyzeContent() {
     }>
   >([]);
   const [isMultifamily, setIsMultifamily] = useState(false);
+  const [unitCountRaw, setUnitCountRaw] = useState("1");
 
   // Pro Max parallel analysis
   const {
@@ -941,6 +942,11 @@ function AnalyzeContent() {
     });
   }, [unitCount]);
 
+  // Sync unitCountRaw when unitCount changes externally
+  useEffect(() => {
+    setUnitCountRaw(String(unitCount));
+  }, [unitCount]);
+
   useEffect(() => {
     if (!isMultifamily || unitRents.length === 0) return;
 
@@ -1078,8 +1084,11 @@ function AnalyzeContent() {
     setProgressSteps([]);
     setCurrentStep("");
 
-    // Use monthlyRent from state, or fall back to edited rent estimate
-    const effectiveRent = monthlyRent || editedProperty.estimatedRent;
+    // Use monthlyRent from state if user entered a value, fall back to RentCast estimate
+    const effectiveRent = (() => {
+      if (monthlyRent && parseFloat(monthlyRent) > 0) return monthlyRent;
+      return editedProperty.estimatedRent;
+    })();
 
     // Pro Max parallel — only when user selected Max IQ model
     if (userTier === "pro_max" && selectedModel === "max") {
@@ -2051,7 +2060,7 @@ function AnalyzeContent() {
           const isBuyHold = selectedStrategy === "Buy & Hold";
           const isHouseHack = selectedStrategy === "House Hack";
           const showRehabRow = isFlip || isBRRRR;
-          const showRentalRow = isBuyHold || isHouseHack;
+          const showRentalRow = isBuyHold || isHouseHack || isBRRRR;
 
           const loanPills: Record<string, string[]> = {
             "Fix & Flip": ["Hard Money", "Private Money", "Cash"],
@@ -2102,6 +2111,10 @@ function AnalyzeContent() {
               step?: string;
               helper?: string;
               extra?: React.ReactNode;
+              helperClickable?: boolean;
+              onHelperClick?: () => void;
+              helperColor?: string;
+              inputStyle?: React.CSSProperties;
             }
           ) => (
             <div className="flex-1">
@@ -2120,12 +2133,22 @@ function AnalyzeContent() {
                   padding: "10px 14px",
                   color: "#e8e6f0",
                   fontSize: 14,
+                  ...(opts?.inputStyle || {}),
                 }}
               />
               {opts?.helper && (
-                <span style={{ fontSize: 10, color: "#3a3758", marginTop: 4, display: "block" }}>
+                <div
+                  onClick={opts?.onHelperClick}
+                  style={{
+                    fontSize: 11,
+                    color: opts?.helperColor || "#3a3758",
+                    marginTop: 4,
+                    cursor: opts?.helperClickable ? "pointer" : "default",
+                    lineHeight: 1.4,
+                  }}
+                >
                   {opts.helper}
-                </span>
+                </div>
               )}
               {opts?.extra}
             </div>
@@ -2174,13 +2197,28 @@ function AnalyzeContent() {
               {/* Row 1 — core financing */}
               <div className="mb-3 flex gap-3">
                 {inp("Purchase Price", purchasePrice, setPurchasePrice, {
-                  placeholder: editedProperty.listPrice || editedProperty.estimatedValue || "e.g. 450000",
-                  helper:
-                    !purchasePrice && !editedProperty.listPrice && editedProperty.estimatedValue
-                      ? `RentCast AVM: $${parseFloat(editedProperty.estimatedValue).toLocaleString()} — reference only`
-                      : !purchasePrice && !editedProperty.listPrice
-                        ? "No active listing found. Enter your target price."
-                        : undefined,
+                  placeholder: "Enter purchase price",
+                  inputStyle: !purchasePrice ? {
+                    border: "0.5px solid rgba(239,159,39,0.5)",
+                    background: "rgba(239,159,39,0.04)",
+                  } : undefined,
+                  helper: !purchasePrice
+                    ? editedProperty.listPrice && parseFloat(editedProperty.listPrice) > 0
+                      ? `List price: $${parseFloat(editedProperty.listPrice).toLocaleString()} \u2014 click to use`
+                      : editedProperty.estimatedValue && parseFloat(editedProperty.estimatedValue) > 0
+                        ? `AVM: $${parseFloat(editedProperty.estimatedValue).toLocaleString()} \u2014 click to use`
+                        : "\u26A0 Required \u2014 enter your target price"
+                    : undefined,
+                  helperColor: !purchasePrice ? "#EF9F27" : undefined,
+                  helperClickable: !purchasePrice && !!(editedProperty.listPrice || editedProperty.estimatedValue),
+                  onHelperClick: () => {
+                    if (purchasePrice) return;
+                    if (editedProperty.listPrice && parseFloat(editedProperty.listPrice) > 0) {
+                      setPurchasePrice(editedProperty.listPrice);
+                    } else if (editedProperty.estimatedValue && parseFloat(editedProperty.estimatedValue) > 0) {
+                      setPurchasePrice(editedProperty.estimatedValue);
+                    }
+                  },
                 })}
                 {inp("Down Payment %", downPayment, setDownPayment, {
                   helper: dpHelper[loanType] || dpHelper[loanType.split(" ")[0]] || "",
@@ -2239,10 +2277,26 @@ function AnalyzeContent() {
                         type="number"
                         min="1"
                         max="50"
-                        value={unitCount}
-                        onChange={(e) =>
-                          setUnitCount(parseInt(e.target.value) || 1)
-                        }
+                        value={unitCountRaw}
+                        onChange={(e) => {
+                          setUnitCountRaw(e.target.value);
+                          const parsed = parseInt(e.target.value);
+                          if (!isNaN(parsed) && parsed >= 1) {
+                            setUnitCount(parsed);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const parsed = parseInt(e.target.value);
+                          if (isNaN(parsed) || parsed < 1) {
+                            setUnitCountRaw("1");
+                            setUnitCount(1);
+                          } else if (parsed > 50) {
+                            setUnitCountRaw("50");
+                            setUnitCount(50);
+                          } else {
+                            setUnitCountRaw(String(parsed));
+                          }
+                        }}
                         className="v2-input w-full"
                         style={{
                           background: "#13121d",
@@ -2261,7 +2315,9 @@ function AnalyzeContent() {
                         {inp(
                           isHouseHack
                             ? "Total Rental Income / Mo"
-                            : "Est. Monthly Rent",
+                            : isBRRRR
+                              ? "Post-Rehab Monthly Rent"
+                              : "Est. Monthly Rent",
                           monthlyRent,
                           setMonthlyRent,
                           {
@@ -2269,7 +2325,14 @@ function AnalyzeContent() {
                               editedProperty.estimatedRent || "e.g. 2800",
                             helper: isHouseHack
                               ? "Income from rented units/rooms"
-                              : undefined,
+                              : isBRRRR
+                                ? "Stabilized rent used for DSCR refi calculation"
+                                : undefined,
+                            extra: isBRRRR && (monthlyRent || editedProperty.estimatedRent) ? (
+                              <div style={{ fontSize: 11, color: "#1D9E75", marginTop: 4 }}>
+                                {"\u2713"} Using ${parseFloat(monthlyRent || editedProperty.estimatedRent).toLocaleString()}/mo for DSCR calculation
+                              </div>
+                            ) : undefined,
                           }
                         )}
                       </>
