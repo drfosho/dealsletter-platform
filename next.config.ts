@@ -108,12 +108,6 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // Redirect root to /v2
-      {
-        source: '/',
-        destination: '/v2',
-        permanent: false,
-      },
       // Redirect V1 auth pages to V2
       {
         source: '/login',
