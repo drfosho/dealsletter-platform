@@ -66,13 +66,6 @@ function secureCompare(a: string, b: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
-  // Rewrite root to /v2 (serves /v2 content without changing URL)
-  if (request.nextUrl.pathname === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/v2'
-    return NextResponse.rewrite(url)
-  }
-
   // Check if the request is for the admin area (non-API)
   if (request.nextUrl.pathname.startsWith('/admin')) {
     let adminPassword: string
