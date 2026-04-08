@@ -1524,15 +1524,27 @@ function AnalyzeContent() {
 
         {/* SECTION 1 — Header */}
         {!isLoadingSaved && (
-        <span
-          className="mb-6 inline-block cursor-pointer"
-          style={{ color: "#4e4a6a", fontSize: 13 }}
-          onClick={() => router.push("/v2")}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#4e4a6a")}
-        >
-          &larr; Back to search
-        </span>
+          savedAnalysisLoaded ? (
+            <span
+              className="mb-6 inline-block cursor-pointer"
+              style={{ color: "#4e4a6a", fontSize: 13 }}
+              onClick={() => router.push("/v2/analyses")}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#4e4a6a")}
+            >
+              &larr; Back to history
+            </span>
+          ) : (
+            <span
+              className="mb-6 inline-block cursor-pointer"
+              style={{ color: "#4e4a6a", fontSize: 13 }}
+              onClick={() => router.push(isLoggedIn ? "/v2/dashboard" : "/v2")}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#4e4a6a")}
+            >
+              &larr; Back to search
+            </span>
+          )
         )}
 
         {!isLoadingSaved && (
@@ -2801,28 +2813,53 @@ function AnalyzeContent() {
                 />
                 Analysis complete
               </span>
-              <button
-                className="cursor-pointer transition-colors"
-                style={{
-                  background: "transparent",
-                  border: "0.5px solid rgba(127,119,221,0.25)",
-                  color: "#6b6690",
-                  borderRadius: 8,
-                  padding: "7px 16px",
-                  fontSize: 13,
-                }}
-                onClick={() => router.push("/v2/dashboard")}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "#9994b8";
-                  e.currentTarget.style.borderColor = "rgba(127,119,221,0.5)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "#6b6690";
-                  e.currentTarget.style.borderColor = "rgba(127,119,221,0.25)";
-                }}
-              >
-                Run another analysis
-              </button>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  className="cursor-pointer"
+                  style={{
+                    background: "transparent",
+                    border: "0.5px solid rgba(127,119,221,0.25)",
+                    color: "#9994b8",
+                    borderRadius: 9,
+                    padding: "7px 16px",
+                    fontSize: 13,
+                    fontFamily: "inherit",
+                  }}
+                  onClick={() => router.push("/v2/dashboard")}
+                >
+                  &larr; Dashboard
+                </button>
+                <button
+                  className="cursor-pointer"
+                  style={{
+                    background: "transparent",
+                    border: "0.5px solid rgba(127,119,221,0.25)",
+                    color: "#9994b8",
+                    borderRadius: 9,
+                    padding: "7px 16px",
+                    fontSize: 13,
+                    fontFamily: "inherit",
+                  }}
+                  onClick={() => router.push("/v2/analyses")}
+                >
+                  View history &rarr;
+                </button>
+                <button
+                  className="cursor-pointer"
+                  style={{
+                    background: "transparent",
+                    border: "0.5px solid rgba(127,119,221,0.25)",
+                    color: "#6b6690",
+                    borderRadius: 9,
+                    padding: "7px 16px",
+                    fontSize: 13,
+                    fontFamily: "inherit",
+                  }}
+                  onClick={() => router.push("/v2/dashboard")}
+                >
+                  Run another analysis
+                </button>
+              </div>
             </div>
 
             <AnalysisResults

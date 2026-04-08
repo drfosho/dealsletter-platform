@@ -49,11 +49,20 @@ const fmtDate = (dateStr: string): string => {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-const getDealScore = (a: any): number | null =>
-  a.analysis_data?.dealScore ??
-  a.analysis_data?.deal_score ??
-  a.analysis_data?.ai_analysis?.dealScore ??
-  null;
+const getDealScore = (a: any): number | null => {
+  if (a.deal_score != null) return a.deal_score;
+  if (a.dealScore != null) return a.dealScore;
+  try {
+    if (a.full_analysis) {
+      const parsed = typeof a.full_analysis === "string" ? JSON.parse(a.full_analysis) : a.full_analysis;
+      if (parsed.dealScore != null) return parsed.dealScore;
+    }
+  } catch {}
+  if (a.analysis_data?.dealScore != null) return a.analysis_data.dealScore;
+  if (a.analysis_data?.deal_score != null) return a.analysis_data.deal_score;
+  if (a.analysis_data?.ai_analysis?.dealScore != null) return a.analysis_data.ai_analysis.dealScore;
+  return null;
+};
 
 const scoreColor = (s: number | null) =>
   s == null ? "#3a3758" : s >= 7 ? "#1D9E75" : s >= 5 ? "#EF9F27" : "#f09595";
