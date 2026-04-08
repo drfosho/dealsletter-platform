@@ -190,46 +190,19 @@ export default function SignupPage() {
             display: "flex",
             alignItems: "center",
             gap: 10,
-            marginBottom: 28,
+            marginBottom: 24,
             cursor: "pointer",
           }}
           onClick={() => router.push("/v2")}
         >
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              background: "#3C3489",
-              borderRadius: 8,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1" y="1" width="6" height="7" rx="1.5" fill="#c8c3f0" />
-              <rect x="9" y="1" width="6" height="4" rx="1.5" fill="#c8c3f0" />
-              <rect
-                x="1"
-                y="10"
-                width="6"
-                height="5"
-                rx="1.5"
-                fill="#9994b8"
-              />
-              <rect
-                x="9"
-                y="7"
-                width="6"
-                height="8"
-                rx="1.5"
-                fill="#9994b8"
-              />
-            </svg>
-          </div>
+          <img
+            src="/logos/logomark-34.png"
+            alt="Dealsletter"
+            style={{ width: 34, height: 34, objectFit: "contain" }}
+          />
           <span
             style={{
-              fontSize: 20,
+              fontSize: 19,
               fontWeight: 600,
               color: "#f0eeff",
               letterSpacing: "-0.4px",
