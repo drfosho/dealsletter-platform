@@ -114,8 +114,10 @@ export async function POST(request: Request) {
       checkoutParams.customer_email = user.email
     }
 
-    // Add subscription metadata
+    // Add subscription metadata + 7-day trial
+    checkoutParams.payment_method_collection = 'always'
     checkoutParams.subscription_data = {
+      trial_period_days: 7,
       metadata: {
         tier,
         billingPeriod,

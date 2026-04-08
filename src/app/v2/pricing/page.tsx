@@ -506,6 +506,11 @@ export default function PricingPage() {
             <div style={{ fontSize: 13, color: "#3a3758", marginBottom: 6 }}>
               {proSub}
             </div>
+            {!isAnnual && (
+              <div style={{ fontSize: 12, color: "#1D9E75", marginTop: 4, marginBottom: 6 }}>
+                7-day free trial &mdash; cancel anytime
+              </div>
+            )}
             {proBelow && (
               <div
                 style={{ fontSize: 12, color: "#1D9E75", marginBottom: 6 }}
@@ -544,7 +549,7 @@ export default function PricingPage() {
                   (e.currentTarget.style.background = "#534AB7")
                 }
               >
-                {isSubscribing === 'pro' ? 'Redirecting...' : 'Start Pro \u2192'}
+                {isSubscribing === 'pro' ? 'Redirecting...' : 'Start 7-day free trial \u2192'}
               </button>
             )}
             {proSave && (
@@ -583,6 +588,11 @@ export default function PricingPage() {
             <div style={{ fontSize: 13, color: "#3a3758", marginBottom: 6 }}>
               {maxSub}
             </div>
+            {!isAnnual && (
+              <div style={{ fontSize: 12, color: "#1D9E75", marginTop: 4, marginBottom: 6 }}>
+                7-day free trial &mdash; cancel anytime
+              </div>
+            )}
             {maxBelow && (
               <div
                 style={{ fontSize: 12, color: "#1D9E75", marginBottom: 6 }}
@@ -621,7 +631,7 @@ export default function PricingPage() {
                   (e.currentTarget.style.background = "#534AB7")
                 }
               >
-                {isSubscribing === 'pro_max' ? 'Redirecting...' : 'Start Pro Max \u2192'}
+                {isSubscribing === 'pro_max' ? 'Redirecting...' : 'Start 7-day free trial \u2192'}
               </button>
             )}
             <div style={{ height: 8 }} />
@@ -828,7 +838,7 @@ export default function PricingPage() {
             Start analyzing deals today.
           </h2>
           <p style={{ fontSize: 15, color: "#4e4a6a", marginBottom: 28 }}>
-            No credit card required. Unlimited free analyses to start.
+            7-day free trial on all paid plans. Card required. Cancel anytime.
           </p>
           <div
             style={{
