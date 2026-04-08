@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import NavBar from "@/components/v2/NavBar";
 import Footer from "@/components/v2/Footer";
 
@@ -145,6 +146,20 @@ export default function PricingPage() {
 
   const handleSubscribe = async (tier: 'pro' | 'pro_max') => {
     setIsSubscribing(tier);
+
+    // Check if user is logged in
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.user) {
+      // Store plan intent and send to signup
+      localStorage.setItem("post_signup_plan", tier);
+      localStorage.setItem("post_login_redirect", "/v2/pricing");
+      router.push(`/v2/signup?plan=${tier}`);
+      setIsSubscribing(null);
+      return;
+    }
+
     try {
       // First check if user has active subscription
       const usageRes = await fetch('/api/analysis/usage');
