@@ -396,7 +396,7 @@ export default function V2AnalysesPage() {
                           ))}
                       </div>
                       <div style={{ display: "flex", gap: 10 }}>
-                        <button onClick={() => router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}`)} style={{ background: "#534AB7", color: "#f0eeff", padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Re-run analysis &rarr;</button>
+                        <button onClick={() => router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}`)} style={{ background: "#534AB7", color: "#f0eeff", padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Run new analysis &rarr;</button>
                         <button onClick={() => router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}&id=${a.id}`)} style={{ background: "transparent", border: "0.5px solid rgba(127,119,221,0.25)", color: "#9994b8", padding: "9px 18px", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>View full analysis</button>
                       </div>
                     </div>

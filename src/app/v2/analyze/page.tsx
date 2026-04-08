@@ -343,8 +343,11 @@ function AnalyzeContent() {
   const router = useRouter();
 
   const address = searchParams.get("address") || "";
+  const savedAnalysisId = searchParams?.get("id") || null;
   const requestedModel = searchParams.get("model") || "speed";
   const [selectedModel, setSelectedModel] = useState("speed");
+  const [isLoadingSaved, setIsLoadingSaved] = useState(false);
+  const [savedAnalysisLoaded, setSavedAnalysisLoaded] = useState(false);
 
   /* --- Property data states --- */
   const [propertyData, setPropertyData] = useState<any>(null);
@@ -643,6 +646,97 @@ function AnalyzeContent() {
 
     loadUserTier();
   }, []);
+
+  /* ---------- Load saved analysis if id param present ------------- */
+
+  useEffect(() => {
+    if (!savedAnalysisId) return;
+
+    const loadSavedAnalysis = async () => {
+      setIsLoadingSaved(true);
+      try {
+        const res = await fetch(`/api/analysis/${savedAnalysisId}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        // Set strategy
+        const strategyMap: Record<string, string> = {
+          rental: "Buy & Hold",
+          flip: "Fix & Flip",
+          brrrr: "BRRRR",
+          "house-hack": "House Hack",
+        };
+        const strategyLabel =
+          strategyMap[data.strategy] || data.deal_type || "Buy & Hold";
+        setSelectedStrategy(strategyLabel);
+
+        // Build result object from saved data
+        const analysisData = data.analysis_data || {};
+        const aiAnalysis = data.ai_analysis || {};
+
+        const savedResult: AnalysisResult = {
+          dealScore: analysisData.dealScore ?? aiAnalysis.dealScore ?? undefined,
+          narrative: aiAnalysis.narrative || analysisData.narrative || aiAnalysis.full_analysis || undefined,
+          riskFlags: aiAnalysis.riskFlags || analysisData.riskFlags || undefined,
+          risks: aiAnalysis.risks || undefined,
+          metrics: aiAnalysis.metrics || analysisData.metrics || undefined,
+          financial_metrics: aiAnalysis.financial_metrics || undefined,
+          cashFlow: aiAnalysis.cashFlow || analysisData.cashFlow || undefined,
+          proForma: aiAnalysis.proForma || analysisData.proForma || undefined,
+          recommendation: aiAnalysis.recommendation || analysisData.recommendation || undefined,
+          marketContext: aiAnalysis.marketContext || analysisData.marketContext || undefined,
+        };
+
+        // Build calculations from saved data
+        const savedCalculations = {
+          purchasePrice: data.purchase_price,
+          cashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow ?? analysisData.cashFlow?.monthly,
+          roi: data.roi,
+          netProfit: data.profit,
+          arv: analysisData.arv ?? aiAnalysis.financial_metrics?.arv,
+          capRate: aiAnalysis.financial_metrics?.cap_rate,
+          cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return,
+          totalInvestment: aiAnalysis.financial_metrics?.total_investment,
+        };
+
+        // Build property data from saved
+        const savedPropertyData = data.property_data || {
+          address: data.address,
+          beds: analysisData.beds,
+          baths: analysisData.baths,
+          sqft: analysisData.sqft,
+          estimatedValue: analysisData.purchasePrice,
+        };
+
+        // Set all the state to show results
+        setParsedResult(savedResult);
+        setServerCalculations(savedCalculations);
+        setEditedProperty((prev) => ({
+          ...prev,
+          ...savedPropertyData,
+        }));
+        setHasAnalyzed(true);
+        setSavedAnalysisLoaded(true);
+
+        // Set the model label if available
+        const modelLabel = analysisData.modelLabel || analysisData.model || "Balanced (Auto)";
+        setSelectedModel(
+          modelLabel.toLowerCase().includes("opus")
+            ? "max"
+            : modelLabel.toLowerCase().includes("mini")
+              ? "speed"
+              : "balanced"
+        );
+      } catch (err) {
+        console.error("Failed to load saved analysis:", err);
+      } finally {
+        setIsLoadingSaved(false);
+      }
+    };
+
+    loadSavedAnalysis();
+  }, [savedAnalysisId]);
 
   /* ---------- Strategy defaults ---------------------------------- */
 
@@ -1306,7 +1400,37 @@ function AnalyzeContent() {
         className="analyze-main mx-auto w-full"
         style={{ maxWidth: 860, padding: "40px 24px" }}
       >
+        {/* Loading saved analysis */}
+        {isLoadingSaved && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "80px 24px",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            <style>{`@keyframes analyze-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                border: "2px solid rgba(127,119,221,0.2)",
+                borderTop: "2px solid #534AB7",
+                borderRadius: "50%",
+                animation: "analyze-spin 0.8s linear infinite",
+              }}
+            />
+            <div style={{ fontSize: 15, color: "#6b6690" }}>
+              Loading your saved analysis...
+            </div>
+          </div>
+        )}
+
         {/* SECTION 1 — Header */}
+        {!isLoadingSaved && (
         <span
           className="mb-6 inline-block cursor-pointer"
           style={{ color: "#4e4a6a", fontSize: 13 }}
@@ -1314,9 +1438,11 @@ function AnalyzeContent() {
           onMouseEnter={(e) => (e.currentTarget.style.color = "#b0acd8")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "#4e4a6a")}
         >
-          ← Back to search
+          &larr; Back to search
         </span>
+        )}
 
+        {!isLoadingSaved && (
         <h1
           style={{
             fontSize: 22,
@@ -1328,6 +1454,39 @@ function AnalyzeContent() {
         >
           {address || "No address provided"}
         </h1>
+        )}
+
+        {/* Saved analysis badge */}
+        {savedAnalysisLoaded && !isLoadingSaved && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "rgba(83,74,183,0.1)",
+              border: "0.5px solid rgba(127,119,221,0.25)",
+              borderRadius: 20,
+              padding: "3px 12px",
+              fontSize: 12,
+              color: "#9994b8",
+              marginTop: 8,
+            }}
+          >
+            <span style={{ color: "#534AB7" }}>{"\u2193"}</span>
+            Saved analysis &mdash;{" "}
+            <span
+              onClick={() => {
+                setSavedAnalysisLoaded(false);
+                setHasAnalyzed(false);
+                setParsedResult(null);
+                setServerCalculations(null);
+              }}
+              style={{ color: "#534AB7", cursor: "pointer", marginLeft: 4 }}
+            >
+              Run fresh analysis
+            </span>
+          </div>
+        )}
 
         {!isLoadingTier && (
           <span
