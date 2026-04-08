@@ -187,28 +187,27 @@ export async function middleware(request: NextRequest) {
   // If user is not logged in and trying to access protected routes
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
+    url.pathname = '/v2/login'
     return NextResponse.redirect(url)
   }
 
   // If user is logged in but email not verified and trying to access analysis or account
   if (user && !user.email_confirmed_at && (isAnalysisPage || isAccountPage)) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/verify-email'
-    url.searchParams.set('email', user.email!)
+    url.pathname = '/v2/login'
     return NextResponse.redirect(url)
   }
 
-  // If user is logged in and verified, redirect away from auth pages (except admin and verification pages)
+  // If user is logged in and verified, redirect away from V1 auth pages
   if (user && user.email_confirmed_at && isAuthPage && !isAdminUsers) {
-    // Don't redirect from verification pages if user just verified
+    // Don't redirect from verification/callback pages
     if (request.nextUrl.pathname.includes('verify-success') ||
         request.nextUrl.pathname.includes('callback') ||
         request.nextUrl.pathname.includes('verify-email')) {
       return supabaseResponse
     }
     const url = request.nextUrl.clone()
-    url.pathname = '/analysis'
+    url.pathname = '/v2/dashboard'
     return NextResponse.redirect(url)
   }
 
