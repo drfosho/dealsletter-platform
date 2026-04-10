@@ -20,7 +20,7 @@ export interface FinancialInputs {
   renovationCosts?: number;
   arv?: number;
   propertyType?: string;
-  loanType?: 'conventional' | 'hardMoney';
+  loanType?: 'conventional' | 'hardMoney' | 'privateMoney' | 'cash';
   points?: number;
 }
 
@@ -136,7 +136,7 @@ export function calculateMonthlyMortgage(
   principal: number,
   annualInterestRate: number,
   termYears: number,
-  loanType: 'conventional' | 'hardMoney' = 'conventional',
+  loanType: 'conventional' | 'hardMoney' | 'privateMoney' | 'cash' = 'conventional',
   additionalPrincipal: number = 0 // For hard money rehab financing
 ): number {
   // Validate inputs
@@ -524,6 +524,9 @@ export interface FlipCalculationInputs extends FinancialInputs {
   arv: number;
   holdingPeriodMonths?: number;
   isHardMoney?: boolean; // Indicates hard money loan with rehab holdback
+  isPrivateMoney?: boolean;
+  isCash?: boolean;
+  sellClosingCostsPercent?: number; // Sell-side closing costs (default 6%)
 }
 
 export interface ClosingCostsBreakdown {
@@ -564,6 +567,10 @@ export interface FlipCalculationOutputs {
 
   // Financing details
   isHardMoney: boolean;
+  isPrivateMoney: boolean;
+  isCash: boolean;
+  loanLabel: string;
+  sellClosingCostsPercent: number;
   pointsCost: number;
 
   // Max Allowable Offer
@@ -601,8 +608,8 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   const renovationCosts = parsePrice(inputs.renovationCosts || 0);
   const arv = parsePrice(inputs.arv);
   const holdingMonths = parseInteger(inputs.holdingPeriodMonths || 6);
-  // Default to 3% points for hard money if not specified
-  const points = parsePercentage(inputs.points) || 3;
+  // Default to 3% points for hard money if not specified, 0 for cash
+  const points = inputs.isCash ? 0 : (inputs.points != null ? parsePercentage(inputs.points) : 3);
 
   console.log('Parsed Input Values:', {
     purchasePrice,
@@ -640,15 +647,23 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     warnings.push(`Holding period (${holdingMonths} months) is unusual - typical flips are 3-12 months`);
   }
 
-  // Determine if this is a hard money loan (default to true for flips)
-  const isHardMoney = inputs.isHardMoney ??
-    (inputs.loanType === 'hardMoney' || points >= 2);
+  // Determine loan type flags
+  const isCash = inputs.isCash ?? (inputs.loanType === 'cash');
+  const isPrivateMoney = inputs.isPrivateMoney ?? (inputs.loanType === 'privateMoney');
+  const isHardMoney = isCash ? false : (inputs.isHardMoney ?? (inputs.loanType === 'hardMoney' || points >= 2));
+
+  // Build dynamic loan label
+  const loanLabel = isCash
+    ? 'Cash Purchase'
+    : isPrivateMoney
+    ? 'Private Money Loan'
+    : 'Hard Money Loan';
 
   console.log('STEP 3: Calculating financing structure...');
 
   // Calculate financing structure
-  const downPayment = (purchasePrice * downPaymentPercent) / 100;
-  const acquisitionLoan = purchasePrice - downPayment;
+  const downPayment = isCash ? purchasePrice : (purchasePrice * downPaymentPercent) / 100;
+  const acquisitionLoan = isCash ? 0 : purchasePrice - downPayment;
 
   console.log('Acquisition Financing:', {
     downPayment: `$${downPayment.toLocaleString()} (${downPaymentPercent}%)`,
@@ -745,11 +760,12 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
 
   console.log('STEP 7: Calculating selling costs...');
 
-  // Selling costs / agent commission — 6% of ARV
-  const sellingCosts = Math.round(arv * 0.06);
+  // Selling costs / agent commission — configurable, default 6% of ARV
+  const sellClosingPct = (inputs.sellClosingCostsPercent != null ? inputs.sellClosingCostsPercent : 6) / 100;
+  const sellingCosts = Math.round(arv * sellClosingPct);
 
   console.log('Selling Costs:', {
-    sellingCosts: `$${sellingCosts.toLocaleString()} (6% of ARV $${arv.toLocaleString()})`
+    sellingCosts: `$${sellingCosts.toLocaleString()} (${(sellClosingPct * 100).toFixed(1)}% of ARV $${arv.toLocaleString()})`
   });
 
   console.log('STEP 8: Calculating investment totals...');
@@ -890,6 +906,10 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
     mao70,
     mao85,
     isHardMoney,
+    isPrivateMoney,
+    isCash,
+    loanLabel,
+    sellClosingCostsPercent: sellClosingPct * 100,
     validation
   };
 }

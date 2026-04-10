@@ -390,6 +390,7 @@ function AnalyzeContent() {
   const [afterRepairValue, setAfterRepairValue] = useState("");
   const [holdingMonths, setHoldingMonths] = useState("");
   const [closingCosts, setClosingCosts] = useState("3");
+  const [sellClosingCosts, setSellClosingCosts] = useState("6");
   const [propertyTax, setPropertyTax] = useState("");
   const [insurance, setInsurance] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -910,6 +911,15 @@ function AnalyzeContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStrategy]);
 
+  // When switching to Cash, zero out financing fields
+  useEffect(() => {
+    if (loanType === 'Cash') {
+      setDownPayment('100');
+      setPoints('0');
+      setInterestRate('0');
+    }
+  }, [loanType]);
+
   /* ---------- Validate model for tier ----------------------------- */
 
   useEffect(() => {
@@ -1108,6 +1118,17 @@ function AnalyzeContent() {
       return editedProperty.estimatedRent;
     })();
 
+    // Shared parsed values for both parallel and standard paths
+    const apiLoanType = loanType.includes("Hard Money")
+      ? "hardMoney"
+      : loanType.includes("Private Money")
+      ? "privateMoney"
+      : loanType.includes("Cash")
+      ? "cash"
+      : "conventional";
+    const parsedDP = downPayment !== '' && downPayment != null ? parseFloat(downPayment) : 20;
+    const parsedPrice = parseFloat(purchasePrice) || 0;
+
     // Pro Max parallel — only when user selected Max IQ model
     if (userTier === "pro_max" && selectedModel === "max") {
       setProMaxMode(true);
@@ -1116,28 +1137,26 @@ function AnalyzeContent() {
       const fetchBody = {
         address,
         strategy: apiStrategy,
-        purchasePrice: parseFloat(purchasePrice) || 0,
-        downPayment:
-          (parseFloat(purchasePrice) || 0) *
-          ((parseFloat(downPayment) || 20) / 100),
+        purchasePrice: parsedPrice,
+        downPayment: parsedPrice * (parsedDP / 100),
         loanTerms: {
           interestRate: parseFloat(interestRate) || 7.5,
           loanTerm: parseFloat(loanTerm) || 30,
-          loanType:
-            loanType.includes("Hard Money") || loanType.includes("Private Money")
-              ? "hardMoney"
-              : "conventional",
+          loanType: apiLoanType,
           points: parseFloat(points) || 0,
         },
         rehabCosts: rehabCost ? parseFloat(rehabCost) : undefined,
         arv: afterRepairValue ? parseFloat(afterRepairValue) : undefined,
-        holdingPeriod: holdingMonths ? parseFloat(holdingMonths) : undefined,
+        holdingPeriod: holdingMonths !== '' && holdingMonths != null
+          ? parseFloat(holdingMonths)
+          : undefined,
         strategyDetails: {
           timeline: holdingMonths || undefined,
           exitStrategy: selectedStrategy === "BRRRR" ? "75" : undefined,
-          downPaymentPercent: parseFloat(downPayment) || undefined,
+          downPaymentPercent: parsedDP || undefined,
         },
         closingCostsPercent: parseFloat(closingCosts) || 3,
+        sellClosingCostsPercent: parseFloat(sellClosingCosts) || 6,
         units: unitCount,
         monthlyRent: effectiveRent ? parseFloat(effectiveRent) : undefined,
         propertyData: propertyData
@@ -1195,28 +1214,26 @@ function AnalyzeContent() {
         body: JSON.stringify({
           address,
           strategy: apiStrategy,
-          purchasePrice: parseFloat(purchasePrice) || 0,
-          downPayment:
-            (parseFloat(purchasePrice) || 0) *
-            ((parseFloat(downPayment) || 20) / 100),
+          purchasePrice: parsedPrice,
+          downPayment: parsedPrice * (parsedDP / 100),
           loanTerms: {
             interestRate: parseFloat(interestRate) || 7.5,
             loanTerm: parseFloat(loanTerm) || 30,
-            loanType:
-              loanType.includes("Hard Money") || loanType.includes("Private Money")
-                ? "hardMoney"
-                : "conventional",
+            loanType: apiLoanType,
             points: parseFloat(points) || 0,
           },
           rehabCosts: rehabCost ? parseFloat(rehabCost) : undefined,
           arv: afterRepairValue ? parseFloat(afterRepairValue) : undefined,
-          holdingPeriod: holdingMonths ? parseFloat(holdingMonths) : undefined,
+          holdingPeriod: holdingMonths !== '' && holdingMonths != null
+            ? parseFloat(holdingMonths)
+            : undefined,
           strategyDetails: {
             timeline: holdingMonths || undefined,
             exitStrategy: selectedStrategy === "BRRRR" ? "75" : undefined,
-            downPaymentPercent: parseFloat(downPayment) || undefined,
+            downPaymentPercent: parsedDP || undefined,
           },
           closingCostsPercent: parseFloat(closingCosts) || 3,
+          sellClosingCostsPercent: parseFloat(sellClosingCosts) || 6,
           units: unitCount,
           monthlyRent: effectiveRent ? parseFloat(effectiveRent) : undefined,
           ...(isMultifamily && unitRents.length > 0
@@ -2275,10 +2292,10 @@ function AnalyzeContent() {
                     }
                   },
                 })}
-                {inp("Down Payment %", downPayment, setDownPayment, {
+                {!isCash && inp("Down Payment %", downPayment, setDownPayment, {
                   helper: dpHelper[loanType] || dpHelper[loanType.split(" ")[0]] || "",
                 })}
-                {inp("Interest Rate %", interestRate, setInterestRate, {
+                {!isCash && inp("Interest Rate %", interestRate, setInterestRate, {
                   step: "0.1",
                   helper: rateHelper[loanType] || rateHelper[loanType.split(" ")[0]] || "",
                 })}
@@ -2314,7 +2331,7 @@ function AnalyzeContent() {
                   {inp("Holding Period (months)", holdingMonths, setHoldingMonths, {
                     placeholder: "6",
                   })}
-                  {inp("Loan Points", points, setPoints, {
+                  {!isCash && inp("Loan Points", points, setPoints, {
                     step: "0.5",
                     placeholder: "2",
                   })}
@@ -2779,7 +2796,7 @@ function AnalyzeContent() {
 
               {/* Closing costs row */}
               {!isCash && (
-                <div className="flex gap-3" style={{ maxWidth: 300 }}>
+                <div className="flex gap-3" style={{ maxWidth: 600 }}>
                   {inp("Closing Costs %", closingCosts, setClosingCosts, {
                     step: "0.5",
                     helper: "Typically 3-4% of purchase price",
@@ -2788,6 +2805,11 @@ function AnalyzeContent() {
                         ≈ ${closingDollar.toLocaleString("en-US")}
                       </span>
                     ) : undefined,
+                  })}
+                  {(isFlip || isBRRRR) && inp("Sell Closing Costs %", sellClosingCosts, setSellClosingCosts, {
+                    placeholder: "6",
+                    step: "0.5",
+                    helper: "Agent fees + title + transfer taxes",
                   })}
                 </div>
               )}
