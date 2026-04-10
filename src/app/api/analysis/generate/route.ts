@@ -2972,6 +2972,7 @@ interface FinancialData {
   mao85?: number;
   isHardMoney?: boolean;
   holdingPeriodMonths?: number;
+  holdingMonths?: number;
   loanAmount?: number;
   buySideClosing?: number;
   sellSideClosing?: number;
