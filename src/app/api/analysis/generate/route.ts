@@ -1955,7 +1955,9 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
 
   // Calculate key metrics for context
   const effectivePurchasePrice = purchasePrice || 0;
-  const downPayment = request.downPayment || (effectivePurchasePrice * 0.20);
+  const downPayment = request.downPayment != null && !isNaN(request.downPayment)
+    ? request.downPayment
+    : (effectivePurchasePrice * 0.20);
   const loanAmount = effectivePurchasePrice - downPayment;
   const pointsCost = request.loanTerms?.points ? (loanAmount * request.loanTerms.points) / 100 : 0;
   
@@ -2289,18 +2291,29 @@ Provide a house hack analysis focusing on the effective mortgage reduction and s
     console.log('[Fix & Flip] Holding time from strategyDetails.timeline:', holdingTimeInMonths, 'months');
 
     // Prepare inputs for centralized calculator
+    const actualLoanType = request.loanTerms?.loanType as string || 'hardMoney';
     const flipInputs: FlipCalculationInputs = {
       purchasePrice: effectivePurchasePrice,
-      downPaymentPercent: (downPayment / effectivePurchasePrice) * 100,
-      interestRate: request.loanTerms?.interestRate || 10.45,
+      downPaymentPercent: effectivePurchasePrice > 0
+        ? (downPayment / effectivePurchasePrice) * 100
+        : 0,
+      interestRate: request.loanTerms?.interestRate != null
+        ? request.loanTerms.interestRate
+        : 10.45,
       loanTermYears: 1,
       renovationCosts: rehabCosts,
       arv: estimatedARV,
       holdingPeriodMonths: holdingTimeInMonths,
-      loanType: request.loanTerms?.loanType as 'conventional' | 'hardMoney' || 'hardMoney',
-      points: request.loanTerms?.points || 2.5,
-      isHardMoney: request.loanTerms?.loanType === 'hardMoney' ||
-                   (request.loanTerms?.points !== undefined && request.loanTerms.points >= 2)
+      loanType: actualLoanType as 'conventional' | 'hardMoney',
+      points: request.loanTerms?.points != null
+        ? request.loanTerms.points
+        : 2.5,
+      isHardMoney: actualLoanType === 'hardMoney',
+      isPrivateMoney: actualLoanType === 'privateMoney',
+      isCash: actualLoanType === 'cash',
+      sellClosingCostsPercent: (request as any).sellClosingCostsPercent != null
+        ? (request as any).sellClosingCostsPercent
+        : 6,
     };
 
     console.log('[Fix & Flip] Calculator inputs:', flipInputs);
@@ -2325,7 +2338,7 @@ PURCHASE & FINANCING:
 - Acquisition Loan: $${Math.round(flipResults.acquisitionLoan).toLocaleString()}
 - Interest Rate: ${flipInputs.interestRate}%
 - Loan Term: ${holdingTimeInMonths} months
-- Loan Type: ${flipResults.isHardMoney ? 'Hard Money (with rehab holdback)' : 'Conventional'}${flipInputs.points ? `
+- Loan Type: ${flipResults.loanLabel}${flipResults.isHardMoney ? ' (with rehab holdback)' : ''}${flipInputs.points ? `
 - Points/Fees: ${flipInputs.points} points ($${Math.round(flipResults.closingCostsBreakdown.lenderPoints).toLocaleString()})` : ''}
 
 RENOVATION & COSTS:
@@ -2342,7 +2355,7 @@ ${flipResults.isHardMoney ? `FINANCING STRUCTURE:
 - Total Holding Costs: $${Math.round(flipResults.holdingCosts).toLocaleString()} (${holdingTimeInMonths} months)
 
 SELLING COSTS:
-- Realtor Fees & Closing (8%): $${Math.round(flipResults.sellingCosts).toLocaleString()}
+- Sell Closing Costs (${flipResults.sellClosingCostsPercent}%): $${Math.round(flipResults.sellingCosts).toLocaleString()}
 
 INVESTMENT SUMMARY:
 - Cash Required: $${Math.round(flipResults.cashRequired).toLocaleString()} (what investor brings)
@@ -2402,6 +2415,7 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
       mao85: flipResults.mao85 || 0,
       isHardMoney: flipResults.isHardMoney || false,
       holdingPeriodMonths: flipInputs.holdingPeriodMonths || 6,
+      holdingMonths: holdingTimeInMonths,
 
       // Calculated display values
       loanAmount: flipResults.totalLoan || 0,
@@ -2969,6 +2983,7 @@ interface FinancialData {
   mao85?: number;
   isHardMoney?: boolean;
   holdingPeriodMonths?: number;
+  holdingMonths?: number;
   loanAmount?: number;
   buySideClosing?: number;
   sellSideClosing?: number;
