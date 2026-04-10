@@ -756,56 +756,56 @@ export async function POST(request: NextRequest) {
 
     console.log('\n--- STEP 3: Authentication Check ---');
     const t_auth = Date.now();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     console.log(`[Timing] Auth check: ${Date.now() - t_auth}ms`);
     console.log('Auth check completed');
     console.log('User authenticated:', !!user);
     console.log('User ID:', user?.id);
     console.log('User email:', user?.email);
-    console.log('Auth error:', authError?.message);
-    
-    if (authError || !user) {
-      console.log('Authentication failed - returning 401');
-      console.log('Auth error details:', authError);
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+
+    // Anonymous users are allowed —
+    // they get free tier with blurred results
+    // Do NOT block unauthenticated requests
 
     // Check if user is admin
-    const adminConfig = getAdminConfig(user.email);
+    const adminConfig = getAdminConfig(user?.email);
 
     // V2 tier for multi-model routing — always resolve before usage check
     let resolvedV2Tier: UserTier = 'free';
 
-    try {
-      const { data: tierProfile } = await supabase
-        .from('user_profiles')
-        .select('subscription_tier')
-        .eq('id', user.id)
-        .single();
+    if (user) {
+      // Logged in — check their tier
+      try {
+        const { data: tierProfile } = await supabase
+          .from('user_profiles')
+          .select('subscription_tier')
+          .eq('id', user.id)
+          .single();
 
-      const rawTier = tierProfile?.subscription_tier?.toLowerCase() || 'free';
+        const rawTier = tierProfile?.subscription_tier?.toLowerCase() || 'free';
 
-      resolvedV2Tier = (() => {
-        if (rawTier === 'pro-plus' || rawTier === 'pro_plus' || rawTier === 'premium') return 'pro_max' as const;
-        if (rawTier === 'pro' || rawTier === 'professional') return 'pro' as const;
-        return 'free' as const;
-      })();
+        if (rawTier === 'pro-plus' || rawTier === 'pro_plus' || rawTier === 'premium') {
+          resolvedV2Tier = 'pro_max';
+        } else if (rawTier === 'pro' || rawTier === 'professional') {
+          resolvedV2Tier = 'pro';
+        } else {
+          resolvedV2Tier = 'free';
+        }
 
-      console.log('V2 tier resolved:', {
-        rawTier,
-        resolvedV2Tier,
-        isAdmin: adminConfig.bypassSubscriptionLimits
-      });
-    } catch (tierErr) {
-      console.error('Failed to resolve tier:', tierErr);
-      resolvedV2Tier = 'free';
+        console.log('V2 tier resolved:', {
+          rawTier,
+          resolvedV2Tier,
+          isAdmin: adminConfig.bypassSubscriptionLimits
+        });
+      } catch (tierErr) {
+        console.error('Failed to resolve tier:', tierErr);
+        resolvedV2Tier = 'free';
+      }
     }
+    // If no user — resolvedV2Tier stays 'free'
 
-    // Skip usage check for admins
-    if (!adminConfig.bypassSubscriptionLimits) {
+    // Skip usage check for admins and anonymous users
+    if (user && !adminConfig.bypassSubscriptionLimits) {
       // Check user's usage limits - try RPC first, fall back to direct query
       let canAnalyze = true;
       let usageMessage = '';
@@ -1139,167 +1139,177 @@ export async function POST(request: NextRequest) {
       market: structuredPropertyData?.market
     });
     
-    // Prepare data for both possible table schemas
-    const insertData = {
-      user_id: user.id,
-      address: body.address,
-      strategy: body.strategy,
-      purchase_price: purchasePrice,
-      down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
-      loan_term: body.loanTerms?.loanTerm || 30,
-      interest_rate: body.loanTerms?.interestRate || 7,
-      rehab_costs: body.rehabCosts || 0,
-      property_data: structuredPropertyData || null,
-      market_data: structuredPropertyData?.market || null,
-      rental_estimate: structuredPropertyData?.rental || null,
-      comparables: structuredPropertyData?.comparables || null,
-      status: 'generating',
-      ai_analysis: { status: 'generating' }, // Placeholder - will be updated after generation
-      // Additional fields for analyzed_properties table if needed
-      roi: 0.0, // Will be calculated after AI analysis
-      profit: 0, // Will be calculated after AI analysis
-      deal_type: strategyToDealType[body.strategy] || 'Buy & Hold',
-      analysis_date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-      analysis_data: {} // Will be populated after AI analysis
-    };
-    
-    console.log('Insert data prepared:', JSON.stringify(insertData, null, 2));
-    
-    // Test Supabase connection first
-    console.log('\n--- STEP 7.1: Testing Supabase Connection ---');
-    console.log('Testing Supabase connection...');
-    
-    // Test 1: Check if we can query the table
-    const { data: testData, error: testError } = await supabase
-      .from('analyzed_properties')
-      .select('count(*)')
-      .limit(1);
-    
-    console.log('Supabase test query result:', { 
-      hasData: !!testData, 
-      data: testData,
-      hasError: !!testError,
-      error: testError,
-      errorType: typeof testError,
-      errorKeys: testError ? Object.keys(testError) : 'null'
-    });
-    
-    // Test 2: List required columns for analyzed_properties
-    console.log('Required columns for analyzed_properties table:');
-    console.log('- user_id (UUID, required)');
-    console.log('- address (TEXT, required)');
-    console.log('- roi (DECIMAL, required)');
-    console.log('- profit (INTEGER, required)');
-    console.log('- deal_type (TEXT, required, must be one of allowed values)');
-    console.log('- analysis_date (DATE, has default)');
-    console.log('- analysis_data (JSONB, optional)');
-    
-    // Test 3: Try a simpler insert with minimal data
-    console.log('\n--- STEP 7.2: Attempting Insert ---');
-    console.log('Attempting insert to user_analyses table...');
-    
-    // Log the exact data being sent
-    console.log('Exact insert payload:', JSON.stringify(insertData, null, 2));
-    
-    // Use analyzed_properties table directly (user_analyses doesn't exist)
-    console.log('Using analyzed_properties table...');
-    const { data: analysisRecord, error: createError } = await supabase
-      .from('analyzed_properties')
-      .insert({
-        user_id: user.id,
-        address: body.address,
-        roi: 0.0, // Will be calculated after AI analysis
-        profit: 0, // Will be calculated after AI analysis
-        deal_type: strategyToDealType[body.strategy] || 'Buy & Hold',
-        analysis_date: new Date().toISOString().split('T')[0],
-        analysis_data: {
-          strategy: body.strategy,
-          purchase_price: purchasePrice,
-          down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
-          loan_term: body.loanTerms?.loanTerm || 30,
-          interest_rate: body.loanTerms?.interestRate || 7,
-          property_data: structuredPropertyData,
-          rehab_costs: body.rehabCosts || 0,
-          strategy_details: (body as any).strategyDetails || {},
-          flip_timeline_months: (body as any).strategyDetails?.timeline || null,
-          status: 'generating',
-          units: body.units || 1,
-          monthlyRent: body.monthlyRent || 0,
-          rentPerUnit: body.rentPerUnit || 0
-        }
-      })
-      .select()
-      .single();
+    // Only save to database for authenticated users
+    // Anonymous analyses are not persisted — that's correct behavior
+    let analysisRecord: any = null;
 
-    if (createError || !analysisRecord) {
-      console.error('\n=== DATABASE INSERT ERROR ===');
-      console.error('Failed to create analysis record');
-      console.error('Error present:', !!createError);
-      console.error('Record present:', !!analysisRecord);
-      
-      if (createError) {
-        console.error('Error object:', createError);
-        console.error('Error type:', typeof createError);
-        console.error('Error constructor:', createError?.constructor?.name);
-        console.error('Error is null:', createError === null);
-        console.error('Error is undefined:', createError === undefined);
-        console.error('Error keys:', Object.keys(createError || {}));
-        console.error('Error own property names:', Object.getOwnPropertyNames(createError || {}));
-        console.error('Error entries:', Object.entries(createError || {}));
-        console.error('Error prototype:', Object.getPrototypeOf(createError));
-        
-        // Try to access properties directly
-        console.error('Direct property access:');
-        console.error('- message:', (createError as any)?.message);
-        console.error('- code:', (createError as any)?.code);
-        console.error('- details:', (createError as any)?.details);
-        console.error('- hint:', (createError as any)?.hint);
-        console.error('- error:', (createError as any)?.error);
-        
-        // Stringify with replacer to catch all properties
-        console.error('Full error stringified:', JSON.stringify(createError, (key, value) => {
-          console.log(`Stringifying key: ${key}, value type: ${typeof value}`);
-          return value;
-        }, 2));
-        
-        // Check if it's a PostgrestError
-        console.error('Is PostgrestError:', createError?.constructor?.name === 'PostgrestError');
-      }
-      
-      console.error('Attempted insert data:', {
+    if (user?.id) {
+      // Prepare data for both possible table schemas
+      const insertData = {
         user_id: user.id,
         address: body.address,
         strategy: body.strategy,
         purchase_price: purchasePrice,
-        propertyData: propertyData ? 'Present' : 'Missing',
-        fields: {
-          down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
-          loan_term: body.loanTerms?.loanTerm || 30,
-          interest_rate: body.loanTerms?.interestRate || 7,
-        }
+        down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
+        loan_term: body.loanTerms?.loanTerm || 30,
+        interest_rate: body.loanTerms?.interestRate || 7,
+        rehab_costs: body.rehabCosts || 0,
+        property_data: structuredPropertyData || null,
+        market_data: structuredPropertyData?.market || null,
+        rental_estimate: structuredPropertyData?.rental || null,
+        comparables: structuredPropertyData?.comparables || null,
+        status: 'generating',
+        ai_analysis: { status: 'generating' }, // Placeholder - will be updated after generation
+        // Additional fields for analyzed_properties table if needed
+        roi: 0.0, // Will be calculated after AI analysis
+        profit: 0, // Will be calculated after AI analysis
+        deal_type: strategyToDealType[body.strategy] || 'Buy & Hold',
+        analysis_date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+        analysis_data: {} // Will be populated after AI analysis
+      };
+
+      console.log('Insert data prepared:', JSON.stringify(insertData, null, 2));
+
+      // Test Supabase connection first
+      console.log('\n--- STEP 7.1: Testing Supabase Connection ---');
+      console.log('Testing Supabase connection...');
+
+      // Test 1: Check if we can query the table
+      const { data: testData, error: testError } = await supabase
+        .from('analyzed_properties')
+        .select('count(*)')
+        .limit(1);
+
+      console.log('Supabase test query result:', {
+        hasData: !!testData,
+        data: testData,
+        hasError: !!testError,
+        error: testError,
+        errorType: typeof testError,
+        errorKeys: testError ? Object.keys(testError) : 'null'
       });
-      
-      // Try to extract more error information
-      let errorMessage = 'Unknown database error';
-      let errorCode = null;
-      let errorHint = null;
-      
-      if (createError) {
-        errorMessage = createError.message || createError.details || errorMessage;
-        errorCode = createError.code;
-        errorHint = createError.hint;
+
+      // Test 2: List required columns for analyzed_properties
+      console.log('Required columns for analyzed_properties table:');
+      console.log('- user_id (UUID, required)');
+      console.log('- address (TEXT, required)');
+      console.log('- roi (DECIMAL, required)');
+      console.log('- profit (INTEGER, required)');
+      console.log('- deal_type (TEXT, required, must be one of allowed values)');
+      console.log('- analysis_date (DATE, has default)');
+      console.log('- analysis_data (JSONB, optional)');
+
+      // Test 3: Try a simpler insert with minimal data
+      console.log('\n--- STEP 7.2: Attempting Insert ---');
+      console.log('Attempting insert to user_analyses table...');
+
+      // Log the exact data being sent
+      console.log('Exact insert payload:', JSON.stringify(insertData, null, 2));
+
+      // Use analyzed_properties table directly (user_analyses doesn't exist)
+      console.log('Using analyzed_properties table...');
+      const { data: record, error: createError } = await supabase
+        .from('analyzed_properties')
+        .insert({
+          user_id: user.id,
+          address: body.address,
+          roi: 0.0, // Will be calculated after AI analysis
+          profit: 0, // Will be calculated after AI analysis
+          deal_type: strategyToDealType[body.strategy] || 'Buy & Hold',
+          analysis_date: new Date().toISOString().split('T')[0],
+          analysis_data: {
+            strategy: body.strategy,
+            purchase_price: purchasePrice,
+            down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
+            loan_term: body.loanTerms?.loanTerm || 30,
+            interest_rate: body.loanTerms?.interestRate || 7,
+            property_data: structuredPropertyData,
+            rehab_costs: body.rehabCosts || 0,
+            strategy_details: (body as any).strategyDetails || {},
+            flip_timeline_months: (body as any).strategyDetails?.timeline || null,
+            status: 'generating',
+            units: body.units || 1,
+            monthlyRent: body.monthlyRent || 0,
+            rentPerUnit: body.rentPerUnit || 0
+          }
+        })
+        .select()
+        .single();
+
+      if (createError || !record) {
+        console.error('\n=== DATABASE INSERT ERROR ===');
+        console.error('Failed to create analysis record');
+        console.error('Error present:', !!createError);
+        console.error('Record present:', !!record);
+
+        if (createError) {
+          console.error('Error object:', createError);
+          console.error('Error type:', typeof createError);
+          console.error('Error constructor:', createError?.constructor?.name);
+          console.error('Error is null:', createError === null);
+          console.error('Error is undefined:', createError === undefined);
+          console.error('Error keys:', Object.keys(createError || {}));
+          console.error('Error own property names:', Object.getOwnPropertyNames(createError || {}));
+          console.error('Error entries:', Object.entries(createError || {}));
+          console.error('Error prototype:', Object.getPrototypeOf(createError));
+
+          // Try to access properties directly
+          console.error('Direct property access:');
+          console.error('- message:', (createError as any)?.message);
+          console.error('- code:', (createError as any)?.code);
+          console.error('- details:', (createError as any)?.details);
+          console.error('- hint:', (createError as any)?.hint);
+          console.error('- error:', (createError as any)?.error);
+
+          // Stringify with replacer to catch all properties
+          console.error('Full error stringified:', JSON.stringify(createError, (key, value) => {
+            console.log(`Stringifying key: ${key}, value type: ${typeof value}`);
+            return value;
+          }, 2));
+
+          // Check if it's a PostgrestError
+          console.error('Is PostgrestError:', createError?.constructor?.name === 'PostgrestError');
+        }
+
+        console.error('Attempted insert data:', {
+          user_id: user.id,
+          address: body.address,
+          strategy: body.strategy,
+          purchase_price: purchasePrice,
+          propertyData: propertyData ? 'Present' : 'Missing',
+          fields: {
+            down_payment_percent: body.downPayment && purchasePrice ? (body.downPayment / purchasePrice) * 100 : 20,
+            loan_term: body.loanTerms?.loanTerm || 30,
+            interest_rate: body.loanTerms?.interestRate || 7,
+          }
+        });
+
+        // Try to extract more error information
+        let errorMessage = 'Unknown database error';
+        let errorCode = null;
+        let errorHint = null;
+
+        if (createError) {
+          errorMessage = createError.message || createError.details || errorMessage;
+          errorCode = createError.code;
+          errorHint = createError.hint;
+        }
+
+        return NextResponse.json(
+          {
+            error: 'Failed to create analysis',
+            details: errorMessage,
+            code: errorCode,
+            hint: errorHint,
+            table: 'user_analyses'
+          },
+          { status: 500 }
+        );
       }
-      
-      return NextResponse.json(
-        { 
-          error: 'Failed to create analysis', 
-          details: errorMessage,
-          code: errorCode,
-          hint: errorHint,
-          table: 'user_analyses'
-        },
-        { status: 500 }
-      );
+
+      analysisRecord = record;
+    } else {
+      console.log('Anonymous user — skipping database insert');
     }
 
     console.log(`[Timing] DB record creation: ${Date.now() - t_dbInsert}ms`);
@@ -1461,86 +1471,90 @@ export async function POST(request: NextRequest) {
             const finalProfit = Math.round(extractedProfit ?? 0);
             const extractedArv = aiAnalysis.financial_metrics?.arv;
 
-            const updateData = {
-              analysis_data: {
-                ...analysisRecord.analysis_data,
-                ai_analysis: aiAnalysis,
-                status: 'completed',
-                calculatedMetrics: {
-                  roi: finalRoi,
-                  profit: finalProfit,
-                  arv: extractedArv,
-                  totalInvestment: aiAnalysis.financial_metrics?.total_investment,
-                  holdingCosts: aiAnalysis.financial_metrics?.holding_costs,
-                  profitMargin: aiAnalysis.financial_metrics?.profit_margin,
-                  monthlyCashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow,
-                  capRate: aiAnalysis.financial_metrics?.cap_rate,
-                  cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return
+            // Save results and update usage — only for authenticated users
+            if (analysisRecord) {
+              const updateData = {
+                analysis_data: {
+                  ...analysisRecord.analysis_data,
+                  ai_analysis: aiAnalysis,
+                  status: 'completed',
+                  calculatedMetrics: {
+                    roi: finalRoi,
+                    profit: finalProfit,
+                    arv: extractedArv,
+                    totalInvestment: aiAnalysis.financial_metrics?.total_investment,
+                    holdingCosts: aiAnalysis.financial_metrics?.holding_costs,
+                    profitMargin: aiAnalysis.financial_metrics?.profit_margin,
+                    monthlyCashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow,
+                    capRate: aiAnalysis.financial_metrics?.cap_rate,
+                    cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return
+                  },
+                  arv: extractedArv
                 },
-                arv: extractedArv
-              },
-              roi: finalRoi,
-              profit: finalProfit
-            };
+                roi: finalRoi,
+                profit: finalProfit
+              };
 
-            const { error: updateError } = await supabase
-              .from('analyzed_properties')
-              .update(updateData)
-              .eq('id', analysisRecord.id)
-              .select('roi, profit')
-              .single();
+              const { error: updateError } = await supabase
+                .from('analyzed_properties')
+                .update(updateData)
+                .eq('id', analysisRecord.id)
+                .select('roi, profit')
+                .single();
 
-            if (updateError) {
-              console.error('[Generate] Failed to update analysis:', updateError);
-              sendLine(`ERROR:${JSON.stringify({ message: 'Failed to save analysis results' })}`);
-              controller.close();
-              return;
-            }
-
-            // Update usage count
-            const { error: usageUpdateError } = await supabase
-              .rpc('increment_analysis_usage', { p_user_id: user.id });
-
-            if (usageUpdateError) {
-              console.error('[Generate] Failed to update usage count:', usageUpdateError);
-            } else {
-              try {
-                const now = new Date();
-                const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                const { data: usageRow } = await supabase
-                  .from('usage_tracking')
-                  .select('analysis_count')
-                  .eq('user_id', user.id)
-                  .eq('month_year', currentMonth)
-                  .single();
-
-                const { data: profile } = await supabase
-                  .from('user_profiles')
-                  .select('subscription_tier')
-                  .eq('id', user.id)
-                  .single();
-
-                const tierLimits: Record<string, number> = { free: 10, basic: 10, starter: 10, pro: 50, professional: 50, 'pro-plus': 200, 'pro_plus': 200, premium: 50 };
-                const tier = profile?.subscription_tier?.toLowerCase() || 'free';
-                const limit = tierLimits[tier] ?? 10;
-                const used = usageRow?.analysis_count ?? 0;
-                const threshold = Math.floor(limit * 0.8);
-                if (used === threshold) {
-                  const { sendUsageWarningEmail } = await import('@/lib/email');
-                  sendUsageWarningEmail({
-                    email: user.email!,
-                    name: user.user_metadata?.full_name as string || undefined,
-                    used,
-                    limit,
-                    tier,
-                  }).catch(err => console.error('[Generate] Usage warning email error:', err));
-                }
-              } catch (emailErr) {
-                console.error('[Generate] Usage warning check error:', emailErr);
+              if (updateError) {
+                console.error('[Generate] Failed to update analysis:', updateError);
+                sendLine(`ERROR:${JSON.stringify({ message: 'Failed to save analysis results' })}`);
+                controller.close();
+                return;
               }
+
+              // Update usage count
+              const { error: usageUpdateError } = await supabase
+                .rpc('increment_analysis_usage', { p_user_id: user!.id });
+
+              if (usageUpdateError) {
+                console.error('[Generate] Failed to update usage count:', usageUpdateError);
+              } else {
+                try {
+                  const now = new Date();
+                  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                  const { data: usageRow } = await supabase
+                    .from('usage_tracking')
+                    .select('analysis_count')
+                    .eq('user_id', user!.id)
+                    .eq('month_year', currentMonth)
+                    .single();
+
+                  const { data: profile } = await supabase
+                    .from('user_profiles')
+                    .select('subscription_tier')
+                    .eq('id', user!.id)
+                    .single();
+
+                  const tierLimits: Record<string, number> = { free: 10, basic: 10, starter: 10, pro: 50, professional: 50, 'pro-plus': 200, 'pro_plus': 200, premium: 50 };
+                  const tier = profile?.subscription_tier?.toLowerCase() || 'free';
+                  const limit = tierLimits[tier] ?? 10;
+                  const used = usageRow?.analysis_count ?? 0;
+                  const threshold = Math.floor(limit * 0.8);
+                  if (used === threshold) {
+                    const { sendUsageWarningEmail } = await import('@/lib/email');
+                    sendUsageWarningEmail({
+                      email: user!.email!,
+                      name: user!.user_metadata?.full_name as string || undefined,
+                      used,
+                      limit,
+                      tier,
+                    }).catch(err => console.error('[Generate] Usage warning email error:', err));
+                  }
+                } catch (emailErr) {
+                  console.error('[Generate] Usage warning check error:', emailErr);
+                }
+              }
+
+              console.log(`[Generate] DB save completed in ${Date.now() - t_claudeEnd}ms`);
             }
 
-            console.log(`[Generate] DB save completed in ${Date.now() - t_claudeEnd}ms`);
             console.log(`[Generate] TOTAL time: ${Date.now() - t_streamStart}ms`);
 
             sendProg('save', 'Results saved');
@@ -1560,16 +1574,18 @@ export async function POST(request: NextRequest) {
             controller.close();
           } catch (error) {
             console.error('[Generate] Stream error:', error);
-            await supabase
-              .from('analyzed_properties')
-              .update({
-                analysis_data: {
-                  ...analysisRecord.analysis_data,
-                  status: 'failed',
-                  error_message: error instanceof Error ? error.message : 'Unknown error'
-                }
-              })
-              .eq('id', analysisRecord.id);
+            if (analysisRecord) {
+              await supabase
+                .from('analyzed_properties')
+                .update({
+                  analysis_data: {
+                    ...analysisRecord.analysis_data,
+                    status: 'failed',
+                    error_message: error instanceof Error ? error.message : 'Unknown error'
+                  }
+                })
+                .eq('id', analysisRecord.id);
+            }
 
             sendLine(`ERROR:${JSON.stringify({ message: error instanceof Error ? error.message : 'Analysis generation failed' })}`);
             controller.close();
