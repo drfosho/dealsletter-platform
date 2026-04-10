@@ -1946,7 +1946,9 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
 
   // Calculate key metrics for context
   const effectivePurchasePrice = purchasePrice || 0;
-  const downPayment = request.downPayment || (effectivePurchasePrice * 0.20);
+  const downPayment = request.downPayment != null && !isNaN(request.downPayment)
+    ? request.downPayment
+    : (effectivePurchasePrice * 0.20);
   const loanAmount = effectivePurchasePrice - downPayment;
   const pointsCost = request.loanTerms?.points ? (loanAmount * request.loanTerms.points) / 100 : 0;
   
