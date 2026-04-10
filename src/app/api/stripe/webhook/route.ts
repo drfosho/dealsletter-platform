@@ -2,10 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import Stripe from 'stripe';
-import { sendCancellationEmail, sendSubscriptionEmail } from '@/lib/email';
+import { sendCancellationEmail } from '@/lib/email';
+import {
+  sendProWelcomeEmail as sendV2ProWelcomeEmail,
+  sendProMaxWelcomeEmail as sendV2ProMaxWelcomeEmail,
+  sendV2CancellationEmail,
+} from '@/lib/v2-emails';
 
 // Disable body parsing, we need the raw body for webhook signature verification
 export const runtime = 'nodejs';
+
+// V2 price ID mapping
+const V2_PRICE_TIERS: Record<string, string> = {
+  [process.env.STRIPE_PRICE_V2_PRO_MONTHLY!]: 'pro',
+  [process.env.STRIPE_PRICE_V2_PRO_YEARLY!]: 'pro',
+  [process.env.STRIPE_PRICE_V2_PRO_MAX_MONTHLY!]: 'pro_plus',
+  [process.env.STRIPE_PRICE_V2_PRO_MAX_YEARLY!]: 'pro_plus',
+};
 
 // Map Stripe tier names to our database tier names
 function mapTierName(stripeTier: string): string {
@@ -276,8 +289,19 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
-          const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
-          const tierName = mapTierName(stripeTierName);
+          // Check V2 price IDs first
+          const createdPriceId = subscription.items?.data?.[0]?.price?.id;
+          let tierName = V2_PRICE_TIERS[createdPriceId || ''];
+          let stripeTierName: string;
+
+          if (tierName) {
+            stripeTierName = tierName;
+            console.log('[Webhook] subscription.created - V2 price detected:', createdPriceId, '→', tierName);
+          } else {
+            // Fall back to existing V1 logic
+            stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
+            tierName = mapTierName(stripeTierName);
+          }
           const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
           console.log('[Webhook] subscription.created - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
@@ -319,6 +343,31 @@ export async function POST(request: NextRequest) {
               id: updateResult.id,
               newTier: updateResult.subscription_tier
             });
+
+            // Send V2 welcome email based on tier
+            const newTier = updateResult.subscription_tier;
+            try {
+              let emailToSend: string | undefined;
+              const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
+              emailToSend = customer.email || undefined;
+
+              if (emailToSend && newTier) {
+                const firstName = subscription.metadata?.firstName || undefined;
+                const interval = subscription.items?.data?.[0]?.plan?.interval || 'month';
+                const billingPeriod = interval === 'year' ? 'yearly' : 'monthly';
+
+                if (newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium') {
+                  await sendV2ProMaxWelcomeEmail(emailToSend, firstName, billingPeriod);
+                  console.log('[Webhook] ✉️ V2 Pro Max welcome email sent');
+                } else if (newTier === 'pro') {
+                  await sendV2ProWelcomeEmail(emailToSend, firstName, billingPeriod);
+                  console.log('[Webhook] ✉️ V2 Pro welcome email sent');
+                }
+              }
+            } catch (emailErr) {
+              // Never fail webhook due to email error
+              console.error('[Webhook] V2 email send failed:', emailErr);
+            }
           }
         } else {
           console.error('[Webhook] subscription.created - ❌ Could not find user for subscription:', subscription.id);
@@ -368,9 +417,20 @@ export async function POST(request: NextRequest) {
           }
 
           if (userId) {
-            // Get tier from metadata
-            const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || session.metadata?.tierName || 'PRO';
-            const tierName = mapTierName(stripeTierName);
+            // Check V2 price IDs first
+            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+            const checkoutPriceId = lineItems.data[0]?.price?.id;
+            let tierName = V2_PRICE_TIERS[checkoutPriceId || ''];
+            let stripeTierName: string;
+
+            if (tierName) {
+              stripeTierName = tierName;
+              console.log('[Webhook] checkout.completed - V2 price detected:', checkoutPriceId, '→', tierName);
+            } else {
+              // Fall back to existing V1 logic
+              stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || session.metadata?.tierName || 'PRO';
+              tierName = mapTierName(stripeTierName);
+            }
             const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
             console.log('[Webhook] checkout.completed - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
@@ -414,18 +474,20 @@ export async function POST(request: NextRequest) {
               } else {
                 console.log('[Webhook] checkout.completed - ✅ Created profile with tier:', tierName);
 
-                // Send subscription confirmation email
+                // Send V2 welcome email based on tier
                 if (customer.email) {
-                  console.log('[Webhook] checkout.completed - Sending subscription email to', customer.email);
-                  sendSubscriptionEmail({
-                    email: customer.email,
-                    tier: tierName,
-                    billingDate: periodEndISO ? new Date(periodEndISO).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
-                  }).then(sent => {
-                    console.log('[Webhook] checkout.completed - Subscription email sent:', sent);
-                  }).catch(err => {
-                    console.error('[Webhook] checkout.completed - Subscription email error:', err);
-                  });
+                  const billingPeriod = session.metadata?.billingPeriod || 'monthly';
+                  try {
+                    if (tierName === 'pro_plus' || tierName === 'pro-plus' || tierName === 'premium') {
+                      await sendV2ProMaxWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro Max welcome email sent');
+                    } else if (tierName === 'pro') {
+                      await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                    }
+                  } catch (emailErr) {
+                    console.error('[Webhook] checkout.completed - V2 email error:', emailErr);
+                  }
                 }
               }
             } else {
@@ -462,18 +524,20 @@ export async function POST(request: NextRequest) {
                   newTier: updateResult?.subscription_tier
                 });
 
-                // Send subscription confirmation email
+                // Send V2 welcome email based on tier
                 if (customer.email) {
-                  console.log('[Webhook] checkout.completed - Sending subscription email to', customer.email);
-                  sendSubscriptionEmail({
-                    email: customer.email,
-                    tier: tierName,
-                    billingDate: periodEndISO ? new Date(periodEndISO).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : undefined,
-                  }).then(sent => {
-                    console.log('[Webhook] checkout.completed - Subscription email sent:', sent);
-                  }).catch(err => {
-                    console.error('[Webhook] checkout.completed - Subscription email error:', err);
-                  });
+                  const billingPeriod = session.metadata?.billingPeriod || 'monthly';
+                  try {
+                    if (tierName === 'pro_plus' || tierName === 'pro-plus' || tierName === 'premium') {
+                      await sendV2ProMaxWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro Max welcome email sent');
+                    } else if (tierName === 'pro') {
+                      await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
+                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                    }
+                  } catch (emailErr) {
+                    console.error('[Webhook] checkout.completed - V2 email error:', emailErr);
+                  }
                 }
               }
             }
@@ -539,8 +603,19 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
-          const stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
-          const tierName = mapTierName(stripeTierName);
+          // Check V2 price IDs first
+          const updatedPriceId = subscription.items?.data?.[0]?.price?.id;
+          let tierName = V2_PRICE_TIERS[updatedPriceId || ''];
+          let stripeTierName: string;
+
+          if (tierName) {
+            stripeTierName = tierName;
+            console.log('[Webhook] subscription.updated - V2 price detected:', updatedPriceId, '→', tierName);
+          } else {
+            // Fall back to existing V1 logic
+            stripeTierName = subscription.metadata.tierName || subscription.metadata.tier || 'PRO';
+            tierName = mapTierName(stripeTierName);
+          }
           const { periodEndISO } = getSubscriptionPeriodDates(subscription);
 
           console.log('[Webhook] subscription.updated - 🏷️ SETTING TIER:', stripeTierName, '→', tierName);
@@ -578,6 +653,36 @@ export async function POST(request: NextRequest) {
           } else {
             console.log('[Webhook] subscription.updated - ✅ User profile updated');
 
+            // Send upgrade welcome email if tier improved
+            const newTier = updateResult.subscription_tier;
+            try {
+              const isUpgrade = newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium' || newTier === 'pro';
+              const isCancelling = subscription.cancel_at_period_end;
+
+              if (isUpgrade && !isCancelling) {
+                let emailToSend: string | undefined;
+                try {
+                  const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
+                  emailToSend = customer.email || undefined;
+                } catch {}
+
+                if (emailToSend) {
+                  const interval = subscription.items?.data?.[0]?.plan?.interval || 'month';
+                  const billingPeriod = interval === 'year' ? 'yearly' : 'monthly';
+
+                  if (newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium') {
+                    await sendV2ProMaxWelcomeEmail(emailToSend, undefined, billingPeriod);
+                    console.log('[Webhook] ✉️ Pro Max upgrade welcome email sent');
+                  } else if (newTier === 'pro') {
+                    await sendV2ProWelcomeEmail(emailToSend, undefined, billingPeriod);
+                    console.log('[Webhook] ✉️ Pro upgrade welcome email sent');
+                  }
+                }
+              }
+            } catch (emailErr) {
+              console.error('[Webhook] Upgrade email failed:', emailErr);
+            }
+
             // Send cancellation email when subscription is set to cancel at period end
             if (subscription.cancel_at_period_end) {
               let customerEmail: string | null = null;
@@ -591,11 +696,18 @@ export async function POST(request: NextRequest) {
                 const accessUntil = new Date(periodEndISO).toLocaleDateString('en-US', {
                   month: 'long', day: 'numeric', year: 'numeric'
                 });
+
+                // Send V2 cancellation email
+                sendV2CancellationEmail(customerEmail, undefined, accessUntil)
+                  .then(() => console.log('[Webhook] ✉️ V2 cancellation email sent'))
+                  .catch(err => console.error('[Webhook] V2 cancellation email error:', err));
+
+                // Also send V1 cancellation email as fallback
                 sendCancellationEmail({
                   email: customerEmail,
                   planName: tierName === 'pro' ? 'Pro' : tierName === 'pro-plus' ? 'Pro Plus' : 'Pro',
                   accessUntil,
-                }).catch(err => console.error('[Webhook] Cancellation email error:', err));
+                }).catch(err => console.error('[Webhook] V1 Cancellation email error:', err));
               }
             }
           }

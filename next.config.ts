@@ -106,6 +106,89 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // Redirect V1 auth pages to V2
+      {
+        source: '/login',
+        destination: '/v2/login',
+        permanent: false,
+      },
+      {
+        source: '/signup',
+        destination: '/v2/signup',
+        permanent: false,
+      },
+      {
+        source: '/register',
+        destination: '/v2/signup',
+        permanent: false,
+      },
+      // Redirect V1 main pages to V2
+      {
+        source: '/pricing',
+        destination: '/v2/pricing',
+        permanent: false,
+      },
+      {
+        source: '/blog',
+        destination: '/v2/blog',
+        permanent: false,
+      },
+      {
+        source: '/blog/:slug',
+        destination: '/v2/blog/:slug',
+        permanent: false,
+      },
+      {
+        source: '/faq',
+        destination: '/v2/faq',
+        permanent: false,
+      },
+      {
+        source: '/contact',
+        destination: '/v2/contact',
+        permanent: false,
+      },
+      {
+        source: '/privacy',
+        destination: '/v2/privacy',
+        permanent: false,
+      },
+      {
+        source: '/terms',
+        destination: '/v2/terms',
+        permanent: false,
+      },
+      // Redirect V1 account pages to V2
+      {
+        source: '/account',
+        destination: '/v2/account',
+        permanent: false,
+      },
+      {
+        source: '/account/:path*',
+        destination: '/v2/account',
+        permanent: false,
+      },
+      // Redirect V1 analysis pages to V2
+      {
+        source: '/analysis',
+        destination: '/v2',
+        permanent: false,
+      },
+      {
+        source: '/analysis/:path*',
+        destination: '/v2',
+        permanent: false,
+      },
+      {
+        source: '/dashboard',
+        destination: '/v2/dashboard',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

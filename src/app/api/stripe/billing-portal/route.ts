@@ -9,6 +9,33 @@ export async function POST(_request: NextRequest) {
   console.log('[BillingPortal] Creating billing portal session...')
 
   try {
+    // Read returnPath from body OR query params
+    let returnPath = '/v2/account'
+
+    try {
+      const body = await _request.json()
+      if (body?.returnPath) {
+        returnPath = body.returnPath
+      }
+    } catch {
+      // No body or not JSON — try query params
+      const reqUrl = new URL(_request.url)
+      const qp = reqUrl.searchParams.get('returnPath')
+      if (qp) returnPath = qp
+    }
+
+    // Always use V2 account as fallback, never V1 /account/subscription
+    if (!returnPath || returnPath === '/account/subscription') {
+      returnPath = '/v2/account'
+    }
+
+    const requestUrl = new URL(_request.url)
+    const host = requestUrl.host
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const appUrl = `${protocol}://${host}`
+    const returnUrl = `${appUrl}${returnPath}`
+    console.log('[BillingPortal] Return URL:', returnUrl)
+
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -57,9 +84,6 @@ export async function POST(_request: NextRequest) {
     }
 
     // Create a billing portal session
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/account/subscription`
-    console.log('[BillingPortal] Return URL:', returnUrl)
-
     const session = await stripe.billingPortal.sessions.create({
       customer: stripeCustomerId,
       return_url: returnUrl,

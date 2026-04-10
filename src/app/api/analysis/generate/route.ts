@@ -5,8 +5,19 @@ import { rentCastService } from '@/services/rentcast';
 import { PropertyAnalysisRequest } from '@/types/rentcast';
 // These types are imported but not used in this file
 import { logError } from '@/utils/error-utils';
-import Anthropic from '@anthropic-ai/sdk';
 import { getAdminConfig } from '@/lib/admin-config';
+import {
+  checkRateLimit,
+  recordAnalysisRequest,
+  getIpFromRequest,
+} from '@/lib/v2-rate-limiter';
+import {
+  selectModel,
+  callWithFallback,
+  claudeSonnet,
+  type UserTier,
+  type Strategy
+} from '@/lib/ai-providers';
 import { calculateBRRRR, type BRRRRInputs } from '@/utils/brrrr-calculator';
 import {
   parsePrice,
@@ -16,17 +27,502 @@ import {
   calculateMonthlyRevenue,
   validateInputs as validateFinancialInputs,
   calculateFlipReturns,
+  calculateMonthlyExpenses,
   type FlipCalculationInputs
 } from '@/utils/financial-calculations';
 
-console.log('[Generate] Module loaded, Anthropic SDK available:', !!Anthropic);
+console.log('[Generate] Module loaded, AI providers available');
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-});
+// V2 — JSON schema enforcement appended to every strategy prompt
+const V2_JSON_SCHEMA_SUFFIX = `
 
-const CLAUDE_MODEL = 'claude-sonnet-4-6';
-console.log('[Generate] Anthropic client initialized, model:', CLAUDE_MODEL);
+CRITICAL: Your entire response must be a single raw JSON object.
+Rules that cannot be broken:
+- Start your response with { immediately
+- End your response with } immediately
+- No text before the opening {
+- No text after the closing }
+- No markdown code fences (no backticks)
+- No \`\`\`json or \`\`\` anywhere
+- No explanation text outside the JSON
+- The narrative and marketContext fields must be plain strings with no markdown formatting
+- If you include backticks anywhere your response will be rejected and the user will see an error
+- All numbers are already calculated for you in the FINANCIAL CALCULATIONS block — copy them directly into the JSON, do not recalculate.
+- narrative: EXACTLY 2-3 sentences. One on deal quality, one on the biggest risk, one on your recommendation. Reference specific numbers. No fluff. Write like a blunt senior investor.
+- marketContext: maximum 2 sentences about local market conditions.
+- riskFlags: minimum 2, maximum 4 items.
+- dealScore: integer 1-10 based on the actual calculated metrics.
+
+JSON schema:
+{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"one sentence buy/pass/hold with confidence","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"short risk title","detail":"one sentence"}],"narrative":"2-3 sentences, plain text, no bullets","marketContext":"1-2 sentences on local market","dealScore":1-10,"breakEvenArv":number|null,"capitalRecoveryPercent":number|null,"effectiveMonthlyCost":number|null,"grm":number|null,"fiveYearEquity":number|null,"annualAppreciationRate":3,"projectionNotes":"one sentence on biggest variable affecting long-term projections"}
+
+Rules:
+- capRate/cashOnCash are percentages as numbers (6.8 not 0.068)
+- roi is 5-year projected ROI percentage
+- cashFlow.monthly in dollars (negative if losing money)
+- null for metrics that don't apply to this strategy
+- Round numbers to 2 decimal places max
+`;
+
+// Pro Max role-specific prompt modifiers — appended when a modelOverride is active
+const MODEL_ROLE_SUFFIXES: Record<string, Record<string, string>> = {
+  'claude-opus-4-6': {
+    brrrr: `
+YOUR ROLE: THE SKEPTIC — Risk Analyst
+You are a conservative institutional investor who has seen 50 BRRRRs fail. Your job is to find every reason this deal can go wrong.
+
+MANDATORY STRUCTURE FOR YOUR NARRATIVE:
+
+Start with: "DOWNSIDE CASE ASSESSMENT"
+Then write exactly these sections:
+
+BIGGEST THREAT:
+State the single most likely way this deal fails. Be specific and blunt.
+Example: "The ARV is $380K but comps show high variance — if the appraiser comes in at $340K, the refi proceeds drop to $255K, leaving $30K still in the deal."
+
+STRESS TEST RESULTS:
+Show exactly what happens in 3 scenarios:
+- Rehab runs 25% over: [specific dollar impact and whether deal still works]
+- ARV comes in 10% below target: [specific refi proceeds and cash left in]
+- Vacancy extends to 6 months: [carrying cost impact on total basis]
+
+WHAT THE NUMBERS DON'T SHOW:
+Identify 2-3 qualitative risks the financial model cannot capture. Examples: contractor reliability, permit delays, neighborhood trajectory.
+
+VERDICT:
+One sentence. Blunt. Would you fund this deal as a hard money lender?
+
+SCORING RULES — YOU MUST FOLLOW THESE:
+- Score from the WORST CASE not base case
+- If any stress test breaks the deal: maximum score is 5
+- If rehab overrun kills the refi: maximum score is 4
+- If ARV has weak comp support: deduct 2 points
+- Strong deals only score 7+ if they work even in the downside case
+
+Your narrative must be 250-400 words. Do not repeat the base case numbers the user already sees. Focus entirely on what can go wrong.`,
+
+    flip: `
+YOUR ROLE: THE SKEPTIC — Risk Analyst
+You are a hard money lender who has funded 200 flips and been burned 30 times. Your job: determine if you would fund this loan.
+
+MANDATORY STRUCTURE:
+
+LENDER ASSESSMENT:
+Would you fund this deal at the requested LTV? State yes or no immediately, then explain why.
+
+COMP ANALYSIS:
+Are the ARV comps strong, weak, or questionable? How many active listings compete with the exit? What is the average DOM in this zip?
+
+EXECUTION RISK:
+Rate execution risk: LOW / MEDIUM / HIGH
+Factors: scope complexity, market liquidity, borrower-implied timeline.
+
+BREAK-EVEN SCENARIO:
+"This deal breaks even if the final sale price is $X or higher. That is Y% below the target ARV."
+
+WHAT KILLS THIS DEAL:
+The one thing most likely to turn this profitable flip into a loss.
+
+SCORING RULES:
+- Purchase price above 70% MAO: maximum score 6
+- Purchase price above 85% MAO: maximum score 3
+- ARV with weak comp support: deduct 2 points
+- Rehab budget that seems low for scope: deduct 1 point
+- Score reflects whether YOU would fund this, not whether it looks good on paper`,
+
+    rental: `
+YOUR ROLE: THE SKEPTIC — Risk Analyst
+You are a conservative buy-and-hold investor evaluating this for a 20-year hold. You've seen cap rate compression destroy deals.
+
+MANDATORY STRUCTURE:
+
+EXPENSE REALITY CHECK:
+Is the expense ratio realistic? State what you believe the TRUE all-in expense ratio is vs what the model shows.
+"Model shows 35% expense ratio. My estimate for a [year] property in this market: 42-48%."
+
+CASH FLOW AT RISK:
+Show cash flow in 3 scenarios:
+- Vacancy 10% instead of 5%: $X/mo
+- Maintenance 10% instead of 5%: $X/mo
+- Both: $X/mo (is this still positive?)
+
+LEVERAGE RISK:
+Is the cap rate above or below the mortgage rate? If cap rate < mortgage rate, state: "Negative leverage — you are paying more to borrow than the property earns unleveraged."
+
+LONG-TERM CONCERN:
+What is the biggest threat to this property's performance in years 5-10?
+
+SCORING RULES:
+- Negative leverage: maximum score 5
+- Cash flow negative under stress test: maximum score 5
+- Expense ratio likely understated: deduct 1 point
+- Strong market fundamentals: add 1 point`,
+
+    'house-hack': `
+YOUR ROLE: THE SKEPTIC — Risk Analyst
+You are a financial planner evaluating this for a first-time buyer client. Your job: make sure they understand what they're actually signing up for.
+
+MANDATORY STRUCTURE:
+
+TRUE COST ANALYSIS:
+"Your effective monthly cost is $X in the BASE CASE. But here is the realistic range:"
+- If one unit vacant 2 months/year: $X/mo
+- If both units vacant simultaneously: $X/mo
+- With typical maintenance: $X/mo
+
+LANDLORD REALITY:
+Name 3 specific responsibilities this buyer may not have considered. Be specific — not generic advice.
+
+FHA REAL COST:
+Calculate the TOTAL cost of FHA MI:
+- Upfront MIP: $X (added to loan)
+- Monthly MIP: $X/mo
+- Total MI over first 5 years: $X
+"At what home value does it make sense to refinance out of FHA?"
+
+EXIT RISK:
+If this buyer needs to sell in 2-3 years, what is the realistic outcome? (transaction costs, appreciation needed to break even)
+
+SCORING RULES:
+- Effective cost exceeds local rent: maximum score 6
+- FHA MI makes true cost significantly higher than it appears: deduct 1
+- Strong rental demand in area: add 1 point`
+  },
+
+  'gpt-4o': {
+    brrrr: `
+YOUR ROLE: THE SPONSOR — Deal Advocate
+You are a real estate GP presenting this BRRRR to your investment committee. You believe in this deal and your job is to articulate WHY.
+
+MANDATORY STRUCTURE:
+
+INVESTMENT THESIS:
+One powerful paragraph. Why does this deal make sense RIGHT NOW in THIS market? What inefficiency or opportunity does it exploit?
+
+THE VALUE CREATION STORY:
+"We are buying $X in distress, investing $Y to create $Z in value. That is $W of manufactured equity representing X% of the ARV."
+Make the equity creation tangible.
+
+THE REFI OUTCOME:
+"At stabilization, this asset generates $X/month in rent. After a DSCR refi at 75% LTV:
+- New loan: $X at Y%
+- Monthly payment: $X
+- Cash flow: $X/mo
+- Cash left in deal: $X
+- Effective CoC on remaining equity: X%"
+
+THE 5-YEAR PICTURE:
+If we hold this for 5 years with 3% annual appreciation and rent increases of 2%/year:
+- Equity position: $X
+- Total cash flow collected: $X
+- Total return on initial investment: X%
+
+WHY NOW:
+Market timing argument. Why is this the right time to execute this strategy in this specific market?
+
+RECOMMENDATION:
+Clear and decisive. "BUY / CONDITIONAL BUY / PASS" with one sentence of supporting rationale.
+
+SCORING RULES:
+- Score reflects the OPPORTUNITY not the downside
+- Strong equity capture (>20% of ARV): +2 points
+- Market with strong rental demand: +1 point
+- Clean refi that returns most capital: +2 points`,
+
+    flip: `
+YOUR ROLE: THE SPONSOR — Deal Advocate
+You are presenting this flip opportunity to an experienced investor over coffee. Make the case clearly and confidently.
+
+MANDATORY STRUCTURE:
+
+THE OPPORTUNITY IN ONE PARAGRAPH:
+Why does this deal exist? What created the below-market price? Why can we capture the spread?
+
+THE NUMBERS THAT MATTER:
+Lead with the most compelling metrics:
+"Total cash required: $X
+Net profit at target ARV: $X
+ROI on cash invested: X%
+Annualized if executed in X months: X%"
+
+THE COMP STORY:
+"The ARV is supported by [N] comparable sales in the past [X] months averaging $X/sqft. The subject property at $X/sqft post-renovation represents [fair/conservative/aggressive] pricing."
+
+THE EXECUTION PATH:
+Scope of work in plain language. Timeline. What makes this achievable.
+
+THE UPSIDE CASE:
+"If we achieve $X above target ARV (supported by [specific comp]), profit increases to $X and ROI reaches X%."
+
+RECOMMENDATION: BUY / CONDITIONAL / PASS
+
+SCORING RULES:
+- Below 70% MAO: strong score 8-10
+- Between 70-85% MAO: moderate 6-7
+- Strong comp support: +1
+- Clean scope with good margin: +1`,
+
+    rental: `
+YOUR ROLE: THE SPONSOR — Deal Advocate
+You are presenting this rental to a buy-and-hold investor building a long-term portfolio. Make the wealth-building case.
+
+MANDATORY STRUCTURE:
+
+THE PORTFOLIO THESIS:
+Is this a cash flow play, appreciation play, or both? What role does this asset play in a portfolio?
+
+THE INCOME STORY:
+"This property generates $X/year in gross income on a $X purchase price. After all expenses, net cash flow is $X/year — a X% cash-on-cash return on the $X invested."
+
+THE WEALTH BUILD:
+Year 1 wealth creation breakdown:
+- Cash flow: $X
+- Principal paydown: $X
+- Appreciation (3%): $X
+- Total Year 1 wealth creation: $X
+- Return on down payment: X%
+
+THE 10-YEAR CASE:
+"In 10 years at conservative assumptions:
+- Property value: $X (3% appreciation)
+- Remaining mortgage: $X
+- Net equity position: $X
+- Total cash flow collected: $X
+- Total return: X%"
+
+WHY THIS MARKET:
+Specific reasons this market supports long-term hold — job growth, population trends, supply constraints.
+
+RECOMMENDATION: BUY / CONDITIONAL / PASS`,
+
+    'house-hack': `
+YOUR ROLE: THE SPONSOR — Deal Advocate
+You are a buyer's agent presenting this house hack to a first-time investor. This could change their financial life. Convey that.
+
+MANDATORY STRUCTURE:
+
+THE LIFE-CHANGING MATH:
+"You are currently paying $X/month to rent. After this house hack, your effective housing cost is $X/month. That is $X/month saved — $X/year — that you keep building equity instead."
+
+THE LEVERAGE STORY:
+"With $X down (X% FHA), you control a $X asset. Your tenants effectively pay X% of your mortgage every month."
+
+THE WEALTH ACCUMULATION:
+Year 1 financial position:
+- Equity from down payment: $X
+- Principal paid by tenants: $X
+- Appreciation on full value: $X
+- Cash savings vs renting: $X
+- Total Year 1 financial benefit: $X
+"Annualized return on your $X down payment: X%"
+
+THE PATH FORWARD:
+"In 2-3 years, move out and convert to a pure rental. Projected cash flow at that point: $X/month. Use the equity to buy your next property."
+
+RECOMMENDATION: BUY / CONDITIONAL / PASS`
+  },
+
+  'grok-3-latest': {
+    brrrr: `
+YOUR ROLE: THE QUANT — Quantitative Analyst
+You are a financial modeling analyst. Your output is DATA ONLY. No inspiration. No narrative fluff. Just verified math and benchmarks.
+
+MANDATORY STRUCTURE — USE THESE EXACT HEADERS:
+
+CALCULATION VERIFICATION:
+Verify each number independently:
+✓ or ✗ Purchase price: $X
+✓ or ✗ Rehab budget: $X
+✓ or ✗ Total basis: $X (purchase + rehab + carrying costs + points)
+✓ or ✗ ARV: $X
+✓ or ✗ Equity capture: $X (ARV - total basis)
+✓ or ✗ Equity capture %: X% of ARV
+✓ or ✗ Refi loan (75% LTV): $X
+✓ or ✗ Cash left in deal: $X (basis - refi proceeds)
+✓ or ✗ Monthly PITIA: $X
+✓ or ✗ DSCR: X.XX (rent/PITIA, must be ≥1.25 for most lenders)
+✓ or ✗ Monthly cash flow: $X
+✓ or ✗ Cash-on-cash: X%
+
+BENCHMARK COMPARISON:
+CoC vs threshold: X% vs 8% minimum → ABOVE/BELOW
+DSCR vs threshold: X.XX vs 1.25 minimum → ABOVE/BELOW
+Equity capture vs ARV: X% vs 20% target → ABOVE/BELOW
+Cash left in vs initial capital: X% recovered → STRONG/MODERATE/WEAK
+
+SENSITIVITY TABLE:
+If ARV -5%: Refi proceeds $X, cash left in $X, deal works? Y/N
+If ARV -10%: Refi proceeds $X, cash left in $X, deal works? Y/N
+If rehab +20%: Total basis $X, cash left in $X, deal works? Y/N
+If rent -10%: DSCR X.XX, cash flow $X, lendable? Y/N
+
+QUANTITATIVE VERDICT:
+Score: X/10
+Basis: [list only the metrics that drove the score, no prose]
+
+SCORING RULES:
+DSCR ≥ 1.25 AND CoC ≥ 8%: base 7
+Each metric above: +0.5 to +1
+Each metric below: -1 to -2
+Sensitivity table shows deal survives all stress tests: +1`,
+
+    flip: `
+YOUR ROLE: THE QUANT — Quantitative Analyst
+Numbers only. Verify the math. Build the sensitivity table. Give the quantitative verdict.
+
+MANDATORY STRUCTURE:
+
+WATERFALL VERIFICATION:
+✓ or ✗ Purchase: $X
+✓ or ✗ Hard money (X% of purchase): $X
+✓ or ✗ Rehab: $X
+✓ or ✗ Interest (X% × X mo): $X
+✓ or ✗ Points (X%): $X
+✓ or ✗ Buy closing (X%): $X
+✓ or ✗ Sell closing + commission (8%): $X
+✓ or ✗ Holding costs: $X
+✓ or ✗ Net profit: $X
+✓ or ✗ ROI on cash: X%
+✓ or ✗ Annualized ROI (X mo hold): X%
+
+MAO ANALYSIS:
+Conservative MAO (70% rule): (ARV × 0.70) - rehab = $X
+Purchase price vs MAO: $X OVER/UNDER by $X (X%)
+Hard money ceiling (85%): (ARV × 0.85) - rehab = $X
+Purchase price vs ceiling: $X OVER/UNDER by $X (X%)
+
+BREAK-EVEN TABLE:
+Break-even sale price: $X (X% below ARV)
+At ARV -5% ($X): profit = $X
+At ARV -10% ($X): profit = $X
+At ARV -15% ($X): profit = $X, loss = $X
+Rehab +20% ($X): profit = $X
+Hold +3 months: profit = $X
+
+BENCHMARK:
+ROI X% vs 20% annualized target: ABOVE/BELOW
+Profit margin X% vs 15% minimum: ABOVE/BELOW
+
+QUANTITATIVE VERDICT: X/10
+[One line of numbers only]
+
+SCORING RULES:
+ROI > 30% annualized: 8-10
+ROI 20-30% annualized: 6-7
+ROI 10-20% annualized: 4-5
+ROI < 10% annualized: 1-3`,
+
+    rental: `
+YOUR ROLE: THE QUANT — Quantitative Analyst
+Verify the rental math from scratch. Run the benchmarks. Show the sensitivity.
+
+MANDATORY STRUCTURE:
+
+EXPENSE STACK VERIFICATION:
+✓ or ✗ Gross monthly rent: $X
+✓ or ✗ Vacancy (5%): -$X
+✓ or ✗ Property tax: -$X/mo
+✓ or ✗ Insurance: -$X/mo
+✓ or ✗ Maintenance (5%): -$X
+✓ or ✗ Management (8%): -$X
+✓ or ✗ CapEx reserve (5%): -$X
+✓ or ✗ Total expenses: $X (X% ratio)
+✓ or ✗ NOI: $X/mo ($X/yr)
+✓ or ✗ Mortgage: -$X/mo
+✓ or ✗ Net cash flow: $X/mo
+✓ or ✗ Cap rate: X%
+✓ or ✗ Cash-on-cash: X%
+✓ or ✗ GRM: X.X (price/annual rent)
+✓ or ✗ DSCR: X.XX (NOI/mortgage)
+
+BENCHMARK COMPARISON:
+Cap rate X% vs market (est. X%): ABOVE/BELOW
+Cap rate vs 10Y treasury + 3%: ABOVE/BELOW (positive/negative spread)
+CoC X% vs 8% threshold: ABOVE/BELOW
+GRM X.X vs 12 ceiling: ABOVE/BELOW
+DSCR X.XX vs 1.0 minimum: ABOVE/BELOW
+
+SENSITIVITY TABLE:
+Vacancy 10%: cash flow $X/mo
+Maintenance 10%: cash flow $X/mo
+Rent -5%: cash flow $X/mo, CoC X%
+Rent -10%: cash flow $X/mo, CoC X%
+Rate +1%: mortgage $X, cash flow $X
+
+5-YEAR MODEL:
+Appreciation (3%/yr): equity +$X
+Principal paydown (yr 1-5): +$X
+Cumulative cash flow: +$X
+Total return: $X on $X invested = X%
+
+QUANTITATIVE VERDICT: X/10
+
+SCORING RULES:
+CoC > 8% AND positive leverage: 8-10
+CoC 5-8% OR neutral leverage: 5-7
+CoC < 5% OR negative leverage: 1-4`,
+
+    'house-hack': `
+YOUR ROLE: THE QUANT — Quantitative Analyst
+Model the true financial benefit of this house hack with precision.
+
+MANDATORY STRUCTURE:
+
+COST VERIFICATION:
+✓ or ✗ Purchase price: $X
+✓ or ✗ Down payment (X%): $X
+✓ or ✗ Loan amount: $X
+✓ or ✗ Monthly P&I: $X
+✓ or ✗ Property tax: $X/mo
+✓ or ✗ Insurance: $X/mo
+✓ or ✗ FHA upfront MIP (1.75%): $X added to loan
+✓ or ✗ FHA monthly MIP (0.85%): $X/mo
+✓ or ✗ Total PITI + MIP: $X/mo
+✓ or ✗ Rental income: $X/mo
+✓ or ✗ Net monthly cost: $X/mo
+✓ or ✗ Market rent equivalent: $X/mo
+✓ or ✗ Monthly savings vs renting: $X
+
+RENT VS OWN COMPARISON:
+Renting equivalent: $X/mo
+House hacking: $X/mo effective
+Monthly advantage: $X
+Annual advantage: $X
+
+WEALTH CREATION (Year 1):
+Principal paydown: $X
+Appreciation (3%): $X
+Savings vs renting: $X
+Total Year 1 benefit: $X
+Return on $X down payment: X%
+
+SENSITIVITY:
+One unit vacant 1 mo/yr: effective cost $X/mo
+Both units vacant 1 mo/yr: effective cost $X/mo
+Break-even rent (cost = $0): $X/mo
+
+5-YEAR EQUITY:
+Down payment: $X
+Principal paid: $X
+Appreciation: $X
+Total equity: $X
+Return on down payment: X%
+
+QUANTITATIVE VERDICT: X/10`
+  }
+};
+
+const getModelRoleSuffix = (modelId: string | undefined, strategy: string): string => {
+  if (!modelId) return '';
+  const roleSuffixes = MODEL_ROLE_SUFFIXES[modelId];
+  if (!roleSuffixes) return '';
+  const strategyKey = strategy === 'rental' ? 'rental'
+    : strategy === 'flip' ? 'flip'
+    : strategy === 'brrrr' ? 'brrrr'
+    : strategy === 'house-hack' ? 'house-hack'
+    : 'rental';
+  return roleSuffixes[strategyKey] || '';
+};
 
 // Strategy-specific system prompts (extracted to module level for streaming access)
 const SYSTEM_PROMPTS: Record<string, string> = {
@@ -60,7 +556,9 @@ RISKS: [3-5 specific risks as complete sentences]
 
 NEXT STEPS: [2-3 specific, actionable items]
 
-Use provided values verbatim. Write naturally without any formatting symbols.`,
+Use provided values verbatim. Write naturally without any formatting symbols.
+
+${V2_JSON_SCHEMA_SUFFIX}`,
 
   flip: `You are a professional real estate investment analyst providing clear, actionable analysis.
 
@@ -91,7 +589,9 @@ RISKS: [3-5 specific risks as complete sentences]
 
 EXIT STRATEGY: [Recommended exit approach and 2-3 action items]
 
-Write naturally in plain text. No markdown, bullets, or special formatting.`,
+Write naturally in plain text. No markdown, bullets, or special formatting.
+
+${V2_JSON_SCHEMA_SUFFIX}`,
 
   rental: `You are a professional real estate investment analyst providing clear, actionable analysis.
 
@@ -122,7 +622,9 @@ RISKS: [3-5 specific risks as complete sentences]
 
 NEXT STEPS: [2-3 specific, actionable items]
 
-Format monetary values with commas. Write in plain text without any formatting symbols.`,
+Format monetary values with commas. Write in plain text without any formatting symbols.
+
+${V2_JSON_SCHEMA_SUFFIX}`,
 
   'house-hack': `You are a professional real estate investment analyst providing clear, actionable analysis for house hacking strategies.
 
@@ -161,10 +663,18 @@ RISKS: [3-5 specific risks as complete sentences]
 
 NEXT STEPS: [2-3 specific, actionable items for getting started with house hacking]
 
-Format monetary values with commas. Write in plain text without any formatting symbols.`
+Format monetary values with commas. Write in plain text without any formatting symbols.
+
+${V2_JSON_SCHEMA_SUFFIX}`
 };
 
 export async function POST(request: NextRequest) {
+  console.log('ENV CHECK:', {
+    hasOpenAI: !!process.env.OPENAI_API_KEY,
+    openAIKeyStart: process.env.OPENAI_API_KEY?.substring(0, 8) || 'MISSING',
+    hasXAI: !!process.env.XAI_API_KEY,
+    hasAnthropic: !!process.env.ANTHROPIC_API_KEY
+  });
   const t_total = Date.now();
   console.log('=== ANALYSIS GENERATION START ===');
   console.log('Timestamp:', new Date().toISOString());
@@ -265,7 +775,35 @@ export async function POST(request: NextRequest) {
 
     // Check if user is admin
     const adminConfig = getAdminConfig(user.email);
-    
+
+    // V2 tier for multi-model routing — always resolve before usage check
+    let resolvedV2Tier: UserTier = 'free';
+
+    try {
+      const { data: tierProfile } = await supabase
+        .from('user_profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single();
+
+      const rawTier = tierProfile?.subscription_tier?.toLowerCase() || 'free';
+
+      resolvedV2Tier = (() => {
+        if (rawTier === 'pro-plus' || rawTier === 'pro_plus' || rawTier === 'premium') return 'pro_max' as const;
+        if (rawTier === 'pro' || rawTier === 'professional') return 'pro' as const;
+        return 'free' as const;
+      })();
+
+      console.log('V2 tier resolved:', {
+        rawTier,
+        resolvedV2Tier,
+        isAdmin: adminConfig.bypassSubscriptionLimits
+      });
+    } catch (tierErr) {
+      console.error('Failed to resolve tier:', tierErr);
+      resolvedV2Tier = 'free';
+    }
+
     // Skip usage check for admins
     if (!adminConfig.bypassSubscriptionLimits) {
       // Check user's usage limits - try RPC first, fall back to direct query
@@ -289,7 +827,6 @@ export async function POST(request: NextRequest) {
           .single();
 
         const analysesUsed = usageRow?.analysis_count ?? 0;
-        // Check user_profiles first (updated by Stripe webhook), then subscriptions as fallback
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('subscription_tier')
@@ -369,6 +906,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // V2 rate limiting — applies to all requests, fails open on error
+    const ipAddress = getIpFromRequest(request);
+    const isParallel = !!(body as any).modelOverride && resolvedV2Tier === 'pro_max';
+
+    const rateLimitResult = await checkRateLimit({
+      userId: user?.id || null,
+      ipAddress,
+      tier: resolvedV2Tier,
+      modelType: isParallel ? 'parallel' : 'single',
+    });
+
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            const encoder = new TextEncoder();
+            controller.enqueue(
+              encoder.encode(
+                `ERROR:${JSON.stringify({
+                  message: rateLimitResult.reason,
+                  retryAfter: rateLimitResult.retryAfter,
+                  code: 'RATE_LIMITED',
+                })}\n`
+              )
+            );
+            controller.close();
+          },
+        }),
+        {
+          status: 429,
+          headers: {
+            'Content-Type': 'text/plain',
+            'Retry-After': String(rateLimitResult.retryAfter || 60),
+            'X-RateLimit-Limit': String(rateLimitResult.limit || 0),
+            'X-RateLimit-Remaining': '0',
+          },
+        }
+      );
+    }
+
+    // Record request (fire and forget)
+    recordAnalysisRequest({
+      userId: user?.id || null,
+      ipAddress,
+      tier: resolvedV2Tier,
+      modelType: isParallel ? 'parallel' : 'single',
+      strategy: body.strategy,
+    }).catch(console.error);
+
     // Validate financial inputs using centralized validation
     const parsedPurchasePrice = parsePrice(body.purchasePrice);
     const parsedDownPayment = parsePrice(body.downPayment);
@@ -376,6 +962,13 @@ export async function POST(request: NextRequest) {
     const parsedLoanTerm = parseInteger(body.loanTerms?.loanTerm);
     const parsedUnits = parseInteger(body.units) || 1;
     const parsedMonthlyRent = parsePrice(body.monthlyRent);
+    const unitBreakdown = (body as any).unitBreakdown as Array<{
+      unitNumber: number;
+      bedrooms: number;
+      bathrooms: number;
+      monthlyRent: number;
+      notes: string;
+    }> | undefined;
 
     console.log('\n--- STEP 4.1: Financial Input Validation ---');
     console.log('Parsed financial values:', {
@@ -431,7 +1024,9 @@ export async function POST(request: NextRequest) {
     let estimatedValue = 0;
     
     console.log('\n--- STEP 5.1: Property Data Retrieval ---');
-    // Check if property data was passed from client (from wizard)
+    // Check if property data was passed from client (from wizard or V2)
+    // V2 — user-edited property data takes priority: the client merges edits
+    // on top of raw RentCast data before sending, so edited values win here.
     if ((body as any).propertyData) {
       console.log('Property data provided in request body');
       propertyData = (body as any).propertyData;
@@ -727,71 +1322,154 @@ export async function POST(request: NextRequest) {
     const { context, calculatedMetrics } = prepareAnalysisContext(propertyData, body);
     console.log(`[Generate] Context prepared in ${Date.now() - t_contextStart}ms`);
 
-    // Build the streaming SSE response
+    // Build the V2 streaming response — PROGRESS lines then a single RESULT
     const encoder = new TextEncoder();
-    const stream = new ReadableStream({
+    const v2Stream = new ReadableStream({
         async start(controller) {
-          const send = (event: Record<string, unknown>) => {
-            try {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-            } catch {
-              // Controller may be closed
-            }
+          const sendLine = (line: string) => {
+            try { controller.enqueue(encoder.encode(line + '\n')); } catch {}
+          };
+          const sendProg = (step: string, detail: string) => {
+            sendLine(`PROGRESS:${JSON.stringify({ type: 'progress', step, detail })}`);
           };
 
           try {
-            // Steps 1-2 already completed (property data + market data resolved before stream)
-            send({ type: 'progress', step: 1, label: 'Fetching property details', status: 'complete' });
-            send({ type: 'progress', step: 2, label: 'Pulling market data', status: 'complete' });
+            // --- Rich contextual progress events ---
+            const prop = (Array.isArray(propertyData?.property) ? propertyData.property[0] : propertyData?.property) || {};
+            const rental = (propertyData?.rental || {}) as any;
+            const comps = (propertyData?.comparables || {}) as any;
+            const arvAnalysisData = (propertyData as any)?.arvAnalysis;
 
-            // Step 3: AI Analysis - stream Claude response
-            send({ type: 'progress', step: 3, label: 'Running AI analysis', status: 'active' });
+            sendProg('auth', 'Request verified');
 
-            const systemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
+            sendProg('property',
+              `Property found — ${prop.bedrooms || '?'}bd/${prop.bathrooms || '?'}ba, ${prop.squareFootage ? prop.squareFootage.toLocaleString() : '?'} sqft`);
+
+            if (comps.value) {
+              sendProg('avm', `AVM acquired — Est. value $${comps.value.toLocaleString()}`);
+            }
+
+            if (rental.rentEstimate) {
+              sendProg('rent', `Rental estimate — $${rental.rentEstimate.toLocaleString()}/mo based on local comps`);
+            }
+
+            if (comps.comparables && Array.isArray(comps.comparables)) {
+              sendProg('comps', `Analyzed ${comps.comparables.length} comparable sales in the area`);
+            }
+
+            // Strategy-specific progress with data-driven ARV messaging
+            if ((body.strategy === 'flip' || body.strategy === 'brrrr') && calculatedMetrics) {
+              const userARV = body.arv || 0;
+              const compARV = arvAnalysisData?.arvEstimate;
+              const avmVal = comps.value || 0;
+              const arv = userARV || compARV || avmVal;
+
+              if (compARV && userARV) {
+                const deviation = Math.abs(userARV - compARV) / compARV;
+                if (deviation <= 0.05) {
+                  sendProg('arv', `ARV $${userARV.toLocaleString()} — aligns closely with ${arvAnalysisData?.compsUsed || 'local'} comp sales (comp ARV: $${compARV.toLocaleString()})`);
+                } else if (deviation <= 0.15) {
+                  sendProg('arv', `ARV $${userARV.toLocaleString()} — ${userARV > compARV ? 'above' : 'below'} comp-based estimate of $${compARV.toLocaleString()}. Verify scope of work.`);
+                } else {
+                  sendProg('arv', `ARV $${userARV.toLocaleString()} — significant variance from comp data ($${compARV.toLocaleString()}). Review comparable sales carefully.`);
+                }
+              } else if (arv) {
+                sendProg('arv', `ARV estimated at $${arv.toLocaleString()} from ${compARV ? `${arvAnalysisData?.compsUsed} comparable sales` : 'AVM data'}`);
+              }
+
+              const rehab = body.rehabCosts || 0;
+              if (rehab > 0) {
+                const maxOffer = arv > 0 ? Math.round(arv * 0.85 - rehab) : 0;
+                sendProg('rehab', `Rehab budget $${rehab.toLocaleString()} · ${maxOffer > 0 ? `Max allowable offer: $${maxOffer.toLocaleString()}` : 'Calculating max offer...'}`);
+              }
+
+              if (body.strategy === 'brrrr') {
+                const refiAmt = Math.round(arv * 0.75);
+                const equity = calculatedMetrics.cashReturned || 0;
+                sendProg('brrrr', `BRRRR analysis — Refi target $${refiAmt.toLocaleString()} at 75% ARV · Est. equity capture $${equity.toLocaleString()}`);
+              }
+            }
+
+            if (body.strategy === 'rental' && calculatedMetrics) {
+              const rent = calculatedMetrics.monthlyRent || 0;
+              const cashFlow = calculatedMetrics.cashFlow || 0;
+              sendProg('cashflow', `Cash flow model — $${rent.toLocaleString()}/mo rent · $${Math.round(cashFlow).toLocaleString()}/mo net cash flow`);
+            }
+
+            if (body.strategy === 'house-hack' && calculatedMetrics) {
+              const netCost = (calculatedMetrics as any).outOfPocketHousingCost || 0;
+              const rentalIncome = calculatedMetrics.monthlyRent || 0;
+              sendProg('househack', `House hack math — Net monthly cost $${Math.round(netCost).toLocaleString()}/mo after $${rentalIncome.toLocaleString()} rental offset`);
+            }
+
+            sendProg('ai', 'Running AI analysis — synthesizing all data points...');
+
+            // Send pre-computed calculations to client for the results component
+            sendLine(`CALCULATIONS:${JSON.stringify(calculatedMetrics)}`);
+
+            // --- Call AI model via multi-model router ---
+            const baseSystemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
             const t_claudeStart = Date.now();
-            console.log(`[Generate] Starting Claude streaming call at +${t_claudeStart - t_streamStart}ms`);
 
-            const claudeStream = anthropic.messages.stream({
-              model: CLAUDE_MODEL,
-              max_tokens: 3000,
-              temperature: 0.3,
-              system: systemPrompt,
-              messages: [{ role: 'user' as const, content: context }]
-            });
+            // Read optional model override
+            const modelOverride = (body as any).modelOverride as string | undefined;
+            // Security: any tier can request speed, only Pro Max can override to premium models
+            const allowedOverride = (() => {
+              if (!modelOverride) return undefined;
+              if (modelOverride === 'gpt-4o-mini') return modelOverride;
+              if (resolvedV2Tier === 'pro_max') return modelOverride;
+              return undefined;
+            })();
+            const modelSelection = selectModel(resolvedV2Tier, body.strategy as Strategy, allowedOverride);
 
-            let fullText = '';
-            claudeStream.on('text', (text) => {
-              fullText += text;
-              send({ type: 'stream', text });
-            });
+            // Apply role-specific suffix for Pro Max parallel models
+            const roleSuffix = allowedOverride ? getModelRoleSuffix(allowedOverride, body.strategy) : '';
+            const systemPrompt = roleSuffix ? baseSystemPrompt + '\n\n' + roleSuffix : baseSystemPrompt;
 
-            const finalMessage = await claudeStream.finalMessage();
+            console.log(`[Generate] Starting AI call at +${t_claudeStart - t_streamStart}ms`);
+            console.log(`[Generate] Model: ${modelSelection.primary.model} (${modelSelection.tierLabel})${roleSuffix ? ' [role suffix applied]' : ''}`);
+
+            // Send model info to client before analysis runs
+            sendLine(`MODEL:${JSON.stringify({
+              provider: modelSelection.primary.name,
+              model: modelSelection.primary.model,
+              tierLabel: modelSelection.tierLabel,
+              modelLabel: modelSelection.modelLabel
+            })}`);
+
+            const aiResponse = await callWithFallback(
+              modelSelection,
+              {
+                systemPrompt,
+                userMessage: context,
+                maxTokens: 4000,
+                temperature: 0.3
+              }
+            );
+
+            const fullText = aiResponse.text;
+
             const t_claudeEnd = Date.now();
-            console.log(`[Generate] Claude streaming completed in ${t_claudeEnd - t_claudeStart}ms`);
-            console.log(`[Generate] Claude usage:`, finalMessage.usage);
-            console.log(`[Generate] Analysis text length: ${fullText.length}`);
+            console.log(`[Generate] AI completed in ${aiResponse.latencyMs}ms`);
+            console.log(`[Generate] Provider: ${aiResponse.provider}, Model: ${aiResponse.model}`);
+            console.log(`[Generate] Tokens: ${aiResponse.inputTokens || '?'} in / ${aiResponse.outputTokens || '?'} out`);
+            console.log(`[Generate] Used fallback: ${aiResponse.usedFallback}`);
+            console.log(`[Generate] Response length: ${fullText.length}`);
 
-            send({ type: 'progress', step: 3, label: 'Running AI analysis', status: 'complete' });
+            sendProg('ai', 'AI analysis complete');
+            sendProg('save', 'Preparing your results...');
 
-            // Step 4: Parse and save results
-            send({ type: 'progress', step: 4, label: 'Preparing your results', status: 'active' });
-            const t_saveStart = Date.now();
-
+            // --- Parse and save ---
             const aiAnalysis = parseAnalysisResponse(fullText, body.strategy, calculatedMetrics);
             console.log('[Generate] Parsed analysis, financial_metrics:', aiAnalysis.financial_metrics);
 
-            // Extract ROI and profit
             const extractedRoi = aiAnalysis.financial_metrics?.roi;
             const extractedProfit = aiAnalysis.financial_metrics?.total_profit ||
                                     aiAnalysis.financial_metrics?.net_profit;
-            // Clamp ROI to fit DECIMAL(5,2) column: max 999.99
             const finalRoi = Math.min(extractedRoi ?? 0, 999.99);
             const finalProfit = Math.round(extractedProfit ?? 0);
-
-            // Extract ARV for flip strategies
             const extractedArv = aiAnalysis.financial_metrics?.arv;
 
-            // Build update data
             const updateData = {
               analysis_data: {
                 ...analysisRecord.analysis_data,
@@ -823,20 +1501,18 @@ export async function POST(request: NextRequest) {
 
             if (updateError) {
               console.error('[Generate] Failed to update analysis:', updateError);
-              send({ type: 'error', message: 'Failed to save analysis results' });
+              sendLine(`ERROR:${JSON.stringify({ message: 'Failed to save analysis results' })}`);
               controller.close();
               return;
             }
 
-            // Update usage count (non-blocking)
-            console.log('[Generate] Incrementing usage count for user:', user.id);
+            // Update usage count
             const { error: usageUpdateError } = await supabase
               .rpc('increment_analysis_usage', { p_user_id: user.id });
 
             if (usageUpdateError) {
               console.error('[Generate] Failed to update usage count:', usageUpdateError);
             } else {
-              // Check 80% threshold for warning email (non-blocking)
               try {
                 const now = new Date();
                 const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -873,27 +1549,26 @@ export async function POST(request: NextRequest) {
               }
             }
 
-            const t_saveEnd = Date.now();
-            console.log(`[Generate] DB save completed in ${t_saveEnd - t_saveStart}ms`);
-            console.log(`[Generate] TOTAL streaming time: ${t_saveEnd - t_streamStart}ms`);
+            console.log(`[Generate] DB save completed in ${Date.now() - t_claudeEnd}ms`);
+            console.log(`[Generate] TOTAL time: ${Date.now() - t_streamStart}ms`);
 
-            send({ type: 'progress', step: 4, label: 'Preparing your results', status: 'complete' });
-            send({
-              type: 'complete',
-              result: {
-                id: analysisRecord.id,
-                address: body.address,
-                strategy: body.strategy,
-                propertyData,
-                analysis: aiAnalysis,
-                timestamp: new Date().toISOString(),
-              }
-            });
+            sendProg('save', 'Results saved');
+
+            // Send raw Claude response directly — no wrapper object.
+            // The wrapper data (id, address, strategy) is already
+            // available client-side from state.
+            const resultText = fullText;
+            console.log('=== SENDING RESULT ===');
+            console.log('Result text length:', resultText.length);
+            console.log('First 200 chars:', resultText.substring(0, 200));
+            console.log('Last 200 chars:', resultText.substring(Math.max(0, resultText.length - 200)));
+            console.log('Starts with {:', resultText.trim().startsWith('{'));
+            console.log('Ends with }:', resultText.trim().endsWith('}'));
+            sendLine(`RESULT:${resultText}`);
 
             controller.close();
           } catch (error) {
             console.error('[Generate] Stream error:', error);
-            // Update analysis status to failed
             await supabase
               .from('analyzed_properties')
               .update({
@@ -905,17 +1580,16 @@ export async function POST(request: NextRequest) {
               })
               .eq('id', analysisRecord.id);
 
-            send({ type: 'error', message: error instanceof Error ? error.message : 'Analysis generation failed' });
+            sendLine(`ERROR:${JSON.stringify({ message: error instanceof Error ? error.message : 'Analysis generation failed' })}`);
             controller.close();
           }
         }
       });
 
-      return new Response(stream, {
+      return new Response(v2Stream, {
         headers: {
-          'Content-Type': 'text/event-stream',
+          'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
           'X-Accel-Buffering': 'no',
         }
       });
@@ -1123,30 +1797,22 @@ NEXT STEPS: [2-3 specific, actionable items for getting started with house hacki
 Format monetary values with commas. Write in plain text without any formatting symbols.`
     };
 
-    const claudeRequest = {
-      model: CLAUDE_MODEL,
-      max_tokens: 3000,
-      temperature: 0.3,
-      system: systemPrompts[request.strategy] || systemPrompts.rental,
-      messages: [
-        {
-          role: "user" as const,
-          content: context
-        }
-      ]
-    };
-    
-    console.log('[generatePropertyAnalysis] Claude request prepared');
-    console.log('[generatePropertyAnalysis] Model:', claudeRequest.model);
-    console.log('[generatePropertyAnalysis] Max tokens:', claudeRequest.max_tokens);
-    
-    const response = await anthropic.messages.create(claudeRequest);
-    
-    console.log('[generatePropertyAnalysis] Claude response received');
-    console.log('[generatePropertyAnalysis] Response usage:', response.usage);
-    console.log('[generatePropertyAnalysis] Response model:', response.model);
-    
-    const analysisText = response.content[0].type === 'text' ? response.content[0].text : '';
+    const legacySystemPrompt = systemPrompts[request.strategy] || systemPrompts.rental;
+
+    console.log('[generatePropertyAnalysis] Using claudeSonnet provider');
+
+    const legacyResponse = await claudeSonnet.call({
+      systemPrompt: legacySystemPrompt,
+      userMessage: context,
+      maxTokens: 3000,
+      temperature: 0.3
+    });
+
+    console.log('[generatePropertyAnalysis] AI response received');
+    console.log('[generatePropertyAnalysis] Provider:', legacyResponse.provider, 'Model:', legacyResponse.model);
+    console.log('[generatePropertyAnalysis] Latency:', legacyResponse.latencyMs + 'ms');
+
+    const analysisText = legacyResponse.text;
     console.log('[generatePropertyAnalysis] Analysis text length:', analysisText.length);
     console.log('[generatePropertyAnalysis] Raw Claude response preview:', analysisText.substring(0, 500) + '...');
     
@@ -1297,8 +1963,9 @@ ${(comparables as any)?.comparables && Array.isArray((comparables as any).compar
       initialLoanType: request.loanTerms?.loanType as 'hardMoney' | 'conventional' | undefined,
       initialInterestRate: request.loanTerms?.interestRate,
       refinanceInterestRate: 7, // Standard conventional rate
-      renovationMonths: parseInt((request as any).strategyDetails?.timeline) || 6,
-      closingCostPercent: 0.03
+      // V2 — accept holdingPeriod directly, fall back to strategyDetails.timeline
+      renovationMonths: (request as any).holdingPeriod || parseInt((request as any).strategyDetails?.timeline) || 6,
+      closingCostPercent: (request as any).closingCostsPercent ? (request as any).closingCostsPercent / 100 : 0.03
     };
     
     // Calculate BRRRR results
@@ -1371,6 +2038,9 @@ ${summary.recommendation}
 
 TIMELINE:
 ${timeline.map(t => `Year ${t.year}: ${t.description} - Cash Flow: $${t.cashFlow.toLocaleString()}`).join('\n')}
+
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
 
 Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition/renovation, refinance cash-out, and long-term rental returns.`;
 
@@ -1474,8 +2144,9 @@ Provide a comprehensive BRRRR analysis focusing on the three phases: acquisition
     const monthlyHousingSavings = marketRentEquivalent - Math.max(effectiveMortgage, 0);
     const annualHousingSavings = monthlyHousingSavings * 12;
 
-    // Cash to close
-    const closingCosts = effectivePurchasePrice * 0.03;
+    // Cash to close — V2 accepts closingCostsPercent from client
+    const closingCostPct = (request as any).closingCostsPercent ? (request as any).closingCostsPercent / 100 : 0.03;
+    const closingCosts = effectivePurchasePrice * closingCostPct;
     const cashToClose = actualDownPayment + closingCosts;
 
     // Housing ROI (savings relative to investment)
@@ -1540,6 +2211,9 @@ ${effectiveMortgage <= 0 ? '- LIVE FREE: Tenants cover 100% of your housing cost
 
 IMPORTANT: This is a house hack analysis. The "effective mortgage" is the key metric, NOT traditional cash flow. A positive effective mortgage simply means you still pay something toward housing, but MUCH less than renting. This is a GOOD deal if the effective mortgage is significantly below market rent.
 
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
+
 Provide a house hack analysis focusing on the effective mortgage reduction and savings compared to renting.`;
 
     // For house hack, use effective mortgage and savings as the key metrics
@@ -1585,7 +2259,8 @@ Provide a house hack analysis focusing on the effective mortgage reduction and s
     // loanTerm = loan maturity (1-2 years for hard money)
     // timeline = actual project duration for holding costs (3-12 months)
     let holdingTimeInMonths = 6; // Default to 6 months for flips
-    const rawTimeline = (request as any).strategyDetails?.timeline;
+    // V2 — accept holdingPeriod directly, fall back to strategyDetails.timeline
+    const rawTimeline = (request as any).holdingPeriod || (request as any).strategyDetails?.timeline;
     if (rawTimeline) {
       const parsedTimeline = parseInt(rawTimeline);
       if (!isNaN(parsedTimeline) && parsedTimeline > 0 && parsedTimeline <= 18) {
@@ -1655,8 +2330,13 @@ SELLING COSTS:
 
 INVESTMENT SUMMARY:
 - Cash Required: $${Math.round(flipResults.cashRequired).toLocaleString()} (what investor brings)
+- Points Cost: $${Math.round(flipResults.pointsCost).toLocaleString()} (${flipInputs.points}% on total loan)
 - Total Investment: $${Math.round(flipResults.totalInvestment).toLocaleString()} (all-in cost)
 - Total Project Cost: $${Math.round(flipResults.totalProjectCost).toLocaleString()} (including selling)
+
+MAX ALLOWABLE OFFER (MAO):
+- 70% Rule (conservative): $${flipResults.mao70.toLocaleString()} ${purchasePrice <= flipResults.mao70 ? '✓ Purchase price is BELOW 70% MAO' : '⚠ Purchase price EXCEEDS 70% MAO'}
+- 85% Rule (HML ceiling): $${flipResults.mao85.toLocaleString()} ${purchasePrice <= flipResults.mao85 ? '✓ Purchase price is BELOW 85% MAO' : '⚠ Purchase price EXCEEDS 85% MAO'}
 
 EXIT STRATEGY:
 - After Repair Value (ARV): $${Math.round(estimatedARV).toLocaleString()}
@@ -1671,21 +2351,48 @@ ${flipResults.validation.errors.map(e => `- ${e}`).join('\n')}
 VALIDATION WARNINGS:
 ${flipResults.validation.warnings.map(w => `- ${w}`).join('\n')}
 ` : ''}
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
+
 Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, holding costs, and profit margins. Do NOT include rental income or cash flow calculations.`;
 
     calculatedMetrics = {
-      totalInvestment: flipResults.cashRequired, // Use cash required for investment metric
+      // Core metrics (existing)
+      totalInvestment: flipResults.cashRequired,
       totalProfit: flipResults.netProfit,
       roi: flipResults.roi,
       holdingCosts: flipResults.holdingCosts,
-      // Fix & Flip specific metrics
       arv: estimatedARV,
       profitMargin: flipResults.profitMargin,
-      // Set rental-focused metrics to 0 or undefined for flips
       cashFlow: 0,
       capRate: 0,
-      cocReturn: flipResults.roi, // Use ROI instead
-      annualNOI: 0
+      cocReturn: flipResults.roi,
+      annualNOI: 0,
+
+      // Fix & Flip specific (needed for waterfall UI)
+      purchasePrice: effectivePurchasePrice || 0,
+      rehabCost: flipInputs.renovationCosts || 0,
+      rehabHoldback: flipResults.rehabHoldback || 0,
+      acquisitionLoan: flipResults.acquisitionLoan || 0,
+      totalLoan: flipResults.totalLoan || 0,
+      downPayment: flipResults.downPayment || 0,
+      pointsCost: flipResults.pointsCost || 0,
+      closingCosts: flipResults.closingCosts || 0,
+      sellingCosts: flipResults.sellingCosts || 0,
+      totalProjectCost: flipResults.totalProjectCost || 0,
+      netProfit: flipResults.netProfit || 0,
+      cashRequired: flipResults.cashRequired || 0,
+      mao70: flipResults.mao70 || 0,
+      mao85: flipResults.mao85 || 0,
+      isHardMoney: flipResults.isHardMoney || false,
+      holdingPeriodMonths: flipInputs.holdingPeriodMonths || 6,
+
+      // Calculated display values
+      loanAmount: flipResults.totalLoan || 0,
+      buySideClosing: flipResults.closingCosts || 0,
+      sellSideClosing: flipResults.sellingCosts || 0,
+      maxAllowableOffer70: flipResults.mao70 || 0,
+      maxAllowableOffer85: flipResults.mao85 || 0,
     };
 
     // Log the final validated results
@@ -1749,32 +2456,99 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
     });
 
     const monthlyPayment = effectivePurchasePrice > 0 ? calculateMonthlyPayment(loanAmount, request.loanTerms?.interestRate || 7, request.loanTerms?.loanTerm || 30, request.loanTerms?.loanType, request.rehabCosts) : 0;
-    
-    // Calculate additional metrics for better analysis
-    // Using same rates as fix & flip for consistency
-    const propertyTaxes = Math.round((effectivePurchasePrice * 0.012) / 12); // 1.2% annually
-    const insurance = Math.round((effectivePurchasePrice * 0.0035) / 12); // 0.35% annually
-    const hoa = 0; // Could be added as parameter
-    const maintenance = Math.round(monthlyRent * 0.1); // 10% of rent for maintenance
-    const propertyManagement = Math.round(monthlyRent * 0.08); // 8% for management
-    const vacancy = Math.round(monthlyRent * 0.05); // 5% vacancy factor
-    
-    const totalExpenses = monthlyPayment + propertyTaxes + insurance + hoa + maintenance + propertyManagement + vacancy;
-    const monthlyCashFlow = monthlyRent - totalExpenses;
+
+    // Use shared expense utility + CapEx reserve
+    const expenseRates = {
+      propertyTaxRate: 0.012,
+      insuranceRate: 0.0035,
+      maintenancePercent: 0.05,
+      managementPercent: 0.08,
+      vacancyPercent: 0.05,
+      hoaMonthly: 0,
+    };
+
+    const baseMonthlyExpenses = calculateMonthlyExpenses(
+      effectivePurchasePrice,
+      monthlyRent,
+      expenseRates
+    );
+
+    // CapEx reserve — 5% of rent for capital expenditures
+    const capExPercent = 5;
+    const monthlyCapEx = Math.round(monthlyRent * (capExPercent / 100));
+    const totalMonthlyExpenses = baseMonthlyExpenses + monthlyCapEx;
+
+    const monthlyCashFlow = monthlyRent - monthlyPayment - totalMonthlyExpenses;
     const annualCashFlow = monthlyCashFlow * 12;
-    const capRate = effectivePurchasePrice > 0 ? ((monthlyRent * 12 - (propertyTaxes + insurance + maintenance) * 12) / effectivePurchasePrice * 100) : 0;
+
+    // NOI = Gross Rent - ALL operating expenses (no mortgage)
+    const annualNOI = (monthlyRent * 12) - (totalMonthlyExpenses * 12);
+    const capRate = effectivePurchasePrice > 0 ? (annualNOI / effectivePurchasePrice * 100) : 0;
     const cashOnCash = downPayment > 0 ? (annualCashFlow / downPayment * 100) : 0;
+
+    // Expense breakdown for UI display
+    const propertyTaxes = Math.round((effectivePurchasePrice * expenseRates.propertyTaxRate) / 12);
+    const insurance = Math.round((effectivePurchasePrice * expenseRates.insuranceRate) / 12);
+    const maintenance = Math.round(monthlyRent * expenseRates.maintenancePercent);
+    const propertyManagement = Math.round(monthlyRent * expenseRates.managementPercent);
+    const vacancy = Math.round(monthlyRent * expenseRates.vacancyPercent);
+
+    const expenseBreakdown = {
+      mortgage: Math.round(monthlyPayment),
+      propertyTax: propertyTaxes,
+      insurance,
+      maintenance,
+      management: propertyManagement,
+      vacancy,
+      capEx: monthlyCapEx,
+      hoa: expenseRates.hoaMonthly,
+      totalOperating: Math.round(totalMonthlyExpenses),
+      totalWithMortgage: Math.round(totalMonthlyExpenses + monthlyPayment),
+    };
     
-    const annualNOI = (monthlyRent * 12) - ((propertyTaxes + insurance + maintenance) * 12);
-    
+    // Build income section with optional unit breakdown
+    const unitBreakdown = (request as any).unitBreakdown as Array<{
+      unitNumber: number;
+      bedrooms: number;
+      bathrooms: number;
+      monthlyRent: number;
+      notes: string;
+    }> | undefined;
+
+    let incomeSection = '';
+    if (units > 1) {
+      incomeSection += `\n- Number of Units: ${units}`;
+      if (unitBreakdown && unitBreakdown.length > 0) {
+        const totalFromBreakdown = unitBreakdown.reduce((sum, u) => sum + u.monthlyRent, 0);
+        incomeSection += `\n- Total Monthly Rent: $${totalFromBreakdown.toLocaleString()}`;
+        incomeSection += `\n- Rent Roll:`;
+        unitBreakdown.forEach(u => {
+          incomeSection += `\n  Unit ${u.unitNumber}: ${u.bedrooms}bd/${u.bathrooms}ba — $${u.monthlyRent.toLocaleString()}/mo${u.notes ? ` (${u.notes})` : ''}`;
+        });
+        incomeSection += `\n- Average Rent Per Unit: $${Math.round(totalFromBreakdown / units).toLocaleString()}`;
+      } else {
+        incomeSection += `\n- Rent Per Unit: $${Math.round(rentPerUnit).toLocaleString()}/month`;
+        incomeSection += `\n- Total Monthly Rent: $${monthlyRent.toLocaleString()}`;
+      }
+      incomeSection += `\n- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}`;
+    } else {
+      incomeSection += `\n- Monthly Rent: $${monthlyRent.toLocaleString()}`;
+      incomeSection += `\n- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}`;
+    }
+
+    // Price source context for Claude
+    const hasListPrice = !!(request as any).listPrice || !!(propertyData as any)?.listing?.price;
+    const priceSource = hasListPrice ? 'active listing price' : 'user-entered price (no active listing found)';
+    const estimatedValue = (propertyData as any)?.comparables?.value || 0;
+
+    context += `\nPrice Source: ${priceSource}`;
+    if (!hasListPrice && estimatedValue > 0) {
+      context += `\nNote: No active listing price was found for this property. The purchase price of $${effectivePurchasePrice.toLocaleString()} was entered by the user. Do not flag this as "purchasing at AVM" or "negative equity from day one" unless the entered price genuinely exceeds the estimated market value by more than 10%. The RentCast AVM of $${estimatedValue.toLocaleString()} should be used as a reference point, not assumed to be the asking price.`;
+    }
+
     context += `\n\nKEY CALCULATIONS:
 INCOME:
-- Monthly Rent: $${monthlyRent.toLocaleString()}
-${units > 1 ? `- Number of Units: ${units}
-- Rent Per Unit: $${Math.round(rentPerUnit).toLocaleString()}/month
-- Total Monthly Rent: $${monthlyRent.toLocaleString()}
-- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}` : `- Monthly Rent: $${monthlyRent.toLocaleString()}
-- Annual Rental Income: $${(monthlyRent * 12).toLocaleString()}`}
+- Monthly Rent: $${monthlyRent.toLocaleString()}${incomeSection}
 
 FINANCING:
 - Purchase Price: $${effectivePurchasePrice.toLocaleString()}
@@ -1789,10 +2563,12 @@ MONTHLY EXPENSES:
 - Mortgage Payment (P&I): $${monthlyPayment.toLocaleString()}
 - Property Taxes: $${propertyTaxes.toLocaleString()}
 - Insurance: $${insurance.toLocaleString()}
-- Maintenance (10%): $${maintenance.toLocaleString()}
+- Maintenance (5%): $${maintenance.toLocaleString()}
 - Property Management (8%): $${propertyManagement.toLocaleString()}
 - Vacancy Reserve (5%): $${vacancy.toLocaleString()}
-- Total Monthly Expenses: $${totalExpenses.toLocaleString()}
+- CapEx Reserve (5%): $${monthlyCapEx.toLocaleString()}
+- Total Operating Expenses: $${Math.round(totalMonthlyExpenses).toLocaleString()}
+- Total Monthly Outflow (incl. mortgage): $${Math.round(totalMonthlyExpenses + monthlyPayment).toLocaleString()}
 
 CASH FLOW ANALYSIS:
 - Monthly Cash Flow: $${monthlyCashFlow.toLocaleString()} ${monthlyCashFlow < 0 ? '(NEGATIVE)' : '(POSITIVE)'}
@@ -1801,18 +2577,66 @@ CASH FLOW ANALYSIS:
 - Cash-on-Cash Return: ${cashOnCash.toFixed(2)}%
 - Annual NOI: $${annualNOI.toLocaleString()}
 
+FINANCIAL CALCULATIONS — PRE-COMPUTED AND VERIFIED:
+These numbers were computed server-side with verified formulas. Copy them directly into your JSON response. Do not recalculate. If a number seems unusual, include it as a risk flag — do not silently change it.
+
 Provide a comprehensive analysis following the format specified. Make sure to include ALL the financial metrics in your response with the exact calculations shown above.`;
     
     calculatedMetrics = {
-      cashFlow: monthlyCashFlow,
-      capRate: capRate,
-      cocReturn: cashOnCash,
-      roi: cashOnCash * 5, // Simple 5-year projection
+      cashFlow: Math.round(monthlyCashFlow),
+      capRate: Math.round(capRate * 100) / 100,
+      cocReturn: Math.round(cashOnCash * 100) / 100,
+      roi: Math.round(cashOnCash * 5 * 100) / 100,
       totalInvestment: downPayment + (request.rehabCosts || 0) + pointsCost,
-      annualNOI: annualNOI,
-      totalProfit: annualCashFlow * 5, // 5-year profit projection
-      monthlyRent: monthlyRent // Add monthly rent to metrics
+      annualNOI: Math.round(annualNOI),
+      totalProfit: Math.round(annualCashFlow * 5),
+      monthlyRent: Math.round(monthlyRent),
+      // Multifamily data
+      units: units,
+      rentPerUnit: units > 1 ? Math.round(monthlyRent / units) : Math.round(monthlyRent),
+      unitBreakdown: unitBreakdown || null,
+      isMultifamily: units > 1,
+      // Full expense breakdown
+      expenseBreakdown,
+      expenseRates: {
+        vacancyPercent: expenseRates.vacancyPercent * 100,
+        managementPercent: expenseRates.managementPercent * 100,
+        maintenancePercent: expenseRates.maintenancePercent * 100,
+        capExPercent,
+        propertyTaxRate: expenseRates.propertyTaxRate * 100,
+        insuranceRate: expenseRates.insuranceRate * 100,
+      },
+      grossMonthlyRent: Math.round(monthlyRent),
+      effectiveGrossRent: Math.round(monthlyRent * (1 - expenseRates.vacancyPercent)),
+      monthlyMortgage: Math.round(monthlyPayment),
+      totalMonthlyExpenses: Math.round(totalMonthlyExpenses),
     };
+  }
+
+  // Calculation verification log (development only)
+  if (process.env.NODE_ENV === 'development') {
+    const afterRepairVal = request.arv || (comparables as any)?.value;
+    const rehabAmt = request.rehabCosts;
+    console.group('=== CALCULATION VERIFICATION ===');
+    console.log('Strategy:', request.strategy);
+    console.log('Inputs:', {
+      purchasePrice,
+      downPayment,
+      rehabCost: rehabAmt,
+      afterRepairValue: afterRepairVal,
+      monthlyRent: request.monthlyRent,
+      loanType: request.loanTerms?.loanType,
+      interestRate: request.loanTerms?.interestRate,
+      holdingMonths: (request as any).holdingPeriod || (request as any).strategyDetails?.timeline
+    });
+    console.log('Calculated outputs:', calculatedMetrics);
+    if (afterRepairVal) {
+      console.log('Max allowable offer (70% rule):',
+        Math.round(afterRepairVal * 0.70) - (rehabAmt || 0));
+      console.log('Max allowable offer (85% HML):',
+        Math.round(afterRepairVal * 0.85) - (rehabAmt || 0));
+    }
+    console.groupEnd();
   }
 
   return { context, calculatedMetrics };
@@ -2113,6 +2937,27 @@ interface FinancialData {
   // Fix & Flip specific metrics
   arv?: number;
   profitMargin?: number;
+  purchasePrice?: number;
+  rehabCost?: number;
+  rehabHoldback?: number;
+  acquisitionLoan?: number;
+  totalLoan?: number;
+  downPayment?: number;
+  pointsCost?: number;
+  closingCosts?: number;
+  sellingCosts?: number;
+  totalProjectCost?: number;
+  netProfit?: number;
+  cashRequired?: number;
+  mao70?: number;
+  mao85?: number;
+  isHardMoney?: boolean;
+  holdingPeriodMonths?: number;
+  loanAmount?: number;
+  buySideClosing?: number;
+  sellSideClosing?: number;
+  maxAllowableOffer70?: number;
+  maxAllowableOffer85?: number;
   // BRRRR-specific metrics
   cashReturned?: number;
   cashLeftInDeal?: number;
@@ -2121,6 +2966,18 @@ interface FinancialData {
   // House Hack-specific metrics
   outOfPocketHousingCost?: number;
   monthlyHousingSavings?: number;
+  // Multifamily metrics
+  units?: number;
+  rentPerUnit?: number;
+  unitBreakdown?: any;
+  isMultifamily?: boolean;
+  // Expense breakdown
+  expenseBreakdown?: any;
+  expenseRates?: any;
+  grossMonthlyRent?: number;
+  effectiveGrossRent?: number;
+  monthlyMortgage?: number;
+  totalMonthlyExpenses?: number;
 }
 
 function extractFinancialData(text: string): FinancialData {
