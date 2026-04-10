@@ -2404,6 +2404,7 @@ Provide a comprehensive fix & flip analysis focusing on ARV, renovation costs, h
       mao85: flipResults.mao85 || 0,
       isHardMoney: flipResults.isHardMoney || false,
       holdingPeriodMonths: flipInputs.holdingPeriodMonths || 6,
+      holdingMonths: holdingTimeInMonths,
 
       // Calculated display values
       loanAmount: flipResults.totalLoan || 0,
