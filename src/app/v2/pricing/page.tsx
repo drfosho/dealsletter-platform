@@ -102,7 +102,7 @@ const faqs = [
 
 const tableRows = [
   { feature: "AI Model", free: "GPT-4o-mini", pro: "Claude Sonnet / GPT-4.1", max: "Opus + GPT-4o + Grok 3" },
-  { feature: "Analyses per month", free: "Unlimited", pro: "Unlimited", max: "Unlimited" },
+  { feature: "Analyses per month", free: "3 / month", pro: "Unlimited", max: "Unlimited" },
   { feature: "All investment strategies", free: "check", pro: "check", max: "check" },
   { feature: "Full AI analysis", free: "Blurred", pro: "check", max: "check" },
   { feature: "PDF & Excel export", free: "dash", pro: "check", max: "check" },
@@ -437,12 +437,12 @@ export default function PricingPage() {
             <div style={tierLabel}>Free</div>
             <div style={priceMain}>$0</div>
             <div style={{ fontSize: 13, color: "#3a3758", marginBottom: 6 }}>
-              forever free
+              no credit card required
             </div>
             <div
               style={{ fontSize: 12, color: "#534AB7", marginBottom: 20 }}
             >
-              Speed model &mdash; GPT-4o-mini
+              Speed model &mdash; GPT-4o mini
             </div>
             <button
               style={ctaOutline}
@@ -465,8 +465,24 @@ export default function PricingPage() {
                 marginBottom: 20,
               }}
             />
-            {featureRow(check, "Unlimited analyses")}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 10,
+                padding: "6px 0",
+              }}
+            >
+              <span style={{ flexShrink: 0, marginTop: 1 }}>{check}</span>
+              <span style={{ fontSize: 13, color: "#9994b8" }}>
+                3 analyses per month
+                <div style={{ fontSize: 11, color: "#4e4a6a", marginTop: 2 }}>
+                  Resets on the 1st of each month
+                </div>
+              </span>
+            </div>
             {featureRow(check, "All 4 investment strategies")}
+            {featureRow(check, "Live market data & comps")}
             {featureRow(check, "Key financial metrics")}
             {featureRow(check, "Risk flags")}
             {featureRow(dash, "AI narrative & deep analysis", "Blurred", true)}
@@ -838,7 +854,8 @@ export default function PricingPage() {
             Start analyzing deals today.
           </h2>
           <p style={{ fontSize: 15, color: "#4e4a6a", marginBottom: 28 }}>
-            7-day free trial on all paid plans. Card required. Cancel anytime.
+            Free plan includes 3 analyses/month &mdash; no card required.
+            7-day free trial on paid plans. Cancel anytime.
           </p>
           <div
             style={{

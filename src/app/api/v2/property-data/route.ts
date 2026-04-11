@@ -279,6 +279,7 @@ export async function POST(request: NextRequest) {
         .from('analyzed_properties')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
+        .eq('analysis_data->>status', 'completed')
         .gte('created_at', startOfMonth.toISOString());
 
       const monthlyCount = count || 0;

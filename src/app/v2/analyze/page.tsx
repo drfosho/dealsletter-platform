@@ -1691,12 +1691,7 @@ function AnalyzeContent() {
             <button
               onClick={() => {
                 setIsDemo(false);
-                router.push(
-                  "/v2/analyze?address=" +
-                    encodeURIComponent(
-                      "742 Maple Street, Oakland CA 94612"
-                    )
-                );
+                router.push("/v2/how-it-works");
               }}
               style={{
                 background: "none",
