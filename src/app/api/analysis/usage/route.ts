@@ -8,14 +8,15 @@ import { FREE_MONTHLY_ANALYSIS_LIMIT } from '@/lib/constants';
 // `null` means "no monthly cap" (paid tiers)
 const TIER_LIMITS: Record<string, number | null> = {
   free: FREE_MONTHLY_ANALYSIS_LIMIT,
-  basic: FREE_MONTHLY_ANALYSIS_LIMIT,
-  starter: FREE_MONTHLY_ANALYSIS_LIMIT,
+  basic: null,
   pro: null,
-  professional: null,
   'pro-plus': null,
-  'pro_plus': null,
+  pro_plus: null,
+  pro_max: null,
+  'pro-max': null,
   premium: null,
-  enterprise: null,
+  professional: null,
+  admin: null,
 };
 
 function getTierLimit(tier: string): number | null {
