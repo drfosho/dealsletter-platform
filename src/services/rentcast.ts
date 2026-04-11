@@ -1,6 +1,6 @@
-import { 
-  RentCastPropertyDetails, 
-  RentCastRentalEstimate, 
+import {
+  RentCastPropertyDetails,
+  RentCastRentalEstimate,
   RentCastSaleComps,
   RentCastMarketData,
   CachedPropertyData,
@@ -8,14 +8,18 @@ import {
   SearchResults
 } from '@/types/rentcast';
 import { logError } from '@/utils/error-utils';
+import { createClient } from '@supabase/supabase-js';
 // TODO: re-add PropertyPhotoService import when Google Maps API is configured
 // import PropertyPhotoService from './property-photos';
 
-// In-memory cache for development (consider Redis for production)
-const propertyCache = new Map<string, CachedPropertyData>();
+// Supabase client for cache persistence (server-side only, uses service role)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-// Cache TTL: 24 hours for property data
-const CACHE_TTL = 24 * 60 * 60 * 1000;
+// 30 days for comprehensive data
+const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Rate limiting
 let requestCount = 0;
@@ -225,8 +229,8 @@ class RentCastService {
   async getPropertyDetails(address: string): Promise<RentCastPropertyDetails> {
     console.log('[RentCast] Getting property details for:', address);
     const cacheKey = `details:${address}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.data) {
       console.log('[RentCast] Using cached property details');
       return cached.data;
@@ -298,7 +302,7 @@ class RentCastService {
       // TODO: re-add property image fetch when Google Maps API is configured
       // Property images are currently disabled — no external image fetching
       
-      this.setCache(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL });
+      await this.setCache(cacheKey, { data, timestamp: Date.now(), ttl: CACHE_TTL_MS });
       return data;
     } catch (error) {
       logError('RentCast Get Property Details', error);
@@ -361,8 +365,8 @@ class RentCastService {
     
     const queryString = this.buildSearchQuery(params);
     const cacheKey = `search:${queryString}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.searchResults) {
       console.log('[RentCast] Using cached search results');
       return cached.searchResults as SearchResults<RentCastPropertyDetails>;
@@ -410,12 +414,12 @@ class RentCastService {
       });
       
       // Cache the results
-      this.setCache(cacheKey, {
+      await this.setCache(cacheKey, {
         searchResults,
         timestamp: Date.now(),
-        ttl: CACHE_TTL
+        ttl: CACHE_TTL_MS
       } as any);
-      
+
       return searchResults;
     } catch (error) {
       logError('RentCast Enhanced Search', error);
@@ -427,8 +431,8 @@ class RentCastService {
   async getRentalEstimate(address: string, autoLookupAttributes: boolean = true): Promise<RentCastRentalEstimate> {
     console.log('[RentCast] Getting rental estimate for:', address);
     const cacheKey = `rent:${address}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.rentEstimate) {
       console.log('[RentCast] Using cached rental estimate');
       return cached.rentEstimate;
@@ -471,7 +475,7 @@ class RentCastService {
 
       console.log('[RentCast] Normalized rental estimate:', normalizedData);
 
-      this.updateCache(cacheKey, { rentEstimate: normalizedData });
+      await this.updateCache(cacheKey, { rentEstimate: normalizedData });
       return normalizedData;
     } catch (error) {
       console.error('[RentCast] Error getting rental estimate:', error);
@@ -484,8 +488,8 @@ class RentCastService {
   async getActiveListing(address: string): Promise<any> {
     console.log('[RentCast] Getting active listing for:', address);
     const cacheKey = `listing:${address}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.listing) {
       console.log('[RentCast] Using cached listing data');
       return cached.listing;
@@ -504,7 +508,7 @@ class RentCastService {
         
         if (listingData && listingData.price) {
           console.log('[RentCast] Found active listing with price:', listingData.price);
-          this.updateCache(cacheKey, { listing: listingData });
+          await this.updateCache(cacheKey, { listing: listingData });
           return listingData;
         }
       } catch {
@@ -522,8 +526,8 @@ class RentCastService {
   async getSaleComparables(address: string, radius: number = 0.5, autoLookupAttributes: boolean = true): Promise<RentCastSaleComps> {
     console.log('[RentCast] Getting sale comparables for:', address);
     const cacheKey = `comps:${address}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.saleComps) {
       console.log('[RentCast] Using cached sale comparables');
       return cached.saleComps;
@@ -570,7 +574,7 @@ class RentCastService {
       console.log('Comparables count:', normalizedData.comparables?.length || 0);
       console.log('=== END AVM RESPONSE ===\n');
 
-      this.updateCache(cacheKey, { saleComps: normalizedData });
+      await this.updateCache(cacheKey, { saleComps: normalizedData });
       return normalizedData;
     } catch (error) {
       console.error('[RentCast] Error getting sale comparables:', error);
@@ -583,8 +587,8 @@ class RentCastService {
   async getMarketData(zipCode: string): Promise<RentCastMarketData> {
     console.log('[RentCast] Getting market data for zip code:', zipCode);
     const cacheKey = `market:${zipCode}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.marketData) {
       console.log('[RentCast] Using cached market data');
       return cached.marketData;
@@ -598,7 +602,7 @@ class RentCastService {
       
       console.log('[RentCast] Market data response:', JSON.stringify(data, null, 2));
       
-      this.updateCache(cacheKey, { marketData: data });
+      await this.updateCache(cacheKey, { marketData: data });
       return data;
     } catch (error) {
       console.error('[RentCast] Error getting market data:', error);
@@ -612,8 +616,8 @@ class RentCastService {
     try {
       // Check if we have all data cached
       const cacheKey = `comprehensive:${address}`;
-      const cached = this.getFromCache(cacheKey);
-      
+      const cached = await this.getFromCache(cacheKey);
+
       if (cached && cached.data && cached.rentEstimate && cached.saleComps && cached.marketData) {
         return {
           property: cached.data,
@@ -679,14 +683,14 @@ class RentCastService {
       });
 
       // Cache the comprehensive data
-      this.setCache(cacheKey, {
+      await this.setCache(cacheKey, {
         data: property,
         rentEstimate: rental,
         saleComps: comparables,
         marketData: market,
         listing: listing,
         timestamp: Date.now(),
-        ttl: CACHE_TTL,
+        ttl: CACHE_TTL_MS,
       });
 
       return comprehensiveData;
@@ -696,36 +700,136 @@ class RentCastService {
     }
   }
 
-  // Cache management
-  private getFromCache(key: string): CachedPropertyData | undefined {
-    const cached = propertyCache.get(key);
-    
-    if (!cached) return undefined;
-    
-    const now = Date.now();
-    if (now - cached.timestamp > cached.ttl) {
-      propertyCache.delete(key);
-      return undefined;
+  // Normalize an address (or other identifier) so cache lookups
+  // are tolerant of casing, abbreviations, and unit numbers.
+  private normalizeAddress(address: string): string {
+    return address
+      .toLowerCase()
+      .trim()
+      // Normalize common abbreviations
+      .replace(/\bstreet\b/g, 'st')
+      .replace(/\bavenue\b/g, 'ave')
+      .replace(/\bboulevard\b/g, 'blvd')
+      .replace(/\bdrive\b/g, 'dr')
+      .replace(/\broad\b/g, 'rd')
+      .replace(/\bcourt\b/g, 'ct')
+      .replace(/\blane\b/g, 'ln')
+      .replace(/\bplace\b/g, 'pl')
+      .replace(/\bcircle\b/g, 'cir')
+      // Remove unit numbers for cache key purposes
+      .replace(/\s+(apt|unit|#|ste|suite)\.?\s*\w+/gi, '')
+      // Normalize whitespace
+      .replace(/\s+/g, ' ')
+      // Remove trailing USA
+      .replace(/,?\s*usa$/i, '')
+      .trim();
+  }
+
+  // Build a normalized prefixed cache key from a raw "<prefix>:<identifier>" key.
+  private buildCacheKey(key: string): string {
+    const colonIdx = key.indexOf(':');
+    if (colonIdx < 0) return this.normalizeAddress(key);
+    const prefix = key.slice(0, colonIdx);
+    const rest = key.slice(colonIdx + 1);
+    return `${prefix}:${this.normalizeAddress(rest)}`;
+  }
+
+  // Cache management — Supabase-backed
+  private async getFromCache(key: string): Promise<CachedPropertyData | null> {
+    try {
+      const prefixedKey = this.buildCacheKey(key);
+
+      const { data, error } = await supabaseAdmin
+        .from('rentcast_cache')
+        .select('data, expires_at')
+        .eq('cache_key', prefixedKey)
+        .single();
+
+      if (error || !data) return null;
+
+      // Check if expired
+      if (new Date(data.expires_at) < new Date()) {
+        await supabaseAdmin
+          .from('rentcast_cache')
+          .delete()
+          .eq('cache_key', prefixedKey);
+        return null;
+      }
+
+      console.log('[RentCast] Cache HIT:', prefixedKey);
+      return data.data as CachedPropertyData;
+    } catch (err) {
+      console.error('[RentCast] Cache read error:', err);
+      return null;
     }
-    
-    return cached;
   }
 
-  private setCache(key: string, data: CachedPropertyData): void {
-    propertyCache.set(key, data);
+  private async setCache(key: string, data: CachedPropertyData): Promise<void> {
+    try {
+      const prefixedKey = this.buildCacheKey(key);
+      const colonIdx = key.indexOf(':');
+      const normalizedAddress = colonIdx >= 0
+        ? this.normalizeAddress(key.slice(colonIdx + 1))
+        : this.normalizeAddress(key);
+
+      const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
+
+      await supabaseAdmin
+        .from('rentcast_cache')
+        .upsert({
+          cache_key: prefixedKey,
+          address: normalizedAddress,
+          data: data,
+          expires_at: expiresAt,
+          created_at: new Date().toISOString()
+        }, {
+          onConflict: 'cache_key'
+        });
+
+      console.log('[RentCast] Cache SET:', prefixedKey);
+    } catch (err) {
+      console.error('[RentCast] Cache write error:', err);
+      // Never fail the request on cache error
+    }
   }
 
-  private updateCache(key: string, updates: Partial<CachedPropertyData>): void {
-    const existing = propertyCache.get(key) || {
-      timestamp: Date.now(),
-      ttl: CACHE_TTL,
-    };
-    
-    propertyCache.set(key, {
-      ...existing,
-      ...updates,
-      timestamp: Date.now(),
-    } as CachedPropertyData);
+  private async updateCache(key: string, updates: Partial<CachedPropertyData>): Promise<void> {
+    try {
+      const prefixedKey = this.buildCacheKey(key);
+      const colonIdx = key.indexOf(':');
+      const normalizedAddress = colonIdx >= 0
+        ? this.normalizeAddress(key.slice(colonIdx + 1))
+        : this.normalizeAddress(key);
+
+      // Get existing data first to merge
+      const { data: existing } = await supabaseAdmin
+        .from('rentcast_cache')
+        .select('data')
+        .eq('cache_key', prefixedKey)
+        .single();
+
+      const merged = {
+        ...(existing?.data || {}),
+        ...updates,
+        timestamp: Date.now(),
+      };
+
+      const expiresAt = new Date(Date.now() + CACHE_TTL_MS).toISOString();
+
+      await supabaseAdmin
+        .from('rentcast_cache')
+        .upsert({
+          cache_key: prefixedKey,
+          address: normalizedAddress,
+          data: merged,
+          expires_at: expiresAt,
+          created_at: new Date().toISOString()
+        }, {
+          onConflict: 'cache_key'
+        });
+    } catch (err) {
+      console.error('[RentCast] Cache update error:', err);
+    }
   }
 
   // Search for rental properties with enhanced filters
@@ -734,8 +838,8 @@ class RentCastService {
     
     const queryString = this.buildSearchQuery(params);
     const cacheKey = `rentals:${queryString}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.searchResults) {
       console.log('[RentCast] Using cached rental search results');
       return cached.searchResults as SearchResults<any>;
@@ -779,12 +883,12 @@ class RentCastService {
       });
       
       // Cache the results
-      this.setCache(cacheKey, {
+      await this.setCache(cacheKey, {
         searchResults,
         timestamp: Date.now(),
-        ttl: CACHE_TTL
+        ttl: CACHE_TTL_MS
       } as any);
-      
+
       return searchResults;
     } catch (error) {
       logError('RentCast Rental Search', error);
@@ -798,8 +902,8 @@ class RentCastService {
     
     const queryString = this.buildSearchQuery(params);
     const cacheKey = `sales:${queryString}`;
-    const cached = this.getFromCache(cacheKey);
-    
+    const cached = await this.getFromCache(cacheKey);
+
     if (cached?.searchResults) {
       console.log('[RentCast] Using cached sale search results');
       return cached.searchResults as SearchResults<any>;
@@ -843,12 +947,12 @@ class RentCastService {
       });
       
       // Cache the results
-      this.setCache(cacheKey, {
+      await this.setCache(cacheKey, {
         searchResults,
         timestamp: Date.now(),
-        ttl: CACHE_TTL
+        ttl: CACHE_TTL_MS
       } as any);
-      
+
       return searchResults;
     } catch (error) {
       logError('RentCast Sale Search', error);
@@ -857,14 +961,22 @@ class RentCastService {
   }
 
   // Clear cache for a specific address or all
-  clearCache(address?: string): void {
-    if (address) {
-      const keysToDelete = Array.from(propertyCache.keys()).filter(key => 
-        key.includes(address)
-      );
-      keysToDelete.forEach(key => propertyCache.delete(key));
-    } else {
-      propertyCache.clear();
+  async clearCache(address?: string): Promise<void> {
+    try {
+      if (address) {
+        const normalized = this.normalizeAddress(address);
+        await supabaseAdmin
+          .from('rentcast_cache')
+          .delete()
+          .ilike('address', `%${normalized}%`);
+      } else {
+        await supabaseAdmin
+          .from('rentcast_cache')
+          .delete()
+          .not('id', 'is', null);
+      }
+    } catch (err) {
+      console.error('[RentCast] Cache clear error:', err);
     }
   }
 }
