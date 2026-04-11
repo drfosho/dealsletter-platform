@@ -27,14 +27,14 @@ const tiers: Tier[] = [
     price: "$0",
     modelLabel: "Speed model only",
     features: [
-      { text: "Property data pull on any address", style: "check" },
-      { text: "Unlimited analyses on Speed model", style: "check" },
+      { text: "Live market data & comps included", style: "check" },
+      { text: "3 analyses per month \u2014 free forever", style: "check" },
       { text: "All 4 investment strategies", style: "check" },
       { text: "Risk flags & AI narrative blurred", style: "partial" },
       { text: "No PDF export or saved history", style: "excluded" },
       { text: "No model selection", style: "excluded" },
     ],
-    note: "You\u2019ll see the numbers. The insights that tell you whether to act are unlocked with Pro.",
+    note: "3 free analyses per month \u2014 no card needed. The insights that tell you whether to act are unlocked with Pro.",
     cta: "Get started free",
   },
   {
@@ -359,7 +359,7 @@ export default function PricingSection() {
 
       {/* Footer note */}
       <p style={{ marginTop: 24, fontSize: 13, color: "#2e2c48" }}>
-        Free plan requires no credit card. Paid plans billed monthly or annually.
+        Free plan includes 3 analyses/month &mdash; no card required. 7-day free trial on paid plans. Cancel anytime.
       </p>
     </section>
   );
