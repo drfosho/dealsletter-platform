@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rentCastService } from '@/services/rentcast';
 import { createClient } from '@/lib/supabase/server';
-
-const FREE_MONTHLY_LIMIT = 3;
+import { FREE_MONTHLY_ANALYSIS_LIMIT } from '@/lib/constants';
 
 // Demo payload returned to anonymous users so the UI has something to render
 // while we prompt them to sign up. Numbers are illustrative, not real data.
@@ -284,13 +283,13 @@ export async function POST(request: NextRequest) {
 
       const monthlyCount = count || 0;
 
-      if (monthlyCount >= FREE_MONTHLY_LIMIT) {
+      if (monthlyCount >= FREE_MONTHLY_ANALYSIS_LIMIT) {
         return NextResponse.json(
           {
             error: 'Monthly limit reached',
             limitReached: true,
             monthlyCount,
-            limit: FREE_MONTHLY_LIMIT,
+            limit: FREE_MONTHLY_ANALYSIS_LIMIT,
             resetDate: new Date(
               new Date().getFullYear(),
               new Date().getMonth() + 1,
@@ -303,13 +302,13 @@ export async function POST(request: NextRequest) {
 
       // Under limit — fetch real data and attach usage info for the UI counter
       const result = await getRentCastData(address);
-      const remainingAnalyses = FREE_MONTHLY_LIMIT - monthlyCount;
+      const remainingAnalyses = FREE_MONTHLY_ANALYSIS_LIMIT - monthlyCount;
 
       return NextResponse.json({
         ...result,
         usageInfo: {
           used: monthlyCount + 1,
-          limit: FREE_MONTHLY_LIMIT,
+          limit: FREE_MONTHLY_ANALYSIS_LIMIT,
           remaining: remainingAnalyses - 1,
           tier: 'free',
         },

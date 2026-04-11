@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import NavBar from "@/components/v2/NavBar";
 import Footer from "@/components/v2/Footer";
+import { FREE_MONTHLY_ANALYSIS_LIMIT } from "@/lib/constants";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -119,6 +120,19 @@ export default function V2AccountPage() {
   const isPaid = tierName === "Pro" || tierName === "Pro Max";
   const isTrialing = usageInfo?.subscription_status === "trialing";
   const used = usageInfo?.analyses_used || 0;
+  const analysesThisMonth = usageInfo?.analyses_this_month || 0;
+  const monthlyRemaining: number | null =
+    usageInfo?.monthly_remaining ?? null;
+  const isFree = (usageInfo?.is_limited ?? tier === "free") && !isAdmin;
+  const nextResetDate = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1,
+    1
+  );
+  const nextResetLabel = nextResetDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 
   const throttleLabel = (() => {
     const t = usageInfo?.subscription_tier || 'free';
@@ -590,34 +604,125 @@ export default function V2AccountPage() {
                   gap: 16,
                 }}
               >
-                <div style={cellStyle}>
-                  <div style={cellLabel}>Analyses run</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
-                    {used}
-                  </div>
-                </div>
-                <div style={cellStyle}>
-                  <div style={cellLabel}>Throttle limit</div>
+                {isFree ? (
+                  <>
+                    <div style={cellStyle}>
+                      <div style={cellLabel}>Used this month</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
+                        {analysesThisMonth}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#3a3758" }}>
+                        of {FREE_MONTHLY_ANALYSIS_LIMIT} free analyses
+                      </div>
+                    </div>
+                    <div style={cellStyle}>
+                      <div style={cellLabel}>Remaining</div>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          color:
+                            monthlyRemaining === 0
+                              ? "#f09595"
+                              : (monthlyRemaining ?? 0) <= 1
+                                ? "#EF9F27"
+                                : "#1D9E75",
+                        }}
+                      >
+                        {monthlyRemaining ?? "—"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#3a3758" }}>
+                        resets on the 1st
+                      </div>
+                    </div>
+                    <div style={cellStyle}>
+                      <div style={cellLabel}>Resets</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "#9994b8" }}>
+                        1st of month
+                      </div>
+                      <div style={{ fontSize: 11, color: "#3a3758" }}>
+                        {nextResetLabel}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={cellStyle}>
+                      <div style={cellLabel}>Analyses run</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
+                        {used}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#3a3758" }}>
+                        all time
+                      </div>
+                    </div>
+                    <div style={cellStyle}>
+                      <div style={cellLabel}>This month</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
+                        {analysesThisMonth}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#3a3758" }}>
+                        no monthly cap
+                      </div>
+                    </div>
+                    <div style={cellStyle}>
+                      <div style={cellLabel}>Limit</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "#9994b8" }}>
+                        Unlimited
+                      </div>
+                      <div style={{ fontSize: 11, color: "#3a3758" }}>
+                        no caps on your plan
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Free-tier progress bar */}
+              {isFree && (
+                <div style={{ marginTop: 16, marginBottom: 8 }}>
                   <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: "#9994b8",
+                      height: 4,
+                      background: "rgba(127,119,221,0.1)",
+                      borderRadius: 4,
+                      overflow: "hidden",
                     }}
                   >
-                    {throttleLabel}
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${Math.min(
+                          100,
+                          (analysesThisMonth / FREE_MONTHLY_ANALYSIS_LIMIT) * 100
+                        )}%`,
+                        background:
+                          monthlyRemaining === 0
+                            ? "#f09595"
+                            : (monthlyRemaining ?? 0) <= 1
+                              ? "#EF9F27"
+                              : "#534AB7",
+                        borderRadius: 4,
+                        transition: "width 0.3s ease",
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: 6,
+                      fontSize: 11,
+                      color: "#4e4a6a",
+                    }}
+                  >
+                    <span>
+                      {analysesThisMonth} of {FREE_MONTHLY_ANALYSIS_LIMIT} used
+                    </span>
+                    <span>Resets {nextResetLabel}</span>
                   </div>
                 </div>
-                <div style={cellStyle}>
-                  <div style={cellLabel}>This month</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: "#f0eeff" }}>
-                    {used}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#3a3758" }}>
-                    analyses this month
-                  </div>
-                </div>
-              </div>
+              )}
 
               {/* Info box */}
               <div
@@ -647,9 +752,40 @@ export default function V2AccountPage() {
                   <line x1="12" y1="8" x2="12.01" y2="8" />
                 </svg>
                 <span style={{ fontSize: 13, color: "#6b6690" }}>
-                  Analyses are unlimited on your plan. Rate limits apply to prevent abuse &mdash; {throttleLabel} maximum.
+                  {isFree ? (
+                    <>
+                      Free plan includes {FREE_MONTHLY_ANALYSIS_LIMIT} analyses per month.
+                      Upgrade to Pro for unlimited analyses with full AI insights and no caps.
+                    </>
+                  ) : (
+                    <>
+                      Analyses are unlimited on your {tierName} plan. Rate limits apply to
+                      prevent abuse &mdash; {throttleLabel} maximum.
+                    </>
+                  )}
                 </span>
               </div>
+
+              {/* Free-tier upgrade CTA */}
+              {isFree && (
+                <button
+                  onClick={() => router.push("/v2/pricing")}
+                  style={{
+                    marginTop: 12,
+                    background: "rgba(83,74,183,0.1)",
+                    border: "0.5px solid rgba(127,119,221,0.25)",
+                    borderRadius: 8,
+                    padding: "10px 16px",
+                    fontSize: 13,
+                    color: "#9994b8",
+                    cursor: "pointer",
+                    width: "100%",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Upgrade to Pro for unlimited analyses &rarr;
+                </button>
+              )}
             </div>
 
             {/* D — Quick actions */}
