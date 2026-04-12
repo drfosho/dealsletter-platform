@@ -768,23 +768,78 @@ export default function V2AccountPage() {
 
               {/* Free-tier upgrade CTA */}
               {isFree && (
-                <button
-                  onClick={() => router.push("/v2/pricing")}
-                  style={{
-                    marginTop: 12,
-                    background: "rgba(83,74,183,0.1)",
-                    border: "0.5px solid rgba(127,119,221,0.25)",
-                    borderRadius: 8,
-                    padding: "10px 16px",
+                <div style={{
+                  marginTop: 16,
+                  background: 'rgba(83,74,183,0.06)',
+                  border: '0.5px solid rgba(127,119,221,0.2)',
+                  borderRadius: 12,
+                  padding: '20px',
+                }}>
+                  <div style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: '#f0eeff',
+                    marginBottom: 6
+                  }}>
+                    Want unlimited analyses?
+                  </div>
+                  <div style={{
                     fontSize: 13,
-                    color: "#9994b8",
-                    cursor: "pointer",
-                    width: "100%",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Upgrade to Pro for unlimited analyses &rarr;
-                </button>
+                    color: '#6b6690',
+                    lineHeight: 1.6,
+                    marginBottom: 14
+                  }}>
+                    Upgrade to Pro for unlimited
+                    analyses, full AI insights,
+                    saved history, and PDF exports.
+                    Try free for 7 days.
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    gap: 8,
+                    flexWrap: 'wrap'
+                  }}>
+                    <button
+                      onClick={() =>
+                        router.push('/v2/pricing')
+                      }
+                      style={{
+                        flex: 1,
+                        minWidth: 140,
+                        background: '#534AB7',
+                        color: '#f0eeff',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '10px 16px',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      See plans →
+                    </button>
+                    <button
+                      onClick={() =>
+                        router.push('/v2/pricing#pro-max')
+                      }
+                      style={{
+                        flex: 1,
+                        minWidth: 140,
+                        background: 'transparent',
+                        color: '#9994b8',
+                        border: '0.5px solid rgba(127,119,221,0.2)',
+                        borderRadius: 8,
+                        padding: '10px 16px',
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      Compare all plans
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
 

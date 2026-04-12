@@ -1714,71 +1714,160 @@ function AnalyzeContent() {
       >
         {/* Free-tier monthly limit reached — shown in place of the form */}
         {freeLimitReached && freeLimitInfo && (
-          <div
-            style={{
-              background: "#13121d",
-              border: "0.5px solid rgba(239,159,39,0.3)",
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(13,13,20,0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: '#13121d',
+              border: '0.5px solid rgba(127,119,221,0.3)',
               borderRadius: 16,
-              padding: "40px 36px",
-              maxWidth: 480,
-              margin: "60px auto",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: 32, marginBottom: 16 }}>📊</div>
-            <h2
-              style={{
+              padding: '40px 36px',
+              maxWidth: 460,
+              width: '100%',
+              textAlign: 'center'
+            }}>
+              {/* Icon */}
+              <div style={{
+                width: 52,
+                height: 52,
+                background: 'rgba(83,74,183,0.12)',
+                borderRadius: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                fontSize: 24
+              }}>
+                📈
+              </div>
+
+              {/* Heading */}
+              <h2 style={{
                 fontSize: 22,
                 fontWeight: 700,
-                color: "#f0eeff",
+                color: '#f0eeff',
+                letterSpacing: '-0.4px',
                 marginBottom: 10,
-              }}
-            >
-              You've used all {freeLimitInfo.limit} free analyses this month
-            </h2>
-            <p
-              style={{
+                lineHeight: 1.3
+              }}>
+                You've used all 3 free analyses
+              </h2>
+
+              {/* Subtext */}
+              <p style={{
                 fontSize: 15,
-                color: "#6b6690",
+                color: '#6b6690',
                 lineHeight: 1.6,
+                marginBottom: 8
+              }}>
+                Upgrade to Pro and get unlimited
+                analyses, full AI insights, saved
+                history, and PDF exports — starting
+                at $29/month.
+              </p>
+
+              {/* Trial callout */}
+              <div style={{
+                background: 'rgba(29,158,117,0.08)',
+                border: '0.5px solid rgba(29,158,117,0.2)',
+                borderRadius: 8,
+                padding: '10px 16px',
+                fontSize: 13,
+                color: '#1D9E75',
                 marginBottom: 28,
-              }}
-            >
-              Your free analyses reset on{" "}
-              <strong style={{ color: "#9994b8" }}>
-                {new Date(freeLimitInfo.resetDate).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                })}
-              </strong>
-              . Upgrade to Pro for unlimited analyses with no caps.
-            </p>
-            <button
-              onClick={() => router.push("/v2/pricing")}
-              style={{
-                width: "100%",
-                background: "#534AB7",
-                color: "#f0eeff",
-                border: "none",
-                borderRadius: 10,
-                padding: "14px 24px",
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer",
-                marginBottom: 12,
-                fontFamily: "inherit",
-              }}
-            >
-              Upgrade to Pro →
-            </button>
-            <p style={{ fontSize: 13, color: "#3a3758" }}>
-              Or wait until{" "}
-              {new Date(freeLimitInfo.resetDate).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-              })}{" "}
-              for your free analyses to reset
-            </p>
+                fontWeight: 500
+              }}>
+                ✓ 7-day free trial — cancel anytime
+              </div>
+
+              {/* What they get */}
+              <div style={{
+                textAlign: 'left',
+                marginBottom: 28,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}>
+                {[
+                  'Unlimited analyses — no monthly caps',
+                  'Full AI narrative & deep analysis',
+                  'Save & export your analyses',
+                  'Auto model routing per strategy',
+                ].map(item => (
+                  <div key={item} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 14,
+                    color: '#9994b8'
+                  }}>
+                    <span style={{
+                      color: '#534AB7',
+                      fontSize: 16,
+                      flexShrink: 0
+                    }}>
+                      ✓
+                    </span>
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              {/* Primary CTA */}
+              <button
+                onClick={() =>
+                  router.push('/v2/pricing')
+                }
+                style={{
+                  width: '100%',
+                  background: '#534AB7',
+                  color: '#f0eeff',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '14px 24px',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginBottom: 10,
+                  fontFamily: 'inherit'
+                }}
+              >
+                See plans & start free trial →
+              </button>
+
+              {/* Secondary — wait for reset */}
+              <button
+                onClick={() =>
+                  router.push('/v2/dashboard')
+                }
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  color: '#4e4a6a',
+                  border: 'none',
+                  padding: '10px',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                Wait until{' '}
+                {new Date(freeLimitInfo.resetDate)
+                  .toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric'
+                  })}{' '}
+                for free reset
+              </button>
+            </div>
           </div>
         )}
 

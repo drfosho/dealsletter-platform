@@ -333,6 +333,57 @@ function TierGate({
           Upgrade to unlock →
         </button>
       </div>
+      {tier === 'free' && (
+        <div style={{
+          background: 'linear-gradient(180deg, transparent 0%, #0d0d14 60%)',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '60px 24px 24px',
+          textAlign: 'center',
+          borderRadius: '0 0 12px 12px'
+        }}>
+          <p style={{
+            fontSize: 14,
+            color: '#9994b8',
+            marginBottom: 14,
+            fontWeight: 500
+          }}>
+            Unlock the full analysis
+          </p>
+          <button
+            onClick={() =>
+              window.location.href = '/v2/pricing'
+            }
+            style={{
+              background: '#534AB7',
+              color: '#f0eeff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '10px 24px',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              marginBottom: 8,
+              display: 'block',
+              width: '100%',
+              maxWidth: 280,
+              margin: '0 auto 8px'
+            }}
+          >
+            Start 7-day free trial →
+          </button>
+          <p style={{
+            fontSize: 12,
+            color: '#3a3758',
+            margin: 0
+          }}>
+            $29/mo after trial · cancel anytime
+          </p>
+        </div>
+      )}
     </div>
   );
 }
