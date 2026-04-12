@@ -149,9 +149,9 @@ export default function Hero({
             ) : (
               <>
                 <span style={{ color: '#534AB7', fontWeight: 500 }}>
-                  Free to start
+                  3 free analyses
                 </span>
-                {' '}— no account needed
+                {' '}— no card needed
               </>
             )}
           </p>
@@ -280,8 +280,8 @@ export default function Hero({
             'Enter any property address to run your analysis'
           ) : (
             <>
-              <span style={{ color: '#7F77DD' }}>Free to start</span>
-              {' '}— no account needed for your first property analysis
+              <span style={{ color: '#7F77DD' }}>3 free analyses</span>
+              {' '}— no card needed
             </>
           )}
         </p>
