@@ -22,7 +22,16 @@ export const metadata: Metadata = {
     default: "Dealsletter \u2014 AI-Powered Real Estate Investment Analysis",
     template: "%s | Dealsletter",
   },
-  description: "Analyze any real estate deal in 30 seconds. Cap rate, cash flow, ROI \u2014 powered by Claude, GPT-4o & Grok 3.",
+  description: "Analyze any real estate deal in 30 seconds. BRRRR, Fix & Flip, Buy & Hold, and House Hack analysis powered by Claude, GPT-4o & Grok 3. Free to start.",
+  keywords: [
+    'AI real estate deal analyzer',
+    'BRRRR calculator',
+    'fix and flip analyzer',
+    'buy and hold calculator',
+    'house hack analysis',
+    'real estate investment analysis',
+    'AI property analysis',
+  ],
   metadataBase: new URL("https://dealsletter.io"),
   manifest: "/manifest.json",
   icons: {

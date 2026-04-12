@@ -397,6 +397,20 @@ function AnalyzeContent() {
   const [streamText, setStreamText] = useState("");
   const [analysisError, setAnalysisError] = useState("");
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  // Anonymous + free-tier gating state
+  const [isDemo, setIsDemo] = useState(false);
+  const [freeLimitReached, setFreeLimitReached] = useState(false);
+  const [freeLimitInfo, setFreeLimitInfo] = useState<{
+    used: number;
+    limit: number;
+    resetDate: string;
+  } | null>(null);
+  const [freeUsageInfo, setFreeUsageInfo] = useState<{
+    used: number;
+    limit: number;
+    remaining: number;
+    tier: string;
+  } | null>(null);
   const [parsedResult, setParsedResult] = useState<AnalysisResult | null>(null);
   const [serverCalculations, setServerCalculations] = useState<any>(null);
   const [modelInfo, setModelInfo] = useState<{
@@ -470,6 +484,31 @@ function AnalyzeContent() {
         const data = await res.json();
 
         if (cancelled) return;
+
+        // Anonymous user — server returned demo payload, gate the UI
+        if (data.isDemo || data.demo) {
+          setIsDemo(true);
+          setPropertyData(data);
+          setPropertyLoading(false);
+          return;
+        }
+
+        // Free-tier user has hit their monthly cap
+        if (data.limitReached) {
+          setFreeLimitReached(true);
+          setFreeLimitInfo({
+            used: data.monthlyCount,
+            limit: data.limit,
+            resetDate: data.resetDate,
+          });
+          setPropertyLoading(false);
+          return;
+        }
+
+        // Free-tier user under cap — surface usage info for the counter badge
+        if (data.usageInfo) {
+          setFreeUsageInfo(data.usageInfo);
+        }
 
         if (data.error && data.fallback) {
           setPropertyError("Property data unavailable — enter details manually");
@@ -1533,10 +1572,305 @@ function AnalyzeContent() {
 
       <NavBar />
 
+      {/* Anonymous user gate — overlays the page when server returned demo payload */}
+      {isDemo && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(13,13,20,0.85)",
+            backdropFilter: "blur(8px)",
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "#13121d",
+              border: "0.5px solid rgba(127,119,221,0.3)",
+              borderRadius: 16,
+              padding: "40px 36px",
+              maxWidth: 440,
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                background: "rgba(83,74,183,0.15)",
+                borderRadius: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+                fontSize: 22,
+              }}
+            >
+              🏠
+            </div>
+
+            <h2
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#f0eeff",
+                letterSpacing: "-0.4px",
+                marginBottom: 10,
+              }}
+            >
+              Analyze your first deal free
+            </h2>
+
+            <p
+              style={{
+                fontSize: 15,
+                color: "#6b6690",
+                lineHeight: 1.6,
+                marginBottom: 28,
+              }}
+            >
+              Create a free account to analyze{" "}
+              <strong style={{ color: "#9994b8" }}>{address}</strong> with live
+              market data, real comps, and AI-powered insights.
+              <br />
+              <br />
+              Takes 30 seconds. No credit card needed.
+            </p>
+
+            <button
+              onClick={() => {
+                localStorage.setItem("post_signup_address", address);
+                localStorage.setItem(
+                  "post_login_redirect",
+                  `/v2/analyze?address=${encodeURIComponent(address)}`
+                );
+                router.push("/v2/signup");
+              }}
+              style={{
+                width: "100%",
+                background: "#534AB7",
+                color: "#f0eeff",
+                border: "none",
+                borderRadius: 10,
+                padding: "14px 24px",
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
+                marginBottom: 12,
+                fontFamily: "inherit",
+              }}
+            >
+              Create free account →
+            </button>
+
+            <button
+              onClick={() => {
+                router.push("/v2/login");
+              }}
+              style={{
+                width: "100%",
+                background: "transparent",
+                color: "#6b6690",
+                border: "0.5px solid rgba(127,119,221,0.2)",
+                borderRadius: 10,
+                padding: "13px 24px",
+                fontSize: 14,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                marginBottom: 20,
+              }}
+            >
+              Already have an account? Sign in
+            </button>
+
+            <button
+              onClick={() => {
+                setIsDemo(false);
+                router.push("/v2/how-it-works");
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#3a3758",
+                fontSize: 13,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              See sample analysis instead
+            </button>
+          </div>
+        </div>
+      )}
+
       <main
         className="analyze-main mx-auto w-full"
         style={{ maxWidth: 860, padding: "40px 24px" }}
       >
+        {/* Free-tier monthly limit reached — shown in place of the form */}
+        {freeLimitReached && freeLimitInfo && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(13,13,20,0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              background: '#13121d',
+              border: '0.5px solid rgba(127,119,221,0.3)',
+              borderRadius: 16,
+              padding: '40px 36px',
+              maxWidth: 460,
+              width: '100%',
+              textAlign: 'center'
+            }}>
+              {/* Icon */}
+              <div style={{
+                width: 52,
+                height: 52,
+                background: 'rgba(83,74,183,0.12)',
+                borderRadius: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                fontSize: 24
+              }}>
+                📈
+              </div>
+
+              {/* Heading */}
+              <h2 style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: '#f0eeff',
+                letterSpacing: '-0.4px',
+                marginBottom: 10,
+                lineHeight: 1.3
+              }}>
+                You've used all 3 free analyses
+              </h2>
+
+              {/* Subtext */}
+              <p style={{
+                fontSize: 15,
+                color: '#6b6690',
+                lineHeight: 1.6,
+                marginBottom: 8
+              }}>
+                Upgrade to Pro and get unlimited
+                analyses, full AI insights, saved
+                history, and PDF exports — starting
+                at $29/month.
+              </p>
+
+              {/* Trial callout */}
+              <div style={{
+                background: 'rgba(29,158,117,0.08)',
+                border: '0.5px solid rgba(29,158,117,0.2)',
+                borderRadius: 8,
+                padding: '10px 16px',
+                fontSize: 13,
+                color: '#1D9E75',
+                marginBottom: 28,
+                fontWeight: 500
+              }}>
+                ✓ 7-day free trial — cancel anytime
+              </div>
+
+              {/* What they get */}
+              <div style={{
+                textAlign: 'left',
+                marginBottom: 28,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8
+              }}>
+                {[
+                  'Unlimited analyses — no monthly caps',
+                  'Full AI narrative & deep analysis',
+                  'Save & export your analyses',
+                  'Auto model routing per strategy',
+                ].map(item => (
+                  <div key={item} style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 14,
+                    color: '#9994b8'
+                  }}>
+                    <span style={{
+                      color: '#534AB7',
+                      fontSize: 16,
+                      flexShrink: 0
+                    }}>
+                      ✓
+                    </span>
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              {/* Primary CTA */}
+              <button
+                onClick={() =>
+                  router.push('/v2/pricing')
+                }
+                style={{
+                  width: '100%',
+                  background: '#534AB7',
+                  color: '#f0eeff',
+                  border: 'none',
+                  borderRadius: 10,
+                  padding: '14px 24px',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginBottom: 10,
+                  fontFamily: 'inherit'
+                }}
+              >
+                See plans & start free trial →
+              </button>
+
+              {/* Secondary — wait for reset */}
+              <button
+                onClick={() =>
+                  router.push('/v2/dashboard')
+                }
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  color: '#4e4a6a',
+                  border: 'none',
+                  padding: '10px',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit'
+                }}
+              >
+                Wait until{' '}
+                {new Date(freeLimitInfo.resetDate)
+                  .toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric'
+                  })}{' '}
+                for free reset
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Loading saved analysis */}
         {isLoadingSaved && (
           <div
@@ -1567,7 +1901,7 @@ function AnalyzeContent() {
         )}
 
         {/* SECTION 1 — Header */}
-        {!isLoadingSaved && (
+        {!isLoadingSaved && !freeLimitReached && (
           savedAnalysisLoaded ? (
             <span
               className="mb-6 inline-block cursor-pointer"
@@ -1701,7 +2035,7 @@ function AnalyzeContent() {
         )}
 
         {/* SECTION 1.5 — Property confirmation card */}
-        {!hasAnalyzed && (
+        {!hasAnalyzed && !freeLimitReached && (
           <div
             style={{
               background: "#13121d",
@@ -2054,8 +2388,53 @@ function AnalyzeContent() {
         )}
 
         {/* SECTION 2 — Strategy selector */}
-        {!hasAnalyzed && !propertyLoading && (
+        {!hasAnalyzed && !propertyLoading && !freeLimitReached && (
           <>
+            {/* Free-tier monthly usage counter */}
+            {freeUsageInfo && (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "rgba(83,74,183,0.08)",
+                  border: "0.5px solid rgba(127,119,221,0.2)",
+                  borderRadius: 20,
+                  padding: "4px 14px",
+                  fontSize: 12,
+                  color: "#6b6690",
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background:
+                      freeUsageInfo.remaining > 0 ? "#1D9E75" : "#f09595",
+                  }}
+                />
+                {freeUsageInfo.used} of {freeUsageInfo.limit} free analyses used
+                this month
+                {freeUsageInfo.remaining > 0
+                  ? ` — ${freeUsageInfo.remaining} remaining`
+                  : " — "}
+                {freeUsageInfo.remaining === 0 && (
+                  <span
+                    onClick={() => router.push("/v2/pricing")}
+                    style={{
+                      color: "#534AB7",
+                      cursor: "pointer",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Upgrade →
+                  </span>
+                )}
+              </div>
+            )}
+
             <p
               style={{
                 fontSize: 14,
@@ -2125,7 +2504,7 @@ function AnalyzeContent() {
         )}
 
         {/* SECTION 3 — Strategy-aware deal parameters */}
-        {selectedStrategy && !hasAnalyzed && (() => {
+        {selectedStrategy && !hasAnalyzed && !freeLimitReached && (() => {
           const isCash = loanType === "Cash" || loanType === "Cash → DSCR Refi";
           const isFlip = selectedStrategy === "Fix & Flip";
           const isBRRRR = selectedStrategy === "BRRRR";
