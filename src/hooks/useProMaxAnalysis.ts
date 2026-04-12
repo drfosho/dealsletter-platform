@@ -137,8 +137,36 @@ export function useProMaxAnalysis() {
           });
 
           if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || "Analysis failed");
+            // Read the stream as text first
+            const errorText = await response.text();
+
+            // Parse ERROR: prefixed stream response from rate limiter
+            let errorMessage = "Analysis failed. Please try again.";
+
+            if (errorText.includes("ERROR:")) {
+              const errorLine = errorText
+                .split("\n")
+                .find((line) => line.startsWith("ERROR:"));
+              if (errorLine) {
+                try {
+                  const parsed = JSON.parse(
+                    errorLine.replace("ERROR:", "")
+                  );
+                  if (parsed.code === "RATE_LIMITED") {
+                    errorMessage = `Rate limit reached. Please wait ${parsed.retryAfter || 60} seconds before trying again.`;
+                  } else {
+                    errorMessage = parsed.message || errorMessage;
+                  }
+                } catch {
+                  // fallback to generic message
+                }
+              }
+            } else if (response.status === 429) {
+              errorMessage =
+                "Too many analyses. Please wait a moment before trying again.";
+            }
+
+            throw new Error(errorMessage);
           }
 
           const reader = response.body?.getReader();
