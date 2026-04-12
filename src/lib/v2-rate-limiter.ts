@@ -22,8 +22,8 @@ const RATE_LIMITS = {
   pro_max: {
     perHour: 40,
     perDay: 100,
-    parallelPerHour: 8,
-    parallelPerDay: 20,
+    parallelPerHour: 15,
+    parallelPerDay: 40,
   },
 };
 
