@@ -773,7 +773,7 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   // CASH REQUIRED = What investor actually brings to closing (out of pocket)
   // Hard money funds 90% of purchase + 100% of rehab (up to 85% ARV)
   // Investor only brings: 10% down + points + closing costs + any LTV overage + holding costs
-  const cashRequired = downPayment + pointsCost + totalClosingCosts + cashForRehab;
+  const cashRequired = downPayment + pointsCost + totalClosingCosts + cashForRehab + totalHoldingCosts;
 
   // TOTAL PROJECT COST = all costs of the flip (for profit calculation)
   const totalInvestment = purchasePrice + renovationCosts + totalHoldingCosts + totalClosingCosts + pointsCost + sellingCosts;
@@ -802,8 +802,10 @@ export function calculateFlipReturns(inputs: FlipCalculationInputs): FlipCalcula
   const mao70 = Math.round(arv * 0.70 - renovationCosts); // 70% rule (conservative investor target)
   const mao85 = Math.round(arv * 0.85 - renovationCosts); // 85% rule (hard money ceiling)
 
-  // ROI = Net Profit / Cash Required (return on actual cash invested)
-  const roi = cashRequired > 0 ? (netProfit / cashRequired) * 100 : 0;
+  // Use the higher of cashRequired or 10% of totalInvestment as
+  // floor to prevent inflated ROI on heavily financed deals
+  const roiDenominator = Math.max(cashRequired, totalInvestment * 0.10);
+  const roi = roiDenominator > 0 ? (netProfit / roiDenominator) * 100 : 0;
 
   // Profit Margin = Net Profit / ARV (industry standard)
   const profitMargin = arv > 0 ? (netProfit / arv) * 100 : 0;
