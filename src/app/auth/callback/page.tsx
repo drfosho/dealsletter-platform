@@ -87,7 +87,7 @@ function AuthCallbackContent() {
               router.push('/auth/verify-success')
             } else {
               // Regular login - go directly to analysis
-              router.push('/analysis')
+              router.push('/v2/analyze')
             }
             return
           }
@@ -118,11 +118,11 @@ function AuthCallbackContent() {
             router.push('/auth/verify-success')
           } else {
             // Regular login - go directly to analysis
-            router.push('/analysis')
+            router.push('/v2/analyze')
           }
         } else {
           // No session, redirect to login
-          router.push('/auth/login')
+          router.push('/v2/login')
         }
       } catch (err) {
         console.error('Callback error:', err)
