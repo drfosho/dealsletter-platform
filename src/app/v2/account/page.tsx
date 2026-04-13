@@ -142,9 +142,10 @@ export default function V2AccountPage() {
   })();
 
   const firstName =
+    user?.user_metadata?.first_name ||
     user?.user_metadata?.full_name?.split(" ")[0] ||
     user?.email?.split("@")[0] ||
-    "User";
+    "there";
 
   const modelLabel =
     tierName === "Pro Max"
@@ -329,7 +330,7 @@ export default function V2AccountPage() {
                     marginBottom: 3,
                   }}
                 >
-                  {user.user_metadata?.full_name || firstName}
+                  {firstName}
                 </div>
                 <div style={{ fontSize: 13, color: "#4e4a6a" }}>
                   {user.email}

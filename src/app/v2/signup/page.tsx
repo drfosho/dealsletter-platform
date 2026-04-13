@@ -14,7 +14,7 @@ const getStrength = (pwd: string): number => {
 };
 
 export default function SignupPage() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -26,8 +26,8 @@ export default function SignupPage() {
   const strength = getStrength(password);
 
   const handleSignUp = async () => {
-    if (!name || !email || !password) {
-      setAuthError("Please fill in all fields");
+    if (!firstName.trim() || !email || !password) {
+      setAuthError("Please enter your first name");
       return;
     }
     if (!agreedToTerms) {
@@ -40,19 +40,15 @@ export default function SignupPage() {
     try {
       const supabase = createClient();
 
-      const nameParts = name.trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/v2/auth/callback`,
           data: {
-            full_name: name.trim(),
-            first_name: firstName,
-            last_name: lastName,
+            full_name: firstName.trim(),
+            first_name: firstName.trim(),
+            last_name: '',
           },
         },
       });
@@ -364,13 +360,13 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Full Name */}
-              <label style={labelStyle}>Full Name</label>
+              {/* First Name */}
+              <label style={labelStyle}>First name</label>
               <input
                 type="text"
-                placeholder="Your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
                 style={inputStyle}
                 onFocus={(e) =>
                   (e.currentTarget.style.borderColor =
