@@ -39,9 +39,9 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ sent: false, reason: 'already_sent' });
     }
 
-    const name = (user.user_metadata?.full_name as string) ||
-                 (user.user_metadata?.first_name as string) ||
-                 undefined;
+    const name = (user.user_metadata?.first_name as string) ||
+                 (user.user_metadata?.full_name as string)?.split(' ')[0] ||
+                 'there';
 
     console.log('[WelcomeEmail] Sending welcome email to:', user.email);
     const sent = await sendWelcomeEmail({

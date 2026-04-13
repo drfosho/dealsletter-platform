@@ -86,8 +86,11 @@ function AuthCallbackContent() {
               // Email verification flow - go to success page
               router.push('/auth/verify-success')
             } else {
+              // Fire welcome email for Google OAuth signups
+              // Non-blocking — don't await
+              fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
               // Regular login - go directly to analysis
-              router.push('/analysis')
+              router.push('/v2/analyze')
             }
             return
           }
@@ -117,12 +120,15 @@ function AuthCallbackContent() {
             // Email verification flow - go to success page
             router.push('/auth/verify-success')
           } else {
+            // Fire welcome email for Google OAuth signups
+            // Non-blocking — don't await
+            fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
             // Regular login - go directly to analysis
-            router.push('/analysis')
+            router.push('/v2/analyze')
           }
         } else {
           // No session, redirect to login
-          router.push('/auth/login')
+          router.push('/v2/login')
         }
       } catch (err) {
         console.error('Callback error:', err)

@@ -450,9 +450,10 @@ export default function DashboardPage() {
       setUser(session.user);
 
       const name =
+        session.user.user_metadata?.first_name ||
         session.user.user_metadata?.full_name?.split(" ")[0] ||
         session.user.email?.split("@")[0] ||
-        "";
+        "there";
       setFirstName(name);
 
       const options = [
