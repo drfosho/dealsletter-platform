@@ -86,6 +86,9 @@ function AuthCallbackContent() {
               // Email verification flow - go to success page
               router.push('/auth/verify-success')
             } else {
+              // Fire welcome email for Google OAuth signups
+              // Non-blocking — don't await
+              fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
               // Regular login - go directly to analysis
               router.push('/v2/analyze')
             }
@@ -117,6 +120,9 @@ function AuthCallbackContent() {
             // Email verification flow - go to success page
             router.push('/auth/verify-success')
           } else {
+            // Fire welcome email for Google OAuth signups
+            // Non-blocking — don't await
+            fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
             // Regular login - go directly to analysis
             router.push('/v2/analyze')
           }
