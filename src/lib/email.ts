@@ -30,7 +30,7 @@ function emailLayout(content: string): string {
         <!-- Footer -->
         <tr><td style="padding-top:32px;text-align:center;">
           <p style="color:#6b7280;font-size:13px;line-height:20px;margin:0;">
-            <a href="${APP_URL}/account/subscription" style="color:#6b7280;text-decoration:underline;">Manage Subscription</a>
+            <a href="${APP_URL}/v2/account" style="color:#6b7280;text-decoration:underline;">Manage Subscription</a>
             &nbsp;&bull;&nbsp;
             <a href="mailto:support@dealsletter.io" style="color:#6b7280;text-decoration:underline;">Contact Support</a>
             &nbsp;&bull;&nbsp;
@@ -95,56 +95,59 @@ async function send(to: string, subject: string, html: string): Promise<boolean>
 export async function sendWelcomeEmail(data: { email: string; name?: string }): Promise<boolean> {
   const greeting = data.name ? `Hi ${data.name},` : 'Hi there,';
 
-  const html = emailLayout(`
-    <h1 style="color:#ffffff;font-size:28px;margin:0 0 8px;text-align:center;">Welcome to Dealsletter! 🏠</h1>
-    <p style="color:#9ca3af;font-size:15px;text-align:center;margin:0 0 32px;">Your email is confirmed &mdash; your account is ready</p>
-
-    <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 24px;">${greeting}</p>
-    <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 24px;">
-      Thanks for confirming your email. Welcome to <strong style="color:#a78bfa;">Dealsletter</strong> &mdash;
-      the AI-powered platform that helps real estate investors analyze deals in seconds, not hours.
-    </p>
-    <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 24px;">
-      Just enter any property address, pick your strategy (rental, fix &amp; flip, BRRRR, or house hack),
-      and our AI delivers a full investment analysis with financial projections, market data, risk assessment, and a clear buy or pass recommendation.
+  const content = `
+    <p style="font-size:16px;color:#9994b8;line-height:1.7;margin:0 0 24px;">
+      ${greeting}
     </p>
 
-    ${infoCard('Your Free Plan Includes', [
-      '<strong style="color:#e5e7eb;">10</strong> property analyses per month',
-      'All investment strategies &mdash; rental, flip, BRRRR, house hack',
-      'AI-powered financial projections &amp; market insights',
-      'Real-time RentCast market data &amp; comparable sales',
-      'No credit card required',
+    <p style="font-size:16px;color:#9994b8;line-height:1.7;margin:0 0 24px;">
+      Your Dealsletter account is live. Enter any property address and get a full investment analysis &mdash; cash flow, cap rate, ROI, risk flags, and AI narrative &mdash; in under 30 seconds.
+    </p>
+
+    <p style="font-size:16px;color:#9994b8;line-height:1.7;margin:0 0 32px;">
+      No spreadsheet. No guesswork. Just the numbers.
+    </p>
+
+    ${infoCard('YOUR FREE PLAN', [
+      '3 analyses per month &mdash; resets on the 1st',
+      'All 4 strategies: BRRRR, Fix &amp; Flip, Buy &amp; Hold, House Hack',
+      'Live market data &amp; rent comps via RentCast',
+      'Key financial metrics: cash flow, cap rate, ROI',
+      'No credit card required &mdash; ever',
     ])}
 
-    <p style="color:#d1d5db;font-size:15px;line-height:24px;margin:0 0 8px;">Get started in 3 steps:</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
-      <tr><td style="padding:6px 0;color:#d1d5db;font-size:14px;">1. Enter any property address</td></tr>
-      <tr><td style="padding:6px 0;color:#d1d5db;font-size:14px;">2. Choose your investment strategy</td></tr>
-      <tr><td style="padding:6px 0;color:#d1d5db;font-size:14px;">3. Get a full AI analysis in seconds</td></tr>
-    </table>
+    ${ctaButton('Analyze Your First Deal \u2192', 'https://dealsletter.io/v2/analyze')}
 
-    ${ctaButton('Run Your First Analysis', `${APP_URL}/analysis/new`)}
+    <div style="margin:40px 0;padding:24px;background:rgba(99,102,241,0.06);border:0.5px solid rgba(99,102,241,0.2);border-radius:12px;">
+      <p style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#6366F1;text-transform:uppercase;margin:0 0 16px;">
+        WANT MORE?
+      </p>
 
-    <!-- Pro upsell -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:32px;background-color:#0f0f14;border:1px solid #7c3aed40;border-radius:12px;">
-      <tr><td style="padding:24px;">
-        <p style="color:#a78bfa;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin:0 0 12px;">Unlock More With Pro</p>
-        <p style="color:#d1d5db;font-size:14px;line-height:22px;margin:0 0 16px;">
-          Serious about investing? Pro gives you <strong style="color:#e5e7eb;">50 analyses per month</strong>,
-          PDF &amp; Excel exports, analysis history, comparison tools, and priority support &mdash;
-          everything you need to move fast on deals.
-        </p>
-        <table cellpadding="0" cellspacing="0"><tr><td>
-          <a href="${APP_URL}/pricing" style="display:inline-block;color:#a78bfa;font-weight:600;font-size:14px;text-decoration:underline;">
-            See Pro Plans &rarr;
-          </a>
-        </td></tr></table>
-      </td></tr>
-    </table>
-  `);
+      <p style="font-size:15px;color:#9994b8;line-height:1.7;margin:0 0 16px;">
+        <strong style="color:#f0eeff;">Pro &mdash; $29/month</strong><br/>
+        Unlimited analyses. Auto-routes Claude Sonnet for BRRRR and Buy &amp; Hold, GPT-4.1 for Fix &amp; Flip and House Hack. Full AI narrative, saved history, PDF export. 7-day free trial.
+      </p>
 
-  return send(data.email, 'Welcome to Dealsletter — Your Account Is Ready 🏠', html);
+      <p style="font-size:15px;color:#9994b8;line-height:1.7;margin:0 0 20px;">
+        <strong style="color:#f0eeff;">Pro Max &mdash; $79/month</strong><br/>
+        Runs Claude Opus, GPT-4o, and Grok 3 simultaneously on every deal. Three independent perspectives &mdash; The Skeptic, The Sponsor, The Quant &mdash; side by side. For investors who need to be certain before they move. 7-day free trial.
+      </p>
+
+      <a href="https://dealsletter.io/v2/pricing" style="display:inline-block;color:#6366F1;font-size:14px;font-weight:600;text-decoration:none;">
+        Compare all plans \u2192
+      </a>
+    </div>
+
+    <p style="font-size:14px;color:#4e4a6a;line-height:1.7;margin:32px 0 0;">
+      Built by a real estate investor, for real estate investors. If you have questions or feedback reply to this email directly &mdash; I read every one.
+      <br/><br/>
+      &mdash; Kevin, Dealsletter
+    </p>
+  `;
+
+  const html = emailLayout(content);
+
+  return send(data.email, 'Welcome to Dealsletter \u2014 analyze your first deal free \ud83c\udfe0', html);
 }
 
 
