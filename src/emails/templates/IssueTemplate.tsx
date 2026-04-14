@@ -611,54 +611,60 @@ export default function IssueTemplate({ issue }: IssueTemplateProps) {
             borderRadius: '0 0 12px 12px',
             padding: '24px 32px',
           }}>
-            <Row>
-              <Column>
-                <Text style={{
+            {/* Copyright */}
+            <Text style={{
+              fontSize: 12,
+              color: '#6b6690',
+              margin: '0 0 16px 0',
+              lineHeight: 1.6,
+              textAlign: 'center' as const,
+            }}>
+              © 2026 Dealsletter · Built by investors, for investors.
+              <br />
+              Not financial advice. Always do your own due diligence.
+            </Text>
+
+            {/* Links */}
+            <Text style={{
+              textAlign: 'center' as const,
+              margin: 0,
+            }}>
+              <Link
+                href="https://x.com/Dealsletter"
+                style={{
+                  color: '#9994b8',
                   fontSize: 12,
-                  color: '#6b6690',
-                  margin: 0,
-                  lineHeight: 1.6,
-                }}>
-                  © 2026 Dealsletter · Built by investors, for investors.
-                  <br />
-                  Not financial advice. Always do your own due diligence.
-                </Text>
-              </Column>
-              <Column style={{ textAlign: 'right' as const }}>
-                <Link
-                  href="https://x.com/Dealsletter"
-                  style={{
-                    color: '#6b6690',
-                    fontSize: 12,
-                    textDecoration: 'none',
-                    marginRight: 12,
-                  }}
-                >
-                  Follow @Dealsletter on X
-                </Link>
-                <Link
-                  href="https://dealsletter.io/v2/pricing"
-                  style={{
-                    color: '#6b6690',
-                    fontSize: 12,
-                    textDecoration: 'none',
-                    marginRight: 12,
-                  }}
-                >
-                  Upgrade
-                </Link>
-                <Link
-                  href="https://dealsletter.io/v2/account"
-                  style={{
-                    color: '#6b6690',
-                    fontSize: 12,
-                    textDecoration: 'none',
-                  }}
-                >
-                  Unsubscribe
-                </Link>
-              </Column>
-            </Row>
+                  textDecoration: 'none',
+                  margin: '0 8px',
+                }}
+              >
+                Follow @Dealsletter on X
+              </Link>
+              <span style={{ color: '#3a3758', fontSize: 12 }}>{' · '}</span>
+              <Link
+                href="https://dealsletter.io/v2/pricing"
+                style={{
+                  color: '#9994b8',
+                  fontSize: 12,
+                  textDecoration: 'none',
+                  margin: '0 8px',
+                }}
+              >
+                Upgrade to Pro
+              </Link>
+              <span style={{ color: '#3a3758', fontSize: 12 }}>{' · '}</span>
+              <Link
+                href="{{{RESEND_UNSUBSCRIBE_URL}}}"
+                style={{
+                  color: '#9994b8',
+                  fontSize: 12,
+                  textDecoration: 'none',
+                  margin: '0 8px',
+                }}
+              >
+                Unsubscribe
+              </Link>
+            </Text>
           </Section>
 
         </Container>
