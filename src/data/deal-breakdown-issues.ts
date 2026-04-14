@@ -13,6 +13,20 @@ export interface DealProperty {
   tag: string
   tagColor: string
   strategy: string
+  listingUrl?: string
+  opportunity?: string
+  risk?: string
+  fullVerdict?: string
+}
+
+export interface IssueSponsor {
+  name: string
+  logo: string
+  headline: string
+  body: string
+  cta: string
+  ctaUrl: string
+  tag?: string
 }
 
 export interface DealBreakdownIssue {
@@ -24,6 +38,7 @@ export interface DealBreakdownIssue {
   properties: DealProperty[]
   content: string
   ctaStrategy: string
+  sponsor?: IssueSponsor
 }
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
@@ -32,9 +47,38 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
     issueNumber: 150,
     date: 'April 2026',
     title: 'Vegas Micro-Unit Density + Naked City Tax Trap + Tampa STR Portfolio',
-    previewText: 'Downtown Vegas 83-unit delivering $33M Year 30, micro-unit density play. Vegas Naked City 24-unit property tax CRITICAL error. Tampa STR 8.8% CoC Florida protected.',
-    ctaStrategy: 'brrrr',
+    previewText: 'Downtown Vegas 83-unit delivering $33M Year 30. Naked City 24-unit property tax error breaks the model. Tampa STR 8.8% CoC with Florida regulatory protection.',
+    ctaStrategy: 'multifamily',
+    sponsor: {
+      name: 'LP Conf',
+      logo: 'https://dealsletter.io/logos/150-sponsor.jpg',
+      headline: 'Network with 50+ LPs & family offices on Zoom',
+      body: 'Free virtual LP Conf on April 30. Vanderbilt Family Office, Hilton FO, Rothschild FO, and Pinegrove ($10B AUM FoF) confirmed as speakers. Network directly with active LPs across 20+ themed breakout rooms covering how top FoFs screen 1,000+ managers, family office allocation trends in 2026, and LP perspectives on AI and European VC.',
+      cta: 'Register free — Virtual LP Conf',
+      ctaUrl: 'https://lpconf.com/?57',
+      tag: 'SPONSORED',
+    },
     properties: [
+      {
+        address: '371 E William St',
+        city: 'San Jose, CA 95112',
+        price: 800000,
+        units: 1,
+        capRate: 0,
+        coc: 88,
+        cashRequired: 120140,
+        annualCashFlow: 105675,
+        verdict: 'Conditional Buy — Verify ARV and Rehab Budget',
+        score: '6/10',
+        scoreValue: 6,
+        tag: 'FIX & FLIP',
+        tagColor: '#EF9F27',
+        strategy: 'flip',
+        listingUrl: 'https://www.zillow.com/homedetails/371-E-William-St-San-Jose-CA-95112/19711857_zpid/',
+        opportunity: 'Strong ROI on a small cash position. 88% cash-on-cash return on $120K deployed at the $775K offer price. Located one block from SJSU with commercial zoning — opens the buyer pool to investors, house-hackers, and development plays.',
+        risk: 'Model disagreement — Claude scored 4/10 (hold), GPT-4o and Grok scored 7/10 (buy). Thin ~10% margin on resale leaves minimal cushion for rehab overruns. $85K rehab budget must be contractor-verified before offering.',
+        fullVerdict: 'Conditional buy at or below $775K with verified rehab and confirmed ARV comps. Every $25K over ask compresses an already thin margin.',
+      },
       {
         address: '200 S 8th St',
         city: 'Downtown Las Vegas, NV',
@@ -50,6 +94,10 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tag: 'URBAN DENSITY PLAY',
         tagColor: '#1D9E75',
         strategy: 'multifamily',
+        listingUrl: 'https://www.loopnet.com/Listing/200-S-8th-St-Las-Vegas-NV/40106069/',
+        opportunity: '83 doors at $83K/unit on the Fremont corridor with 6 years of proven occupancy including through COVID. Kitchen conversions on 59 studios at $150/unit bump produce $1.45M implied asset value on ~$708K capex — 105% ROI on the conversion alone.',
+        risk: 'Staffed operating business, not a passive hold. On-site payroll $8,600/mo + owner-paid utilities $8,300/mo. Sub-250 SF average unit size creates financing complexity — confirm lender terms before going under contract.',
+        fullVerdict: 'Buy for an experienced urban operator with $300-400K reserves beyond the down payment. Not suitable for passive or first-time investors.',
       },
       {
         address: '2216 Tam Dr',
@@ -66,6 +114,10 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tag: 'TAX TRAP ⚠️',
         tagColor: '#f09595',
         strategy: 'multifamily',
+        listingUrl: 'https://www.loopnet.com/Listing/2216-2224-Tam-Dr-Las-Vegas-NV/39661604/',
+        opportunity: '24 units near the Strip with R-4 zoning and a motivated seller — price already reduced. RUBS utility recovery could add $14-17K/yr in NOI at minimal cost. At $2.4-2.5M with verified taxes the deal potentially becomes interesting.',
+        risk: 'Property tax in the OM is almost certainly wrong. Modeled at $5,400/yr — Nevada effective rate puts post-sale taxes at ~$17,100/yr. That correction drops monthly cash flow from $1,442 to $467 and DCR from 1.11 to 1.04. Call Clark County: (702) 455-3882.',
+        fullVerdict: 'Hard pass at $2,850,000 until taxes independently confirmed. Walk unless price corrects to $2.4-2.5M.',
       },
       {
         address: '4513 W McElroy Ave',
@@ -82,21 +134,65 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tag: 'STR BUSINESS',
         tagColor: '#7F77DD',
         strategy: 'str',
+        listingUrl: 'https://www.loopnet.com/Listing/4513-W-McElroy-Ave-Tampa-FL/40090503/',
+        opportunity: '8.8% CoC on $238K deployed with Florida state preemption removing the regulatory risk that kills most STR investments. Turnkey operation — existing listing, reviews, and search ranking transfer at close. MacDill AFB + cruise port + Amalie Arena drive year-round demand.',
+        risk: '62% expense ratio is structurally normal for STR — platform fees (14%), cleaning (8%), management (15%). The model only works at $16K/mo gross. A drop to $13K approaches breakeven. No trailing revenue confirmed yet.',
+        fullVerdict: 'Buy contingent on 12-month Airbnb payout history confirming $180K+ annual gross. If numbers check out, move confidently.',
       },
     ],
     content: `
 ## This Week's Deals
 
-Three-property portfolio spanning Vegas micro-unit density, a tax trap warning, and a Tampa STR operating business. Each deal teaches something different about how experienced investors stress test assumptions before deploying capital.
+Four properties across two markets — a San Jose fix & flip with a Max IQ model disagreement, an 83-unit Vegas micro-unit density play, a Naked City 24-unit with a critical tax error, and a turnkey Tampa STR with state-level regulatory protection.
 
 ---
 
-## 🏢 Vegas Carson View — 83-Unit Micro-Unit Density Play
+## 🏠 San Jose Fix & Flip — 371 E William St
+
+**San Jose, CA 95112 · 3bd/2ba · 956 sqft · Built 1910**
+**List $800,000 · Offer modeled at $775,000 · Hard money 10% down**
+
+This one was run through Max IQ — three models, three perspectives. The result was a split verdict.
+
+### Max IQ Results
+
+| Model | Score | Verdict |
+|-------|-------|---------|
+| Claude Opus (Skeptic) | 4/10 | Hold |
+| GPT-4o (Sponsor) | 7/10 | Buy |
+| Grok 3 (Quant) | 7/10 | Buy |
+| **Average** | **6/10** | **Conditional Buy** |
+
+### The Numbers
+
+| Metric | Value |
+|--------|-------|
+| Offer Price | $775,000 |
+| Down Payment (10%) | $77,500 |
+| Total Cash In | $120,140 |
+| Rehab Budget | $85,000 |
+| ARV (modeled) | $1,055,827 |
+| Net Profit | $105,675 |
+| ROI on Cash | 88% |
+
+### Opportunity
+
+Strong ROI on a relatively small cash position. At $775K, the model produces 88% cash-on-cash return on $120K deployed. Located one block from SJSU with commercial zoning — opens the buyer pool to investors, house-hackers, and development plays. ARV modeled at $1,055,827 based on recent area comps.
+
+### Risk
+
+**The model disagreement is the story.** Claude scored it 4/10 (hold) while GPT-4o and Grok scored 7/10 (buy). The disagreement comes from ARV uncertainty and a thin profit margin of approximately 10% on resale value — minimal cushion for rehab overruns or any market softness. The $85,000 rehab budget must be contractor-verified before offering.
+
+### Verdict: 6/10 — Conditional Buy
+
+At or below $775K with a verified rehab budget and confirmed ARV comps. Do not overpay — every $25K over ask compresses an already thin margin.
+
+---
+
+## 🏢 Vegas Carson View — 83-Unit Micro-Unit Density
 
 **200 S 8th St, Downtown Las Vegas, NV 89101**
 **$6,900,000 ($83,133/unit) · 83 Units · Motel Conversion**
-
-This is an urban density operating business, not a passive apartment investment. 228 SF average unit size, exterior corridor 1963 motel conversion, on-site staff, owner-paid utilities — the format requires an experienced operator who understands what they're managing.
 
 ### The Numbers
 
@@ -105,90 +201,64 @@ This is an urban density operating business, not a passive apartment investment.
 | Down Payment (25%) | $1,725,000 |
 | Total Cash Required | $1,932,000 |
 | Gross Rent | $73,940/mo ($891/unit avg) |
-| Annual Cash Flow | $109,176 ($9,098/mo) |
-| Year 1 CoC | 5.7% |
+| Annual Cash Flow | $109,176 |
+| Day 1 CoC | 5.7% |
 | Cap Rate | 7.3% |
-| Debt Coverage | 1.28 |
-| Break-Even Ratio | 81.1% |
-| Year 30 Property Value | $22,379,443 |
+| DCR | 1.28 |
+| Break-Even Occupancy | 81.1% |
 | Year 30 Total Profit | $32,966,494 |
 
-### Unit Mix
+### Opportunity
 
-| Type | Units | Avg Rent | Monthly |
-|------|-------|----------|---------|
-| Studio Tier A | 2 | $725 | $1,450 |
-| Studio Tier B | 59 | $900 | $53,100 |
-| Studio Tier C | 12 | $825 | $9,900 |
-| 1BR/1BA | 10 | $949 | $9,490 |
-| **Total** | **83** | **$891 avg** | **$73,940** |
+83 doors at $83K/unit on the Fremont corridor with 6 years of proven occupancy including through COVID. Kitchen conversions on 59 studios at a conservative $150/unit bump produce $1.45M in implied asset value on ~$708K capex — a 105% ROI without touching the remaining 24 units. 81.1% break-even ratio means you only need to exceed 18.9% vacancy to cover all costs and debt service.
 
-### Why It Works
+### Risk
 
-**$83,133/unit is genuinely cheap for 83 doors in Vegas.** Fremont Street adjacency, irreplaceable density on 0.35 acres downtown — this basis doesn't get replicated. 7.3% cap above current Vegas urban multifamily average. 81.1% break-even ratio means occupancy only needs to exceed 18.9% to cover all costs and debt service. Proven through COVID with full occupancy.
+**Staffed operating business, not a passive hold.** On-site payroll runs $8,600/mo and owner-paid utilities add $8,300/mo. Average unit size of 228 SF creates financing complexity — many conventional lenders won't touch sub-250 SF. Confirm lender terms before going under contract.
 
-**Kitchen conversion upside is documented, not speculative.** Nearby operators have achieved $150-250/unit rent premiums post-kitchen on comparable units. Conservative math: 59 Tier B studios × $150 increase = $8,850/mo additional revenue. At 7.3% cap that's $1,454,794 in implied asset value on $708K in capex — 105% ROI on the conversion.
+### Verdict: 7/10 — Buy, Experienced Operator Only
 
-### The Risks
-
-**$8,279/mo owner-paid utilities is major exposure.** 11.8% of gross rent. Audit exactly what's owner-paid immediately — submetering feasibility could recover $3-4K/month and add $493-658K in asset value at current cap rate.
-
-**Financing is genuinely complex.** Many conventional multifamily lenders won't touch sub-250 SF average units or motel conversions. Confirm 75% LTV 30-year amortizing terms are locked with an actual lender who has reviewed unit sizes and property history BEFORE going under contract. Bridge/DSCR lenders are the realistic path and may come at higher rates.
-
-**1963 wood-frame deferred maintenance.** PCA is mandatory. $44,364/year CapEx reserve may prove insufficient on aging systems.
-
-### Verdict: 7/10 — Buy, Experienced Urban Operator Only
-
-Legitimate urban density play at one of Las Vegas's most active revitalization corridors. The kitchen conversion alpha is real. The complexity is also real — this is an actively staffed operating business, not a passive hold. Right hands, reserve $300-400K beyond the down payment.
+Strong urban density play at an irreplaceable basis. Right hands, with $300-400K in reserves beyond the down payment.
 
 ---
 
 ## 🏢 Vegas Fortune Villas — Property Tax Error Breaks the Model
 
-**2216-2224 Tam Dr, Las Vegas, NV 89102**
-**$2,850,000 ($118,750/unit) · 24 Units · Naked City**
+**2216-2224 Tam Dr, Las Vegas, NV 89102 · Naked City**
+**$2,850,000 ($118,750/unit) · 24 Units · 91% Occupied**
 
-This deal has a single line item that may destroy the entire investment thesis. The property tax assumption in the model is almost certainly wrong.
-
-### The Numbers — Modeled vs Tax-Corrected
+### Modeled vs Tax-Corrected
 
 | Metric | As Modeled | Tax Corrected |
 |--------|-----------|---------------|
-| Down Payment (25%) | $712,500 | $712,500 |
-| Total Cash Required | $798,000 | $798,000 |
-| Property Taxes | $450/mo ($5,400/yr) | ~$1,425/mo ($17,100/yr) |
+| Property Taxes | $450/mo | ~$1,425/mo |
 | Annual Cash Flow | $17,304 | ~$5,604 |
 | CoC | 2.2% | ~0.7% |
-| Cap Rate | 6.3% | ~5.9% |
 | DCR | 1.11 | ~1.04 |
 | Monthly Cash Flow | $1,442 | ~$467 |
 
 ### The Tax Problem
 
-Nevada assessors typically value at 35% taxable value with approximately 3.2% levy, producing an effective rate of 0.5-0.7% of market value. At 0.6% on a $2.85M purchase, actual post-sale taxes are approximately $17,100/year — more than 3x the modeled $5,400.
+Nevada's effective rate on a $2.85M purchase puts actual post-sale taxes at approximately $17,100/year — more than 3x the modeled $5,400. That single correction drops monthly cash flow from $1,442 to $467 and DCR from 1.11 to 1.04.
 
-If taxes correct to $17,100/year: annual NOI drops $11,700, monthly cash flow falls from $1,442 to $467, CoC drops from 2.2% to 0.7%, DCR falls from 1.11 to 1.04.
+**At 1.04 DCR one bad month turns negative.**
 
-**This is not a rounding error. This single line item eliminates the cash flow thesis.**
+**MANDATORY before offer:** Call Clark County Assessor at (702) 455-3882. Ask for the actual assessed value and tax obligation on a property purchased at $2,850,000.
 
-**MANDATORY before offer:** Call Clark County Assessor at (702) 455-3882. Ask for the actual assessed value and tax obligation on a property purchased at $2,850,000. The $5,400/year figure is almost certainly the current owner's legacy basis — it will not survive a sale.
+### Opportunity
 
-### What Could Make This Interesting
+24 units near the Strip with R-4 zoning and a motivated seller. RUBS utility recovery adds $14-17K/yr in NOI at minimal cost. Renovation upside on unrenovated units. At $2.4-2.5M with verified taxes the deal potentially becomes interesting.
 
-At $2,400-2,500K with verified taxes, the deal potentially becomes interesting again. R-4 zoning on 0.48 acres near the Strip carries long-term redevelopment optionality. RUBS utility recovery ($50-60/unit) adds $1,200-1,440/mo in effective NOI. Renovation upside on unrenovated units adds additional value.
+### Verdict: 4.5/10 — Hard Pass at Current Ask
 
-### Verdict: 4.5/10 — Hard Pass Until Tax Verified
-
-Price reduced signals seller motivation. Negotiate hard if taxes verify or correct to $2.4-2.5M. At current ask with unverified taxes, the risk-adjusted return doesn't justify deploying $798K in Naked City with 1.11 DCR and a modeled figure that's almost certainly wrong.
+Walk unless taxes verify or price corrects to $2.4-2.5M.
 
 ---
 
-## 🏖️ Tampa STR 4-Unit — 8.8% CoC, 62% Expense Ratio Reality
+## 🏖️ Tampa STR 4-Unit — 8.8% CoC, Florida Protected
 
 **4513 W McElroy Ave, South Tampa, FL 33611**
 **$850,000 ($212,500/unit) · 4 Studios · Turnkey Airbnb**
-
-The 62% expense ratio is not a flaw. It's the cost of operating an STR. Understanding why it's justified is what separates investors who buy this correctly from those who get surprised after closing.
 
 ### The Numbers
 
@@ -196,53 +266,38 @@ The 62% expense ratio is not a flaw. It's the cost of operating an STR. Understa
 |--------|-------|
 | Down Payment (25%) | $212,500 |
 | Total Cash Required | $238,000 |
-| Gross STR Revenue | $16,000/mo ($4,000/unit avg) |
-| Annual Cash Flow | $21,000 ($1,750/mo) |
+| Gross STR Revenue | $16,000/mo |
+| Annual Cash Flow | $21,000 |
 | CoC | 8.8% |
 | Cap Rate | 8.2% |
-| Debt Coverage | 1.43 |
-| Operating Expense Ratio | 62% of EGI |
+| DCR | 1.43 |
+| Expense Ratio | 62% |
 
-### Why 62% OpEx Is Justified
+### Why 62% Expense Ratio Is Not a Problem
 
-| | LTR Model | STR Model |
-|--|-----------|-----------|
+| | LTR | STR |
+|--|-----|-----|
 | Gross Revenue | $6,000/mo | $16,000/mo |
 | Expense Ratio | 40-45% | 62% |
 | NOI | ~$3,300/mo | ~$5,780/mo |
-| **STR advantage** | | **+$2,480/mo (+75%)** |
 
-Three cost centers exist in STR that don't exist in LTR: Airbnb platform fees (14.1% of gross), cleaning per-stay (8.1%), and STR management (15.1%). Those three line items total 37.2% of gross revenue. The $16,000/month gross compensates for all of it and then some.
+The 62% comes from three STR-specific costs that don't exist in LTR: Airbnb fees (14%), cleaning per-stay (8%), and management (15%). The $16K gross compensates for all of it and produces 75% higher NOI than the equivalent LTR.
 
 ### The Florida Advantage
 
-Florida Statute 509 provides state-level preemption — cities and counties cannot prohibit short-term rentals outright. This removes the existential regulatory risk that makes most urban STR investments fragile. You're not buying an Airbnb that a city council vote can eliminate next year.
+Florida Statute 509 provides state-level preemption — cities and counties cannot prohibit short-term rentals outright. This removes the existential regulatory risk that makes most urban STR investments fragile.
 
-### What Breaks the Model
+### Risk
 
-Revenue needs to stay at $16,000/month. If gross drops to $13,000/month the deal approaches breakeven. The 1.43 DCR means income can drop 30% before missing a loan payment — meaningful cushion — but the operating model requires active management, strong reviews, and dynamic pricing to maintain occupancy.
-
-**Verify trailing 12-month revenue before closing.** Request actual Airbnb/VRBO payout history for all 4 units. The $16,000/month is a modeled figure — confirm it's documented performance, not a projection.
-
-Self-managing removes the $2,417/month management fee entirely. At $0 management cost, monthly cash flow jumps from $1,750 to $4,167 and CoC reaches approximately 21%.
+**The model only works at $16K/month gross.** A drop to $13K approaches breakeven. Verify trailing 12-month Airbnb payout history before closing.
 
 ### Verdict: 7.5/10 — Buy Contingent Revenue Verification
 
-Strong South Tampa STR asset with state-level regulatory protection, diversified demand base (tourism + corporate + MacDill AFB government travel), and genuine optionality to pivot STR/MTR/LTR. The 62% expense ratio is the structure, not the problem. Contingent on T12 revenue verification confirming $180K+ annual gross.
+Confirm $180K+ annual gross from actual payout history. If verified, move confidently.
 
 ---
 
-## Deal Rankings
-
-| Property | Strategy | Cash In | Day 1 CoC | Units | Verdict |
-|----------|----------|---------|-----------|-------|---------|
-| Vegas Carson View | Multifamily | $1.932M | 5.7% | 83 | 7/10 ✅ |
-| Vegas Fortune Villas | Multifamily | $798K | 2.2% (0.7% corrected) | 24 | 4.5/10 ❌ |
-| Tampa STR 4-Unit | STR | $238K | 8.8% | 4 | 7.5/10 ⚠️ |
-
----
-
-*Model these deals at dealsletter.io — BRRRR, multifamily, STR, and house hack analysis powered by live market data. 3 free analyses/month, no card needed.*
+*3 free analyses/month at dealsletter.io — no card needed. Model any of these deals yourself with live market data.*
     `,
   },
 ]
