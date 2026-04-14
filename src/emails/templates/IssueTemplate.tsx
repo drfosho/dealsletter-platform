@@ -12,8 +12,9 @@ import {
   Button,
   Hr,
   Preview,
+  Img,
 } from '@react-email/components'
-import { DealBreakdownIssue, DealProperty } from '@/data/deal-breakdown-issues'
+import { DealBreakdownIssue, DealProperty, IssueSponsor } from '@/data/deal-breakdown-issues'
 
 interface IssueTemplateProps {
   issue: DealBreakdownIssue
@@ -188,6 +189,82 @@ function PropertyCard({ prop }: { prop: DealProperty }) {
   )
 }
 
+function SponsorBlock({ sponsor }: { sponsor: IssueSponsor }) {
+  return (
+    <Section style={{
+      background: '#fffdf5',
+      border: '1px solid #f0e6c0',
+      borderRadius: 12,
+      padding: '24px',
+      marginBottom: 16,
+    }}>
+      {/* Sponsor label */}
+      <Text style={{
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '1.5px',
+        textTransform: 'uppercase' as const,
+        color: '#b8860b',
+        margin: '0 0 16px 0',
+      }}>
+        {sponsor.tag || 'SPONSORED'}
+      </Text>
+
+      {/* Logo if provided */}
+      {sponsor.logo && (
+        <Img
+          src={sponsor.logo}
+          alt={sponsor.name}
+          style={{
+            maxHeight: 40,
+            maxWidth: 140,
+            marginBottom: 16,
+            display: 'block',
+          }}
+        />
+      )}
+
+      {/* Headline */}
+      <Text style={{
+        fontSize: 16,
+        fontWeight: 700,
+        color: '#1a1830',
+        margin: '0 0 8px 0',
+        lineHeight: 1.4,
+      }}>
+        {sponsor.headline}
+      </Text>
+
+      {/* Body */}
+      <Text style={{
+        fontSize: 14,
+        color: '#6b6690',
+        lineHeight: 1.7,
+        margin: '0 0 20px 0',
+      }}>
+        {sponsor.body}
+      </Text>
+
+      {/* CTA */}
+      <Button
+        href={sponsor.ctaUrl}
+        style={{
+          background: '#1a1830',
+          color: '#ffffff',
+          fontSize: 13,
+          fontWeight: 600,
+          padding: '12px 24px',
+          borderRadius: 8,
+          textDecoration: 'none',
+          display: 'inline-block',
+        }}
+      >
+        {sponsor.cta}
+      </Button>
+    </Section>
+  )
+}
+
 export default function IssueTemplate({ issue }: IssueTemplateProps) {
   const issueUrl = `https://dealsletter.io/v2/deal-breakdown/${issue.slug}`
 
@@ -299,6 +376,16 @@ export default function IssueTemplate({ issue }: IssueTemplateProps) {
               <PropertyCard key={i} prop={prop} />
             ))}
           </Section>
+
+          {/* Sponsor block */}
+          {issue.sponsor && (
+            <Section style={{
+              background: colors.background,
+              padding: '0 32px 8px',
+            }}>
+              <SponsorBlock sponsor={issue.sponsor} />
+            </Section>
+          )}
 
           {/* Read full breakdown CTA */}
           <Section style={{

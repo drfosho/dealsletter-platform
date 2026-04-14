@@ -170,6 +170,78 @@ export default function IssueDetailPage() {
           ))}
         </div>
 
+        {/* Sponsor block */}
+        {issue.sponsor && (
+          <div style={{
+            background: '#fffdf5',
+            border: '1px solid #f0e6c0',
+            borderRadius: 12,
+            padding: '24px',
+            marginBottom: 40,
+          }}>
+            <div style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase' as const,
+              color: '#b8860b',
+              marginBottom: 14,
+            }}>
+              {issue.sponsor.tag || 'SPONSORED'}
+            </div>
+
+            {issue.sponsor.logo && (
+              <img
+                src={issue.sponsor.logo}
+                alt={issue.sponsor.name}
+                style={{
+                  maxHeight: 40,
+                  maxWidth: 140,
+                  marginBottom: 14,
+                  display: 'block',
+                }}
+              />
+            )}
+
+            <div style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: '#f0eeff',
+              marginBottom: 8,
+              lineHeight: 1.4,
+            }}>
+              {issue.sponsor.headline}
+            </div>
+
+            <div style={{
+              fontSize: 14,
+              color: '#9994b8',
+              lineHeight: 1.7,
+              marginBottom: 20,
+            }}>
+              {issue.sponsor.body}
+            </div>
+
+            <a
+              href={issue.sponsor.ctaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                background: '#f0eeff',
+                color: '#1a1830',
+                fontSize: 13,
+                fontWeight: 600,
+                padding: '12px 24px',
+                borderRadius: 8,
+                textDecoration: 'none',
+              }}
+            >
+              {issue.sponsor.cta}
+            </a>
+          </div>
+        )}
+
         {/* Full content */}
         <div style={{
           fontSize: 16,
