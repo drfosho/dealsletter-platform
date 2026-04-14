@@ -435,19 +435,20 @@ export default function IssueTemplate({ issue }: IssueTemplateProps) {
           }}>
             <Row>
               <Column>
-                <Text style={{
-                  fontSize: 20,
-                  fontWeight: 800,
-                  color: '#ffffff',
-                  margin: 0,
-                  letterSpacing: '-0.5px',
-                }}>
-                  Dealsletter
-                </Text>
+                <Img
+                  src="https://xsiflgnnowyvkhxjwmuu.supabase.co/storage/v1/object/public/email-assets/wordmark-transparent.png"
+                  alt="Dealsletter"
+                  width={160}
+                  height={32}
+                  style={{
+                    display: 'block',
+                    marginBottom: 4,
+                  }}
+                />
                 <Text style={{
                   fontSize: 12,
                   color: '#9994b8',
-                  margin: '2px 0 0 0',
+                  margin: '4px 0 0 0',
                 }}>
                   AI-Powered Deal Analysis
                 </Text>
