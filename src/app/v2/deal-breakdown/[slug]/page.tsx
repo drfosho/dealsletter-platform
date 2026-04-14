@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import NavBar from '@/components/v2/NavBar'
 import Footer from '@/components/v2/Footer'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { getIssueBySlug } from '@/data/deal-breakdown-issues'
 
 export default function IssueDetailPage() {
@@ -176,73 +178,148 @@ export default function IssueDetailPage() {
         }}
         className="deal-breakdown-content"
         >
-          {issue.content
-            .split('\n')
-            .map((line, i) => {
-              if (line.startsWith('## ')) {
-                return (
-                  <h2 key={i} style={{
-                    fontSize: 22,
-                    fontWeight: 700,
-                    color: '#f0eeff',
-                    letterSpacing: '-0.4px',
-                    marginTop: 48,
-                    marginBottom: 16,
-                    paddingTop: 48,
-                    borderTop: '0.5px solid rgba(127,119,221,0.15)',
-                  }}>
-                    {line.replace('## ', '')}
-                  </h2>
-                )
-              }
-              if (line.startsWith('### ')) {
-                return (
-                  <h3 key={i} style={{
-                    fontSize: 17,
-                    fontWeight: 700,
-                    color: '#f0eeff',
-                    marginTop: 28,
-                    marginBottom: 12,
-                  }}>
-                    {line.replace('### ', '')}
-                  </h3>
-                )
-              }
-              if (line.startsWith('**') && line.endsWith('**')) {
-                return (
-                  <p key={i} style={{
-                    fontWeight: 700,
-                    color: '#f0eeff',
-                    marginBottom: 12,
-                  }}>
-                    {line.replace(/\*\*/g, '')}
-                  </p>
-                )
-              }
-              if (line.startsWith('---')) {
-                return (
-                  <hr key={i} style={{
-                    border: 'none',
-                    borderTop: '0.5px solid rgba(127,119,221,0.15)',
-                    margin: '32px 0',
-                  }} />
-                )
-              }
-              if (line.startsWith('| ')) {
-                return null
-              }
-              if (line.trim() === '') {
-                return <div key={i} style={{ height: 8 }} />
-              }
-              return (
-                <p key={i} style={{
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h2: ({children}) => (
+                <h2 style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: '#f0eeff',
+                  letterSpacing: '-0.4px',
+                  marginTop: 48,
                   marginBottom: 16,
-                  color: '#9994b8',
+                  paddingTop: 48,
+                  borderTop: '0.5px solid rgba(127,119,221,0.15)',
                 }}>
-                  {line}
+                  {children}
+                </h2>
+              ),
+              h3: ({children}) => (
+                <h3 style={{
+                  fontSize: 17,
+                  fontWeight: 700,
+                  color: '#f0eeff',
+                  marginTop: 28,
+                  marginBottom: 12,
+                }}>
+                  {children}
+                </h3>
+              ),
+              p: ({children}) => (
+                <p style={{
+                  fontSize: 16,
+                  color: '#9994b8',
+                  lineHeight: 1.8,
+                  marginBottom: 16,
+                }}>
+                  {children}
                 </p>
-              )
-            })}
+              ),
+              strong: ({children}) => (
+                <strong style={{
+                  color: '#f0eeff',
+                  fontWeight: 700,
+                }}>
+                  {children}
+                </strong>
+              ),
+              hr: () => (
+                <hr style={{
+                  border: 'none',
+                  borderTop: '0.5px solid rgba(127,119,221,0.15)',
+                  margin: '32px 0',
+                }} />
+              ),
+              table: ({children}) => (
+                <div style={{
+                  overflowX: 'auto',
+                  marginBottom: 24,
+                }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    fontSize: 14,
+                  }}>
+                    {children}
+                  </table>
+                </div>
+              ),
+              thead: ({children}) => (
+                <thead>
+                  {children}
+                </thead>
+              ),
+              tbody: ({children}) => (
+                <tbody>
+                  {children}
+                </tbody>
+              ),
+              tr: ({children}) => (
+                <tr style={{
+                  borderBottom: '0.5px solid rgba(127,119,221,0.1)',
+                }}>
+                  {children}
+                </tr>
+              ),
+              th: ({children}) => (
+                <th style={{
+                  padding: '10px 16px',
+                  textAlign: 'left',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: '#6366F1',
+                  textTransform: 'uppercase',
+                  borderBottom: '0.5px solid rgba(99,102,241,0.2)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {children}
+                </th>
+              ),
+              td: ({children}) => (
+                <td style={{
+                  padding: '10px 16px',
+                  color: '#9994b8',
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                }}>
+                  {children}
+                </td>
+              ),
+              li: ({children}) => (
+                <li style={{
+                  color: '#9994b8',
+                  fontSize: 15,
+                  lineHeight: 1.7,
+                  marginBottom: 6,
+                }}>
+                  {children}
+                </li>
+              ),
+              ul: ({children}) => (
+                <ul style={{
+                  paddingLeft: 20,
+                  marginBottom: 16,
+                }}>
+                  {children}
+                </ul>
+              ),
+              blockquote: ({children}) => (
+                <blockquote style={{
+                  borderLeft: '3px solid #6366F1',
+                  paddingLeft: 16,
+                  margin: '16px 0',
+                  color: '#6b6690',
+                  fontStyle: 'italic',
+                }}>
+                  {children}
+                </blockquote>
+              ),
+            }}
+          >
+            {issue.content}
+          </ReactMarkdown>
         </div>
 
         {/* Bottom CTA */}
