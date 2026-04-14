@@ -10,7 +10,7 @@ const navLinks = [
   { label: "Strategies", href: "/v2/strategies" },
   { label: "Pricing", href: "/v2/pricing" },
   { label: "Blog", href: "/v2/blog" },
-  { label: "Real Estate Deals", href: "https://newsletter.dealsletter.io", external: true },
+  { label: "Deal Breakdown", href: "/v2/deal-breakdown" },
 ];
 
 export default function NavBar() {
