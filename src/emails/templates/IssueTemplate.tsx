@@ -359,11 +359,14 @@ function SponsorBlock({ sponsor }: { sponsor: IssueSponsor }) {
         <Img
           src={sponsor.logo}
           alt={sponsor.name}
+          width={520}
           style={{
-            maxHeight: 40,
-            maxWidth: 140,
-            marginBottom: 16,
             display: 'block',
+            width: '100%',
+            maxWidth: 520,
+            height: 'auto',
+            marginBottom: 16,
+            borderRadius: 8,
           }}
         />
       )}
