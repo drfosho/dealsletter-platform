@@ -648,7 +648,7 @@ export default function IssueTemplate({ issue }: IssueTemplateProps) {
                   Upgrade
                 </Link>
                 <Link
-                  href="https://dealsletter.io/v2/account"
+                  href="{{{RESEND_UNSUBSCRIBE_URL}}}"
                   style={{
                     color: '#6b6690',
                     fontSize: 12,
