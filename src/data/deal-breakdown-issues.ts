@@ -13,6 +13,7 @@ export interface DealProperty {
   tag: string
   tagColor: string
   strategy: string
+  listingUrl?: string
 }
 
 export interface IssueSponsor {
@@ -47,7 +48,7 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
     ctaStrategy: 'multifamily',
     sponsor: {
       name: 'LP Conf',
-      logo: 'https://dealsletter.io/logos/150-sponsor',
+      logo: 'https://dealsletter.io/logos/150-sponsor.jpg',
       headline: 'Network with 50+ LPs & family offices on Zoom',
       body: 'Free virtual LP Conf on April 30. Vanderbilt Family Office, Hilton FO, Rothschild FO, and Pinegrove ($10B AUM FoF) confirmed as speakers. Network directly with active LPs across 20+ themed breakout rooms covering how top FoFs screen 1,000+ managers, family office allocation trends in 2026, and LP perspectives on AI and European VC.',
       cta: 'Register free — Virtual LP Conf',
@@ -70,6 +71,7 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tag: 'FIX & FLIP',
         tagColor: '#EF9F27',
         strategy: 'flip',
+        listingUrl: 'https://www.zillow.com/homedetails/371-E-William-St-San-Jose-CA-95112/19711857_zpid/',
       },
       {
         address: '200 S 8th St',
@@ -86,6 +88,7 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tag: 'URBAN DENSITY PLAY',
         tagColor: '#1D9E75',
         strategy: 'multifamily',
+        listingUrl: 'https://www.loopnet.com/Listing/200-S-8th-St-Las-Vegas-NV/40106069/',
       },
       {
         address: '2216 Tam Dr',
@@ -102,6 +105,7 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tag: 'TAX TRAP ⚠️',
         tagColor: '#f09595',
         strategy: 'multifamily',
+        listingUrl: 'https://www.loopnet.com/Listing/2216-2224-Tam-Dr-Las-Vegas-NV/39661604/',
       },
       {
         address: '4513 W McElroy Ave',
@@ -118,6 +122,7 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tag: 'STR BUSINESS',
         tagColor: '#7F77DD',
         strategy: 'str',
+        listingUrl: 'https://www.loopnet.com/Listing/4513-W-McElroy-Ave-Tampa-FL/40090503/',
       },
     ],
     content: `

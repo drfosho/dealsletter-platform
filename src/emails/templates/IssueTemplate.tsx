@@ -53,8 +53,8 @@ function PropertyCard({ prop }: { prop: DealProperty }) {
       background: colors.cardBg,
       border: `1px solid ${colors.cardBorder}`,
       borderRadius: 12,
-      padding: '20px 24px',
-      marginBottom: 12,
+      padding: '24px',
+      marginBottom: 16,
     }}>
       {/* Tag */}
       <Text style={{
@@ -64,103 +64,162 @@ function PropertyCard({ prop }: { prop: DealProperty }) {
         fontSize: 10,
         fontWeight: 700,
         letterSpacing: '1px',
-        textTransform: 'uppercase',
+        textTransform: 'uppercase' as const,
         padding: '3px 10px',
         borderRadius: 4,
-        marginBottom: 8,
-        margin: '0 0 10px 0',
+        margin: '0 0 12px 0',
       }}>
         {prop.tag}
       </Text>
 
-      {/* Address */}
+      {/* Address as link if url exists */}
       <Text style={{
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: 700,
         color: colors.text,
         margin: '0 0 2px 0',
       }}>
-        {prop.address}
+        {prop.listingUrl ? (
+          <Link
+            href={prop.listingUrl}
+            style={{
+              color: colors.text,
+              textDecoration: 'none',
+            }}
+          >
+            {prop.address} ↗
+          </Link>
+        ) : prop.address}
       </Text>
       <Text style={{
         fontSize: 13,
         color: colors.textMuted,
-        margin: '0 0 16px 0',
+        margin: '0 0 20px 0',
       }}>
         {prop.city}
       </Text>
 
-      {/* Metrics row */}
-      <Row>
-        <Column style={{ width: '25%' }}>
+      {/* Metrics grid — 3 across */}
+      <Row style={{ marginBottom: 8 }}>
+        <Column style={{ width: '33%' }}>
           <Text style={{
             fontSize: 10,
             color: colors.textLight,
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
             letterSpacing: '0.5px',
             margin: '0 0 2px 0',
           }}>
-            Cap Rate
+            {prop.strategy === 'flip' ? 'ROI on Cash' : 'Cap Rate'}
           </Text>
           <Text style={{
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
             color: colors.text,
-            margin: 0,
+            margin: '0 0 12px 0',
           }}>
-            {prop.capRate}%
+            {prop.strategy === 'flip' ? `${prop.coc}%` : `${prop.capRate}%`}
           </Text>
         </Column>
-        <Column style={{ width: '25%' }}>
+        <Column style={{ width: '33%' }}>
           <Text style={{
             fontSize: 10,
             color: colors.textLight,
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
             letterSpacing: '0.5px',
             margin: '0 0 2px 0',
           }}>
-            CoC Year 1
+            {prop.strategy === 'flip' ? 'Net Profit' : 'Day 1 CoC'}
           </Text>
           <Text style={{
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
             color: colors.text,
-            margin: 0,
+            margin: '0 0 12px 0',
           }}>
-            {prop.coc}%
+            {prop.strategy === 'flip'
+              ? `$${(prop.annualCashFlow / 1000).toFixed(0)}K`
+              : `${prop.coc}%`}
           </Text>
         </Column>
-        <Column style={{ width: '25%' }}>
+        <Column style={{ width: '33%' }}>
           <Text style={{
             fontSize: 10,
             color: colors.textLight,
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
             letterSpacing: '0.5px',
             margin: '0 0 2px 0',
           }}>
-            Units
+            {prop.strategy === 'flip' ? 'Cash In' : 'Units'}
           </Text>
           <Text style={{
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
             color: colors.text,
-            margin: 0,
+            margin: '0 0 12px 0',
           }}>
-            {prop.units}
+            {prop.strategy === 'flip'
+              ? `$${(prop.cashRequired / 1000).toFixed(0)}K`
+              : prop.units}
           </Text>
         </Column>
-        <Column style={{ width: '25%' }}>
+      </Row>
+
+      {/* Second metrics row */}
+      <Row style={{ marginBottom: 20 }}>
+        <Column style={{ width: '33%' }}>
           <Text style={{
             fontSize: 10,
             color: colors.textLight,
-            textTransform: 'uppercase',
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.5px',
+            margin: '0 0 2px 0',
+          }}>
+            {prop.strategy === 'flip' ? 'List Price' : 'Cash Required'}
+          </Text>
+          <Text style={{
+            fontSize: 15,
+            fontWeight: 600,
+            color: colors.textMuted,
+            margin: 0,
+          }}>
+            {prop.strategy === 'flip'
+              ? `$${(prop.price / 1000).toFixed(0)}K`
+              : `$${(prop.cashRequired / 1000).toFixed(0)}K`}
+          </Text>
+        </Column>
+        <Column style={{ width: '33%' }}>
+          <Text style={{
+            fontSize: 10,
+            color: colors.textLight,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.5px',
+            margin: '0 0 2px 0',
+          }}>
+            {prop.strategy === 'flip' ? 'Total Price' : 'Annual CF'}
+          </Text>
+          <Text style={{
+            fontSize: 15,
+            fontWeight: 600,
+            color: colors.textMuted,
+            margin: 0,
+          }}>
+            {prop.strategy === 'flip'
+              ? `$${(prop.price / 1000).toFixed(0)}K`
+              : `$${(prop.annualCashFlow / 1000).toFixed(0)}K`}
+          </Text>
+        </Column>
+        <Column style={{ width: '33%' }}>
+          <Text style={{
+            fontSize: 10,
+            color: colors.textLight,
+            textTransform: 'uppercase' as const,
             letterSpacing: '0.5px',
             margin: '0 0 2px 0',
           }}>
             Score
           </Text>
           <Text style={{
-            fontSize: 18,
+            fontSize: 15,
             fontWeight: 700,
             color: getScoreColor(prop.scoreValue),
             margin: 0,
@@ -173,18 +232,38 @@ function PropertyCard({ prop }: { prop: DealProperty }) {
       <Hr style={{
         border: 'none',
         borderTop: `1px solid ${colors.border}`,
-        margin: '16px 0',
+        margin: '0 0 16px 0',
       }} />
 
       {/* Verdict */}
       <Text style={{
         fontSize: 13,
         color: colors.textMuted,
-        margin: 0,
         fontStyle: 'italic',
+        margin: '0 0 16px 0',
+        lineHeight: 1.5,
       }}>
         {prop.verdict}
       </Text>
+
+      {/* Property button */}
+      {prop.listingUrl && (
+        <Button
+          href={prop.listingUrl}
+          style={{
+            background: colors.primary,
+            color: '#ffffff',
+            fontSize: 12,
+            fontWeight: 600,
+            padding: '10px 20px',
+            borderRadius: 6,
+            textDecoration: 'none',
+            display: 'inline-block',
+          }}
+        >
+          View Property →
+        </Button>
+      )}
     </Section>
   )
 }
@@ -428,37 +507,33 @@ export default function IssueTemplate({ issue }: IssueTemplateProps) {
             background: colors.primaryLight,
             border: `1px solid ${colors.cardBorder}`,
             borderRadius: 12,
-            margin: '0 0 0 0',
             padding: '24px 32px',
             textAlign: 'center' as const,
+            marginBottom: 0,
           }}>
             <Text style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: colors.text,
-              margin: '0 0 6px 0',
-            }}>
-              Analyze your own deals
-            </Text>
-            <Text style={{
-              fontSize: 13,
+              fontSize: 15,
               color: colors.textMuted,
               margin: '0 0 16px 0',
               lineHeight: 1.6,
             }}>
-              BRRRR, Fix &amp; Flip, Buy &amp; Hold, House Hack. Live market data. 3 free analyses/month.
+              Analyze your own deals — BRRRR, Fix &amp; Flip, Buy &amp; Hold, House Hack. 3 free analyses/month.
             </Text>
-            <Link
-              href="https://dealsletter.io/v2/analyze"
+            <Button
+              href="https://dealsletter.io"
               style={{
-                color: colors.primary,
-                fontWeight: 600,
+                background: colors.primary,
+                color: '#ffffff',
                 fontSize: 14,
+                fontWeight: 600,
+                padding: '14px 32px',
+                borderRadius: 8,
                 textDecoration: 'none',
+                display: 'inline-block',
               }}
             >
-              dealsletter.io/v2/analyze →
-            </Link>
+              Go to Dealsletter →
+            </Button>
           </Section>
 
           {/* Footer */}

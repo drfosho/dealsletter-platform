@@ -51,8 +51,9 @@ async function sendIssue(slugOrNumber: string) {
   // Send via Resend Broadcasts
   const { data, error } = await resend.broadcasts.create({
     audienceId: AUDIENCE_ID,
-    from: FROM_EMAIL,
-    subject: `[PRO] #${issue.issueNumber}: ${issue.title}`,
+    from: 'Dealsletter <main@dealsletter.io>',
+    replyTo: 'kevin@dealsletter.io',
+    subject: `#${issue.issueNumber}: ${issue.title}`,
     html,
   })
 
