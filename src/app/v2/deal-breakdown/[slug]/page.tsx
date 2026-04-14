@@ -166,6 +166,54 @@ export default function IssueDetailPage() {
                     : '❌'
                 }
               </div>
+
+              {prop.opportunity && (
+                <div style={{
+                  marginTop: 12,
+                  paddingTop: 12,
+                  borderTop: '0.5px solid rgba(127,119,221,0.1)',
+                }}>
+                  <div style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase' as const,
+                    color: '#1D9E75',
+                    marginBottom: 4,
+                  }}>
+                    ✓ Opportunity
+                  </div>
+                  <div style={{
+                    fontSize: 12,
+                    color: '#6b6690',
+                    lineHeight: 1.6,
+                  }}>
+                    {prop.opportunity}
+                  </div>
+                </div>
+              )}
+
+              {prop.risk && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    textTransform: 'uppercase' as const,
+                    color: '#f09595',
+                    marginBottom: 4,
+                  }}>
+                    ⚠ Risk
+                  </div>
+                  <div style={{
+                    fontSize: 12,
+                    color: '#6b6690',
+                    lineHeight: 1.6,
+                  }}>
+                    {prop.risk}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

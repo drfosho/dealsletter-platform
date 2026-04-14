@@ -246,6 +246,71 @@ function PropertyCard({ prop }: { prop: DealProperty }) {
         {prop.verdict}
       </Text>
 
+      {/* Opportunity */}
+      {prop.opportunity && (
+        <>
+          <Text style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '1px',
+            textTransform: 'uppercase' as const,
+            color: colors.green,
+            margin: '0 0 6px 0',
+          }}>
+            ✓ Opportunity
+          </Text>
+          <Text style={{
+            fontSize: 13,
+            color: colors.textMuted,
+            lineHeight: 1.6,
+            margin: '0 0 14px 0',
+          }}>
+            {prop.opportunity}
+          </Text>
+        </>
+      )}
+
+      {/* Risk */}
+      {prop.risk && (
+        <>
+          <Text style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '1px',
+            textTransform: 'uppercase' as const,
+            color: '#e05252',
+            margin: '0 0 6px 0',
+          }}>
+            ⚠ Risk
+          </Text>
+          <Text style={{
+            fontSize: 13,
+            color: colors.textMuted,
+            lineHeight: 1.6,
+            margin: '0 0 14px 0',
+          }}>
+            {prop.risk}
+          </Text>
+        </>
+      )}
+
+      {/* Full verdict */}
+      {prop.fullVerdict && (
+        <Text style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: colors.text,
+          lineHeight: 1.6,
+          margin: '0 0 16px 0',
+          padding: '10px 14px',
+          background: colors.primaryLight,
+          borderRadius: 6,
+          borderLeft: `3px solid ${colors.primary}`,
+        }}>
+          Verdict: {prop.fullVerdict}
+        </Text>
+      )}
+
       {/* Property button */}
       {prop.listingUrl && (
         <Button
@@ -556,6 +621,17 @@ export default function IssueTemplate({ issue }: IssueTemplateProps) {
                 </Text>
               </Column>
               <Column style={{ textAlign: 'right' as const }}>
+                <Link
+                  href="https://x.com/Dealsletter"
+                  style={{
+                    color: '#6b6690',
+                    fontSize: 12,
+                    textDecoration: 'none',
+                    marginRight: 12,
+                  }}
+                >
+                  Follow @Dealsletter on X
+                </Link>
                 <Link
                   href="https://dealsletter.io/v2/pricing"
                   style={{

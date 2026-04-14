@@ -14,6 +14,9 @@ export interface DealProperty {
   tagColor: string
   strategy: string
   listingUrl?: string
+  opportunity?: string
+  risk?: string
+  fullVerdict?: string
 }
 
 export interface IssueSponsor {
@@ -72,6 +75,9 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tagColor: '#EF9F27',
         strategy: 'flip',
         listingUrl: 'https://www.zillow.com/homedetails/371-E-William-St-San-Jose-CA-95112/19711857_zpid/',
+        opportunity: 'Strong ROI on a small cash position. 88% cash-on-cash return on $120K deployed at the $775K offer price. Located one block from SJSU with commercial zoning — opens the buyer pool to investors, house-hackers, and development plays.',
+        risk: 'Model disagreement — Claude scored 4/10 (hold), GPT-4o and Grok scored 7/10 (buy). Thin ~10% margin on resale leaves minimal cushion for rehab overruns. $85K rehab budget must be contractor-verified before offering.',
+        fullVerdict: 'Conditional buy at or below $775K with verified rehab and confirmed ARV comps. Every $25K over ask compresses an already thin margin.',
       },
       {
         address: '200 S 8th St',
@@ -89,6 +95,9 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tagColor: '#1D9E75',
         strategy: 'multifamily',
         listingUrl: 'https://www.loopnet.com/Listing/200-S-8th-St-Las-Vegas-NV/40106069/',
+        opportunity: '83 doors at $83K/unit on the Fremont corridor with 6 years of proven occupancy including through COVID. Kitchen conversions on 59 studios at $150/unit bump produce $1.45M implied asset value on ~$708K capex — 105% ROI on the conversion alone.',
+        risk: 'Staffed operating business, not a passive hold. On-site payroll $8,600/mo + owner-paid utilities $8,300/mo. Sub-250 SF average unit size creates financing complexity — confirm lender terms before going under contract.',
+        fullVerdict: 'Buy for an experienced urban operator with $300-400K reserves beyond the down payment. Not suitable for passive or first-time investors.',
       },
       {
         address: '2216 Tam Dr',
@@ -106,6 +115,9 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tagColor: '#f09595',
         strategy: 'multifamily',
         listingUrl: 'https://www.loopnet.com/Listing/2216-2224-Tam-Dr-Las-Vegas-NV/39661604/',
+        opportunity: '24 units near the Strip with R-4 zoning and a motivated seller — price already reduced. RUBS utility recovery could add $14-17K/yr in NOI at minimal cost. At $2.4-2.5M with verified taxes the deal potentially becomes interesting.',
+        risk: 'Property tax in the OM is almost certainly wrong. Modeled at $5,400/yr — Nevada effective rate puts post-sale taxes at ~$17,100/yr. That correction drops monthly cash flow from $1,442 to $467 and DCR from 1.11 to 1.04. Call Clark County: (702) 455-3882.',
+        fullVerdict: 'Hard pass at $2,850,000 until taxes independently confirmed. Walk unless price corrects to $2.4-2.5M.',
       },
       {
         address: '4513 W McElroy Ave',
@@ -123,6 +135,9 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
         tagColor: '#7F77DD',
         strategy: 'str',
         listingUrl: 'https://www.loopnet.com/Listing/4513-W-McElroy-Ave-Tampa-FL/40090503/',
+        opportunity: '8.8% CoC on $238K deployed with Florida state preemption removing the regulatory risk that kills most STR investments. Turnkey operation — existing listing, reviews, and search ranking transfer at close. MacDill AFB + cruise port + Amalie Arena drive year-round demand.',
+        risk: '62% expense ratio is structurally normal for STR — platform fees (14%), cleaning (8%), management (15%). The model only works at $16K/mo gross. A drop to $13K approaches breakeven. No trailing revenue confirmed yet.',
+        fullVerdict: 'Buy contingent on 12-month Airbnb payout history confirming $180K+ annual gross. If numbers check out, move confidently.',
       },
     ],
     content: `
