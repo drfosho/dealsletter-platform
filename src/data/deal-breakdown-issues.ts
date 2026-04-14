@@ -51,7 +51,7 @@ export const dealBreakdownIssues: DealBreakdownIssue[] = [
     ctaStrategy: 'multifamily',
     sponsor: {
       name: 'LP Conf',
-      logo: 'https://dealsletter.io/logos/150-sponsor.jpg',
+      logo: 'https://xsiflgnnowyvkhxjwmuu.supabase.co/storage/v1/object/public/email-assets/150-sponsor.jpg',
       headline: 'Network with 50+ LPs & family offices on Zoom',
       body: 'Free virtual LP Conf on April 30. Vanderbilt Family Office, Hilton FO, Rothschild FO, and Pinegrove ($10B AUM FoF) confirmed as speakers. Network directly with active LPs across 20+ themed breakout rooms covering how top FoFs screen 1,000+ managers, family office allocation trends in 2026, and LP perspectives on AI and European VC.',
       cta: 'Register free — Virtual LP Conf',
