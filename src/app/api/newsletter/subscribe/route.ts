@@ -1,49 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { Resend } from 'resend'
 
-export const runtime = 'nodejs';
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+const AUDIENCE_ID = '88867a45-ed26-4522-9147-d1008ee57566'
+
+const TOPICS = {
+  newsletter: '787f17f1-b87f-464a-adf0-9b82834df927',
+  updates: 'cf52bc26-7ff7-4141-b0e5-5621aad4b4c0',
+  promotions: '4e1d7902-1d79-4d02-a431-ec38462a6ab9',
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+    const body = await request.json()
+    const {
+      email,
+      firstName,
+      subscribeNewsletter = true,
+      subscribeUpdates = false,
+      subscribePromotions = false,
+    } = body
 
-    if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
+      return NextResponse.json(
+        { error: 'Valid email required' },
+        { status: 400 }
+      )
     }
 
-    const apiKey = process.env.BEEHIIV_API_KEY;
-    const publicationId = process.env.BEEHIIV_PUBLICATION_ID;
-
-    if (!apiKey || !publicationId) {
-      console.warn('[Newsletter] Beehiiv not configured — BEEHIIV_API_KEY or BEEHIIV_PUBLICATION_ID missing');
-      return NextResponse.json({ subscribed: false, reason: 'not_configured' });
+    // Build topic subscriptions
+    const topics: Record<string, boolean> = {}
+    if (subscribeNewsletter) {
+      topics[TOPICS.newsletter] = true
+    }
+    if (subscribeUpdates) {
+      topics[TOPICS.updates] = true
+    }
+    if (subscribePromotions) {
+      topics[TOPICS.promotions] = true
     }
 
-    const res = await fetch(
-      `https://api.beehiiv.com/v2/publications/${publicationId}/subscriptions`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          email,
-          reactivate_existing: true,
-          send_welcome_email: false,
-        }),
-      }
-    );
+    // Add or update contact in Resend
+    const { data, error } = await resend.contacts.create({
+      email,
+      firstName: firstName || '',
+      audienceId: AUDIENCE_ID,
+      unsubscribed: false,
+    })
 
-    if (!res.ok) {
-      const body = await res.text();
-      console.error('[Newsletter] Beehiiv API error:', res.status, body);
-      return NextResponse.json({ subscribed: false, error: 'Beehiiv API error' }, { status: 502 });
+    if (error) {
+      console.error('Resend contact error:', error)
+      return NextResponse.json(
+        { error: 'Subscription failed' },
+        { status: 500 }
+      )
     }
 
-    console.log('[Newsletter] Subscribed to Beehiiv:', email);
-    return NextResponse.json({ subscribed: true });
-  } catch (error) {
-    console.error('[Newsletter] Error:', error);
-    return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      message: 'Subscribed to the Deal Desk newsletter',
+    })
+  } catch (err) {
+    console.error('Newsletter subscribe error:', err)
+    return NextResponse.json(
+      { error: 'Something went wrong' },
+      { status: 500 }
+    )
   }
 }

@@ -1,11 +1,129 @@
 'use client'
 
+import React, { useState } from 'react'
 import Link from 'next/link'
 import NavBar from '@/components/v2/NavBar'
 import Footer from '@/components/v2/Footer'
 import {
   getLatestIssue,
 } from '@/data/deal-breakdown-issues'
+
+function SubscribeWidget() {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
+
+  async function handleSubscribe() {
+    if (!email || !email.includes('@')) {
+      setErrorMsg('Enter a valid email')
+      return
+    }
+    setStatus('loading')
+    setErrorMsg('')
+
+    try {
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          subscribeNewsletter: true,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setStatus('success')
+      } else {
+        setStatus('error')
+        setErrorMsg(data.error || 'Something went wrong')
+      }
+    } catch {
+      setStatus('error')
+      setErrorMsg('Something went wrong')
+    }
+  }
+
+  if (status === 'success') {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        fontSize: 14,
+        color: '#1D9E75',
+        fontWeight: 600,
+      }}>
+        ✓ You're in — first issue lands next week
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p style={{
+        fontSize: 13,
+        color: '#4e4a6a',
+        marginBottom: 12,
+      }}>
+        Get the weekly deal breakdown — free, no account needed.
+      </p>
+      <div style={{
+        display: 'flex',
+        gap: 8,
+        flexWrap: 'wrap',
+      }}>
+        <input
+          type="email"
+          placeholder="your@email.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') handleSubscribe()
+          }}
+          style={{
+            flex: 1,
+            minWidth: 200,
+            background: 'rgba(13,13,20,0.6)',
+            border: '0.5px solid rgba(127,119,221,0.25)',
+            borderRadius: 8,
+            padding: '10px 14px',
+            fontSize: 14,
+            color: '#f0eeff',
+            fontFamily: 'inherit',
+            outline: 'none',
+          }}
+        />
+        <button
+          onClick={handleSubscribe}
+          disabled={status === 'loading'}
+          style={{
+            background: '#6366F1',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '10px 20px',
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            opacity: status === 'loading' ? 0.7 : 1,
+          }}
+        >
+          {status === 'loading' ? 'Subscribing...' : 'Subscribe free →'}
+        </button>
+      </div>
+      {errorMsg && (
+        <p style={{
+          fontSize: 12,
+          color: '#f09595',
+          marginTop: 8,
+        }}>
+          {errorMsg}
+        </p>
+      )}
+    </div>
+  )
+}
 
 export default function DealBreakdownPage() {
   const latest = getLatestIssue()
@@ -62,6 +180,61 @@ export default function DealBreakdownPage() {
             underwriting, honest verdicts, and the numbers that
             actually matter.
           </p>
+        </div>
+
+        {/* Origin story */}
+        <div style={{
+          background: '#13121d',
+          border: '0.5px solid rgba(127,119,221,0.15)',
+          borderRadius: 16,
+          padding: '32px',
+          marginBottom: 48,
+        }}>
+          <div style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '1.5px',
+            color: '#6366F1',
+            textTransform: 'uppercase' as const,
+            marginBottom: 12,
+          }}>
+            How We Started
+          </div>
+          <h2 style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: '#f0eeff',
+            letterSpacing: '-0.3px',
+            marginBottom: 12,
+            lineHeight: 1.3,
+          }}>
+            Dealsletter started as a newsletter. It still is one.
+          </h2>
+          <p style={{
+            fontSize: 15,
+            color: '#6b6690',
+            lineHeight: 1.8,
+            marginBottom: 16,
+          }}>
+            Before the AI analyzer, before the platform, there were weekly deal
+            breakdowns landing in investor inboxes every week. Real properties, real
+            numbers, honest verdicts — no fluff, no hype. That newsletter grew to
+            2,200+ subscribers, 150+ issues, and open rates that consistently outperform industry averages.
+          </p>
+          <p style={{
+            fontSize: 15,
+            color: '#6b6690',
+            lineHeight: 1.8,
+            marginBottom: 24,
+          }}>
+            The platform is new. The newsletter never stopped. Every week we still
+            break down 3-4 real deals — multifamily, fix &amp; flip, BRRRR, STR —
+            with the same direct, numbers-first approach. Now you can also run the
+            same analysis yourself on any address.
+          </p>
+
+          {/* Subscribe widget */}
+          <SubscribeWidget />
         </div>
 
         {/* Latest issue featured */}
