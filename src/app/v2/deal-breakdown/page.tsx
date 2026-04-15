@@ -219,7 +219,7 @@ export default function DealBreakdownPage() {
             Before the AI analyzer, before the platform, there were weekly deal
             breakdowns landing in investor inboxes every week. Real properties, real
             numbers, honest verdicts — no fluff, no hype. That newsletter grew to
-            1,800+ subscribers across 150+ issues.
+            2,200+ subscribers, 150+ issues, and open rates that consistently outperform industry averages.
           </p>
           <p style={{
             fontSize: 15,
