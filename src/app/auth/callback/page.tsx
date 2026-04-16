@@ -96,6 +96,52 @@ function AuthCallbackContent() {
           }
         }
 
+        // Check for PKCE code param
+        const code = searchParams.get('code')
+
+        if (code) {
+          try {
+            const { data: exchangeData, error: exchangeError } =
+              await supabase.auth.exchangeCodeForSession(code)
+
+            if (exchangeError) {
+              console.error('Code exchange error:', exchangeError)
+              setError(exchangeError.message)
+              setStatus('error')
+              return
+            }
+
+            if (exchangeData?.session) {
+              const type = searchParams.get('type')
+              const isSignup = type === 'signup' || type === 'email_confirmation'
+
+              await ensureUserProfile(exchangeData.session.user, isSignup)
+
+              setStatus('success')
+
+              if (isSignup) {
+                router.push('/auth/verify-success')
+                return
+              }
+
+              // Check for post-login redirect
+              const redirectTo = localStorage.getItem('post_login_redirect')
+              if (redirectTo) {
+                localStorage.removeItem('post_login_redirect')
+                router.push(redirectTo)
+                return
+              }
+
+              // Fire welcome email for OAuth signups
+              fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+              router.push('/v2/analyze')
+              return
+            }
+          } catch (err) {
+            console.error('Auth callback error:', err)
+          }
+        }
+
         // If no tokens in URL, check for existing session
         const { data, error } = await supabase.auth.getSession()
 
