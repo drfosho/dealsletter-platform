@@ -1230,7 +1230,16 @@ export async function POST(request: NextRequest) {
             status: 'generating',
             units: body.units || 1,
             monthlyRent: body.monthlyRent || 0,
-            rentPerUnit: body.rentPerUnit || 0
+            rentPerUnit: body.rentPerUnit || 0,
+            // Save loan terms so full analysis page uses the same inputs as the wizard
+            loan_terms: {
+              loanType: body.loanTerms?.loanType || 'conventional',
+              points: body.loanTerms?.points || 0,
+              interestRate: body.loanTerms?.interestRate || 7,
+              loanTerm: body.loanTerms?.loanTerm || 30
+            },
+            // Save ARV directly so it's accessible without deep nesting
+            arv: body.arv || 0
           }
         })
         .select()

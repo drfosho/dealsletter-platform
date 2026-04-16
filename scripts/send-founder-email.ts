@@ -5,7 +5,7 @@ import { Resend } from 'resend'
 import { render } from '@react-email/render'
 import { createElement } from 'react'
 
-const resend = new Resend(process.env.RESEND_API_KEY_NEWSLETTER)
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 const AUDIENCE_ID = '88867a45-ed26-4522-9147-d1008ee57566'
 

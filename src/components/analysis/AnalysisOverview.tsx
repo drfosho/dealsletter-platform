@@ -200,14 +200,16 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
     const analysisData = (analysis as any).analysis_data || {};
     const aiMetrics = analysis.ai_analysis?.financial_metrics || {};
     const nestedAiMetrics = analysisData?.ai_analysis?.financial_metrics || {};
+    const strategyDetails = analysisData?.strategy_details || (analysis as any).strategy_details || {};
 
     // DEBUG: Log the full data structure to understand where values are
     console.log('[InvestmentScore] FULL DEBUG:', {
       hasAiAnalysis: !!analysis.ai_analysis,
       hasAnalysisData: !!analysisData,
-      aiAnalysisKeys: analysis.ai_analysis ? Object.keys(analysis.ai_analysis) : [],
-      analysisDataKeys: analysisData ? Object.keys(analysisData) : [],
-      topLevelKeys: Object.keys(analysis).filter(k => !['ai_analysis', 'analysis_data', 'property_data'].includes(k))
+      aiMetricsKeys: Object.keys(aiMetrics),
+      nestedAiMetricsKeys: Object.keys(nestedAiMetrics),
+      topLevelRoi: (analysis as any).roi,
+      topLevelProfit: (analysis as any).profit
     });
 
     // Helper to get numeric value, skipping 0/null/undefined to find actual values
@@ -244,7 +246,6 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       aiMetrics: aiMetrics?.roi,
       nestedAiMetrics: nestedAiMetrics?.roi,
       analysisDataRoi: analysisData?.roi,
-      calculatedMetrics: analysisData?.calculatedMetrics?.roi,
       finalRoi: roi
     });
 
@@ -259,6 +260,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       // For flips, ROI and profit margin are the primary success metrics
 
       // Get profit values from all possible locations
+      // CRITICAL: Also check analysis_data.ai_analysis.financial_metrics directly
       const netProfit = getNumericValue(
         (analysis as any).profit,
         aiMetrics?.net_profit,
@@ -268,7 +270,10 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
         analysisData?.profit,
         analysisData?.netProfit,
         analysisData?.calculatedMetrics?.totalProfit,
-        (analysis as any).calculated_metrics?.totalProfit
+        (analysis as any).calculated_metrics?.totalProfit,
+        // Also check strategy_details where values might be stored
+        strategyDetails?.netProfit,
+        strategyDetails?.profit
       );
 
       // Debug: Log where profit was found
@@ -331,33 +336,53 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
 
       console.log('[InvestmentScore] Flip metrics:', { roi, netProfit, profitMargin, arv, timeline, purchasePrice, rehabCosts });
 
+      // FALLBACK: If ROI is 0 but we have valid profit and investment data, calculate ROI
+      let effectiveRoi = roi;
+      if (effectiveRoi === 0 && netProfit > 0 && purchasePrice > 0) {
+        // Estimate cash required (down payment + closing costs for hard money)
+        const estimatedDownPayment = purchasePrice * 0.10; // 10% for hard money
+        const estimatedClosingCosts = purchasePrice * 0.03; // 3% closing
+        const estimatedCashRequired = estimatedDownPayment + estimatedClosingCosts;
+        effectiveRoi = (netProfit / estimatedCashRequired) * 100;
+        console.log('[InvestmentScore] Calculated ROI from profit:', effectiveRoi);
+      }
+
+      // FALLBACK: If profit margin is 0 but we have profit and ARV, calculate it
+      let effectiveProfitMargin = profitMargin;
+      if (effectiveProfitMargin === 0 && netProfit > 0 && arv > 0) {
+        effectiveProfitMargin = (netProfit / arv) * 100;
+        console.log('[InvestmentScore] Calculated profit margin:', effectiveProfitMargin);
+      }
+
       // ROI Component (50 points max) - PRIMARY METRIC FOR FLIPS
       // Excellent returns should be heavily rewarded
       let roiScore = 0;
-      if (roi >= 100) roiScore = 50;        // Exceptional: 100%+ ROI
-      else if (roi >= 75) roiScore = 47;    // Outstanding: 75-100% ROI
-      else if (roi >= 50) roiScore = 43;    // Excellent: 50-75% ROI
-      else if (roi >= 35) roiScore = 38;    // Very Good: 35-50% ROI
-      else if (roi >= 25) roiScore = 32;    // Good: 25-35% ROI
-      else if (roi >= 20) roiScore = 26;    // Above Average: 20-25% ROI
-      else if (roi >= 15) roiScore = 20;    // Average: 15-20% ROI
-      else if (roi >= 10) roiScore = 14;    // Below Average: 10-15% ROI
-      else if (roi >= 5) roiScore = 8;      // Marginal: 5-10% ROI
-      else if (roi >= 0) roiScore = 4;      // Poor: 0-5% ROI
-      else roiScore = 0;                    // Losing money
+      if (effectiveRoi >= 100) roiScore = 50;        // Exceptional: 100%+ ROI
+      else if (effectiveRoi >= 75) roiScore = 47;    // Outstanding: 75-100% ROI
+      else if (effectiveRoi >= 50) roiScore = 44;    // Excellent: 50-75% ROI
+      else if (effectiveRoi >= 40) roiScore = 40;    // Very Good: 40-50% ROI
+      else if (effectiveRoi >= 30) roiScore = 36;    // Good: 30-40% ROI
+      else if (effectiveRoi >= 25) roiScore = 32;    // Above Average: 25-30% ROI
+      else if (effectiveRoi >= 20) roiScore = 28;    // Average: 20-25% ROI
+      else if (effectiveRoi >= 15) roiScore = 22;    // Below Average: 15-20% ROI
+      else if (effectiveRoi >= 10) roiScore = 16;    // Marginal: 10-15% ROI
+      else if (effectiveRoi >= 5) roiScore = 10;     // Poor: 5-10% ROI
+      else if (effectiveRoi >= 0) roiScore = 5;      // Very Poor: 0-5% ROI
+      else roiScore = 0;                              // Losing money
 
       score += roiScore;
 
-      // Profit Margin Component (35 points max)
+      // Profit Margin Component (35 points max) - IMPROVED SCORING
       let marginScore = 0;
-      if (profitMargin >= 20) marginScore = 35;       // Excellent
-      else if (profitMargin >= 15) marginScore = 30;  // Very Good
-      else if (profitMargin >= 12) marginScore = 26;  // Good
-      else if (profitMargin >= 10) marginScore = 22;  // Above Average (11% = 22 points)
-      else if (profitMargin >= 8) marginScore = 17;   // Average
-      else if (profitMargin >= 5) marginScore = 12;   // Below Average
-      else if (profitMargin >= 0) marginScore = 5;    // Marginal
-      else marginScore = 0;                           // Losing money
+      if (effectiveProfitMargin >= 20) marginScore = 35;       // Excellent
+      else if (effectiveProfitMargin >= 15) marginScore = 31;  // Very Good
+      else if (effectiveProfitMargin >= 12) marginScore = 27;  // Good
+      else if (effectiveProfitMargin >= 10) marginScore = 23;  // Above Average
+      else if (effectiveProfitMargin >= 8) marginScore = 19;   // Average
+      else if (effectiveProfitMargin >= 6) marginScore = 15;   // Below Average
+      else if (effectiveProfitMargin >= 4) marginScore = 10;   // Marginal
+      else if (effectiveProfitMargin >= 0) marginScore = 5;    // Poor
+      else marginScore = 0;                                    // Losing money
 
       score += marginScore;
 
@@ -366,31 +391,38 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
       let riskScore = 15;
 
       // Timeline risk (longer = riskier)
-      if (timeline > 12) riskScore -= 4;
-      else if (timeline > 9) riskScore -= 2;
+      if (timeline > 12) riskScore -= 3;
+      else if (timeline > 9) riskScore -= 1;
 
       // High rehab relative to purchase price
-      if (purchasePrice > 0 && rehabCosts / purchasePrice > 0.4) riskScore -= 3;
-      else if (purchasePrice > 0 && rehabCosts / purchasePrice > 0.3) riskScore -= 1;
+      if (purchasePrice > 0 && rehabCosts / purchasePrice > 0.5) riskScore -= 3;
+      else if (purchasePrice > 0 && rehabCosts / purchasePrice > 0.35) riskScore -= 1;
 
-      // Thin margins are risky
-      if (profitMargin < 8) riskScore -= 2;
+      // Very thin margins are risky
+      if (effectiveProfitMargin < 5 && effectiveProfitMargin > 0) riskScore -= 2;
 
       // Very low absolute profit increases risk
-      if (netProfit < 20000 && netProfit > 0) riskScore -= 2;
+      if (netProfit < 15000 && netProfit > 0) riskScore -= 1;
 
       score += Math.max(0, riskScore);
+
+      // BONUS: Add points for exceptional deals
+      if (netProfit >= 100000) score += 5; // Large profit bonus
+      else if (netProfit >= 50000) score += 3; // Good profit bonus
 
       console.log('[InvestmentScore] Flip score breakdown:', {
         roiScore: `${roiScore}/50`,
         marginScore: `${marginScore}/35`,
         riskScore: `${Math.max(0, riskScore)}/15`,
-        totalScore: score
+        bonus: netProfit >= 100000 ? 5 : (netProfit >= 50000 ? 3 : 0),
+        totalScore: score,
+        effectiveRoi,
+        effectiveProfitMargin
       });
 
       // VALIDATION: Check if score makes sense
-      if (roi > 100 && profitMargin > 10 && score < 70) {
-        console.error('[InvestmentScore] WARNING: Excellent metrics but low score!', { roi, profitMargin, score });
+      if (effectiveRoi > 50 && effectiveProfitMargin > 10 && score < 65) {
+        console.warn('[InvestmentScore] WARNING: Good metrics but moderate score', { effectiveRoi, effectiveProfitMargin, score });
       }
 
     } else if (strategy === 'brrrr') {
