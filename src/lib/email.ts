@@ -92,7 +92,7 @@ async function send(to: string, subject: string, html: string): Promise<boolean>
 
 // ─── 1. Welcome email (free signup) ──────────────────────────────────
 
-export async function sendWelcomeEmail(data: { email: string; name?: string }): Promise<boolean> {
+export async function sendWelcomeEmail(data: { email: string; name?: string; subscribedNewsletter?: boolean }): Promise<boolean> {
   const greeting = data.name ? `Hi ${data.name},` : 'Hi there,';
 
   const content = `
@@ -115,6 +115,21 @@ export async function sendWelcomeEmail(data: { email: string; name?: string }): 
       'Key financial metrics: cash flow, cap rate, ROI',
       'No credit card required &mdash; ever',
     ])}
+
+    ${data.subscribedNewsletter ? `
+      <div style="margin:0 0 32px;padding:20px 24px;background:rgba(29,158,117,0.06);border:0.5px solid rgba(29,158,117,0.2);border-radius:12px;">
+        <p style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#1D9E75;text-transform:uppercase;margin:0 0 10px;">
+          &#10003; Deal Desk Newsletter
+        </p>
+        <p style="font-size:14px;color:#9994b8;line-height:1.7;margin:0;">
+          You're subscribed to the weekly Deal Desk &mdash; real properties, real numbers, honest verdicts. Every issue breaks down 3-4 deals with full underwriting and AI-powered analysis.
+          <br/><br/>
+          <a href="https://dealsletter.io/v2/deal-breakdown" style="color:#1D9E75;font-weight:600;text-decoration:none;">
+            View past issues \u2192
+          </a>
+        </p>
+      </div>
+    ` : ''}
 
     ${ctaButton('Analyze Your First Deal \u2192', 'https://dealsletter.io/v2/analyze')}
 
@@ -148,6 +163,56 @@ export async function sendWelcomeEmail(data: { email: string; name?: string }): 
   const html = emailLayout(content);
 
   return send(data.email, 'Welcome to Dealsletter \u2014 analyze your first deal free \ud83c\udfe0', html);
+}
+
+
+// ─── 1b. Newsletter welcome email ────────────────────────────────────
+
+export async function sendNewsletterWelcomeEmail(data: { email: string }): Promise<boolean> {
+  const content = `
+    <p style="font-size:16px;color:#9994b8;line-height:1.7;margin:0 0 24px;">
+      Hi there,
+    </p>
+
+    <p style="font-size:16px;color:#9994b8;line-height:1.7;margin:0 0 24px;">
+      You're in. Welcome to the Dealsletter Deal Desk.
+    </p>
+
+    <p style="font-size:16px;color:#9994b8;line-height:1.7;margin:0 0 32px;">
+      Every week we break down 3-4 real investment properties &mdash; multifamily, fix &amp; flip, BRRRR, STR &mdash; with full underwriting, honest verdicts, and the numbers that actually matter. No hype, no fluff.
+    </p>
+
+    ${infoCard('WHAT TO EXPECT', [
+      'Weekly deal breakdowns &mdash; real properties, real numbers',
+      'BRRRR, Fix &amp; Flip, Buy &amp; Hold, STR strategies',
+      'Honest verdicts &mdash; buy, pass, or conditional',
+      'Full analysis archive at dealsletter.io/v2/deal-breakdown',
+    ])}
+
+    ${ctaButton('Browse Past Issues \u2192', 'https://dealsletter.io/v2/deal-breakdown')}
+
+    <div style="margin:40px 0;padding:24px;background:rgba(99,102,241,0.06);border:0.5px solid rgba(99,102,241,0.2);border-radius:12px;">
+      <p style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#6366F1;text-transform:uppercase;margin:0 0 16px;">
+        Want to analyze your own deals?
+      </p>
+      <p style="font-size:15px;color:#9994b8;line-height:1.7;margin:0 0 16px;">
+        Dealsletter analyzes any property in 30 seconds &mdash; cash flow, cap rate, ROI, and AI-powered insights. 3 free analyses/month, no credit card needed.
+      </p>
+      <a href="https://dealsletter.io/v2/analyze" style="display:inline-block;color:#6366F1;font-size:14px;font-weight:600;text-decoration:none;">
+        Try it free \u2192
+      </a>
+    </div>
+
+    <p style="font-size:14px;color:#4e4a6a;line-height:1.7;margin:32px 0 0;">
+      Built by a real estate investor, for real estate investors. Reply to this email with any questions &mdash; I read every one.
+      <br/><br/>
+      &mdash; Kevin, Dealsletter
+    </p>
+  `;
+
+  const html = emailLayout(content);
+
+  return send(data.email, 'Welcome to the Deal Desk \ud83c\udfe0', html);
 }
 
 

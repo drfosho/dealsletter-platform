@@ -39,14 +39,24 @@ export async function POST(_request: NextRequest) {
       return NextResponse.json({ sent: false, reason: 'already_sent' });
     }
 
+    const { data: profile } = await admin
+      .from('user_profiles')
+      .select('first_name')
+      .eq('id', user.id)
+      .single();
+
     const name = (user.user_metadata?.first_name as string) ||
+                 profile?.first_name ||
                  (user.user_metadata?.full_name as string)?.split(' ')[0] ||
                  'there';
+
+    const subscribedNewsletter = user.user_metadata?.newsletter_subscribed === true;
 
     console.log('[WelcomeEmail] Sending welcome email to:', user.email);
     const sent = await sendWelcomeEmail({
       email: user.email!,
       name,
+      subscribedNewsletter,
     });
 
     return NextResponse.json({ sent });

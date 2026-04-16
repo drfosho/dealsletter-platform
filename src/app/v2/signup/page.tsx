@@ -50,6 +50,7 @@ export default function SignupPage() {
             full_name: firstName.trim(),
             first_name: firstName.trim(),
             last_name: '',
+            newsletter_subscribed: newsletterOptIn,
           },
         },
       });
