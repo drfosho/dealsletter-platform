@@ -29,12 +29,12 @@ export default function VerifySuccess() {
   useEffect(() => {
     // Redirect when countdown reaches 0
     if (countdown <= 0) {
-      router.push('/analysis')
+      router.push('/v2/analyze')
     }
   }, [countdown, router])
 
   const handleGoNow = () => {
-    router.push('/analysis')
+    router.push('/v2/analyze')
   }
 
   if (loading) {
