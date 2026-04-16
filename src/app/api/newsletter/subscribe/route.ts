@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       subscribeNewsletter = true,
       subscribeUpdates = false,
       subscribePromotions = false,
+      skipWelcomeEmail = false,
     } = body
 
     if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -57,14 +58,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Send newsletter welcome email
-    try {
-      await resend.emails.send({
-        from: 'Dealsletter <main@dealsletter.io>',
-        to: email,
-        replyTo: 'kevin@dealsletter.io',
-        subject: 'Welcome to the Deal Desk \ud83c\udfe0',
-        html: `<!DOCTYPE html>
+    // Send newsletter welcome email (unless caller asked to skip)
+    if (!skipWelcomeEmail) {
+      try {
+        await resend.emails.send({
+          from: 'Dealsletter <main@dealsletter.io>',
+          to: email,
+          replyTo: 'kevin@dealsletter.io',
+          subject: 'Welcome to the Deal Desk \ud83c\udfe0',
+          html: `<!DOCTYPE html>
 <html>
 <body style="background:#f4f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;padding:40px 0;">
   <div style="max-width:560px;margin:0 auto;">
@@ -145,10 +147,11 @@ export async function POST(request: NextRequest) {
   </div>
 </body>
 </html>`,
-      })
-    } catch (emailErr) {
-      // Non-blocking — don't fail the subscribe if email fails
-      console.error('Newsletter welcome email error:', emailErr)
+        })
+      } catch (emailErr) {
+        // Non-blocking — don't fail the subscribe if email fails
+        console.error('Newsletter welcome email error:', emailErr)
+      }
     }
 
     return NextResponse.json({

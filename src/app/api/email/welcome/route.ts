@@ -28,6 +28,8 @@ export async function POST(_request: NextRequest) {
       .select('id')
       .maybeSingle();
 
+    console.log('[WelcomeEmail] Claim result:', { claimed, claimError });
+
     if (claimError) {
       console.error('[WelcomeEmail] Claim error:', claimError.message);
       // If column doesn't exist, the error will contain "column" — skip dedup and send

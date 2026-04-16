@@ -83,6 +83,7 @@ export default function SignupPage() {
             email,
             firstName: firstName.trim(),
             subscribeNewsletter: true,
+            skipWelcomeEmail: true,
           }),
         }).catch(() => {})
       }
