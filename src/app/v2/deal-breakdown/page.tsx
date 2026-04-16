@@ -1,6 +1,5 @@
 'use client'
 
-import React, { useState } from 'react'
 import Link from 'next/link'
 import NavBar from '@/components/v2/NavBar'
 import Footer from '@/components/v2/Footer'
@@ -9,118 +8,44 @@ import {
 } from '@/data/deal-breakdown-issues'
 
 function SubscribeWidget() {
-  const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
-  const [errorMsg, setErrorMsg] = useState('')
-
-  async function handleSubscribe() {
-    if (!email || !email.includes('@')) {
-      setErrorMsg('Enter a valid email')
-      return
-    }
-    setStatus('loading')
-    setErrorMsg('')
-
-    try {
-      const res = await fetch('/api/newsletter/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          subscribeNewsletter: true,
-        }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        setStatus('success')
-      } else {
-        setStatus('error')
-        setErrorMsg(data.error || 'Something went wrong')
-      }
-    } catch {
-      setStatus('error')
-      setErrorMsg('Something went wrong')
-    }
-  }
-
-  if (status === 'success') {
-    return (
+  return (
+    <div style={{
+      background: 'rgba(99,102,241,0.06)',
+      border: '0.5px solid rgba(99,102,241,0.15)',
+      borderRadius: 10,
+      padding: '16px 20px',
+    }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        fontSize: 14,
-        color: '#1D9E75',
-        fontWeight: 600,
+        marginBottom: 8,
       }}>
-        ✓ You're in — first issue lands next week
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      <p style={{
-        fontSize: 13,
-        color: '#4e4a6a',
-        marginBottom: 12,
-      }}>
-        Get the weekly deal breakdown — free, no account needed.
-      </p>
-      <div style={{
-        display: 'flex',
-        gap: 8,
-        flexWrap: 'wrap',
-      }}>
-        <input
-          type="email"
-          placeholder="your@email.com"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleSubscribe()
-          }}
-          style={{
-            flex: 1,
-            minWidth: 200,
-            background: 'rgba(13,13,20,0.6)',
-            border: '0.5px solid rgba(127,119,221,0.25)',
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontSize: 14,
-            color: '#f0eeff',
-            fontFamily: 'inherit',
-            outline: 'none',
-          }}
-        />
-        <button
-          onClick={handleSubscribe}
-          disabled={status === 'loading'}
-          style={{
-            background: '#6366F1',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            padding: '10px 20px',
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            opacity: status === 'loading' ? 0.7 : 1,
-          }}
-        >
-          {status === 'loading' ? 'Subscribing...' : 'Subscribe free →'}
-        </button>
-      </div>
-      {errorMsg && (
-        <p style={{
-          fontSize: 12,
-          color: '#f09595',
-          marginTop: 8,
+        <div style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background: '#EF9F27',
+          flexShrink: 0,
+        }}/>
+        <div style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: '#EF9F27',
         }}>
-          {errorMsg}
-        </p>
-      )}
+          Newsletter subscribe — coming soon
+        </div>
+      </div>
+      <div style={{
+        fontSize: 13,
+        color: '#6b6690',
+        lineHeight: 1.6,
+        paddingLeft: 18,
+      }}>
+        All existing subscribers have been
+        imported. New Dealsletter accounts
+        are automatically added to the list.
+      </div>
     </div>
   )
 }
