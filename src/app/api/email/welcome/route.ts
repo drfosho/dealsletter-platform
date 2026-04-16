@@ -6,21 +6,26 @@ import { sendWelcomeEmail } from '@/lib/email';
 export const runtime = 'nodejs';
 
 export async function POST(_request: NextRequest) {
+  console.log('[WelcomeEmail] Route hit');
+
   try {
-    // Use the user's session to get their identity
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
+    console.log('[WelcomeEmail] Auth check:', {
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      authError: authError?.message,
+    });
+
     if (authError || !user) {
-      console.log('[WelcomeEmail] 401 — no session.', { authError: authError?.message });
+      console.log('[WelcomeEmail] BLOCKED — no session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Use admin client (bypasses RLS) for the atomic claim
     const admin = createAdminClient();
 
-    // Atomic claim: set welcome_email_sent = true ONLY if it's currently false/null.
-    // Uses service role to bypass RLS. Only one concurrent request wins.
     const { data: claimed, error: claimError } = await admin
       .from('user_profiles')
       .update({ welcome_email_sent: true })
@@ -29,16 +34,21 @@ export async function POST(_request: NextRequest) {
       .select('id')
       .maybeSingle();
 
-    console.log('[WelcomeEmail] Claim result:', { claimed, claimError });
+    console.log('[WelcomeEmail] Claim:', {
+      claimed: !!claimed,
+      claimError: claimError?.message,
+    });
 
     if (claimError) {
       console.error('[WelcomeEmail] Claim error:', claimError.message);
-      // If column doesn't exist, the error will contain "column" — skip dedup and send
       if (!claimError.message.includes('column')) {
-        return NextResponse.json({ sent: false, error: claimError.message }, { status: 500 });
+        return NextResponse.json(
+          { sent: false, error: claimError.message },
+          { status: 500 }
+        );
       }
     } else if (!claimed) {
-      console.log('[WelcomeEmail] Already sent for user:', user.id);
+      console.log('[WelcomeEmail] Already sent');
       return NextResponse.json({ sent: false, reason: 'already_sent' });
     }
 
@@ -55,16 +65,20 @@ export async function POST(_request: NextRequest) {
 
     const subscribedNewsletter = user.user_metadata?.newsletter_subscribed === true;
 
-    console.log('[WelcomeEmail] Sending welcome email to:', user.email);
+    console.log('[WelcomeEmail] Sending to:', user.email, { name, subscribedNewsletter });
+
     const sent = await sendWelcomeEmail({
       email: user.email!,
       name,
       subscribedNewsletter,
     });
 
+    console.log('[WelcomeEmail] Result:', sent);
+
     return NextResponse.json({ sent });
+
   } catch (error) {
-    console.error('[WelcomeEmail] Error:', error);
+    console.error('[WelcomeEmail] Caught error:', error);
     return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
   }
 }
