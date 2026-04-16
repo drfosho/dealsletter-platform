@@ -12,6 +12,7 @@ export async function POST(_request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.log('[WelcomeEmail] 401 — no session.', { authError: authError?.message });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

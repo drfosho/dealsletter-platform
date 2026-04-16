@@ -15,7 +15,10 @@ export default function VerifySuccess() {
     // Send welcome email exactly once (ref guard prevents React 18 Strict Mode double-fire)
     if (!welcomeEmailSent.current) {
       welcomeEmailSent.current = true
-      fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+      // Small delay to ensure session cookie is established after email confirmation redirect
+      setTimeout(() => {
+        fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+      }, 1500)
     }
 
     // Start countdown
