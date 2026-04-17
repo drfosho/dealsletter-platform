@@ -92,7 +92,7 @@ async function send(to: string, subject: string, html: string): Promise<boolean>
 
 // ─── 1. Welcome email (free signup) ──────────────────────────────────
 
-export async function sendWelcomeEmail(data: { email: string; name?: string }): Promise<boolean> {
+export async function sendWelcomeEmail(data: { email: string; name?: string; subscribedNewsletter?: boolean }): Promise<boolean> {
   const greeting = data.name ? `Hi ${data.name},` : 'Hi there,';
 
   const content = `
@@ -115,6 +115,21 @@ export async function sendWelcomeEmail(data: { email: string; name?: string }): 
       'Key financial metrics: cash flow, cap rate, ROI',
       'No credit card required &mdash; ever',
     ])}
+
+    ${data.subscribedNewsletter ? `
+      <div style="margin:0 0 32px;padding:20px 24px;background:rgba(29,158,117,0.06);border:0.5px solid rgba(29,158,117,0.2);border-radius:12px;">
+        <p style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#1D9E75;text-transform:uppercase;margin:0 0 10px;">
+          &#10003; Deal Desk Newsletter
+        </p>
+        <p style="font-size:14px;color:#9994b8;line-height:1.7;margin:0;">
+          You're subscribed to the weekly Deal Desk &mdash; real properties, real numbers, honest verdicts. Every issue breaks down 3-4 deals with full underwriting and AI-powered analysis.
+          <br/><br/>
+          <a href="https://dealsletter.io/v2/deal-breakdown" style="color:#1D9E75;font-weight:600;text-decoration:none;">
+            View past issues \u2192
+          </a>
+        </p>
+      </div>
+    ` : ''}
 
     ${ctaButton('Analyze Your First Deal \u2192', 'https://dealsletter.io/v2/analyze')}
 

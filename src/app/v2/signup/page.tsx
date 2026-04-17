@@ -18,6 +18,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [newsletterOptIn, setNewsletterOptIn] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
@@ -49,6 +50,7 @@ export default function SignupPage() {
             full_name: firstName.trim(),
             first_name: firstName.trim(),
             last_name: '',
+            newsletter_subscribed: newsletterOptIn,
           },
         },
       });
@@ -71,6 +73,19 @@ export default function SignupPage() {
           setAuthError(error.message);
         }
         return;
+      }
+
+      if (newsletterOptIn && email) {
+        fetch('/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            firstName: firstName.trim(),
+            subscribeNewsletter: true,
+            skipWelcomeEmail: true,
+          }),
+        }).catch(() => {})
       }
 
       setIsSuccess(true);
@@ -456,10 +471,45 @@ export default function SignupPage() {
                 </>
               )}
 
+              {/* Newsletter opt-in */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  marginTop: 14,
+                  marginBottom: 12,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="newsletter-optin"
+                  checked={newsletterOptIn}
+                  onChange={(e) => setNewsletterOptIn(e.target.checked)}
+                  style={{
+                    marginTop: 2,
+                    accentColor: "#6366F1",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                  }}
+                />
+                <label
+                  htmlFor="newsletter-optin"
+                  style={{
+                    fontSize: 13,
+                    color: "#6b6690",
+                    lineHeight: 1.5,
+                    cursor: "pointer",
+                  }}
+                >
+                  Send me the weekly Deal Desk — real properties, real numbers,
+                  honest verdicts. Unsubscribe anytime.
+                </label>
+              </div>
+
               {/* Terms checkbox */}
               <div
                 style={{
-                  marginTop: 14,
                   marginBottom: 4,
                   display: "flex",
                   alignItems: "flex-start",

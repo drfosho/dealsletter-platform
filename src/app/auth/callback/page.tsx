@@ -83,12 +83,18 @@ function AuthCallbackContent() {
             setStatus('success')
 
             if (isEmailVerification) {
+              // Fire welcome email before redirect — session is established here
+              setTimeout(() => {
+                fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+              }, 1000)
               // Email verification flow - go to success page
               router.push('/auth/verify-success')
             } else {
               // Fire welcome email for Google OAuth signups
               // Non-blocking — don't await
-              fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+              setTimeout(() => {
+                fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+              }, 2000)
               // Regular login - go directly to analysis
               router.push('/v2/analyze')
             }
@@ -117,12 +123,18 @@ function AuthCallbackContent() {
           setStatus('success')
 
           if (fallbackIsSignup) {
+            // Fire welcome email before redirect — session is established here
+            setTimeout(() => {
+              fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+            }, 1000)
             // Email verification flow - go to success page
             router.push('/auth/verify-success')
           } else {
             // Fire welcome email for Google OAuth signups
             // Non-blocking — don't await
-            fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+            setTimeout(() => {
+              fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+            }, 2000)
             // Regular login - go directly to analysis
             router.push('/v2/analyze')
           }
