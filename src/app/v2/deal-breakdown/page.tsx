@@ -5,6 +5,7 @@ import Link from 'next/link'
 import NavBar from '@/components/v2/NavBar'
 import Footer from '@/components/v2/Footer'
 import {
+  dealBreakdownIssues,
   getLatestIssue,
 } from '@/data/deal-breakdown-issues'
 
@@ -401,20 +402,115 @@ export default function DealBreakdownPage() {
           </div>
         )}
 
-        {/* Past issues placeholder */}
-        <div style={{
-          marginTop: 48,
-          paddingTop: 48,
-          borderTop: '0.5px solid rgba(127,119,221,0.1)',
-        }}>
-          <p style={{
-            fontSize: 14,
-            color: '#4e4a6a',
-            textAlign: 'center',
-          }}>
-            Past issues coming soon — 150 issues of deal analysis in the archive.
-          </p>
-        </div>
+        {/* Past issues grid */}
+        {dealBreakdownIssues.length > 1 && (
+          <div style={{ marginTop: 48 }}>
+            <div style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '1.5px',
+              color: '#4e4a6a',
+              textTransform: 'uppercase' as const,
+              marginBottom: 20,
+            }}>
+              Past Issues
+            </div>
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column' as const,
+              gap: 12,
+            }}>
+              {dealBreakdownIssues.slice(1).map((issue) => (
+                <Link
+                  key={issue.slug}
+                  href={`/v2/deal-breakdown/${issue.slug}`}
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div style={{
+                    background: '#13121d',
+                    border: '0.5px solid rgba(127,119,221,0.15)',
+                    borderRadius: 12,
+                    padding: '20px 24px',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(99,102,241,0.3)'
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(127,119,221,0.15)'
+                  }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 8,
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                      }}>
+                        <span style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: '#6366F1',
+                        }}>
+                          Issue #{issue.issueNumber}
+                        </span>
+                        <span style={{
+                          fontSize: 12,
+                          color: '#4e4a6a',
+                        }}>
+                          {issue.date}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize: 12,
+                        color: '#4e4a6a',
+                      }}>
+                        {issue.properties.length} deals &rarr;
+                      </span>
+                    </div>
+
+                    <div style={{
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: '#9994b8',
+                      lineHeight: 1.4,
+                      marginBottom: 12,
+                    }}>
+                      {issue.title}
+                    </div>
+
+                    {/* Property tags */}
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap' as const,
+                      gap: 6,
+                    }}>
+                      {issue.properties.map((prop, i) => (
+                        <div key={i} style={{
+                          background: `${prop.tagColor}15`,
+                          border: `0.5px solid ${prop.tagColor}40`,
+                          borderRadius: 4,
+                          padding: '2px 8px',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.5px',
+                          color: prop.tagColor,
+                        }}>
+                          {prop.tag}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />
