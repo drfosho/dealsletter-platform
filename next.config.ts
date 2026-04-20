@@ -119,26 +119,11 @@ const nextConfig: NextConfig = {
     return [
       // Redirect V1 auth pages to V2
       {
-        source: '/login',
-        destination: '/v2/login',
-        permanent: false,
-      },
-      {
-        source: '/signup',
-        destination: '/v2/signup',
-        permanent: false,
-      },
-      {
         source: '/register',
         destination: '/v2/signup',
         permanent: false,
       },
       // Redirect V1 main pages to V2
-      {
-        source: '/pricing',
-        destination: '/v2/pricing',
-        permanent: false,
-      },
       {
         source: '/blog',
         destination: '/v2/blog',
