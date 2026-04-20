@@ -57,13 +57,8 @@ const PRODUCT = [
   { label: 'Markets', href: '/markets' },
   { label: 'Pipeline', href: '/v3/signup' },
 ]
-const DATA = [
-  { label: 'Coverage', href: '/markets' },
-  { label: 'Methodology', href: '/how-it-works' },
-  { label: 'API', href: '/pricing' },
-]
 const COMPANY = [
-  { label: 'About', href: '/how-it-works' },
+  { label: 'About', href: '/about' },
   { label: 'Changelog', href: '/' },
   { label: 'Contact', href: '/contact' },
 ]
@@ -87,7 +82,7 @@ export default function PublicFooter() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+          gridTemplateColumns: '2fr 1fr 1fr 1fr',
           gap: 28,
           maxWidth: 1440,
           margin: '0 auto',
@@ -112,7 +107,6 @@ export default function PublicFooter() {
           </div>
         </div>
         <FooterCol title="Product" items={PRODUCT} />
-        <FooterCol title="Data" items={DATA} />
         <FooterCol title="Company" items={COMPANY} />
         <FooterCol title="Legal" items={LEGAL} />
       </div>

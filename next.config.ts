@@ -134,26 +134,6 @@ const nextConfig: NextConfig = {
         destination: '/v2/blog/:slug',
         permanent: false,
       },
-      {
-        source: '/faq',
-        destination: '/v2/faq',
-        permanent: false,
-      },
-      {
-        source: '/contact',
-        destination: '/v2/contact',
-        permanent: false,
-      },
-      {
-        source: '/privacy',
-        destination: '/v2/privacy',
-        permanent: false,
-      },
-      {
-        source: '/terms',
-        destination: '/v2/terms',
-        permanent: false,
-      },
       // Redirect V1 account pages to V2
       {
         source: '/account',

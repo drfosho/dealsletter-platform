@@ -186,7 +186,12 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/scout' ||
     request.nextUrl.pathname === '/how-it-works' ||
     request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname === '/signup'
+    request.nextUrl.pathname === '/signup' ||
+    request.nextUrl.pathname === '/contact' ||
+    request.nextUrl.pathname === '/faq' ||
+    request.nextUrl.pathname === '/terms' ||
+    request.nextUrl.pathname === '/privacy' ||
+    request.nextUrl.pathname === '/about'
 
   // Allow API routes to pass through without authentication
   if (isApiRoute) {
