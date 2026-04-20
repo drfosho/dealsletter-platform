@@ -52,6 +52,11 @@ type PropertyData = {
     estimatedValue?: number
     estimatedRent?: number
     listPrice?: number | null
+    listing?: {
+      price?: number | null
+      listedDate?: string | null
+      status?: string | null
+    } | null
   }
   rental?: {
     rentEstimate?: number
@@ -60,6 +65,9 @@ type PropertyData = {
   }
   arvAnalysis?: {
     arvEstimate?: number
+    arvLow?: number
+    arvMid?: number
+    arvHigh?: number
     compsUsed?: number
     confidence?: string
   }
@@ -124,6 +132,28 @@ function defaultStatusFromScore(score: number | null | undefined): PipelineStatu
   return 'Watching'
 }
 
+// Purchase price: active listing > AVM > comparables midpoint.
+function pickPurchasePrice(pd: PropertyData): number | undefined {
+  const listing = pd.property?.listing?.price
+  if (typeof listing === 'number' && listing > 0) return listing
+  const avm = pd.property?.estimatedValue
+  if (typeof avm === 'number' && avm > 0) return avm
+  const comps = pd.comparables?.value
+  if (typeof comps === 'number' && comps > 0) return comps
+  return undefined
+}
+
+// ARV: RentCast arvMid > AVM * 1.15 > comparables * 1.15.
+function pickArv(pd: PropertyData): number | undefined {
+  const mid = pd.arvAnalysis?.arvMid
+  if (typeof mid === 'number' && mid > 0) return mid
+  const est = pd.arvAnalysis?.arvEstimate
+  if (typeof est === 'number' && est > 0) return est
+  const avm = pd.property?.estimatedValue ?? pd.comparables?.value
+  if (typeof avm === 'number' && avm > 0) return Math.round(avm * 1.15)
+  return undefined
+}
+
 /* ------------------------ body builder ------------------------ */
 
 function buildAnalyzeBody(
@@ -132,10 +162,15 @@ function buildAnalyzeBody(
   propertyData: PropertyData,
   edited: EditableProperty
 ): Record<string, unknown> {
-  const purchasePrice = toNum(edited.listPrice) || 0
-  const estimatedValue = toNum(edited.estimatedValue) || purchasePrice
-  const monthlyRent = toNum(edited.estimatedRent)
-  const arv = toNum(edited.arv) || estimatedValue
+  // Always prefer the edited value, but fall back to the same priority chain
+  // the editable panel seeded with. Never default to 0.
+  const purchasePrice =
+    toNum(edited.listPrice) ?? pickPurchasePrice(propertyData) ?? 0
+  const estimatedValue =
+    toNum(edited.estimatedValue) ?? propertyData.property?.estimatedValue ?? purchasePrice
+  const monthlyRent =
+    toNum(edited.estimatedRent) ?? propertyData.rental?.rentEstimate
+  const arv = toNum(edited.arv) ?? pickArv(propertyData) ?? estimatedValue
   const rehab = toNum(edited.rehabCost) ?? 0
   const dpPercent = toNum(edited.downPaymentPercent) ?? 20
   const interestRate = toNum(edited.interestRate) ?? 7.5
@@ -1162,9 +1197,11 @@ export default function V3AnalyzePage() {
         sqft: data.property?.sqft ?? data.property?.squareFootage,
         yearBuilt: data.property?.yearBuilt,
         propertyType: data.property?.propertyType,
-        listPrice: data.property?.listPrice,
-        estimatedValue: data.property?.estimatedValue,
+        listPrice: pickPurchasePrice(data),
+        estimatedValue: data.property?.estimatedValue ?? data.comparables?.value,
         estimatedRent: data.rental?.rentEstimate ?? data.property?.estimatedRent,
+        comparablesValue: data.comparables?.value,
+        arvMid: data.arvAnalysis?.arvMid ?? data.arvAnalysis?.arvEstimate,
       }
       setEdited(makeInitialEditable(strategy, source))
     } catch (err) {
@@ -1198,6 +1235,13 @@ export default function V3AnalyzePage() {
 
   const onAnalyze = async () => {
     if (!propData || !edited) return
+    const previewPrice = toNum(edited.listPrice) ?? pickPurchasePrice(propData) ?? 0
+    if (previewPrice < 10000) {
+      setAnalysisError(
+        'Purchase price is required. Please verify the property data above.'
+      )
+      return
+    }
     setAnalysisLoading(true)
     setAnalysisError('')
     setRateLimit(null)
@@ -1370,6 +1414,7 @@ export default function V3AnalyzePage() {
           onChange={updateEdited}
           onRunAnalysis={onAnalyze}
           submitting={analysisLoading || proMax.isRunning}
+          arvHint={pickArv(propData)}
         />
       )}
 

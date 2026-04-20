@@ -55,10 +55,24 @@ export function makeInitialEditable(
     listPrice?: number | null
     estimatedValue?: number
     estimatedRent?: number
+    comparablesValue?: number
+    arvMid?: number
   }
 ): EditableProperty {
-  const avm = source.estimatedValue || source.listPrice || 0
-  const arvDefault = avm ? Math.round(avm * 1.15) : 0
+  // Purchase price priority: active listing -> AVM -> comparables value.
+  const purchaseDefault =
+    source.listPrice ||
+    source.estimatedValue ||
+    source.comparablesValue ||
+    0
+  const avm = source.estimatedValue || source.comparablesValue || purchaseDefault || 0
+  // ARV priority: RentCast ARV analysis -> AVM * 1.15.
+  const arvDefault =
+    source.arvMid && source.arvMid > 0
+      ? Math.round(source.arvMid)
+      : avm
+        ? Math.round(avm * 1.15)
+        : 0
   const units = inferUnitCount(source.propertyType)
   const defaultDp =
     strategy === 'House Hack' ? '3.5' : strategy === 'Buy & Hold' ? '20' : '20'
@@ -68,7 +82,7 @@ export function makeInitialEditable(
     baths: source.baths != null ? String(source.baths) : '',
     sqft: source.sqft != null ? String(source.sqft) : '',
     yearBuilt: source.yearBuilt != null ? String(source.yearBuilt) : '',
-    listPrice: source.listPrice ? String(source.listPrice) : avm ? String(avm) : '',
+    listPrice: purchaseDefault ? String(purchaseDefault) : '',
     estimatedValue: avm ? String(avm) : '',
     estimatedRent: source.estimatedRent != null ? String(source.estimatedRent) : '',
     arv: arvDefault ? String(arvDefault) : '',
@@ -191,6 +205,12 @@ type Props = {
   onChange: (patch: Partial<EditableProperty>) => void
   onRunAnalysis: () => void
   submitting?: boolean
+  arvHint?: number
+}
+
+function fmtUsd(n: number | undefined | null): string {
+  if (!n || !Number.isFinite(n)) return ''
+  return `$${Math.round(n).toLocaleString('en-US')}`
 }
 
 export default function PropertyEditCard({
@@ -199,6 +219,7 @@ export default function PropertyEditCard({
   onChange,
   onRunAnalysis,
   submitting,
+  arvHint,
 }: Props) {
   const showBrrrFlip = strategy === 'BRRRR' || strategy === 'Fix & Flip'
   const showBuyHold = strategy === 'Buy & Hold'
@@ -295,7 +316,13 @@ export default function PropertyEditCard({
             gap: 12,
           }}
         >
-          <Field label="After repair value (ARV)">
+          <Field
+            label={
+              arvHint && arvHint > 0
+                ? `ARV (Est. ${fmtUsd(arvHint)})`
+                : 'After repair value (ARV)'
+            }
+          >
             <TextInput
               value={value.arv}
               onChange={v => onChange({ arv: v })}
