@@ -630,3 +630,46 @@ input[type="checkbox"]:focus {
     linear-gradient(90deg, rgba(147, 51, 234, 0.03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+
+/* ------------------------------------------------------------------ */
+/*  V3 Design System — scoped under .v3-root                           */
+/*  Do not reference these tokens from v2 code.                        */
+/* ------------------------------------------------------------------ */
+.v3-root {
+  --v3-bg: #080810;
+  --v3-surface: #0f0f1a;
+  --v3-elevated: #151524;
+  --v3-elevated-2: #1c1c2e;
+  --v3-border: rgba(99, 102, 241, 0.15);
+  --v3-border-strong: rgba(99, 102, 241, 0.3);
+  --v3-hairline: rgba(240, 238, 255, 0.06);
+  --v3-indigo: #6366F1;
+  --v3-indigo-hover: #818CF8;
+  --v3-indigo-dim: rgba(99, 102, 241, 0.12);
+  --v3-green: #10B981;
+  --v3-amber: #F59E0B;
+  --v3-red: #EF4444;
+  --v3-blue: #3B82F6;
+  --v3-text: #F0EEFF;
+  --v3-text-secondary: #9994B8;
+  --v3-text-muted: #4B4870;
+  --v3-font-sans: var(--font-v3-sans), 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --v3-font-mono: var(--font-v3-mono), 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  --v3-font-serif: var(--font-v3-serif), 'Instrument Serif', Georgia, serif;
+
+  background: var(--v3-bg);
+  color: var(--v3-text);
+  font-family: var(--v3-font-sans);
+  min-height: 100vh;
+}
+
+.v3-root *,
+.v3-root *::before,
+.v3-root *::after {
+  box-sizing: border-box;
+}
+
+@keyframes v3-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
