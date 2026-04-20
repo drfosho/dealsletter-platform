@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const AUDIENCE_ID = '88867a45-ed26-4522-9147-d1008ee57566'
 
 const TOPICS = {
@@ -13,6 +11,16 @@ const TOPICS = {
 
 export async function POST(request: NextRequest) {
   try {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      console.error('Newsletter subscribe: RESEND_API_KEY is not configured')
+      return NextResponse.json(
+        { error: 'Newsletter service not configured' },
+        { status: 503 }
+      )
+    }
+    const resend = new Resend(apiKey)
+
     const body = await request.json()
     const {
       email,
