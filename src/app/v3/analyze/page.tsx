@@ -1,10 +1,19 @@
 'use client'
 
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import AnalysisAccordion from '@/components/v3/app/AnalysisAccordion'
 import AddressAutocomplete from '@/components/v3/app/AddressAutocomplete'
+import ThinkingUI, { type ThinkingStep } from '@/components/v3/app/ThinkingUI'
+import DealParametersPanel, {
+  dealDefaultsFor,
+  apiLoanTypeFor,
+  isCashLoan,
+  type DealParams,
+  type DealStrategy,
+} from '@/components/v3/app/DealParametersPanel'
+import { FlipChart, HoldChart } from '@/components/v3/app/ProjectionCharts'
 import { useV3Tier } from '@/hooks/useV3Tier'
 import {
   useProMaxAnalysis,
@@ -21,7 +30,7 @@ import type { PipelineStatus } from '@/data/v3-deals'
 
 /* ----------------------------- types ----------------------------- */
 
-type Strategy = 'BRRRR' | 'Fix & Flip' | 'Buy & Hold' | 'House Hack'
+type Strategy = DealStrategy
 const STRATEGIES: Strategy[] = ['BRRRR', 'Fix & Flip', 'Buy & Hold', 'House Hack']
 
 type ModelTier = 'speed' | 'balanced' | 'max'
@@ -32,8 +41,6 @@ const MODEL_OPTIONS: { key: ModelTier; label: string; sub: string }[] = [
 ]
 
 type ArvConfidence = 'Low' | 'Mid' | 'High'
-type LoanType = 'FHA' | 'Conventional'
-type LoanTerm = 15 | 20 | 30
 
 type EditForm = {
   purchasePrice: string
@@ -46,10 +53,6 @@ type EditForm = {
   arv: string
   arvConfidence: ArvConfidence
   rehabCost: string
-  downPaymentPercent: string
-  interestRate: string
-  loanTerm: LoanTerm
-  loanType: LoanType
   units: string
 }
 
@@ -69,6 +72,7 @@ type PropertyData = {
     estimatedValue?: number
     estimatedRent?: number
     listPrice?: number | null
+    propertyTaxes?: number | null
     listing?: {
       price?: number | null
       listedDate?: string | null
@@ -90,15 +94,7 @@ type PropertyData = {
   }
   comparables?: {
     value?: number
-    sales?: Array<{
-      address?: string
-      formattedAddress?: string
-      bedrooms?: number
-      bathrooms?: number
-      squareFootage?: number
-      price?: number
-      distance?: number
-    }>
+    sales?: Array<Record<string, unknown>>
     rentals?: Array<{
       address?: string
       formattedAddress?: string
@@ -120,7 +116,7 @@ function apiStrategyFor(strategy: Strategy): string {
 }
 
 function fmtMoney(n: number | null | undefined): string {
-  if (n == null) return '—'
+  if (n == null || !Number.isFinite(n)) return '—'
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
   if (Math.abs(n) >= 1000) return `$${Math.round(n / 1000)}K`
   return `$${Math.round(n).toLocaleString()}`
@@ -132,23 +128,18 @@ function fmtMoneyFull(n: number | null | undefined): string {
 }
 
 function fmtMonthly(n: number | null | undefined): string {
-  if (n == null) return '—'
+  if (n == null || !Number.isFinite(n)) return '—'
   return `${fmtMoney(n)}/mo`
 }
 
 function fmtYearly(n: number | null | undefined): string {
-  if (n == null) return '—'
+  if (n == null || !Number.isFinite(n)) return '—'
   return `${fmtMoney(n)}/yr`
 }
 
 function fmtPct(n: number | null | undefined): string {
-  if (n == null) return '—'
+  if (n == null || !Number.isFinite(n)) return '—'
   return `${n.toFixed(1)}%`
-}
-
-function fmtInt(n: number | null | undefined): string {
-  if (n == null) return '—'
-  return Math.round(n).toLocaleString()
 }
 
 function toNum(s: string | undefined | null): number | undefined {
@@ -198,10 +189,7 @@ function pickAvm(pd: PropertyData): number | undefined {
   return typeof v === 'number' && v > 0 ? v : undefined
 }
 
-function pickArvLowMidHigh(
-  pd: PropertyData,
-  avm: number | undefined
-): { low: number | undefined; mid: number | undefined; high: number | undefined } {
+function pickArvLowMidHigh(pd: PropertyData, avm: number | undefined) {
   const a = pd.arvAnalysis
   const baseLow = a?.arvLow ?? (avm ? avm * 1.05 : undefined)
   const baseMid = a?.arvMid ?? a?.arvEstimate ?? (avm ? avm * 1.15 : undefined)
@@ -226,8 +214,6 @@ function makeInitialForm(strategy: Strategy, pd: PropertyData): EditForm {
   const sqft = pd.property?.sqft ?? pd.property?.squareFootage
   const rent = pd.rental?.rentEstimate ?? pd.property?.estimatedRent
   const units = inferUnitCount(pd.property?.propertyType)
-  const defaultDp = strategy === 'House Hack' ? '3.5' : '20'
-  const defaultLoanType: LoanType = strategy === 'House Hack' ? 'FHA' : 'Conventional'
   return {
     purchasePrice: purchase ? String(purchase) : '',
     estimatedValue: avm ? String(avm) : purchase ? String(purchase) : '',
@@ -238,11 +224,7 @@ function makeInitialForm(strategy: Strategy, pd: PropertyData): EditForm {
     yearBuilt: pd.property?.yearBuilt != null ? String(pd.property.yearBuilt) : '',
     arv: arvMid ? String(arvMid) : '',
     arvConfidence: 'Mid',
-    rehabCost: '40000',
-    downPaymentPercent: defaultDp,
-    interestRate: '7.5',
-    loanTerm: 30,
-    loanType: defaultLoanType,
+    rehabCost: strategy === 'Fix & Flip' || strategy === 'BRRRR' ? '40000' : '0',
     units: String(units),
   }
 }
@@ -253,33 +235,38 @@ function buildAnalyzeBody(
   address: string,
   strategy: Strategy,
   propertyData: PropertyData,
-  edited: EditForm
+  form: EditForm,
+  params: DealParams
 ): Record<string, unknown> {
-  const purchasePrice =
-    toNum(edited.purchasePrice) ?? pickPurchasePrice(propertyData) ?? 0
+  const purchasePrice = toNum(form.purchasePrice) ?? pickPurchasePrice(propertyData) ?? 0
   const estimatedValue =
-    toNum(edited.estimatedValue) ?? pickAvm(propertyData) ?? purchasePrice
-  const monthlyRent = toNum(edited.estimatedRent) ?? propertyData.rental?.rentEstimate
-  const arv = toNum(edited.arv) ?? pickArv(propertyData) ?? estimatedValue
-  const rehab = toNum(edited.rehabCost) ?? 0
-  const dpPercent = toNum(edited.downPaymentPercent) ?? 20
-  const interestRate = toNum(edited.interestRate) ?? 7.5
-  const term = edited.loanTerm || 30
+    toNum(form.estimatedValue) ?? pickAvm(propertyData) ?? purchasePrice
+  const monthlyRent = toNum(form.estimatedRent) ?? propertyData.rental?.rentEstimate
+  const arv = toNum(form.arv) ?? pickArv(propertyData) ?? estimatedValue
+  const rehab = toNum(form.rehabCost) ?? 0
+  const dpPercent = toNum(params.downPaymentPercent) ?? 20
+  const interestRate = toNum(params.interestRate) ?? 7.5
+  const term = toNum(params.loanTerm) ?? 30
+  const points = toNum(params.points) ?? 0
+  const holdingMonths = toNum(params.holdingMonths)
+  const closingPct = toNum(params.closingCosts) ?? 3
+  const sellClosingPct = toNum(params.sellClosingCosts) ?? 6
+  const propertyTax = toNum(params.propertyTax)
+  const insurance = toNum(params.insurance)
   const units =
     strategy === 'House Hack'
-      ? toNum(edited.units) || inferUnitCount(propertyData.property?.propertyType)
+      ? toNum(form.units) || inferUnitCount(propertyData.property?.propertyType)
       : 1
-  const apiLoanType = 'conventional'
 
   const mergedPropertyData = {
     ...propertyData,
     property: {
       ...(propertyData.property || {}),
-      bedrooms: toNum(edited.beds) ?? propertyData.property?.bedrooms ?? propertyData.property?.beds,
-      bathrooms: toNum(edited.baths) ?? propertyData.property?.bathrooms ?? propertyData.property?.baths,
+      bedrooms: toNum(form.beds) ?? propertyData.property?.bedrooms ?? propertyData.property?.beds,
+      bathrooms: toNum(form.baths) ?? propertyData.property?.bathrooms ?? propertyData.property?.baths,
       squareFootage:
-        toNum(edited.sqft) ?? propertyData.property?.squareFootage ?? propertyData.property?.sqft,
-      yearBuilt: toNum(edited.yearBuilt) ?? propertyData.property?.yearBuilt,
+        toNum(form.sqft) ?? propertyData.property?.squareFootage ?? propertyData.property?.sqft,
+      yearBuilt: toNum(form.yearBuilt) ?? propertyData.property?.yearBuilt,
       estimatedValue,
     },
     rental: {
@@ -300,19 +287,23 @@ function buildAnalyzeBody(
     loanTerms: {
       interestRate,
       loanTerm: term,
-      loanType: apiLoanType,
-      points: 0,
+      loanType: apiLoanTypeFor(params.loanType),
+      points,
     },
     rehabCosts: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? rehab : undefined,
     arv: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? arv : undefined,
+    holdingPeriod: holdingMonths,
     strategyDetails: {
       downPaymentPercent: dpPercent,
       exitStrategy: strategy === 'BRRRR' ? '75' : undefined,
-      arvConfidence: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? edited.arvConfidence : undefined,
-      loanType: strategy === 'House Hack' ? edited.loanType : undefined,
+      arvConfidence: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? form.arvConfidence : undefined,
+      loanType: params.loanType,
+      timeline: holdingMonths != null ? String(holdingMonths) : undefined,
     },
-    closingCostsPercent: 3,
-    sellClosingCostsPercent: 6,
+    closingCostsPercent: closingPct,
+    sellClosingCostsPercent: sellClosingPct,
+    propertyTax,
+    insurance,
     units,
     monthlyRent,
     propertyData: mergedPropertyData,
@@ -517,13 +508,7 @@ function ModelToggle({
   )
 }
 
-function AlertBox({
-  kind,
-  children,
-}: {
-  kind: 'error' | 'warn' | 'info'
-  children: ReactNode
-}) {
+function AlertBox({ kind, children }: { kind: 'error' | 'warn' | 'info'; children: ReactNode }) {
   const colors =
     kind === 'error'
       ? { color: '#F87171', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.22)' }
@@ -543,26 +528,6 @@ function AlertBox({
       }}
     >
       {children}
-    </div>
-  )
-}
-
-function LoadingDot({ label }: { label: string }) {
-  return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-      <span
-        style={{
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          background: 'var(--blue)',
-          boxShadow: '0 0 0 6px rgba(59,130,246,0.14)',
-          animation: 'v3-pulse 1.8s ease-in-out infinite',
-        }}
-      />
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>
-        {label}
-      </span>
     </div>
   )
 }
@@ -596,31 +561,27 @@ function UpgradeOverlay({ message }: { message: string }) {
   )
 }
 
-function Chevron({ open }: { open: boolean }) {
+function SectionLabel({ children, color }: { children: ReactNode; color?: string }) {
   return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+    <div
       style={{
-        color: 'var(--text-muted)',
-        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-        transition: 'transform 200ms ease',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        letterSpacing: '0.12em',
+        color: color || 'var(--indigo-hover)',
+        textTransform: 'uppercase',
+        fontWeight: 600,
+        marginBottom: 10,
       }}
     >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
+      {children}
+    </div>
   )
 }
 
-/* --------------------- editable form sub-components --------------------- */
+/* --------------------- editable property panel --------------------- */
 
-const formLabelStyle: React.CSSProperties = {
+const pFieldLabel: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: 10,
   letterSpacing: '0.08em',
@@ -630,8 +591,7 @@ const formLabelStyle: React.CSSProperties = {
   display: 'block',
   marginBottom: 6,
 }
-
-const formInputStyle: React.CSSProperties = {
+const pFieldInput: React.CSSProperties = {
   width: '100%',
   background: 'var(--elevated)',
   border: '1px solid var(--border)',
@@ -644,40 +604,34 @@ const formInputStyle: React.CSSProperties = {
   transition: 'border-color 140ms ease',
 }
 
-function FormField({
-  label,
-  children,
-}: {
-  label: ReactNode
-  children: ReactNode
-}) {
+function PField({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
     <div>
-      <label style={formLabelStyle}>{label}</label>
+      <label style={pFieldLabel}>{label}</label>
       {children}
     </div>
   )
 }
 
-function FormInput({
+function PInput({
   value,
   onChange,
-  placeholder,
   inputMode,
+  placeholder,
 }: {
   value: string
   onChange: (v: string) => void
-  placeholder?: string
   inputMode?: 'numeric' | 'decimal' | 'text'
+  placeholder?: string
 }) {
   return (
     <input
       type="text"
       inputMode={inputMode || 'text'}
       value={value}
-      placeholder={placeholder}
       onChange={e => onChange(e.target.value)}
-      style={formInputStyle}
+      placeholder={placeholder}
+      style={pFieldInput}
       onFocus={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
       onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
     />
@@ -723,7 +677,6 @@ function PillRow<T extends string | number>({
               fontFamily: prominent ? 'var(--font-sans)' : 'var(--font-mono)',
               fontSize: prominent ? 14 : 11,
               fontWeight: prominent ? 600 : 500,
-              letterSpacing: prominent ? '0' : '0.04em',
               cursor: 'pointer',
               transition: 'all 140ms ease',
               display: 'flex',
@@ -741,7 +694,6 @@ function PillRow<T extends string | number>({
                   fontSize: 11,
                   color: active && prominent ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)',
                   fontWeight: 400,
-                  letterSpacing: '0.02em',
                 }}
               >
                 {sub}
@@ -750,24 +702,6 @@ function PillRow<T extends string | number>({
           </button>
         )
       })}
-    </div>
-  )
-}
-
-function SectionLabel({ children, color }: { children: ReactNode; color?: string }) {
-  return (
-    <div
-      style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: 10,
-        letterSpacing: '0.12em',
-        color: color || 'var(--indigo-hover)',
-        textTransform: 'uppercase',
-        fontWeight: 600,
-        marginBottom: 10,
-      }}
-    >
-      {children}
     </div>
   )
 }
@@ -807,27 +741,21 @@ function EditablePanel({
   propertyData,
   form,
   onChange,
-  onRun,
-  submitting,
 }: {
   strategy: Strategy
   propertyData: PropertyData
   form: EditForm
   onChange: (patch: Partial<EditForm>) => void
-  onRun: () => void
-  submitting?: boolean
 }) {
   const avm = pickAvm(propertyData)
   const listPrice = pickListPrice(propertyData)
   const arvValues = pickArvLowMidHigh(propertyData, toNum(form.estimatedValue) ?? avm)
-
   const sqft = toNum(form.sqft) ?? 0
   const rehabLight = Math.round(sqft * 15)
   const rehabStandard = Math.round(sqft * 35)
   const rehabExtensive = Math.round(sqft * 65)
 
   const showBrrrFlip = strategy === 'BRRRR' || strategy === 'Fix & Flip'
-  const showBuyHold = strategy === 'Buy & Hold'
   const showHouseHack = strategy === 'House Hack'
 
   const setArvFromConfidence = (c: ArvConfidence) => {
@@ -853,9 +781,9 @@ function EditablePanel({
     >
       <SectionLabel>PROPERTY DATA — VERIFY BEFORE ANALYSIS</SectionLabel>
 
-      {/* ---------------- purchase price (prominent) ---------------- */}
+      {/* purchase price */}
       <div style={{ marginBottom: 20 }}>
-        <label style={{ ...formLabelStyle, color: 'var(--indigo-hover)', fontWeight: 600, fontSize: 10 }}>
+        <label style={{ ...pFieldLabel, color: 'var(--indigo-hover)', fontWeight: 600, fontSize: 10 }}>
           PURCHASE PRICE
         </label>
         <input
@@ -911,41 +839,34 @@ function EditablePanel({
           gap: 12,
         }}
       >
-        <FormField label="AVM / Estimated value">
-          <FormInput
+        <PField label="AVM / Estimated value">
+          <PInput
             value={form.estimatedValue}
             onChange={v => onChange({ estimatedValue: v })}
-            placeholder="0"
             inputMode="numeric"
           />
-        </FormField>
-        <FormField label="Estimated rent / mo">
-          <FormInput
+        </PField>
+        <PField label="Estimated rent / mo">
+          <PInput
             value={form.estimatedRent}
             onChange={v => onChange({ estimatedRent: v })}
-            placeholder="0"
             inputMode="numeric"
           />
-        </FormField>
-        <FormField label="Year built">
-          <FormInput
-            value={form.yearBuilt}
-            onChange={v => onChange({ yearBuilt: v })}
-            inputMode="numeric"
-          />
-        </FormField>
-        <FormField label="Beds">
-          <FormInput value={form.beds} onChange={v => onChange({ beds: v })} inputMode="numeric" />
-        </FormField>
-        <FormField label="Baths">
-          <FormInput value={form.baths} onChange={v => onChange({ baths: v })} inputMode="decimal" />
-        </FormField>
-        <FormField label="Sqft">
-          <FormInput value={form.sqft} onChange={v => onChange({ sqft: v })} inputMode="numeric" />
-        </FormField>
+        </PField>
+        <PField label="Year built">
+          <PInput value={form.yearBuilt} onChange={v => onChange({ yearBuilt: v })} inputMode="numeric" />
+        </PField>
+        <PField label="Beds">
+          <PInput value={form.beds} onChange={v => onChange({ beds: v })} inputMode="numeric" />
+        </PField>
+        <PField label="Baths">
+          <PInput value={form.baths} onChange={v => onChange({ baths: v })} inputMode="decimal" />
+        </PField>
+        <PField label="Sqft">
+          <PInput value={form.sqft} onChange={v => onChange({ sqft: v })} inputMode="numeric" />
+        </PField>
       </div>
 
-      {/* ---------------- BRRRR / Fix & Flip ---------------- */}
       {showBrrrFlip && (
         <div
           style={{
@@ -972,19 +893,15 @@ function EditablePanel({
             />
           </div>
 
-          <FormField
+          <PField
             label={
               arvHintValue && arvHintValue > 0
                 ? `ARV (Est. ${fmtMoneyFull(arvHintValue)})`
                 : 'After repair value (ARV)'
             }
           >
-            <FormInput
-              value={form.arv}
-              onChange={v => onChange({ arv: v })}
-              inputMode="numeric"
-            />
-          </FormField>
+            <PInput value={form.arv} onChange={v => onChange({ arv: v })} inputMode="numeric" />
+          </PField>
 
           <div>
             <div
@@ -1002,7 +919,6 @@ function EditablePanel({
                   fontFamily: 'var(--font-mono)',
                   fontSize: 10,
                   color: 'var(--text-muted)',
-                  letterSpacing: '0.04em',
                 }}
               >
                 {sqft > 0 ? `Based on $/sqft · ${sqft.toLocaleString()} sqft` : 'Add sqft to use presets'}
@@ -1031,111 +947,32 @@ function EditablePanel({
               }}
             />
             <div style={{ marginTop: 10 }}>
-              <FormField label="Rehab cost">
-                <FormInput
-                  value={form.rehabCost}
-                  onChange={v => onChange({ rehabCost: v })}
-                  inputMode="numeric"
-                />
-              </FormField>
+              <PField label="Rehab cost">
+                <PInput value={form.rehabCost} onChange={v => onChange({ rehabCost: v })} inputMode="numeric" />
+              </PField>
             </div>
           </div>
         </div>
       )}
 
-      {/* ---------------- Buy & Hold ---------------- */}
-      {showBuyHold && (
-        <div
-          style={{
-            marginTop: 22,
-            paddingTop: 20,
-            borderTop: '1px solid var(--hairline)',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 12,
-          }}
-        >
-          <FormField label="Down payment %">
-            <FormInput
-              value={form.downPaymentPercent}
-              onChange={v => onChange({ downPaymentPercent: v })}
-              inputMode="decimal"
-            />
-          </FormField>
-          <FormField label="Interest rate %">
-            <FormInput
-              value={form.interestRate}
-              onChange={v => onChange({ interestRate: v })}
-              inputMode="decimal"
-            />
-          </FormField>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <SectionLabel>LOAN TERM</SectionLabel>
-            <PillRow
-              options={[30, 20, 15] as const}
-              value={form.loanTerm}
-              onChange={v => onChange({ loanTerm: v })}
-              formatLabel={v => `${v}yr`}
-              prominent
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ---------------- House Hack ---------------- */}
       {showHouseHack && (
         <div
           style={{
             marginTop: 22,
             paddingTop: 20,
             borderTop: '1px solid var(--hairline)',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 12,
           }}
         >
-          <FormField label="Down payment %">
-            <FormInput
-              value={form.downPaymentPercent}
-              onChange={v => onChange({ downPaymentPercent: v })}
-              inputMode="decimal"
-            />
-          </FormField>
-          <FormField label="Number of units">
-            <FormInput value={form.units} onChange={v => onChange({ units: v })} inputMode="numeric" />
-          </FormField>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <SectionLabel>LOAN TYPE</SectionLabel>
-            <PillRow
-              options={['FHA', 'Conventional'] as const}
-              value={form.loanType}
-              onChange={v => onChange({ loanType: v })}
-              prominent
-            />
-          </div>
+          <PField label="Number of units">
+            <PInput value={form.units} onChange={v => onChange({ units: v })} inputMode="numeric" />
+          </PField>
         </div>
       )}
-
-      <button
-        type="button"
-        className="app-btn"
-        onClick={onRun}
-        disabled={submitting}
-        style={{
-          width: '100%',
-          justifyContent: 'center',
-          padding: '12px 16px',
-          fontSize: 14,
-          marginTop: 24,
-        }}
-      >
-        {submitting ? 'Running…' : 'Looks good — Run Analysis →'}
-      </button>
     </section>
   )
 }
 
-/* ----------------------- status bar (Fix 5 earlier) ----------------------- */
+/* ----------------------- status bar ----------------------- */
 
 const PIPELINE_STATUSES: PipelineStatus[] = ['Watching', 'Reviewing', 'Strong Buy', 'Passed']
 
@@ -1254,18 +1091,7 @@ function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => voi
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 36, marginTop: 8 }}>
       <section>
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            letterSpacing: '0.14em',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            marginBottom: 12,
-          }}
-        >
-          Recent analyses
-        </div>
+        <SectionLabel color="var(--text-muted)">Recent analyses</SectionLabel>
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
           {EMPTY_STATE_DEALS.map(d => (
             <div
@@ -1279,32 +1105,14 @@ function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => voi
                 padding: 12,
               }}
             >
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: 'var(--text)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {d.address}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
                 {d.city} · {d.strategy}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 18,
-                    fontWeight: 600,
-                    color: 'var(--indigo-hover)',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 600, color: 'var(--indigo-hover)' }}>
                   {d.cap}
                 </span>
                 <SignalBadge signal={d.signal} />
@@ -1315,18 +1123,7 @@ function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => voi
       </section>
 
       <section>
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            letterSpacing: '0.14em',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            marginBottom: 12,
-          }}
-        >
-          Strategies
-        </div>
+        <SectionLabel color="var(--text-muted)">Strategies</SectionLabel>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {STRATEGY_CARDS.map(s => (
             <button
@@ -1355,28 +1152,10 @@ function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => voi
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, minHeight: 30 }}>
                 {s.tag}
               </div>
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  letterSpacing: '0.12em',
-                  color: 'var(--text-muted)',
-                  marginTop: 10,
-                  textTransform: 'uppercase',
-                }}
-              >
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.12em', color: 'var(--text-muted)', marginTop: 10, textTransform: 'uppercase' }}>
                 {s.metricLabel}
               </div>
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: 'var(--indigo-hover)',
-                  marginTop: 2,
-                  letterSpacing: '-0.01em',
-                }}
-              >
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 600, color: 'var(--indigo-hover)', marginTop: 2 }}>
                 {s.metricValue}
               </div>
             </button>
@@ -1385,18 +1164,7 @@ function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => voi
       </section>
 
       <section>
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            letterSpacing: '0.14em',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            marginBottom: 12,
-          }}
-        >
-          How it works
-        </div>
+        <SectionLabel color="var(--text-muted)">How it works</SectionLabel>
         <div
           style={{
             display: 'flex',
@@ -1425,227 +1193,7 @@ function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => voi
   )
 }
 
-/* ------------------- Pro Max expandable card ------------------- */
-
-function ProMaxCard({
-  idx,
-  cfg,
-  modelLabel,
-  parsed,
-  status,
-  error,
-  progressDetail,
-  expanded,
-  onToggle,
-}: {
-  idx: number
-  cfg: (typeof PRO_MAX_MODELS)[number] | undefined
-  modelLabel: string
-  parsed: V3AnalysisResult | null
-  status: 'pending' | 'loading' | 'complete' | 'error'
-  error: string | null
-  progressDetail: string
-  expanded: boolean
-  onToggle: () => void
-}) {
-  const s = parsed ? signalFromDealScore(parsed.dealScore) : null
-  const expandable = status === 'complete' && parsed != null
-  return (
-    <div
-      style={{
-        position: 'relative',
-        background: expanded ? 'var(--elevated)' : 'var(--surface)',
-        border: `1px solid ${expanded ? 'var(--border-strong)' : 'var(--hairline)'}`,
-        borderRadius: 10,
-        padding: 20,
-        overflow: 'hidden',
-        minHeight: 220,
-        transition: 'background 200ms ease, border-color 200ms ease',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 3,
-          background: cfg?.accentColor || '#6366F1',
-        }}
-      />
-
-      <button
-        type="button"
-        onClick={expandable ? onToggle : undefined}
-        disabled={!expandable}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
-          width: '100%',
-          textAlign: 'left',
-          cursor: expandable ? 'pointer' : 'default',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          marginBottom: 14,
-        }}
-      >
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
-            {cfg?.roleLabel || `Model ${idx + 1}`}
-          </div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
-            {modelLabel}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {s && <SignalBadge signal={s} />}
-          {expandable && <Chevron open={expanded} />}
-        </div>
-      </button>
-
-      {status === 'loading' && <LoadingDot label={progressDetail || 'Running…'} />}
-      {status === 'error' && <AlertBox kind="error">{error || 'Model failed'}</AlertBox>}
-
-      {parsed && status === 'complete' && (
-        <>
-          <p
-            style={{
-              margin: 0,
-              fontSize: 13,
-              color: 'var(--text-secondary)',
-              lineHeight: 1.6,
-              display: expanded ? 'block' : '-webkit-box',
-              WebkitLineClamp: expanded ? undefined : 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: expanded ? 'visible' : 'hidden',
-            }}
-          >
-            {parsed.narrative || parsed.recommendation || 'No narrative returned.'}
-          </p>
-
-          <div
-            style={{
-              borderTop: '1px solid var(--hairline)',
-              marginTop: 16,
-              paddingTop: 14,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 12,
-            }}
-          >
-            {[
-              { label: 'CAP', value: fmtPct(parsed.metrics?.capRate) },
-              { label: 'CoC', value: fmtPct(parsed.metrics?.cashOnCash) },
-              { label: 'SCORE', value: parsed.dealScore != null ? `${parsed.dealScore}/10` : '—' },
-            ].map(m => (
-              <div key={m.label}>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 8,
-                    letterSpacing: '0.1em',
-                    color: 'var(--text-muted)',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {m.label}
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    marginTop: 3,
-                  }}
-                >
-                  {m.value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {expanded && (
-            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--hairline)' }}>
-              <SectionLabel>FULL METRICS</SectionLabel>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: 12,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 11,
-                }}
-              >
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>CF/MO</div>
-                  <div style={{ color: 'var(--text)', marginTop: 3 }}>{fmtMoney(parsed.cashFlow?.monthly)}</div>
-                </div>
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>5-YR ROI</div>
-                  <div style={{ color: 'var(--text)', marginTop: 3 }}>{fmtPct(parsed.metrics?.roi)}</div>
-                </div>
-                <div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>ARV</div>
-                  <div style={{ color: 'var(--text)', marginTop: 3 }}>{fmtMoney(parsed.metrics?.arvEstimate)}</div>
-                </div>
-              </div>
-
-              {parsed.riskFlags && parsed.riskFlags.length > 0 && (
-                <>
-                  <div style={{ marginTop: 14, marginBottom: 8 }}>
-                    <SectionLabel color="var(--text-muted)">Risk flags</SectionLabel>
-                  </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {parsed.riskFlags.map((flag, i) => (
-                      <li key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                        <span
-                          style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: 9,
-                            letterSpacing: '0.1em',
-                            color:
-                              flag.severity === 'high'
-                                ? '#F87171'
-                                : flag.severity === 'medium'
-                                  ? '#FBBF24'
-                                  : 'var(--text-muted)',
-                            textTransform: 'uppercase',
-                            marginRight: 6,
-                          }}
-                        >
-                          [{flag.severity}]
-                        </span>
-                        <strong style={{ color: 'var(--text)', fontWeight: 500 }}>{flag.flag}</strong>
-                        {flag.detail ? ` — ${flag.detail}` : ''}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              {parsed.marketContext && (
-                <>
-                  <div style={{ marginTop: 14, marginBottom: 6 }}>
-                    <SectionLabel color="var(--text-muted)">Market context</SectionLabel>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    {parsed.marketContext}
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  )
-}
-
-/* --------------------------- property-data fetch --------------------------- */
+/* --------------------- property-data fetch --------------------- */
 
 async function fetchPropertyData(address: string, strategy: Strategy): Promise<PropertyData> {
   const res = await fetch('/api/v2/property-data', {
@@ -1665,51 +1213,193 @@ async function fetchPropertyData(address: string, strategy: Strategy): Promise<P
   return (await res.json()) as PropertyData
 }
 
-/* ------------- secondary metrics (Fix 6) ------------- */
+/* ------------------ strategy-aware metrics builders ------------------ */
 
-type MetricCell = { label: string; value: string }
+type MetricCell = { label: string; value: string; accent?: string }
 
-function secondaryMetricsFor(
+function num(
+  obj: Record<string, unknown> | undefined | null,
+  key: string
+): number | undefined {
+  if (!obj) return undefined
+  const v = (obj as Record<string, unknown>)[key]
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  return undefined
+}
+
+function aiFinOf(result: V3AnalysisResult): Record<string, number | null | undefined> {
+  const fromRaw = ((result.raw as Record<string, unknown> | undefined)?.ai_analysis as
+    | Record<string, unknown>
+    | undefined)?.financial_metrics as Record<string, number | null | undefined> | undefined
+  return fromRaw || {}
+}
+
+function primaryMetricsFor(
   strategy: Strategy,
   result: V3AnalysisResult,
-  edited: EditForm | null
+  calc: Record<string, unknown> | null,
+  form: EditForm | null,
+  params: DealParams
 ): MetricCell[] {
-  const aiFin =
-    ((result.raw as Record<string, unknown> | undefined)?.ai_analysis as Record<string, unknown> | undefined)
-      ?.financial_metrics ||
-    ((result as unknown as { ai_analysis?: { financial_metrics?: Record<string, number | null | undefined> } })
-      .ai_analysis?.financial_metrics) ||
-    {}
-  const fin = aiFin as Record<string, number | null | undefined>
+  const fin = aiFinOf(result)
+  const proForma = (result.proForma || {}) as Record<string, unknown>
+  const purchase = toNum(form?.purchasePrice) ?? 0
+  const rehab = toNum(form?.rehabCost) ?? 0
+  const arv = toNum(form?.arv) ?? (result.metrics?.arvEstimate ?? 0)
+  const closingPct = toNum(params.closingCosts) ?? 3
+  const sellClosingPct = toNum(params.sellClosingCosts) ?? 6
+  const holdingMonths = toNum(params.holdingMonths) ?? 6
+  const dpPct = toNum(params.downPaymentPercent) ?? 20
+  const rate = toNum(params.interestRate) ?? 7.5
 
   if (strategy === 'Fix & Flip') {
-    const purchase = toNum(edited?.purchasePrice) ?? 0
-    const rehab = toNum(edited?.rehabCost) ?? 0
-    const closing = purchase * 0.03
-    const proForma = (result.proForma || {}) as Record<string, unknown>
+    const closing = purchase * (closingPct / 100)
+    const loanBalance = purchase * (1 - dpPct / 100)
+    const monthlyInterest = (loanBalance * (rate / 100)) / 12
+    const holdingCost = monthlyInterest * holdingMonths
     const totalCost =
-      (proForma.totalCost as number | undefined) ?? purchase + rehab + closing
-    const projectedSale =
-      (proForma.projectedSalePrice as number | undefined) ??
-      (result.metrics?.arvEstimate ?? undefined)
+      num(calc, 'totalProjectCost') ??
+      (num(proForma, 'totalCost') as number | undefined) ??
+      purchase + rehab + closing + holdingCost
+    const sellClosing = arv * (sellClosingPct / 100)
+    const gross =
+      (fin.gross_profit as number | undefined) ??
+      (arv && totalCost ? arv - totalCost : undefined)
+    const net =
+      (fin.net_profit as number | undefined) ??
+      (gross != null ? gross - sellClosing : undefined)
+    const roi =
+      (fin.roi_percent as number | undefined) ??
+      (net != null && totalCost ? (net / totalCost) * 100 : undefined)
+    const maxOffer = arv > 0 ? arv * 0.85 - rehab : 0
     return [
-      { label: 'TOTAL COST', value: fmtMoney(totalCost) },
-      { label: 'PROJECTED SALE', value: fmtMoney(projectedSale) },
-      { label: 'GROSS PROFIT', value: fmtMoney(fin.gross_profit) },
-      { label: 'NET PROFIT', value: fmtMoney(fin.net_profit) },
+      { label: 'NET PROFIT', value: fmtMoney(net), accent: (net ?? 0) >= 0 ? '#34D399' : '#F87171' },
+      { label: 'ROI', value: fmtPct(roi), accent: '#34D399' },
       {
-        label: 'ROI',
-        value: fmtPct(fin.roi_percent ?? (result.metrics?.roi as number | undefined)),
+        label: 'DEAL SCORE',
+        value: result.dealScore != null ? `${result.dealScore}/10` : '—',
+        accent: 'var(--indigo-hover)',
       },
+      { label: 'MAX OFFER', value: fmtMoney(maxOffer), accent: 'var(--text)' },
+    ]
+  }
+
+  if (strategy === 'House Hack') {
+    const cf = result.cashFlow?.monthly ?? result.cashFlow?.monthlyCashFlow ?? null
+    const coc = result.metrics?.cashOnCash
+    const monthlyHousingCost = cf != null ? -cf : undefined
+    const offsetPct =
+      (fin.offset_percent as number | undefined) ?? undefined
+    return [
       {
-        label: 'HOLD PERIOD',
-        value:
-          (proForma.holdingPeriod as string | undefined) ||
-          '6 months',
+        label: 'MONTHLY HOUSING',
+        value: fmtMoney(monthlyHousingCost),
+        accent: (monthlyHousingCost ?? 0) <= 0 ? '#34D399' : 'var(--text)',
+      },
+      { label: 'OFFSET %', value: fmtPct(offsetPct), accent: 'var(--indigo-hover)' },
+      { label: 'CASH-ON-CASH', value: fmtPct(coc), accent: '#34D399' },
+      {
+        label: 'DEAL SCORE',
+        value: result.dealScore != null ? `${result.dealScore}/10` : '—',
+        accent: 'var(--indigo-hover)',
       },
     ]
   }
 
+  // BRRRR + Buy & Hold share the primary layout
+  const monthly =
+    result.cashFlow?.monthlyCashFlow != null
+      ? result.cashFlow.monthlyCashFlow
+      : (result.cashFlow?.monthly as number | undefined)
+  const five =
+    result.metrics?.fiveYearROI != null
+      ? result.metrics.fiveYearROI
+      : (result.metrics?.roi as number | undefined)
+
+  return [
+    { label: 'CAP RATE', value: fmtPct(result.metrics?.capRate), accent: '#34D399' },
+    { label: 'CASH-ON-CASH', value: fmtPct(result.metrics?.cashOnCash), accent: '#34D399' },
+    { label: 'CF / MONTH', value: fmtMoney(monthly), accent: 'var(--text)' },
+    {
+      label: strategy === 'BRRRR' ? 'DEAL SCORE' : '5-YR ROI',
+      value:
+        strategy === 'BRRRR'
+          ? result.dealScore != null
+            ? `${result.dealScore}/10`
+            : '—'
+          : fmtPct(five),
+      accent: 'var(--indigo-hover)',
+    },
+  ]
+}
+
+function secondaryMetricsFor(
+  strategy: Strategy,
+  result: V3AnalysisResult,
+  calc: Record<string, unknown> | null,
+  form: EditForm | null,
+  params: DealParams
+): MetricCell[] {
+  const fin = aiFinOf(result)
+  const proForma = (result.proForma || {}) as Record<string, unknown>
+  const purchase = toNum(form?.purchasePrice) ?? 0
+  const rehab = toNum(form?.rehabCost) ?? 0
+  const arv = toNum(form?.arv) ?? (result.metrics?.arvEstimate ?? 0)
+  const closingPct = toNum(params.closingCosts) ?? 3
+  const holdingMonths = toNum(params.holdingMonths) ?? 6
+  const dpPct = toNum(params.downPaymentPercent) ?? 20
+  const rate = toNum(params.interestRate) ?? 7.5
+
+  if (strategy === 'Fix & Flip') {
+    const closing = purchase * (closingPct / 100)
+    const loanBalance = purchase * (1 - dpPct / 100)
+    const monthlyInterest = (loanBalance * (rate / 100)) / 12
+    const holdingCost = monthlyInterest * holdingMonths
+    const totalCost =
+      num(calc, 'totalProjectCost') ??
+      (num(proForma, 'totalCost') as number | undefined) ??
+      purchase + rehab + closing + holdingCost
+    const projectedSale =
+      num(proForma, 'projectedSalePrice') ?? arv
+    return [
+      { label: 'TOTAL COST', value: fmtMoney(totalCost) },
+      { label: 'PROJECTED SALE', value: fmtMoney(projectedSale) },
+      { label: 'GROSS PROFIT', value: fmtMoney(fin.gross_profit) },
+      { label: 'HOLD PERIOD', value: `${holdingMonths} mo` },
+    ]
+  }
+
+  if (strategy === 'BRRRR') {
+    const refiProceeds = arv > 0 ? arv * 0.75 : undefined
+    const totalIn =
+      (num(proForma, 'totalInvestment') as number | undefined) ??
+      (purchase && rehab ? purchase + rehab : undefined)
+    const cashLeftIn =
+      totalIn && refiProceeds ? Math.max(0, totalIn - refiProceeds) : undefined
+    return [
+      { label: 'ARV', value: fmtMoney(arv) },
+      { label: 'REFI @ 75%', value: fmtMoney(refiProceeds) },
+      { label: 'CASH LEFT IN', value: fmtMoney(cashLeftIn) },
+      { label: 'EQUITY CAPTURE', value: fmtMoney(result.metrics?.equityCapture) },
+    ]
+  }
+
+  if (strategy === 'House Hack') {
+    return [
+      { label: 'GROSS RENT', value: fmtMonthly(result.cashFlow?.grossRent) },
+      {
+        label: 'EFFECTIVE HOUSING',
+        value: fmtMonthly(result.cashFlow?.monthly != null ? -result.cashFlow.monthly : undefined),
+      },
+      { label: 'UNITS', value: form?.units || '1' },
+      {
+        label: 'DEAL SCORE',
+        value: result.dealScore != null ? `${result.dealScore}/10` : '—',
+      },
+    ]
+  }
+
+  // Buy & Hold
   return [
     {
       label: 'NOI',
@@ -1724,6 +1414,64 @@ function secondaryMetricsFor(
       value: result.dealScore != null ? `${result.dealScore}/10` : '—',
     },
   ]
+}
+
+/* -------------------- pro forma + risk flags helpers -------------------- */
+
+const PRO_FORMA_FIELDS: { key: string; label: string; kind: 'money' | 'moneyYear' | 'moneyMonth' | 'pct' }[] = [
+  { key: 'purchasePrice', label: 'Purchase Price', kind: 'money' },
+  { key: 'rehabCost', label: 'Rehab Cost', kind: 'money' },
+  { key: 'totalInvestment', label: 'Total Investment', kind: 'money' },
+  { key: 'arvEstimate', label: 'ARV', kind: 'money' },
+  { key: 'grossRent', label: 'Gross Rent (annual)', kind: 'moneyYear' },
+  { key: 'vacancy', label: 'Vacancy Loss', kind: 'moneyYear' },
+  { key: 'netOperatingIncome', label: 'Net Operating Income', kind: 'moneyYear' },
+  { key: 'annualDebtService', label: 'Annual Debt Service', kind: 'moneyYear' },
+]
+
+function ProFormaTable({ proForma }: { proForma: Record<string, unknown> | undefined }) {
+  if (!proForma) return null
+  const rows = PRO_FORMA_FIELDS.map(f => {
+    const v = proForma[f.key]
+    const n = typeof v === 'number' && Number.isFinite(v) ? v : null
+    let value = '—'
+    if (n != null) {
+      if (f.kind === 'money') value = fmtMoneyFull(n)
+      else if (f.kind === 'moneyYear') value = `${fmtMoneyFull(n)}/yr`
+      else if (f.kind === 'moneyMonth') value = `${fmtMoneyFull(n)}/mo`
+      else value = fmtPct(n)
+    }
+    return { label: f.label, value }
+  })
+
+  return (
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 10,
+        padding: '6px 20px',
+      }}
+    >
+      {rows.map((r, i) => (
+        <div
+          key={r.label}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: 12,
+            padding: '12px 0',
+            borderBottom: i === rows.length - 1 ? 'none' : '1px solid var(--hairline)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+          }}
+        >
+          <span style={{ color: 'var(--text-muted)' }}>{r.label}</span>
+          <span style={{ color: 'var(--text)', fontWeight: 500 }}>{r.value}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 /* ============================ PAGE ============================ */
@@ -1756,19 +1504,20 @@ export default function V3AnalyzePage() {
   const [propLoading, setPropLoading] = useState(false)
   const [propError, setPropError] = useState('')
   const [form, setForm] = useState<EditForm | null>(null)
+  const [params, setParams] = useState<DealParams>(dealDefaultsFor('BRRRR'))
 
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState('')
   const [rateLimit, setRateLimit] = useState<{ retryAfter: number } | null>(null)
   const [result, setResult] = useState<V3AnalysisResult | null>(null)
   const [calculations, setCalculations] = useState<Record<string, unknown> | null>(null)
-  const [progressStep, setProgressStep] = useState('')
+  const [progressSteps, setProgressSteps] = useState<ThinkingStep[]>([])
 
   const [dealStatus, setDealStatus] = useState<PipelineStatus>('Watching')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const [expandedModel, setExpandedModel] = useState<number | null>(null)
+  const [expandedModelId, setExpandedModelId] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
 
   const proMax = useProMaxAnalysis()
@@ -1778,6 +1527,11 @@ export default function V3AnalyzePage() {
     if (result?.dealScore != null) setDealStatus(defaultStatusFromScore(result.dealScore))
   }, [result?.dealScore])
 
+  // Strategy change: reset deal params to the strategy's defaults.
+  useEffect(() => {
+    setParams(dealDefaultsFor(strategy))
+  }, [strategy])
+
   const onAddressFetch = async () => {
     if (!address.trim()) return
     setPropLoading(true)
@@ -1785,10 +1539,12 @@ export default function V3AnalyzePage() {
     setPropData(null)
     setResult(null)
     setCalculations(null)
+    setProgressSteps([])
     setAnalysisError('')
     setRateLimit(null)
     setForm(null)
     setSaveState('idle')
+    setExpandedModelId(null)
     try {
       const data = await fetchPropertyData(address.trim(), strategy)
       setPropData(data)
@@ -1800,14 +1556,13 @@ export default function V3AnalyzePage() {
     }
   }
 
-  // Re-seed strategy-specific defaults when strategy changes but preserve universal
-  // overrides the user already typed.
+  // Strategy change while property data loaded: reseed strategy-specific form.
   useEffect(() => {
     if (!propData || !form) return
     setForm(prev => {
       if (!prev) return prev
       const seeded = makeInitialForm(strategy, propData)
-      return { ...seeded, ...prev, arvConfidence: seeded.arvConfidence, loanTerm: seeded.loanTerm, loanType: seeded.loanType }
+      return { ...seeded, ...prev, arvConfidence: seeded.arvConfidence }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strategy])
@@ -1824,11 +1579,11 @@ export default function V3AnalyzePage() {
     setRateLimit(null)
     setResult(null)
     setCalculations(null)
-    setProgressStep('')
-    setExpandedModel(null)
+    setProgressSteps([])
+    setExpandedModelId(null)
     setSaveState('idle')
 
-    const body = buildAnalyzeBody(address, strategy, propData, form)
+    const body = buildAnalyzeBody(address, strategy, propData, form, params)
 
     if (isProMaxMode) {
       proMax.resetResults()
@@ -1844,7 +1599,7 @@ export default function V3AnalyzePage() {
 
     try {
       const { result: res, calculations: calc } = await runStandardAnalysis(body, (step, detail) => {
-        setProgressStep(detail || step)
+        setProgressSteps(prev => [...prev, { step, detail, timestamp: Date.now() }])
       })
       setResult(res)
       setCalculations(calc)
@@ -1885,6 +1640,7 @@ export default function V3AnalyzePage() {
             annual_cash_flow: result.cashFlow?.annual,
             arv: result.metrics?.arvEstimate,
             roi: result.metrics?.roi,
+            ...aiFinOf(result),
           },
         },
       }
@@ -1905,20 +1661,478 @@ export default function V3AnalyzePage() {
     }
   }
 
-  const signal = signalFromDealScore(result?.dealScore)
-  const narrativeBlurred = tier === 'free' && result != null
-  const secondaryBlurred = tier === 'free' && result != null
-
   const showEmpty =
     !propData && !propLoading && !propError && !result && !analysisLoading && !proMax.isRunning
   const isDev = process.env.NODE_ENV === 'development'
 
-  const updateForm = (patch: Partial<EditForm>) => {
-    setForm(prev => (prev ? { ...prev, ...patch } : prev))
+  const updateForm = (patch: Partial<EditForm>) => setForm(prev => (prev ? { ...prev, ...patch } : prev))
+  const updateParams = (patch: Partial<DealParams>) => setParams(prev => ({ ...prev, ...patch }))
+
+  const expandedModel = useMemo(() => {
+    if (!expandedModelId) return null
+    return proMax.modelResults.find(m => m.modelId === expandedModelId) || null
+  }, [expandedModelId, proMax.modelResults])
+
+  /* ---------------- render a full result view (reusable) ---------------- */
+
+  const renderResultsView = (
+    viewResult: V3AnalysisResult,
+    viewCalc: Record<string, unknown> | null,
+    modelLabel?: string
+  ) => {
+    const signal = signalFromDealScore(viewResult.dealScore)
+    const narrativeBlurred = tier === 'free'
+    const secondaryBlurred = tier === 'free'
+    const primary = primaryMetricsFor(strategy, viewResult, viewCalc, form, params)
+    const secondary = secondaryMetricsFor(strategy, viewResult, viewCalc, form, params)
+    const arv = toNum(form?.arv) ?? (viewResult.metrics?.arvEstimate ?? 0)
+    const rehab = toNum(form?.rehabCost) ?? 0
+    const purchase = toNum(form?.purchasePrice) ?? 0
+    const sellClosingPct = toNum(params.sellClosingCosts) ?? 6
+    const dpPct = toNum(params.downPaymentPercent) ?? 20
+    const rate = toNum(params.interestRate) ?? 7.5
+    const term = toNum(params.loanTerm) ?? 30
+    const holdingMonths = toNum(params.holdingMonths) ?? 6
+    const closingPct = toNum(params.closingCosts) ?? 3
+    const monthlyCF =
+      viewResult.cashFlow?.monthlyCashFlow != null
+        ? viewResult.cashFlow.monthlyCashFlow
+        : (viewResult.cashFlow?.monthly ?? 0)
+    const maxOffer = arv > 0 ? arv * 0.85 - rehab : 0
+    const refiProceeds = arv > 0 ? arv * 0.75 : 0
+
+    return (
+      <>
+        {/* Deal score strip */}
+        <section style={{ marginBottom: 18 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  letterSpacing: '0.12em',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {modelLabel ? `${modelLabel} · Deal score` : 'Deal score'}
+              </span>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 40,
+                  fontWeight: 700,
+                  letterSpacing: '-0.02em',
+                  color:
+                    viewResult.dealScore != null && viewResult.dealScore >= 7
+                      ? '#34D399'
+                      : viewResult.dealScore != null && viewResult.dealScore <= 4
+                        ? '#F87171'
+                        : '#FBBF24',
+                  lineHeight: 1,
+                  marginTop: 6,
+                }}
+              >
+                {viewResult.dealScore != null ? `${viewResult.dealScore}/10` : '—'}
+              </div>
+            </div>
+            <SignalBadge signal={signal as Signal} />
+          </div>
+        </section>
+
+        {/* Primary metrics */}
+        <section style={{ marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {primary.map(m => (
+              <div
+                key={m.label}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--hairline)',
+                  borderRadius: 10,
+                  padding: 16,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    letterSpacing: '0.12em',
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {m.label}
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 28,
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    color: m.accent || 'var(--text)',
+                    lineHeight: 1,
+                    marginTop: 8,
+                  }}
+                >
+                  {m.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Chart */}
+        {purchase > 0 && (
+          <section style={{ marginBottom: 20 }}>
+            {strategy === 'Fix & Flip' ? (
+              <FlipChart
+                purchasePrice={purchase}
+                rehabCost={rehab}
+                closingCostsPercent={closingPct}
+                sellClosingCostsPercent={sellClosingPct}
+                interestRate={rate}
+                downPaymentPercent={dpPct}
+                holdingMonths={holdingMonths}
+                arv={arv}
+              />
+            ) : (
+              <HoldChart
+                purchasePrice={purchase}
+                downPaymentPercent={dpPct}
+                interestRate={rate}
+                loanTermYears={term}
+                monthlyCashFlow={monthlyCF}
+              />
+            )}
+          </section>
+        )}
+
+        {/* Secondary metrics */}
+        <section style={{ marginBottom: 20, position: 'relative' }}>
+          <div style={{ marginBottom: 10 }}>
+            <SectionLabel color="var(--text-muted)">
+              {strategy === 'Fix & Flip'
+                ? 'Flip economics'
+                : strategy === 'BRRRR'
+                  ? 'BRRRR details'
+                  : strategy === 'House Hack'
+                    ? 'House-hack breakdown'
+                    : 'Full underwriting'}
+            </SectionLabel>
+          </div>
+          <div
+            style={{
+              filter: secondaryBlurred ? 'blur(4px)' : 'none',
+              pointerEvents: secondaryBlurred ? 'none' : 'auto',
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gap: 10,
+              }}
+            >
+              {secondary.map(m => (
+                <div
+                  key={m.label}
+                  style={{
+                    background: 'var(--bg)',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 8,
+                    padding: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      letterSpacing: '0.12em',
+                      color: 'var(--text-muted)',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {m.label}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 20,
+                      fontWeight: 600,
+                      color: 'var(--text)',
+                      marginTop: 6,
+                    }}
+                  >
+                    {m.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {secondaryBlurred && <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />}
+        </section>
+
+        {/* Max offer recommendation */}
+        {(strategy === 'Fix & Flip' || strategy === 'BRRRR') && arv > 0 && (
+          <section style={{ marginBottom: 12 }}>
+            <div
+              style={{
+                background: 'var(--indigo-dim)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 12,
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 16,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    letterSpacing: '0.14em',
+                    color: 'var(--indigo-hover)',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {strategy === 'Fix & Flip' ? 'Recommended max offer' : 'Refi target @ 75% ARV'}
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 28,
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    color: 'var(--text)',
+                    marginTop: 4,
+                  }}
+                >
+                  {fmtMoneyFull(strategy === 'Fix & Flip' ? maxOffer : refiProceeds)}
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 360, lineHeight: 1.5 }}>
+                {strategy === 'Fix & Flip'
+                  ? `Formula: ARV × 85% − rehab. Stays under 70% rule with rehab of ${fmtMoneyFull(rehab)}.`
+                  : `Expected cash back on refi, assuming 75% LTV against ARV of ${fmtMoneyFull(arv)}.`}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Narrative + risk flags */}
+        {(viewResult.narrative || (viewResult.riskFlags && viewResult.riskFlags.length > 0)) && (
+          <section style={{ marginBottom: 20, position: 'relative' }}>
+            <div
+              style={{
+                filter: narrativeBlurred ? 'blur(4px)' : 'none',
+                pointerEvents: narrativeBlurred ? 'none' : 'auto',
+              }}
+            >
+              {viewResult.narrative && (
+                <div
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 12,
+                    padding: 20,
+                    marginBottom: 12,
+                  }}
+                >
+                  <SectionLabel>AI NARRATIVE</SectionLabel>
+                  <p style={{ margin: '10px 0 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                    {viewResult.narrative}
+                  </p>
+                  {viewResult.marketContext && (
+                    <>
+                      <div style={{ marginTop: 14 }}>
+                        <SectionLabel color="var(--text-muted)">Market context</SectionLabel>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                        {viewResult.marketContext}
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+              {viewResult.riskFlags && viewResult.riskFlags.length > 0 && (
+                <div
+                  style={{
+                    background: 'var(--surface)',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 12,
+                    padding: 20,
+                  }}
+                >
+                  <SectionLabel color="var(--text-muted)">RISK FLAGS</SectionLabel>
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10,
+                    }}
+                  >
+                    {viewResult.riskFlags.map((flag, i) => (
+                      <li key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: 'var(--text-secondary)' }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 9,
+                            fontWeight: 600,
+                            letterSpacing: '0.1em',
+                            color:
+                              flag.severity === 'high'
+                                ? '#F87171'
+                                : flag.severity === 'medium'
+                                  ? '#FBBF24'
+                                  : '#34D399',
+                            background:
+                              flag.severity === 'high'
+                                ? 'rgba(239,68,68,0.12)'
+                                : flag.severity === 'medium'
+                                  ? 'rgba(245,158,11,0.12)'
+                                  : 'rgba(16,185,129,0.12)',
+                            padding: '3px 8px',
+                            borderRadius: 4,
+                            textTransform: 'uppercase',
+                            flexShrink: 0,
+                            height: 20,
+                            alignSelf: 'flex-start',
+                          }}
+                        >
+                          {flag.severity}
+                        </span>
+                        <span>
+                          <strong style={{ color: 'var(--text)', fontWeight: 500 }}>{flag.flag}</strong>
+                          {flag.detail ? ` — ${flag.detail}` : ''}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            {narrativeBlurred && <UpgradeOverlay message="Upgrade to Pro to unlock full analysis" />}
+          </section>
+        )}
+
+        {/* Pro Forma table */}
+        {viewResult.proForma && (
+          <section style={{ marginBottom: 12 }}>
+            <AnalysisAccordion title="Pro Forma" subtitle="All line items">
+              <ProFormaTable proForma={viewResult.proForma} />
+            </AnalysisAccordion>
+          </section>
+        )}
+
+        {/* Rent comps */}
+        {propData?.comparables?.rentals && propData.comparables.rentals.length > 0 && (
+          <section style={{ marginBottom: 12 }}>
+            <AnalysisAccordion title="Rent Comps" subtitle="Closest matched rentals">
+              <div>
+                {propData.comparables.rentals.slice(0, 3).map((c, i, arr) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '2fr 1fr 1fr 1fr',
+                      gap: 12,
+                      padding: '10px 0',
+                      borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--hairline)',
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 12,
+                    }}
+                  >
+                    <span style={{ color: 'var(--text)' }}>{c.formattedAddress || c.address || '—'}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>
+                      {c.bedrooms ?? '?'}/{c.bathrooms ?? '?'}
+                    </span>
+                    <span style={{ color: 'var(--text)', fontWeight: 500 }}>{fmtMoneyFull(c.rent ?? null)}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {c.distance != null ? `${c.distance.toFixed(2)} mi` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </AnalysisAccordion>
+          </section>
+        )}
+
+        {/* Recommendation */}
+        {viewResult.recommendation && (
+          <section style={{ marginBottom: 12 }}>
+            <AnalysisAccordion title="Offer Recommendation" subtitle="AI suggested action" defaultOpen>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                {viewResult.recommendation}
+              </p>
+            </AnalysisAccordion>
+          </section>
+        )}
+
+        {isDev && (
+          <section style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              onClick={() => setShowRaw(v => !v)}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--hairline)',
+                color: 'var(--text-muted)',
+                borderRadius: 6,
+                padding: '6px 10px',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.08em',
+              }}
+            >
+              {showRaw ? 'Hide raw response' : 'Show raw response (dev)'}
+            </button>
+            {showRaw && (
+              <pre
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  background: 'var(--bg)',
+                  border: '1px solid var(--hairline)',
+                  padding: 12,
+                  borderRadius: 8,
+                  overflow: 'auto',
+                  marginTop: 8,
+                  color: 'var(--text-secondary)',
+                  maxHeight: 500,
+                }}
+              >
+                {JSON.stringify({ result: viewResult, calculations: viewCalc }, null, 2)}
+              </pre>
+            )}
+          </section>
+        )}
+      </>
+    )
   }
+
+  /* ----------------------- render ----------------------- */
 
   return (
     <div style={{ padding: '28px 28px 80px', maxWidth: 1440, margin: '0 auto' }}>
+      {/* Address input */}
       <div
         style={{
           position: 'relative',
@@ -1954,6 +2168,7 @@ export default function V3AnalyzePage() {
         </button>
       </div>
 
+      {/* Strategy + model */}
       <div
         style={{
           display: 'flex',
@@ -1978,7 +2193,27 @@ export default function V3AnalyzePage() {
 
       {propLoading && (
         <div style={{ marginBottom: 22 }}>
-          <LoadingDot label="Pulling property data from RentCast..." />
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                background: 'var(--blue)',
+                boxShadow: '0 0 0 6px rgba(59,130,246,0.14)',
+                animation: 'v3-pulse 1.8s ease-in-out infinite',
+              }}
+            />
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)' }}>
+              Pulling property data from RentCast…
+            </span>
+          </div>
         </div>
       )}
 
@@ -1989,26 +2224,112 @@ export default function V3AnalyzePage() {
       )}
 
       {propData && form && (
-        <EditablePanel
-          strategy={strategy}
-          propertyData={propData}
-          form={form}
-          onChange={updateForm}
-          onRun={onAnalyze}
-          submitting={analysisLoading || proMax.isRunning}
-        />
+        <>
+          <EditablePanel
+            strategy={strategy}
+            propertyData={propData}
+            form={form}
+            onChange={updateForm}
+          />
+          <DealParametersPanel
+            strategy={strategy}
+            value={params}
+            onChange={updateParams}
+            purchasePrice={toNum(form.purchasePrice) ?? 0}
+            arv={toNum(form.arv) ?? 0}
+            rehab={toNum(form.rehabCost) ?? 0}
+            rentcastPropertyTax={propData.property?.propertyTaxes ?? null}
+          />
+          <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="app-btn"
+              onClick={onAnalyze}
+              disabled={analysisLoading || proMax.isRunning || isCashLoan(params.loanType) === false && !form.purchasePrice}
+              style={{ padding: '12px 22px', fontSize: 14 }}
+            >
+              {analysisLoading || proMax.isRunning ? 'Running…' : 'Run Analysis →'}
+            </button>
+          </div>
+        </>
       )}
 
-      {propData && (analysisLoading || proMax.isRunning) && (
-        <div style={{ marginTop: 16 }}>
-          <LoadingDot
-            label={
-              isProMaxMode
-                ? `Running parallel analysis (${proMax.completedCount}/${proMax.totalModels})…`
-                : progressStep || 'Running analysis…'
-            }
-          />
-        </div>
+      {(analysisLoading || proMax.isRunning) && (
+        <ThinkingUI
+          address={address}
+          steps={
+            isProMaxMode
+              ? proMax.modelResults
+                  .flatMap(mr =>
+                    mr.progressSteps.map(ps => ({
+                      step: `${mr.modelLabel}: ${ps.step}`,
+                      detail: ps.detail,
+                      timestamp: ps.timestamp,
+                    }))
+                  )
+                  .slice(-8)
+              : progressSteps.slice(-8)
+          }
+          extra={
+            isProMaxMode ? (
+              <div
+                style={{
+                  marginTop: 6,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 10,
+                }}
+              >
+                {proMax.modelResults.map((mr, i) => {
+                  const cfg = PRO_MAX_MODELS[i]
+                  return (
+                    <div
+                      key={mr.modelId}
+                      style={{
+                        background: 'var(--bg)',
+                        border: '1px solid var(--hairline)',
+                        borderRadius: 8,
+                        padding: 12,
+                      }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)' }}>
+                        {cfg?.roleLabel || mr.role}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                        {mr.modelLabel}
+                      </div>
+                      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background:
+                              mr.status === 'complete'
+                                ? 'var(--green)'
+                                : mr.status === 'error'
+                                  ? 'var(--red)'
+                                  : 'var(--blue)',
+                            animation: mr.status === 'loading' ? 'v3-pulse 1.4s ease-in-out infinite' : 'none',
+                          }}
+                        />
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+                          {mr.status === 'loading'
+                            ? mr.progressSteps.at(-1)?.detail || 'Running…'
+                            : mr.status === 'complete'
+                              ? 'Complete'
+                              : mr.status === 'error'
+                                ? 'Error'
+                                : 'Pending'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : undefined
+          }
+        />
       )}
 
       {rateLimit && (
@@ -2034,9 +2355,30 @@ export default function V3AnalyzePage() {
         </div>
       )}
 
-      {/* ------------- Pro Max 3-model comparison ------------- */}
-      {isProMaxMode && (proMax.isRunning || proMax.completedCount > 0) && (
+      {/* Pro Max expanded single-model view */}
+      {isProMaxMode && expandedModel && expandedModel.parsedResult && (
+        <div style={{ marginTop: 24 }}>
+          <button
+            type="button"
+            onClick={() => setExpandedModelId(null)}
+            className="app-btn-ghost"
+            style={{ padding: '7px 14px', fontSize: 12, marginBottom: 16 }}
+          >
+            ← Back to comparison
+          </button>
+          <StatusBar value={dealStatus} onChange={setDealStatus} onSave={onSaveToPipeline} saveState={saveState} />
+          {renderResultsView(
+            expandedModel.parsedResult as V3AnalysisResult,
+            expandedModel.serverCalculations as Record<string, unknown> | null,
+            expandedModel.modelLabel
+          )}
+        </div>
+      )}
+
+      {/* Pro Max 3-card comparison grid (collapsed) */}
+      {isProMaxMode && !expandedModel && !proMax.isRunning && proMax.completedCount > 0 && (
         <section style={{ marginTop: 24 }}>
+          <StatusBar value={dealStatus} onChange={setDealStatus} onSave={onSaveToPipeline} saveState={saveState} />
           <div
             style={{
               display: 'flex',
@@ -2055,459 +2397,186 @@ export default function V3AnalyzePage() {
                 textTransform: 'uppercase',
               }}
             >
-              AI CONSENSUS ({proMax.completedCount}/{proMax.totalModels})
+              AI CONSENSUS ({proMax.completedCount}/{proMax.totalModels}) · Click a card to expand
             </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {proMax.modelResults.map((mr, i) => {
-              const modelCfg = PRO_MAX_MODELS[i]
+              const cfg = PRO_MAX_MODELS[i]
               const parsed = mr.parsedResult as V3AnalysisResult | null
+              const s = parsed ? signalFromDealScore(parsed.dealScore) : null
+              const clickable = mr.status === 'complete' && parsed != null
+
+              // Strategy-specific preview metrics
+              const preview: { label: string; value: string }[] =
+                strategy === 'Fix & Flip'
+                  ? [
+                      {
+                        label: 'SCORE',
+                        value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
+                      },
+                      { label: 'NET PROFIT', value: fmtMoney(aiFinOf(parsed || {} as V3AnalysisResult).net_profit) },
+                    ]
+                  : strategy === 'BRRRR'
+                    ? [
+                        {
+                          label: 'SCORE',
+                          value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
+                        },
+                        { label: 'CoC', value: fmtPct(parsed?.metrics?.cashOnCash) },
+                      ]
+                    : strategy === 'House Hack'
+                      ? [
+                          {
+                            label: 'SCORE',
+                            value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
+                          },
+                          {
+                            label: 'SAVINGS',
+                            value: fmtMonthly(
+                              parsed?.cashFlow?.monthly != null ? -parsed.cashFlow.monthly : undefined
+                            ),
+                          },
+                        ]
+                      : [
+                          {
+                            label: 'SCORE',
+                            value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
+                          },
+                          { label: 'CF/MO', value: fmtMoney(parsed?.cashFlow?.monthly) },
+                        ]
+
               return (
-                <ProMaxCard
+                <button
                   key={mr.modelId}
-                  idx={i}
-                  cfg={modelCfg}
-                  modelLabel={mr.modelLabel}
-                  parsed={parsed}
-                  status={mr.status}
-                  error={mr.error}
-                  progressDetail={mr.progressSteps.at(-1)?.detail || ''}
-                  expanded={expandedModel === i}
-                  onToggle={() => setExpandedModel(prev => (prev === i ? null : i))}
-                />
+                  type="button"
+                  disabled={!clickable}
+                  onClick={() => clickable && setExpandedModelId(mr.modelId)}
+                  style={{
+                    position: 'relative',
+                    textAlign: 'left',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 10,
+                    padding: 20,
+                    overflow: 'hidden',
+                    minHeight: 220,
+                    cursor: clickable ? 'pointer' : 'default',
+                    transition: 'border-color 180ms ease, transform 180ms ease',
+                  }}
+                  onMouseEnter={e => {
+                    if (clickable) {
+                      e.currentTarget.style.borderColor = 'var(--border-strong)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'var(--hairline)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 3,
+                      background: cfg?.accentColor || '#6366F1',
+                    }}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
+                        {cfg?.roleLabel || `Model ${i + 1}`}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                        {mr.modelLabel}
+                      </div>
+                    </div>
+                    {s && <SignalBadge signal={s} />}
+                  </div>
+                  {mr.status === 'error' && <AlertBox kind="error">{mr.error || 'Model failed'}</AlertBox>}
+                  {parsed && (
+                    <>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 13,
+                          color: 'var(--text-secondary)',
+                          lineHeight: 1.6,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {parsed.narrative || parsed.recommendation || 'No narrative returned.'}
+                      </p>
+                      <div
+                        style={{
+                          borderTop: '1px solid var(--hairline)',
+                          marginTop: 14,
+                          paddingTop: 12,
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, 1fr)',
+                          gap: 12,
+                        }}
+                      >
+                        {preview.map(p => (
+                          <div key={p.label}>
+                            <div
+                              style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 8,
+                                letterSpacing: '0.12em',
+                                color: 'var(--text-muted)',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {p.label}
+                            </div>
+                            <div
+                              style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 15,
+                                fontWeight: 600,
+                                color: 'var(--text)',
+                                marginTop: 3,
+                              }}
+                            >
+                              {p.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {clickable && (
+                        <div
+                          style={{
+                            marginTop: 12,
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 10,
+                            letterSpacing: '0.1em',
+                            color: 'var(--indigo-hover)',
+                          }}
+                        >
+                          View full analysis →
+                        </div>
+                      )}
+                    </>
+                  )}
+                </button>
               )
             })}
           </div>
         </section>
       )}
 
-      {/* ------------- Standard single-model results ------------- */}
+      {/* Standard single-model results */}
       {!isProMaxMode && result && (
         <div style={{ marginTop: 24 }}>
-          <StatusBar
-            value={dealStatus}
-            onChange={setDealStatus}
-            onSave={onSaveToPipeline}
-            saveState={saveState}
-          />
-
-          <section style={{ marginBottom: 20 }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 16,
-                flexWrap: 'wrap',
-                marginBottom: 12,
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.12em',
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                }}
-              >
-                Deal score · {result.dealScore != null ? `${result.dealScore}/10` : '—'}
-              </span>
-              <SignalBadge signal={signal as Signal} />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-              {[
-                { label: 'CAP RATE', value: fmtPct(result.metrics?.capRate), accent: '#34D399' },
-                { label: 'CASH-ON-CASH', value: fmtPct(result.metrics?.cashOnCash), accent: '#34D399' },
-                {
-                  label: 'CF / MONTH',
-                  value:
-                    result.cashFlow?.monthlyCashFlow != null
-                      ? fmtMoney(result.cashFlow.monthlyCashFlow)
-                      : fmtMoney(result.cashFlow?.monthly),
-                  accent: 'var(--text)',
-                },
-                {
-                  label: '5-YR ROI',
-                  value:
-                    result.metrics?.fiveYearROI != null
-                      ? fmtPct(result.metrics.fiveYearROI)
-                      : fmtPct(result.metrics?.roi),
-                  accent: 'var(--indigo-hover)',
-                },
-              ].map(m => (
-                <div
-                  key={m.label}
-                  style={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--hairline)',
-                    borderRadius: 10,
-                    padding: 16,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      letterSpacing: '0.12em',
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {m.label}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 30,
-                      fontWeight: 700,
-                      letterSpacing: '-0.02em',
-                      color: m.accent,
-                      lineHeight: 1,
-                      marginTop: 8,
-                    }}
-                  >
-                    {m.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ------------- Secondary metrics (Fix 6) ------------- */}
-          <section style={{ marginBottom: 20, position: 'relative' }}>
-            <div style={{ marginBottom: 10 }}>
-              <SectionLabel color="var(--text-muted)">
-                {strategy === 'Fix & Flip' ? 'Flip economics' : 'Full underwriting'}
-              </SectionLabel>
-            </div>
-            <div
-              style={{
-                filter: secondaryBlurred ? 'blur(4px)' : 'none',
-                pointerEvents: secondaryBlurred ? 'none' : 'auto',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                  gap: 10,
-                }}
-              >
-                {secondaryMetricsFor(strategy, result, form).map(m => (
-                  <div
-                    key={m.label}
-                    style={{
-                      background: 'var(--bg)',
-                      border: '1px solid var(--hairline)',
-                      borderRadius: 8,
-                      padding: 14,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 9,
-                        letterSpacing: '0.12em',
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {m.label}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 20,
-                        fontWeight: 600,
-                        color: 'var(--text)',
-                        marginTop: 6,
-                        letterSpacing: '-0.01em',
-                      }}
-                    >
-                      {m.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {secondaryBlurred && <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />}
-          </section>
-
-          {(result.narrative || (result.riskFlags && result.riskFlags.length > 0)) && (
-            <section style={{ marginBottom: 20, position: 'relative' }}>
-              <div
-                style={{
-                  filter: narrativeBlurred ? 'blur(4px)' : 'none',
-                  pointerEvents: narrativeBlurred ? 'none' : 'auto',
-                }}
-              >
-                {result.narrative && (
-                  <div
-                    style={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--hairline)',
-                      borderRadius: 12,
-                      padding: 20,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <SectionLabel>AI NARRATIVE</SectionLabel>
-                    <p style={{ margin: '10px 0 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                      {result.narrative}
-                    </p>
-                    {result.marketContext && (
-                      <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                        {result.marketContext}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {result.riskFlags && result.riskFlags.length > 0 && (
-                  <div
-                    style={{
-                      background: 'var(--surface)',
-                      border: '1px solid var(--hairline)',
-                      borderRadius: 12,
-                      padding: 20,
-                    }}
-                  >
-                    <SectionLabel color="var(--text-muted)">RISK FLAGS</SectionLabel>
-                    <ul
-                      style={{
-                        listStyle: 'none',
-                        padding: 0,
-                        margin: 0,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 10,
-                      }}
-                    >
-                      {result.riskFlags.map((flag, i) => (
-                        <li key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: 'var(--text-secondary)' }}>
-                          <span
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: 9,
-                              letterSpacing: '0.1em',
-                              color:
-                                flag.severity === 'high'
-                                  ? '#F87171'
-                                  : flag.severity === 'medium'
-                                    ? '#FBBF24'
-                                    : 'var(--text-muted)',
-                              textTransform: 'uppercase',
-                              flexShrink: 0,
-                              marginTop: 3,
-                            }}
-                          >
-                            [{flag.severity}]
-                          </span>
-                          <span>
-                            <strong style={{ color: 'var(--text)', fontWeight: 500 }}>{flag.flag}</strong>
-                            {flag.detail ? ` — ${flag.detail}` : ''}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-              {narrativeBlurred && <UpgradeOverlay message="Upgrade to Pro to unlock full analysis" />}
-            </section>
-          )}
-
-          {strategy === 'BRRRR' && result.proForma && (
-            <section style={{ marginBottom: 12 }}>
-              <AnalysisAccordion title="BRRRR Waterfall" subtitle="Acquisition → rehab → refi" defaultOpen>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 20px' }}>
-                  {[
-                    { label: 'Purchase', value: fmtMoney(result.proForma.purchasePrice as number | null | undefined) },
-                    { label: 'Rehab', value: fmtMoney(result.proForma.rehabCost as number | null | undefined) },
-                    { label: 'Total In', value: fmtMoney(result.proForma.totalInvestment as number | null | undefined) },
-                    {
-                      label: 'ARV',
-                      value: fmtMoney(
-                        (result.proForma.arvEstimate as number | null | undefined) ?? result.metrics?.arvEstimate
-                      ),
-                    },
-                    {
-                      label: 'Refi (75% ARV)',
-                      value: result.proForma.arvEstimate
-                        ? fmtMoney((result.proForma.arvEstimate as number) * 0.75)
-                        : '—',
-                    },
-                    {
-                      label: 'Cash Left In',
-                      value: fmtMoney(
-                        result.proForma.totalInvestment && result.proForma.arvEstimate
-                          ? (result.proForma.totalInvestment as number) -
-                              (result.proForma.arvEstimate as number) * 0.75
-                          : null
-                      ),
-                    },
-                    { label: 'Monthly Cash Flow', value: fmtMoney(result.cashFlow?.monthly) },
-                    { label: 'CoC Return', value: fmtPct(result.metrics?.cashOnCash) },
-                  ].map(row => (
-                    <div
-                      key={row.label}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        borderBottom: '1px solid var(--hairline)',
-                        padding: '8px 0',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 12,
-                      }}
-                    >
-                      <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{row.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </AnalysisAccordion>
-            </section>
-          )}
-
-          {propData?.comparables?.rentals && propData.comparables.rentals.length > 0 && (
-            <section style={{ marginBottom: 12 }}>
-              <AnalysisAccordion title="Rent Comps" subtitle="Closest matched rentals">
-                <div>
-                  {propData.comparables.rentals.slice(0, 3).map((c, i, arr) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '2fr 1fr 1fr 1fr',
-                        gap: 12,
-                        padding: '10px 0',
-                        borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--hairline)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 12,
-                      }}
-                    >
-                      <span style={{ color: 'var(--text)' }}>{c.formattedAddress || c.address || '—'}</span>
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        {c.bedrooms ?? '?'}/{c.bathrooms ?? '?'}
-                      </span>
-                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>{fmtMoney(c.rent ?? null)}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>
-                        {c.distance != null ? `${c.distance.toFixed(2)} mi` : '—'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </AnalysisAccordion>
-            </section>
-          )}
-
-          {result.metrics?.capRate != null && result.metrics.cashOnCash != null && result.cashFlow?.monthly != null && (
-            <section style={{ marginBottom: 12 }}>
-              <AnalysisAccordion title="Stress Test" subtitle="Base / Conservative / Bear">
-                <div>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
-                      gap: 12,
-                      padding: '8px 0',
-                      borderBottom: '1px solid var(--hairline)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      letterSpacing: '0.12em',
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    <span>Scenario</span>
-                    <span>Cap</span>
-                    <span>CoC</span>
-                    <span>CF/mo</span>
-                  </div>
-                  {[
-                    { name: 'Base', factor: 1.0 },
-                    { name: 'Conservative (−10%)', factor: 0.9 },
-                    { name: 'Bear (−20%)', factor: 0.8 },
-                  ].map((sc, i, arr) => (
-                    <div
-                      key={sc.name}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1.5fr 1fr 1fr 1fr',
-                        gap: 12,
-                        padding: '10px 0',
-                        borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--hairline)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 12,
-                      }}
-                    >
-                      <span style={{ color: 'var(--text)' }}>{sc.name}</span>
-                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                        {fmtPct((result.metrics?.capRate ?? 0) * sc.factor)}
-                      </span>
-                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                        {fmtPct((result.metrics?.cashOnCash ?? 0) * sc.factor)}
-                      </span>
-                      <span style={{ color: 'var(--text)', fontWeight: 500 }}>
-                        {fmtMoney((result.cashFlow?.monthly ?? 0) * sc.factor)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </AnalysisAccordion>
-            </section>
-          )}
-
-          {result.recommendation && (
-            <section style={{ marginBottom: 12 }}>
-              <AnalysisAccordion title="Offer Recommendation" subtitle="AI suggested action">
-                <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                  {result.recommendation}
-                </p>
-              </AnalysisAccordion>
-            </section>
-          )}
-
-          {isDev && (
-            <section style={{ marginTop: 16 }}>
-              <button
-                type="button"
-                onClick={() => setShowRaw(v => !v)}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--hairline)',
-                  color: 'var(--text-muted)',
-                  borderRadius: 6,
-                  padding: '6px 10px',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {showRaw ? 'Hide raw response' : 'Show raw response (dev)'}
-              </button>
-              {showRaw && (
-                <pre
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    background: 'var(--bg)',
-                    border: '1px solid var(--hairline)',
-                    padding: 12,
-                    borderRadius: 8,
-                    overflow: 'auto',
-                    marginTop: 8,
-                    color: 'var(--text-secondary)',
-                    maxHeight: 500,
-                  }}
-                >
-                  {JSON.stringify({ result, calculations }, null, 2)}
-                </pre>
-              )}
-            </section>
-          )}
+          <StatusBar value={dealStatus} onChange={setDealStatus} onSave={onSaveToPipeline} saveState={saveState} />
+          {renderResultsView(result, calculations)}
         </div>
       )}
     </div>
