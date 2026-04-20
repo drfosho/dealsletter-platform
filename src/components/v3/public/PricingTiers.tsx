@@ -23,7 +23,7 @@ const TIERS: Tier[] = [
     description: 'Run analyses on any address. Results blurred — upgrade to unlock.',
     features: ['1 model', 'Blurred results', 'Public listings only', '5 saves / mo'],
     cta: 'Start free →',
-    ctaHref: '/signup',
+    ctaHref: '/v3/signup',
   },
   {
     name: 'Pro',
@@ -34,7 +34,7 @@ const TIERS: Tier[] = [
     description: 'Full results, unlimited analyses, strategy-switching, saved pipeline.',
     features: ['2 models in parallel', 'Unlimited analyses', 'Full PDF export', 'Saved pipeline'],
     cta: 'Go Pro →',
-    ctaHref: '/signup',
+    ctaHref: '/v3/signup',
     highlight: true,
   },
   {
@@ -52,7 +52,7 @@ const TIERS: Tier[] = [
       'API + webhooks',
     ],
     cta: 'Unlock Max IQ →',
-    ctaHref: '/signup',
+    ctaHref: '/v3/signup',
   },
 ]
 

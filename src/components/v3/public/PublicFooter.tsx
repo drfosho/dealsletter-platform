@@ -55,7 +55,7 @@ const PRODUCT = [
   { label: 'Scout', href: '/scout' },
   { label: 'Analyze', href: '/how-it-works' },
   { label: 'Markets', href: '/markets' },
-  { label: 'Pipeline', href: '/signup' },
+  { label: 'Pipeline', href: '/v3/signup' },
 ]
 const DATA = [
   { label: 'Coverage', href: '/markets' },

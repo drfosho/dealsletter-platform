@@ -233,7 +233,7 @@ export default function HowItWorksPage() {
 
       <section style={{ padding: '0 40px 120px', maxWidth: 1440, margin: '0 auto', textAlign: 'center' }}>
         <Link
-          href="/signup"
+          href="/v3/signup"
           className="app-btn"
           style={{ padding: '12px 22px', fontSize: 14, display: 'inline-flex' }}
         >

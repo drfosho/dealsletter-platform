@@ -42,7 +42,7 @@ function Hero() {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
-    router.push('/signup')
+    router.push('/v3/signup')
   }
 
   return (

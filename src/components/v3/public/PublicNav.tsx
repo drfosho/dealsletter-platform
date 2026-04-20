@@ -102,10 +102,10 @@ export default function PublicNav() {
       </nav>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Link href="/login" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 13 }}>
+        <Link href="/v3/login" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 13 }}>
           Sign in
         </Link>
-        <Link href="/signup" className="app-btn" style={{ padding: '7px 14px', fontSize: 13 }}>
+        <Link href="/v3/signup" className="app-btn" style={{ padding: '7px 14px', fontSize: 13 }}>
           Start free
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12" />
