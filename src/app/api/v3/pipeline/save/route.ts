@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       aiAnalysis,
       cashFlow,
       proForma,
+      status,
     } = body as Record<string, unknown>
 
     if (!address || typeof address !== 'string') {
@@ -58,6 +59,10 @@ export async function POST(request: NextRequest) {
     const m = (metrics as Record<string, number | null | undefined>) || {}
     const cf = (cashFlow as Record<string, number | null | undefined>) || {}
 
+    const ALLOWED_STATUSES = ['Watching', 'Reviewing', 'Saved', 'Strong Buy', 'Passed']
+    const initialStatus =
+      typeof status === 'string' && ALLOWED_STATUSES.includes(status) ? status : 'Watching'
+
     const analysisData = {
       strategy,
       signal,
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest) {
       proForma,
       property_data: propertyData,
       ai_analysis: aiAnalysis,
-      v3_pipeline_status: 'Watching',
+      v3_pipeline_status: initialStatus,
       v3_saved_at: new Date().toISOString(),
     }
 

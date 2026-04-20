@@ -1,9 +1,15 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef, FormEvent } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import AnalysisAccordion from '@/components/v3/app/AnalysisAccordion'
+import AddressAutocomplete from '@/components/v3/app/AddressAutocomplete'
+import PropertyEditCard, {
+  makeInitialEditable,
+  inferUnitCount,
+  type EditableProperty,
+} from '@/components/v3/app/PropertyEditCard'
 import { useV3Tier } from '@/hooks/useV3Tier'
 import {
   useProMaxAnalysis,
@@ -16,6 +22,7 @@ import {
   type V3AnalysisResult,
   type Signal,
 } from '@/lib/v3-analysis-parser'
+import type { PipelineStatus } from '@/data/v3-deals'
 
 /* ----------------------------- types ----------------------------- */
 
@@ -23,8 +30,7 @@ type Strategy = 'BRRRR' | 'Fix & Flip' | 'Buy & Hold' | 'House Hack'
 const STRATEGIES: Strategy[] = ['BRRRR', 'Fix & Flip', 'Buy & Hold', 'House Hack']
 
 type ModelTier = 'speed' | 'balanced' | 'max'
-type ModelOption = { key: ModelTier; label: string; sub: string }
-const MODEL_OPTIONS: ModelOption[] = [
+const MODEL_OPTIONS: { key: ModelTier; label: string; sub: string }[] = [
   { key: 'speed', label: 'Speed', sub: 'GPT-4o-mini' },
   { key: 'balanced', label: 'Balanced', sub: 'Sonnet + GPT-4.1' },
   { key: 'max', label: 'Max IQ', sub: 'Opus + GPT-4o + Grok 3' },
@@ -33,6 +39,7 @@ const MODEL_OPTIONS: ModelOption[] = [
 type PropertyData = {
   isDemo?: boolean
   demo?: boolean
+  address?: string
   property?: {
     beds?: number
     baths?: number
@@ -53,8 +60,6 @@ type PropertyData = {
   }
   arvAnalysis?: {
     arvEstimate?: number
-    arvLow?: number
-    arvHigh?: number
     compsUsed?: number
     confidence?: string
   }
@@ -78,10 +83,9 @@ type PropertyData = {
       distance?: number
     }>
   }
-  address?: string
 }
 
-/* --------------------------- strategy helpers --------------------------- */
+/* --------------------------- helpers --------------------------- */
 
 function apiStrategyFor(strategy: Strategy): string {
   if (strategy === 'BRRRR') return 'brrrr'
@@ -107,21 +111,199 @@ function fmtInt(n: number | null | undefined): string {
   return Math.round(n).toLocaleString()
 }
 
-/* --------------------------- UI pieces --------------------------- */
+function toNum(s: string | undefined | null): number | undefined {
+  if (s == null) return undefined
+  const n = parseFloat(String(s).replace(/[^0-9.\-]/g, ''))
+  return Number.isFinite(n) ? n : undefined
+}
+
+function defaultStatusFromScore(score: number | null | undefined): PipelineStatus {
+  if (score == null) return 'Watching'
+  if (score >= 8) return 'Strong Buy'
+  if (score >= 6) return 'Reviewing'
+  return 'Watching'
+}
+
+/* ------------------------ body builder ------------------------ */
+
+function buildAnalyzeBody(
+  address: string,
+  strategy: Strategy,
+  propertyData: PropertyData,
+  edited: EditableProperty
+): Record<string, unknown> {
+  const purchasePrice = toNum(edited.listPrice) || 0
+  const estimatedValue = toNum(edited.estimatedValue) || purchasePrice
+  const monthlyRent = toNum(edited.estimatedRent)
+  const arv = toNum(edited.arv) || estimatedValue
+  const rehab = toNum(edited.rehabCost) ?? 0
+  const dpPercent = toNum(edited.downPaymentPercent) ?? 20
+  const interestRate = toNum(edited.interestRate) ?? 7.5
+  const term = edited.loanTerm || 30
+  const units =
+    strategy === 'House Hack'
+      ? toNum(edited.units) || inferUnitCount(propertyData.property?.propertyType)
+      : 1
+  const apiLoanType = 'conventional'
+
+  const mergedPropertyData = {
+    ...propertyData,
+    property: {
+      ...(propertyData.property || {}),
+      bedrooms: toNum(edited.beds) ?? propertyData.property?.bedrooms ?? propertyData.property?.beds,
+      bathrooms: toNum(edited.baths) ?? propertyData.property?.bathrooms ?? propertyData.property?.baths,
+      squareFootage:
+        toNum(edited.sqft) ?? propertyData.property?.squareFootage ?? propertyData.property?.sqft,
+      yearBuilt: toNum(edited.yearBuilt) ?? propertyData.property?.yearBuilt,
+      estimatedValue,
+    },
+    rental: {
+      ...(propertyData.rental || {}),
+      rentEstimate: monthlyRent ?? propertyData.rental?.rentEstimate,
+    },
+    comparables: {
+      ...(propertyData.comparables || {}),
+      value: estimatedValue,
+    },
+  }
+
+  return {
+    address,
+    strategy: apiStrategyFor(strategy),
+    purchasePrice,
+    downPayment: Math.round(purchasePrice * (dpPercent / 100)),
+    loanTerms: {
+      interestRate,
+      loanTerm: term,
+      loanType: apiLoanType,
+      points: 0,
+    },
+    rehabCosts: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? rehab : undefined,
+    arv: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? arv : undefined,
+    strategyDetails: {
+      downPaymentPercent: dpPercent,
+      exitStrategy: strategy === 'BRRRR' ? '75' : undefined,
+      arvConfidence: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? edited.arvConfidence : undefined,
+      loanType: strategy === 'House Hack' ? edited.loanType : undefined,
+    },
+    closingCostsPercent: 3,
+    sellClosingCostsPercent: 6,
+    units,
+    monthlyRent,
+    propertyData: mergedPropertyData,
+  }
+}
+
+/* ------------------------- streaming analyze ------------------------- */
+
+type StreamResult = {
+  result: V3AnalysisResult
+  calculations: Record<string, unknown> | null
+}
+
+async function runStandardAnalysis(
+  body: Record<string, unknown>,
+  onProgress: (step: string, detail: string) => void
+): Promise<StreamResult> {
+  const res = await fetch('/api/analysis/generate', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-V2-Request': 'true' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok && res.status === 429) {
+    const retryAfter = Number(res.headers.get('retry-after')) || 60
+    const err = new Error('RATE_LIMIT')
+    ;(err as unknown as { retryAfter: number }).retryAfter = retryAfter
+    throw err
+  }
+  if (!res.body) throw new Error('No response body')
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let raw = ''
+  let lineBuffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const chunk = decoder.decode(value, { stream: true })
+    raw += chunk
+    lineBuffer += chunk
+    const lines = lineBuffer.split('\n')
+    lineBuffer = lines.pop() || ''
+    for (const line of lines) {
+      if (line.startsWith('PROGRESS:')) {
+        try {
+          const ev = JSON.parse(line.slice(9))
+          if (ev?.type === 'progress') onProgress(ev.step, ev.detail)
+        } catch {}
+      }
+    }
+  }
+
+  let resultJson = ''
+  let calculations: Record<string, unknown> | null = null
+  const allLines = raw.split('\n')
+  for (const line of allLines) {
+    if (line.startsWith('CALCULATIONS:')) {
+      try {
+        calculations = JSON.parse(line.slice(13))
+      } catch {}
+    } else if (line.startsWith('RESULT:')) {
+      resultJson = line.slice(7)
+    } else if (line.startsWith('ERROR:')) {
+      try {
+        const errPayload = JSON.parse(line.slice(6))
+        if (errPayload?.code === 'RATE_LIMITED') {
+          const e = new Error('RATE_LIMIT')
+          ;(e as unknown as { retryAfter: number }).retryAfter = errPayload.retryAfter || 60
+          throw e
+        }
+        throw new Error(errPayload?.message || 'Analysis failed')
+      } catch (parseErr) {
+        if (parseErr instanceof Error && parseErr.message === 'RATE_LIMIT') throw parseErr
+        throw parseErr instanceof Error ? parseErr : new Error('Analysis failed')
+      }
+    } else if (
+      resultJson &&
+      line.trim() &&
+      !line.startsWith('PROGRESS:') &&
+      !line.startsWith('MODEL:') &&
+      !line.startsWith('CALCULATIONS:') &&
+      !line.startsWith('ERROR:')
+    ) {
+      resultJson += line
+    }
+  }
+
+  if (!resultJson) {
+    const marker = raw.indexOf('RESULT:')
+    if (marker !== -1) {
+      const after = raw.slice(marker + 7)
+      const lastBrace = after.lastIndexOf('}')
+      if (lastBrace !== -1) resultJson = after.slice(0, lastBrace + 1)
+    }
+  }
+
+  const parsed = parseAnalysisStream(resultJson)
+  if (!parsed) throw new Error('Could not parse analysis response')
+  return { result: normalizeResult(parsed), calculations }
+}
+
+/* --------------------------- UI primitives --------------------------- */
 
 function Chip({
   active,
   onClick,
   disabled,
   children,
-  subtitle,
   locked,
 }: {
   active: boolean
   onClick: () => void
   disabled?: boolean
   children: React.ReactNode
-  subtitle?: string
   locked?: boolean
 }) {
   return (
@@ -129,36 +311,20 @@ function Chip({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={locked ? 'Upgrade to unlock' : undefined}
+      title={locked ? 'Upgrade required' : undefined}
       style={{
         background: active ? 'var(--indigo-dim)' : 'var(--surface)',
         color: active ? 'var(--indigo-hover)' : 'var(--text-secondary)',
         border: `1px solid ${active ? 'var(--border-strong)' : 'var(--border)'}`,
         borderRadius: 999,
-        padding: subtitle ? '5px 12px' : '6px 12px',
+        padding: '6px 12px',
         fontSize: 12,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: locked ? 0.55 : 1,
-        display: 'inline-flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: 1,
         transition: 'all 140ms ease',
       }}
     >
-      <span>{children}</span>
-      {subtitle && (
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            letterSpacing: '0.08em',
-            color: active ? 'var(--indigo-hover)' : 'var(--text-muted)',
-          }}
-        >
-          {subtitle}
-        </span>
-      )}
+      {children}
     </button>
   )
 }
@@ -305,7 +471,605 @@ function UpgradeOverlay({ message }: { message: string }) {
   )
 }
 
-/* ------------------------ property-data fetch ------------------------ */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        color: 'var(--text-muted)',
+        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+        transition: 'transform 200ms ease',
+      }}
+    >
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  )
+}
+
+/* ----------------------- status bar (Fix 5) ----------------------- */
+
+const PIPELINE_STATUSES: PipelineStatus[] = ['Watching', 'Reviewing', 'Strong Buy', 'Passed']
+
+function statusColor(status: PipelineStatus) {
+  if (status === 'Strong Buy') return { fill: 'rgba(16,185,129,0.14)', text: '#34D399' }
+  if (status === 'Reviewing') return { fill: 'var(--indigo-dim)', text: 'var(--indigo-hover)' }
+  if (status === 'Passed') return { fill: 'rgba(239,68,68,0.12)', text: '#F87171' }
+  return { fill: 'var(--surface)', text: 'var(--text-secondary)' }
+}
+
+function StatusBar({
+  value,
+  onChange,
+  onSave,
+  saveState,
+}: {
+  value: PipelineStatus
+  onChange: (v: PipelineStatus) => void
+  onSave: () => void
+  saveState: 'idle' | 'saving' | 'saved' | 'error'
+}) {
+  const saved = saveState === 'saved'
+  return (
+    <section
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 12,
+        padding: '16px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        flexWrap: 'wrap',
+        marginBottom: 20,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.12em',
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+        }}
+      >
+        Save this deal
+      </span>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+        {PIPELINE_STATUSES.map(s => {
+          const active = s === value
+          const c = statusColor(s)
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onChange(s)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 999,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: '0.04em',
+                background: active ? c.fill : 'var(--surface)',
+                color: active ? c.text : 'var(--text-secondary)',
+                border: `1px solid ${active ? 'var(--border-strong)' : 'var(--hairline)'}`,
+                cursor: 'pointer',
+                transition: 'all 140ms ease',
+              }}
+            >
+              {s}
+            </button>
+          )
+        })}
+      </div>
+      <button
+        type="button"
+        onClick={onSave}
+        className="app-btn"
+        disabled={saveState === 'saving' || saved}
+        style={{
+          padding: '9px 16px',
+          fontSize: 13,
+          background: saved ? 'var(--green)' : undefined,
+          borderColor: saved ? 'var(--green)' : undefined,
+        }}
+      >
+        {saved ? '✓ Saved' : saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Retry save' : 'Save →'}
+      </button>
+    </section>
+  )
+}
+
+/* ------------------- empty state content (Fix 6) ------------------- */
+
+const EMPTY_STATE_DEALS = [
+  { address: '2847 Magnolia Ave', city: 'Memphis TN', strategy: 'BRRRR', cap: '11.8%', signal: 'STRONG BUY' as Signal },
+  { address: '1290 N Prospect Rd', city: 'Indianapolis IN', strategy: 'Buy & Hold', cap: '9.4%', signal: 'BUY' as Signal },
+  { address: '3104 Clearwater Blvd', city: 'Tampa FL', strategy: 'BRRRR', cap: '10.1%', signal: 'STRONG BUY' as Signal },
+  { address: '412 Birch St', city: 'Kansas City MO', strategy: 'BRRRR', cap: '10.2%', signal: 'STRONG BUY' as Signal },
+]
+
+const STRATEGY_CARDS: {
+  name: Strategy
+  tag: string
+  metricLabel: string
+  metricValue: string
+}[] = [
+  { name: 'BRRRR', tag: 'Buy · Rehab · Rent · Refi · Repeat', metricLabel: 'ROI', metricValue: '188% avg' },
+  { name: 'Fix & Flip', tag: 'Acquire · Renovate · Exit', metricLabel: 'PROFIT', metricValue: '$88K avg' },
+  { name: 'Buy & Hold', tag: 'Long-term cash flow', metricLabel: 'CAP RATE', metricValue: '9.4% avg' },
+  { name: 'House Hack', tag: 'Live-in value-add', metricLabel: 'NET COST', metricValue: '-$180/mo avg' },
+]
+
+function AnalyzeEmpty({
+  onPickStrategy,
+}: {
+  onPickStrategy: (s: Strategy) => void
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 36, marginTop: 8 }}>
+      <section>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.14em',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            marginBottom: 12,
+          }}
+        >
+          Recent analyses
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            overflowX: 'auto',
+            paddingBottom: 6,
+          }}
+        >
+          {EMPTY_STATE_DEALS.map(d => (
+            <div
+              key={d.address}
+              style={{
+                flex: '0 0 auto',
+                minWidth: 200,
+                background: 'var(--surface)',
+                border: '1px solid var(--hairline)',
+                borderRadius: 8,
+                padding: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--text)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {d.address}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                {d.city} · {d.strategy}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 18,
+                    fontWeight: 600,
+                    color: 'var(--indigo-hover)',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {d.cap}
+                </span>
+                <SignalBadge signal={d.signal} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.14em',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            marginBottom: 12,
+          }}
+        >
+          Strategies
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 12,
+          }}
+        >
+          {STRATEGY_CARDS.map(s => (
+            <button
+              key={s.name}
+              type="button"
+              onClick={() => onPickStrategy(s.name)}
+              style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--hairline)',
+                borderRadius: 10,
+                padding: 16,
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'transform 160ms ease, border-color 160ms ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.borderColor = 'var(--border-strong)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.borderColor = 'var(--hairline)'
+              }}
+            >
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{s.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, minHeight: 30 }}>
+                {s.tag}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  letterSpacing: '0.12em',
+                  color: 'var(--text-muted)',
+                  marginTop: 10,
+                  textTransform: 'uppercase',
+                }}
+              >
+                {s.metricLabel}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: 'var(--indigo-hover)',
+                  marginTop: 2,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {s.metricValue}
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.14em',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            marginBottom: 12,
+          }}
+        >
+          How it works
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <span>
+            <span style={{ color: 'var(--indigo-hover)', fontWeight: 600 }}>①</span> Enter address
+          </span>
+          <span style={{ color: 'var(--text-muted)' }}>→</span>
+          <span>
+            <span style={{ color: 'var(--indigo-hover)', fontWeight: 600 }}>②</span> AI underwrites in 27s
+          </span>
+          <span style={{ color: 'var(--text-muted)' }}>→</span>
+          <span>
+            <span style={{ color: 'var(--indigo-hover)', fontWeight: 600 }}>③</span> Save to pipeline
+          </span>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/* ------------------- Pro Max expandable card (Fix 4) ------------------- */
+
+function ProMaxCard({
+  idx,
+  cfg,
+  modelLabel,
+  parsed,
+  status,
+  error,
+  progressDetail,
+  expanded,
+  onToggle,
+}: {
+  idx: number
+  cfg: (typeof PRO_MAX_MODELS)[number] | undefined
+  modelLabel: string
+  parsed: V3AnalysisResult | null
+  status: 'pending' | 'loading' | 'complete' | 'error'
+  error: string | null
+  progressDetail: string
+  expanded: boolean
+  onToggle: () => void
+}) {
+  const s = parsed ? signalFromDealScore(parsed.dealScore) : null
+  const expandable = status === 'complete' && parsed != null
+  return (
+    <div
+      style={{
+        position: 'relative',
+        background: expanded ? 'var(--elevated)' : 'var(--surface)',
+        border: `1px solid ${expanded ? 'var(--border-strong)' : 'var(--hairline)'}`,
+        borderRadius: 10,
+        padding: 20,
+        overflow: 'hidden',
+        minHeight: 220,
+        transition: 'background 200ms ease, border-color 200ms ease',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          background: cfg?.accentColor || '#6366F1',
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={expandable ? onToggle : undefined}
+        disabled={!expandable}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          width: '100%',
+          textAlign: 'left',
+          cursor: expandable ? 'pointer' : 'default',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          marginBottom: 14,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
+            {cfg?.roleLabel || `Model ${idx + 1}`}
+          </div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+            {modelLabel}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {s && <SignalBadge signal={s} />}
+          {expandable && <Chevron open={expanded} />}
+        </div>
+      </button>
+
+      {status === 'loading' && <LoadingDot label={progressDetail || 'Running…'} />}
+      {status === 'error' && <AlertBox kind="error">{error || 'Model failed'}</AlertBox>}
+
+      {parsed && status === 'complete' && (
+        <>
+          <p
+            style={{
+              margin: 0,
+              fontSize: 13,
+              color: 'var(--text-secondary)',
+              lineHeight: 1.6,
+              display: expanded ? 'block' : '-webkit-box',
+              WebkitLineClamp: expanded ? undefined : 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: expanded ? 'visible' : 'hidden',
+            }}
+          >
+            {parsed.narrative || parsed.recommendation || 'No narrative returned.'}
+          </p>
+
+          <div
+            style={{
+              borderTop: '1px solid var(--hairline)',
+              marginTop: 16,
+              paddingTop: 14,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 12,
+            }}
+          >
+            {[
+              { label: 'CAP', value: fmtPct(parsed.metrics?.capRate) },
+              { label: 'CoC', value: fmtPct(parsed.metrics?.cashOnCash) },
+              {
+                label: 'SCORE',
+                value: parsed.dealScore != null ? `${parsed.dealScore}/10` : '—',
+              },
+            ].map(m => (
+              <div key={m.label}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 8,
+                    letterSpacing: '0.1em',
+                    color: 'var(--text-muted)',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {m.label}
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'var(--text)',
+                    marginTop: 3,
+                  }}
+                >
+                  {m.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {expanded && (
+            <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--hairline)' }}>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  letterSpacing: '0.14em',
+                  color: 'var(--indigo-hover)',
+                  fontWeight: 600,
+                  marginBottom: 8,
+                }}
+              >
+                FULL METRICS
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 12,
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                }}
+              >
+                <div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>CF/MO</div>
+                  <div style={{ color: 'var(--text)', marginTop: 3 }}>
+                    {fmtMoney(parsed.cashFlow?.monthly)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>5-YR ROI</div>
+                  <div style={{ color: 'var(--text)', marginTop: 3 }}>{fmtPct(parsed.metrics?.roi)}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>ARV</div>
+                  <div style={{ color: 'var(--text)', marginTop: 3 }}>
+                    {fmtMoney(parsed.metrics?.arvEstimate)}
+                  </div>
+                </div>
+              </div>
+
+              {parsed.riskFlags && parsed.riskFlags.length > 0 && (
+                <>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      letterSpacing: '0.14em',
+                      color: 'var(--text-muted)',
+                      fontWeight: 600,
+                      marginTop: 14,
+                      marginBottom: 8,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Risk flags
+                  </div>
+                  <ul
+                    style={{
+                      listStyle: 'none',
+                      padding: 0,
+                      margin: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    {parsed.riskFlags.map((flag, i) => (
+                      <li key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 9,
+                            letterSpacing: '0.1em',
+                            color:
+                              flag.severity === 'high'
+                                ? '#F87171'
+                                : flag.severity === 'medium'
+                                  ? '#FBBF24'
+                                  : 'var(--text-muted)',
+                            textTransform: 'uppercase',
+                            marginRight: 6,
+                          }}
+                        >
+                          [{flag.severity}]
+                        </span>
+                        <strong style={{ color: 'var(--text)', fontWeight: 500 }}>{flag.flag}</strong>
+                        {flag.detail ? ` — ${flag.detail}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {parsed.marketContext && (
+                <>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      letterSpacing: '0.14em',
+                      color: 'var(--text-muted)',
+                      fontWeight: 600,
+                      marginTop: 14,
+                      marginBottom: 6,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Market context
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    {parsed.marketContext}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/* --------------------------- property-data fetch --------------------------- */
 
 async function fetchPropertyData(address: string, strategy: Strategy): Promise<PropertyData> {
   const res = await fetch('/api/v2/property-data', {
@@ -325,147 +1089,6 @@ async function fetchPropertyData(address: string, strategy: Strategy): Promise<P
   return (await res.json()) as PropertyData
 }
 
-function readNum(...candidates: Array<number | null | undefined>): number | undefined {
-  for (const c of candidates) {
-    if (typeof c === 'number' && Number.isFinite(c) && c > 0) return c
-  }
-  return undefined
-}
-
-function buildAnalyzeBody(
-  address: string,
-  strategy: Strategy,
-  propertyData: PropertyData
-): Record<string, unknown> {
-  const prop = propertyData.property || {}
-  const list = readNum(prop.listPrice ?? null, prop.estimatedValue, propertyData.comparables?.value)
-  const purchasePrice = list || 0
-  const downPaymentPercent = 20
-  const monthlyRent = readNum(propertyData.rental?.rentEstimate, prop.estimatedRent)
-  const arv = readNum(propertyData.arvAnalysis?.arvEstimate, propertyData.comparables?.value)
-
-  return {
-    address,
-    strategy: apiStrategyFor(strategy),
-    purchasePrice,
-    downPayment: Math.round(purchasePrice * (downPaymentPercent / 100)),
-    loanTerms: {
-      interestRate: 7.5,
-      loanTerm: 30,
-      loanType: 'conventional',
-      points: 0,
-    },
-    rehabCosts: strategy === 'BRRRR' || strategy === 'Fix & Flip' ? 40000 : undefined,
-    arv,
-    strategyDetails: {
-      downPaymentPercent,
-      exitStrategy: strategy === 'BRRRR' ? '75' : undefined,
-    },
-    closingCostsPercent: 3,
-    sellClosingCostsPercent: 6,
-    units: 1,
-    monthlyRent,
-    propertyData,
-  }
-}
-
-/* ------------------------- streaming analyze ------------------------- */
-
-type StreamResult = {
-  result: V3AnalysisResult
-  calculations: Record<string, unknown> | null
-}
-
-async function runStandardAnalysis(
-  body: Record<string, unknown>,
-  onProgress: (step: string, detail: string) => void
-): Promise<StreamResult> {
-  const res = await fetch('/api/analysis/generate', {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'X-V2-Request': 'true' },
-    body: JSON.stringify(body),
-  })
-  if (!res.ok && res.status === 429) {
-    const retryAfter = Number(res.headers.get('retry-after')) || 60
-    const err = new Error('RATE_LIMIT')
-    ;(err as unknown as { retryAfter: number }).retryAfter = retryAfter
-    throw err
-  }
-  if (!res.body) throw new Error('No response body')
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let raw = ''
-  let lineBuffer = ''
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    const chunk = decoder.decode(value, { stream: true })
-    raw += chunk
-    lineBuffer += chunk
-    const lines = lineBuffer.split('\n')
-    lineBuffer = lines.pop() || ''
-    for (const line of lines) {
-      if (line.startsWith('PROGRESS:')) {
-        try {
-          const ev = JSON.parse(line.slice(9))
-          if (ev?.type === 'progress') onProgress(ev.step, ev.detail)
-        } catch {}
-      }
-    }
-  }
-
-  let resultJson = ''
-  let calculations: Record<string, unknown> | null = null
-  const allLines = raw.split('\n')
-  for (const line of allLines) {
-    if (line.startsWith('CALCULATIONS:')) {
-      try {
-        calculations = JSON.parse(line.slice(13))
-      } catch {}
-    } else if (line.startsWith('RESULT:')) {
-      resultJson = line.slice(7)
-    } else if (line.startsWith('ERROR:')) {
-      try {
-        const errPayload = JSON.parse(line.slice(6))
-        if (errPayload?.code === 'RATE_LIMITED') {
-          const e = new Error('RATE_LIMIT')
-          ;(e as unknown as { retryAfter: number }).retryAfter = errPayload.retryAfter || 60
-          throw e
-        }
-        throw new Error(errPayload?.message || 'Analysis failed')
-      } catch (parseErr) {
-        if (parseErr instanceof Error && parseErr.message === 'RATE_LIMIT') throw parseErr
-        throw parseErr instanceof Error ? parseErr : new Error('Analysis failed')
-      }
-    } else if (
-      resultJson &&
-      line.trim() &&
-      !line.startsWith('PROGRESS:') &&
-      !line.startsWith('MODEL:') &&
-      !line.startsWith('CALCULATIONS:') &&
-      !line.startsWith('ERROR:')
-    ) {
-      resultJson += line
-    }
-  }
-
-  if (!resultJson) {
-    const marker = raw.indexOf('RESULT:')
-    if (marker !== -1) {
-      const after = raw.slice(marker + 7)
-      const lastBrace = after.lastIndexOf('}')
-      if (lastBrace !== -1) resultJson = after.slice(0, lastBrace + 1)
-    }
-  }
-
-  const parsed = parseAnalysisStream(resultJson)
-  if (!parsed) throw new Error('Could not parse analysis response')
-  return { result: normalizeResult(parsed), calculations }
-}
-
 /* ============================ PAGE ============================ */
 
 export default function V3AnalyzePage() {
@@ -483,18 +1106,19 @@ export default function V3AnalyzePage() {
   const [address, setAddress] = useState('')
   const [strategy, setStrategy] = useState<Strategy>('BRRRR')
   const [model, setModel] = useState<ModelTier>(defaultModel)
-  const [hasInit, setHasInit] = useState(false)
+  const [hasInitModel, setHasInitModel] = useState(false)
 
   useEffect(() => {
-    if (!hasInit && tierState.status === 'ready') {
+    if (!hasInitModel && tierState.status === 'ready') {
       setModel(defaultModel)
-      setHasInit(true)
+      setHasInitModel(true)
     }
-  }, [tierState.status, defaultModel, hasInit])
+  }, [tierState.status, defaultModel, hasInitModel])
 
   const [propData, setPropData] = useState<PropertyData | null>(null)
   const [propLoading, setPropLoading] = useState(false)
   const [propError, setPropError] = useState('')
+  const [edited, setEdited] = useState<EditableProperty | null>(null)
 
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState('')
@@ -503,25 +1127,46 @@ export default function V3AnalyzePage() {
   const [calculations, setCalculations] = useState<Record<string, unknown> | null>(null)
   const [progressStep, setProgressStep] = useState('')
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [dealStatus, setDealStatus] = useState<PipelineStatus>('Watching')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [expandedModel, setExpandedModel] = useState<number | null>(null)
+  const [showRaw, setShowRaw] = useState(false)
 
   const proMax = useProMaxAnalysis()
 
   const isProMaxMode = tier === 'pro_max' && model === 'max'
 
-  const onAddressSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+  useEffect(() => {
+    if (result?.dealScore != null) setDealStatus(defaultStatusFromScore(result.dealScore))
+  }, [result?.dealScore])
+
+  const onAddressFetch = async () => {
     if (!address.trim()) return
     setPropLoading(true)
     setPropError('')
     setPropData(null)
     setResult(null)
+    setCalculations(null)
     setAnalysisError('')
     setRateLimit(null)
+    setEdited(null)
+    setSaveState('idle')
     try {
       const data = await fetchPropertyData(address.trim(), strategy)
       setPropData(data)
+      const source = {
+        beds: data.property?.beds ?? data.property?.bedrooms,
+        baths: data.property?.baths ?? data.property?.bathrooms,
+        sqft: data.property?.sqft ?? data.property?.squareFootage,
+        yearBuilt: data.property?.yearBuilt,
+        propertyType: data.property?.propertyType,
+        listPrice: data.property?.listPrice,
+        estimatedValue: data.property?.estimatedValue,
+        estimatedRent: data.rental?.rentEstimate ?? data.property?.estimatedRent,
+      }
+      setEdited(makeInitialEditable(strategy, source))
     } catch (err) {
       setPropError(err instanceof Error ? err.message : 'Failed to fetch property data')
     } finally {
@@ -529,25 +1174,45 @@ export default function V3AnalyzePage() {
     }
   }
 
+  // When strategy changes while property data is loaded, re-seed strategy-specific
+  // defaults but preserve universal overrides the user may have typed.
+  useEffect(() => {
+    if (!propData || !edited) return
+    setEdited(prev => {
+      if (!prev) return prev
+      const source = {
+        beds: toNum(prev.beds),
+        baths: toNum(prev.baths),
+        sqft: toNum(prev.sqft),
+        yearBuilt: toNum(prev.yearBuilt),
+        propertyType: propData.property?.propertyType,
+        listPrice: toNum(prev.listPrice),
+        estimatedValue: toNum(prev.estimatedValue),
+        estimatedRent: toNum(prev.estimatedRent),
+      }
+      const seeded = makeInitialEditable(strategy, source)
+      return { ...seeded, ...prev, arvConfidence: seeded.arvConfidence, loanTerm: seeded.loanTerm, loanType: seeded.loanType }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strategy])
+
   const onAnalyze = async () => {
-    if (!propData) return
+    if (!propData || !edited) return
     setAnalysisLoading(true)
     setAnalysisError('')
     setRateLimit(null)
     setResult(null)
     setCalculations(null)
     setProgressStep('')
+    setExpandedModel(null)
+    setSaveState('idle')
 
-    const body = buildAnalyzeBody(address, strategy, propData)
+    const body = buildAnalyzeBody(address, strategy, propData, edited)
 
     if (isProMaxMode) {
       proMax.resetResults()
       try {
-        await proMax.runParallelAnalysis(
-          body,
-          parseAnalysisStream,
-          normalizeResult
-        )
+        await proMax.runParallelAnalysis(body, parseAnalysisStream, normalizeResult)
       } catch (err) {
         setAnalysisError(err instanceof Error ? err.message : 'Parallel analysis failed')
       } finally {
@@ -576,7 +1241,7 @@ export default function V3AnalyzePage() {
 
   const onSaveToPipeline = async () => {
     if (!result) return
-    setSaveStatus('saving')
+    setSaveState('saving')
     try {
       const payload = {
         address,
@@ -587,6 +1252,7 @@ export default function V3AnalyzePage() {
         signal: signalFromDealScore(result.dealScore),
         dealScore: result.dealScore,
         propertyData: propData,
+        status: dealStatus,
         aiAnalysis: {
           narrative: result.narrative,
           marketContext: result.marketContext,
@@ -606,37 +1272,31 @@ export default function V3AnalyzePage() {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error('save failed')
-      setSaveStatus('saved')
+      setSaveState('saved')
       if (saveTimeout.current) clearTimeout(saveTimeout.current)
-      saveTimeout.current = setTimeout(() => setSaveStatus('idle'), 3000)
+      saveTimeout.current = setTimeout(() => setSaveState('idle'), 3000)
     } catch {
-      setSaveStatus('error')
+      setSaveState('error')
       if (saveTimeout.current) clearTimeout(saveTimeout.current)
-      saveTimeout.current = setTimeout(() => setSaveStatus('idle'), 3000)
+      saveTimeout.current = setTimeout(() => setSaveState('idle'), 3000)
     }
   }
-
-  const headerStats = useMemo(() => {
-    if (!propData) return null
-    const p = propData.property || {}
-    return [
-      { label: 'BEDS', value: String(p.bedrooms ?? p.beds ?? '—') },
-      { label: 'BATHS', value: String(p.bathrooms ?? p.baths ?? '—') },
-      { label: 'SQFT', value: p.squareFootage ?? p.sqft ? fmtInt(p.squareFootage ?? p.sqft) : '—' },
-      { label: 'YEAR', value: p.yearBuilt ? String(p.yearBuilt) : '—' },
-      { label: 'LIST', value: fmtMoney(p.listPrice ?? p.estimatedValue ?? null) },
-      { label: 'ARV', value: fmtMoney(propData.arvAnalysis?.arvEstimate ?? null), color: '#34D399' as const },
-    ]
-  }, [propData])
 
   const signal = signalFromDealScore(result?.dealScore)
   const narrativeBlurred = tier === 'free' && result != null
 
+  const showEmpty = !propData && !propLoading && !propError && !result && !analysisLoading && !proMax.isRunning
+  const isDev = process.env.NODE_ENV === 'development'
+
+  const updateEdited = (patch: Partial<EditableProperty>) => {
+    setEdited(prev => (prev ? { ...prev, ...patch } : prev))
+  }
+
   return (
     <div style={{ padding: '28px 28px 80px', maxWidth: 1440, margin: '0 auto' }}>
-      <form
-        onSubmit={onAddressSubmit}
+      <div
         style={{
+          position: 'relative',
           display: 'flex',
           alignItems: 'center',
           background: 'var(--elevated)',
@@ -652,32 +1312,22 @@ export default function V3AnalyzePage() {
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </span>
-        <input
-          type="text"
+        <AddressAutocomplete
           value={address}
-          onChange={e => setAddress(e.target.value)}
-          placeholder="Enter property address..."
-          style={{
-            flex: 1,
-            fontFamily: 'var(--font-mono)',
-            fontSize: 13,
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: 'var(--text)',
-            padding: '8px 0',
-            minWidth: 0,
-          }}
+          onChange={setAddress}
+          onSubmit={onAddressFetch}
+          disabled={propLoading}
         />
         <button
-          type="submit"
+          type="button"
           className="app-btn"
           style={{ borderRadius: 8, padding: '9px 16px' }}
           disabled={propLoading || !address.trim()}
+          onClick={onAddressFetch}
         >
           {propLoading ? 'Loading…' : 'Fetch →'}
         </button>
-      </form>
+      </div>
 
       <div
         style={{
@@ -699,6 +1349,8 @@ export default function V3AnalyzePage() {
         <ModelToggle value={model} onChange={setModel} allowed={allowedModels} />
       </div>
 
+      {showEmpty && <AnalyzeEmpty onPickStrategy={setStrategy} />}
+
       {propLoading && (
         <div style={{ marginBottom: 22 }}>
           <LoadingDot label="Pulling property data from RentCast..." />
@@ -711,140 +1363,30 @@ export default function V3AnalyzePage() {
         </div>
       )}
 
-      {propData && (
-        <section
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--hairline)',
-            borderRadius: 12,
-            padding: 22,
-            marginBottom: 20,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  letterSpacing: '0.12em',
-                  color: 'var(--text-muted)',
-                  textTransform: 'uppercase',
-                  marginBottom: 6,
-                }}
-              >
-                PROPERTY
-                {propData.isDemo || propData.demo ? ' · DEMO DATA' : ''}
-              </div>
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 26,
-                  fontWeight: 600,
-                  letterSpacing: '-0.02em',
-                  color: 'var(--text)',
-                }}
-              >
-                {propData.address || address}
-              </div>
-              {headerStats && (
-                <div style={{ display: 'flex', gap: 18, marginTop: 12, flexWrap: 'wrap' }}>
-                  {headerStats.map(s => (
-                    <div key={s.label}>
-                      <div
-                        style={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 9,
-                          letterSpacing: '0.12em',
-                          color: 'var(--text-muted)',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {s.label}
-                      </div>
-                      <div
-                        style={{
-                          fontFamily: 'var(--font-mono)',
-                          fontSize: 15,
-                          fontWeight: 600,
-                          color: (s as { color?: string }).color || 'var(--text)',
-                          marginTop: 3,
-                        }}
-                      >
-                        {s.value}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {propData.rental?.rentEstimate && (
-              <div
-                style={{
-                  background: 'var(--bg)',
-                  border: '1px solid var(--hairline)',
-                  borderRadius: 10,
-                  padding: 14,
-                  minWidth: 220,
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 9,
-                    letterSpacing: '0.14em',
-                    color: 'var(--indigo-hover)',
-                    fontWeight: 600,
-                  }}
-                >
-                  RENTCAST DATA
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 18,
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    marginTop: 6,
-                  }}
-                >
-                  ${fmtInt(propData.rental.rentEstimate)}/mo
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                  Estimated market rent
-                </div>
-              </div>
-            )}
-          </div>
+      {propData && edited && (
+        <PropertyEditCard
+          strategy={strategy}
+          value={edited}
+          onChange={updateEdited}
+          onRunAnalysis={onAnalyze}
+          submitting={analysisLoading || proMax.isRunning}
+        />
+      )}
 
-          <div style={{ marginTop: 18, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button
-              type="button"
-              className="app-btn"
-              onClick={onAnalyze}
-              disabled={analysisLoading || proMax.isRunning}
-              style={{ padding: '10px 18px', fontSize: 13 }}
-            >
-              {analysisLoading || proMax.isRunning ? 'Running…' : 'Analyze →'}
-            </button>
-            {analysisLoading && progressStep && (
-              <span
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 11,
-                  color: 'var(--text-muted)',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                {progressStep}
-              </span>
-            )}
-          </div>
-        </section>
+      {propData && (analysisLoading || proMax.isRunning) && (
+        <div style={{ marginTop: 16 }}>
+          <LoadingDot
+            label={
+              isProMaxMode
+                ? `Running parallel analysis (${proMax.completedCount}/${proMax.totalModels})…`
+                : progressStep || 'Running analysis…'
+            }
+          />
+        </div>
       )}
 
       {rateLimit && (
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginTop: 18 }}>
           <AlertBox kind="warn">
             Rate limit reached. Please wait {Math.ceil(rateLimit.retryAfter / 60)} minute
             {rateLimit.retryAfter >= 120 ? 's' : ''} before running another analysis.
@@ -861,14 +1403,14 @@ export default function V3AnalyzePage() {
       )}
 
       {analysisError && !rateLimit && (
-        <div style={{ marginBottom: 18 }}>
+        <div style={{ marginTop: 18 }}>
           <AlertBox kind="error">{analysisError}</AlertBox>
         </div>
       )}
 
-      {/* ------------- Pro Max 3-model comparison ------------- */}
+      {/* ------------- Pro Max 3-model comparison (Fix 4) ------------- */}
       {isProMaxMode && (proMax.isRunning || proMax.completedCount > 0) && (
-        <section style={{ marginBottom: 20 }}>
+        <section style={{ marginTop: 24 }}>
           <div
             style={{
               display: 'flex',
@@ -894,138 +1436,19 @@ export default function V3AnalyzePage() {
             {proMax.modelResults.map((mr, i) => {
               const modelCfg = PRO_MAX_MODELS[i]
               const parsed = mr.parsedResult as V3AnalysisResult | null
-              const mSignal = parsed ? signalFromDealScore(parsed.dealScore) : null
               return (
-                <div
+                <ProMaxCard
                   key={mr.modelId}
-                  style={{
-                    position: 'relative',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--hairline)',
-                    borderRadius: 10,
-                    padding: 20,
-                    overflow: 'hidden',
-                    minHeight: 220,
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 3,
-                      background: modelCfg?.accentColor || '#6366F1',
-                    }}
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 14 }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
-                        {modelCfg?.roleLabel || mr.role}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
-                        {mr.modelLabel}
-                      </div>
-                    </div>
-                    {mSignal && <SignalBadge signal={mSignal} />}
-                  </div>
-                  {mr.status === 'loading' && (
-                    <LoadingDot label={mr.progressSteps.at(-1)?.detail || 'Running…'} />
-                  )}
-                  {mr.status === 'error' && (
-                    <AlertBox kind="error">{mr.error || 'Model failed'}</AlertBox>
-                  )}
-                  {parsed && mr.status === 'complete' && (
-                    <>
-                      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                        {parsed.narrative || parsed.recommendation || 'No narrative returned.'}
-                      </p>
-                      <div
-                        style={{
-                          borderTop: '1px solid var(--hairline)',
-                          marginTop: 16,
-                          paddingTop: 14,
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(3, 1fr)',
-                          gap: 12,
-                        }}
-                      >
-                        <div>
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: 8,
-                              letterSpacing: '0.1em',
-                              color: 'var(--text-muted)',
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            CAP
-                          </div>
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: 'var(--text)',
-                              marginTop: 3,
-                            }}
-                          >
-                            {fmtPct(parsed.metrics?.capRate)}
-                          </div>
-                        </div>
-                        <div>
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: 8,
-                              letterSpacing: '0.1em',
-                              color: 'var(--text-muted)',
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            CoC
-                          </div>
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: 'var(--text)',
-                              marginTop: 3,
-                            }}
-                          >
-                            {fmtPct(parsed.metrics?.cashOnCash)}
-                          </div>
-                        </div>
-                        <div>
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: 8,
-                              letterSpacing: '0.1em',
-                              color: 'var(--text-muted)',
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            SCORE
-                          </div>
-                          <div
-                            style={{
-                              fontFamily: 'var(--font-mono)',
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: 'var(--text)',
-                              marginTop: 3,
-                            }}
-                          >
-                            {parsed.dealScore != null ? `${parsed.dealScore}/10` : '—'}
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  idx={i}
+                  cfg={modelCfg}
+                  modelLabel={mr.modelLabel}
+                  parsed={parsed}
+                  status={mr.status}
+                  error={mr.error}
+                  progressDetail={mr.progressSteps.at(-1)?.detail || ''}
+                  expanded={expandedModel === i}
+                  onToggle={() => setExpandedModel(prev => (prev === i ? null : i))}
+                />
               )
             })}
           </div>
@@ -1034,7 +1457,14 @@ export default function V3AnalyzePage() {
 
       {/* ------------- Standard single-model results ------------- */}
       {!isProMaxMode && result && (
-        <>
+        <div style={{ marginTop: 24 }}>
+          <StatusBar
+            value={dealStatus}
+            onChange={setDealStatus}
+            onSave={onSaveToPipeline}
+            saveState={saveState}
+          />
+
           <section style={{ marginBottom: 20 }}>
             <div
               style={{
@@ -1070,8 +1500,22 @@ export default function V3AnalyzePage() {
               {[
                 { label: 'CAP RATE', value: fmtPct(result.metrics?.capRate), accent: '#34D399' },
                 { label: 'CASH-ON-CASH', value: fmtPct(result.metrics?.cashOnCash), accent: '#34D399' },
-                { label: 'CASH FLOW', value: result.cashFlow?.monthly != null ? fmtMoney(result.cashFlow.monthly) : '—', accent: 'var(--text)' },
-                { label: '5-YEAR ROI', value: fmtPct(result.metrics?.roi), accent: 'var(--indigo-hover)' },
+                {
+                  label: 'CF / MO',
+                  value:
+                    result.cashFlow?.monthlyCashFlow != null
+                      ? fmtMoney(result.cashFlow.monthlyCashFlow)
+                      : fmtMoney(result.cashFlow?.monthly),
+                  accent: 'var(--text)',
+                },
+                {
+                  label: '5-YR ROI',
+                  value:
+                    result.metrics?.fiveYearROI != null
+                      ? fmtPct(result.metrics.fiveYearROI)
+                      : fmtPct(result.metrics?.roi),
+                  accent: 'var(--indigo-hover)',
+                },
               ].map(m => (
                 <div
                   key={m.label}
@@ -1111,7 +1555,7 @@ export default function V3AnalyzePage() {
             </div>
           </section>
 
-          {(result.narrative || result.riskFlags?.length) && (
+          {(result.narrative || (result.riskFlags && result.riskFlags.length > 0)) && (
             <section style={{ marginBottom: 20, position: 'relative' }}>
               <div
                 style={{
@@ -1215,13 +1659,17 @@ export default function V3AnalyzePage() {
                     { label: 'Purchase', value: fmtMoney(result.proForma.purchasePrice as number | null | undefined) },
                     { label: 'Rehab', value: fmtMoney(result.proForma.rehabCost as number | null | undefined) },
                     { label: 'Total In', value: fmtMoney(result.proForma.totalInvestment as number | null | undefined) },
-                    { label: 'ARV', value: fmtMoney(result.proForma.arvEstimate as number | null | undefined ?? result.metrics?.arvEstimate) },
+                    {
+                      label: 'ARV',
+                      value: fmtMoney(
+                        (result.proForma.arvEstimate as number | null | undefined) ?? result.metrics?.arvEstimate
+                      ),
+                    },
                     {
                       label: 'Refi (75% ARV)',
-                      value:
-                        result.proForma.arvEstimate
-                          ? fmtMoney((result.proForma.arvEstimate as number) * 0.75)
-                          : '—',
+                      value: result.proForma.arvEstimate
+                        ? fmtMoney((result.proForma.arvEstimate as number) * 0.75)
+                        : '—',
                     },
                     {
                       label: 'Cash Left In',
@@ -1354,46 +1802,46 @@ export default function V3AnalyzePage() {
             </section>
           )}
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button
-              type="button"
-              className="app-btn-ghost"
-              style={{ padding: '10px 16px' }}
-              onClick={onSaveToPipeline}
-              disabled={saveStatus === 'saving' || saveStatus === 'saved'}
-            >
-              {saveStatus === 'saving'
-                ? 'Saving…'
-                : saveStatus === 'saved'
-                  ? '✓ Saved to pipeline'
-                  : saveStatus === 'error'
-                    ? 'Save failed — retry'
-                    : 'Save to Pipeline'}
-            </button>
-            <button type="button" className="app-btn-ghost" style={{ padding: '10px 16px' }} disabled>
-              Export PDF
-            </button>
-          </div>
-
-          {calculations && process.env.NODE_ENV === 'development' && (
-            <details style={{ marginTop: 20, color: 'var(--text-muted)', fontSize: 11 }}>
-              <summary style={{ cursor: 'pointer' }}>Server calculations (dev)</summary>
-              <pre
+          {isDev && (
+            <section style={{ marginTop: 16 }}>
+              <button
+                type="button"
+                onClick={() => setShowRaw(v => !v)}
                 style={{
+                  background: 'transparent',
+                  border: '1px solid var(--hairline)',
+                  color: 'var(--text-muted)',
+                  borderRadius: 6,
+                  padding: '6px 10px',
+                  cursor: 'pointer',
                   fontFamily: 'var(--font-mono)',
                   fontSize: 10,
-                  background: 'var(--bg)',
-                  padding: 12,
-                  borderRadius: 8,
-                  overflow: 'auto',
-                  marginTop: 8,
+                  letterSpacing: '0.08em',
                 }}
               >
-                {JSON.stringify(calculations, null, 2)}
-              </pre>
-            </details>
+                {showRaw ? 'Hide raw response' : 'Show raw response (dev)'}
+              </button>
+              {showRaw && (
+                <pre
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    background: 'var(--bg)',
+                    border: '1px solid var(--hairline)',
+                    padding: 12,
+                    borderRadius: 8,
+                    overflow: 'auto',
+                    marginTop: 8,
+                    color: 'var(--text-secondary)',
+                    maxHeight: 500,
+                  }}
+                >
+                  {JSON.stringify({ result, calculations }, null, 2)}
+                </pre>
+              )}
+            </section>
           )}
-        </>
+        </div>
       )}
     </div>
   )
