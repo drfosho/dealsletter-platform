@@ -1,15 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import AnalysisAccordion from '@/components/v3/app/AnalysisAccordion'
 import AddressAutocomplete from '@/components/v3/app/AddressAutocomplete'
-import PropertyEditCard, {
-  makeInitialEditable,
-  inferUnitCount,
-  type EditableProperty,
-} from '@/components/v3/app/PropertyEditCard'
 import { useV3Tier } from '@/hooks/useV3Tier'
 import {
   useProMaxAnalysis,
@@ -35,6 +30,28 @@ const MODEL_OPTIONS: { key: ModelTier; label: string; sub: string }[] = [
   { key: 'balanced', label: 'Balanced', sub: 'Sonnet + GPT-4.1' },
   { key: 'max', label: 'Max IQ', sub: 'Opus + GPT-4o + Grok 3' },
 ]
+
+type ArvConfidence = 'Low' | 'Mid' | 'High'
+type LoanType = 'FHA' | 'Conventional'
+type LoanTerm = 15 | 20 | 30
+
+type EditForm = {
+  purchasePrice: string
+  estimatedValue: string
+  estimatedRent: string
+  beds: string
+  baths: string
+  sqft: string
+  yearBuilt: string
+  arv: string
+  arvConfidence: ArvConfidence
+  rehabCost: string
+  downPaymentPercent: string
+  interestRate: string
+  loanTerm: LoanTerm
+  loanType: LoanType
+  units: string
+}
 
 type PropertyData = {
   isDemo?: boolean
@@ -109,6 +126,21 @@ function fmtMoney(n: number | null | undefined): string {
   return `$${Math.round(n).toLocaleString()}`
 }
 
+function fmtMoneyFull(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return `$${Math.round(n).toLocaleString('en-US')}`
+}
+
+function fmtMonthly(n: number | null | undefined): string {
+  if (n == null) return '—'
+  return `${fmtMoney(n)}/mo`
+}
+
+function fmtYearly(n: number | null | undefined): string {
+  if (n == null) return '—'
+  return `${fmtMoney(n)}/yr`
+}
+
 function fmtPct(n: number | null | undefined): string {
   if (n == null) return '—'
   return `${n.toFixed(1)}%`
@@ -132,7 +164,20 @@ function defaultStatusFromScore(score: number | null | undefined): PipelineStatu
   return 'Watching'
 }
 
-// Purchase price: active listing > AVM > comparables midpoint.
+function inferUnitCount(propertyType: string | undefined): number {
+  const pt = (propertyType || '').toLowerCase()
+  if (pt.includes('duplex')) return 2
+  if (pt.includes('triplex')) return 3
+  if (
+    pt.includes('fourplex') ||
+    pt.includes('quadplex') ||
+    pt.includes('4-plex') ||
+    pt.includes('4 plex')
+  )
+    return 4
+  return 1
+}
+
 function pickPurchasePrice(pd: PropertyData): number | undefined {
   const listing = pd.property?.listing?.price
   if (typeof listing === 'number' && listing > 0) return listing
@@ -143,15 +188,63 @@ function pickPurchasePrice(pd: PropertyData): number | undefined {
   return undefined
 }
 
-// ARV: RentCast arvMid > AVM * 1.15 > comparables * 1.15.
+function pickListPrice(pd: PropertyData): number | undefined {
+  const v = pd.property?.listing?.price ?? pd.property?.listPrice
+  return typeof v === 'number' && v > 0 ? v : undefined
+}
+
+function pickAvm(pd: PropertyData): number | undefined {
+  const v = pd.property?.estimatedValue ?? pd.comparables?.value
+  return typeof v === 'number' && v > 0 ? v : undefined
+}
+
+function pickArvLowMidHigh(
+  pd: PropertyData,
+  avm: number | undefined
+): { low: number | undefined; mid: number | undefined; high: number | undefined } {
+  const a = pd.arvAnalysis
+  const baseLow = a?.arvLow ?? (avm ? avm * 1.05 : undefined)
+  const baseMid = a?.arvMid ?? a?.arvEstimate ?? (avm ? avm * 1.15 : undefined)
+  const baseHigh = a?.arvHigh ?? (avm ? avm * 1.25 : undefined)
+  return {
+    low: baseLow ? Math.round(baseLow) : undefined,
+    mid: baseMid ? Math.round(baseMid) : undefined,
+    high: baseHigh ? Math.round(baseHigh) : undefined,
+  }
+}
+
 function pickArv(pd: PropertyData): number | undefined {
-  const mid = pd.arvAnalysis?.arvMid
-  if (typeof mid === 'number' && mid > 0) return mid
-  const est = pd.arvAnalysis?.arvEstimate
-  if (typeof est === 'number' && est > 0) return est
-  const avm = pd.property?.estimatedValue ?? pd.comparables?.value
-  if (typeof avm === 'number' && avm > 0) return Math.round(avm * 1.15)
-  return undefined
+  return pickArvLowMidHigh(pd, pickAvm(pd)).mid
+}
+
+function makeInitialForm(strategy: Strategy, pd: PropertyData): EditForm {
+  const avm = pickAvm(pd)
+  const purchase = pickPurchasePrice(pd) ?? avm ?? 0
+  const arvMid = pickArvLowMidHigh(pd, avm).mid ?? (avm ? Math.round(avm * 1.15) : 0)
+  const beds = pd.property?.beds ?? pd.property?.bedrooms
+  const baths = pd.property?.baths ?? pd.property?.bathrooms
+  const sqft = pd.property?.sqft ?? pd.property?.squareFootage
+  const rent = pd.rental?.rentEstimate ?? pd.property?.estimatedRent
+  const units = inferUnitCount(pd.property?.propertyType)
+  const defaultDp = strategy === 'House Hack' ? '3.5' : '20'
+  const defaultLoanType: LoanType = strategy === 'House Hack' ? 'FHA' : 'Conventional'
+  return {
+    purchasePrice: purchase ? String(purchase) : '',
+    estimatedValue: avm ? String(avm) : purchase ? String(purchase) : '',
+    estimatedRent: rent != null ? String(rent) : '',
+    beds: beds != null ? String(beds) : '',
+    baths: baths != null ? String(baths) : '',
+    sqft: sqft != null ? String(sqft) : '',
+    yearBuilt: pd.property?.yearBuilt != null ? String(pd.property.yearBuilt) : '',
+    arv: arvMid ? String(arvMid) : '',
+    arvConfidence: 'Mid',
+    rehabCost: '40000',
+    downPaymentPercent: defaultDp,
+    interestRate: '7.5',
+    loanTerm: 30,
+    loanType: defaultLoanType,
+    units: String(units),
+  }
 }
 
 /* ------------------------ body builder ------------------------ */
@@ -160,16 +253,13 @@ function buildAnalyzeBody(
   address: string,
   strategy: Strategy,
   propertyData: PropertyData,
-  edited: EditableProperty
+  edited: EditForm
 ): Record<string, unknown> {
-  // Always prefer the edited value, but fall back to the same priority chain
-  // the editable panel seeded with. Never default to 0.
   const purchasePrice =
-    toNum(edited.listPrice) ?? pickPurchasePrice(propertyData) ?? 0
+    toNum(edited.purchasePrice) ?? pickPurchasePrice(propertyData) ?? 0
   const estimatedValue =
-    toNum(edited.estimatedValue) ?? propertyData.property?.estimatedValue ?? purchasePrice
-  const monthlyRent =
-    toNum(edited.estimatedRent) ?? propertyData.rental?.rentEstimate
+    toNum(edited.estimatedValue) ?? pickAvm(propertyData) ?? purchasePrice
+  const monthlyRent = toNum(edited.estimatedRent) ?? propertyData.rental?.rentEstimate
   const arv = toNum(edited.arv) ?? pickArv(propertyData) ?? estimatedValue
   const rehab = toNum(edited.rehabCost) ?? 0
   const dpPercent = toNum(edited.downPaymentPercent) ?? 20
@@ -338,7 +428,7 @@ function Chip({
   active: boolean
   onClick: () => void
   disabled?: boolean
-  children: React.ReactNode
+  children: ReactNode
   locked?: boolean
 }) {
   return (
@@ -432,7 +522,7 @@ function AlertBox({
   children,
 }: {
   kind: 'error' | 'warn' | 'info'
-  children: React.ReactNode
+  children: ReactNode
 }) {
   const colors =
     kind === 'error'
@@ -528,7 +618,524 @@ function Chevron({ open }: { open: boolean }) {
   )
 }
 
-/* ----------------------- status bar (Fix 5) ----------------------- */
+/* --------------------- editable form sub-components --------------------- */
+
+const formLabelStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 10,
+  letterSpacing: '0.08em',
+  fontWeight: 500,
+  color: 'var(--text-secondary)',
+  textTransform: 'uppercase',
+  display: 'block',
+  marginBottom: 6,
+}
+
+const formInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: 'var(--elevated)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  padding: '9px 12px',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 13,
+  color: 'var(--text)',
+  outline: 'none',
+  transition: 'border-color 140ms ease',
+}
+
+function FormField({
+  label,
+  children,
+}: {
+  label: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div>
+      <label style={formLabelStyle}>{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function FormInput({
+  value,
+  onChange,
+  placeholder,
+  inputMode,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  inputMode?: 'numeric' | 'decimal' | 'text'
+}) {
+  return (
+    <input
+      type="text"
+      inputMode={inputMode || 'text'}
+      value={value}
+      placeholder={placeholder}
+      onChange={e => onChange(e.target.value)}
+      style={formInputStyle}
+      onFocus={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
+      onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+    />
+  )
+}
+
+function PillRow<T extends string | number>({
+  options,
+  value,
+  onChange,
+  formatLabel,
+  sublabels,
+  prominent,
+}: {
+  options: readonly T[]
+  value: T
+  onChange: (v: T) => void
+  formatLabel?: (v: T) => string
+  sublabels?: Record<string, string>
+  prominent?: boolean
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {options.map(opt => {
+        const active = opt === value
+        const label = formatLabel ? formatLabel(opt) : String(opt)
+        const sub = sublabels?.[String(opt)]
+        return (
+          <button
+            key={String(opt)}
+            type="button"
+            onClick={() => onChange(opt)}
+            style={{
+              background: active
+                ? prominent
+                  ? 'var(--indigo)'
+                  : 'var(--indigo-dim)'
+                : 'var(--elevated)',
+              color: active ? (prominent ? '#fff' : 'var(--indigo-hover)') : 'var(--text-secondary)',
+              border: `1px solid ${active ? (prominent ? 'var(--indigo)' : 'var(--border-strong)') : 'var(--border)'}`,
+              borderRadius: 8,
+              padding: prominent ? '10px 20px' : '5px 12px',
+              fontFamily: prominent ? 'var(--font-sans)' : 'var(--font-mono)',
+              fontSize: prominent ? 14 : 11,
+              fontWeight: prominent ? 600 : 500,
+              letterSpacing: prominent ? '0' : '0.04em',
+              cursor: 'pointer',
+              transition: 'all 140ms ease',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 2,
+              minWidth: prominent ? 96 : undefined,
+            }}
+          >
+            <span>{label}</span>
+            {sub && (
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                  color: active && prominent ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)',
+                  fontWeight: 400,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {sub}
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function SectionLabel({ children, color }: { children: ReactNode; color?: string }) {
+  return (
+    <div
+      style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        letterSpacing: '0.12em',
+        color: color || 'var(--indigo-hover)',
+        textTransform: 'uppercase',
+        fontWeight: 600,
+        marginBottom: 10,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function QuickFillBtn({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: 'var(--elevated)',
+        border: '1px solid var(--border)',
+        borderRadius: 6,
+        padding: '6px 12px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 11,
+        color: 'var(--text-secondary)',
+        cursor: 'pointer',
+        transition: 'all 140ms ease',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'var(--border-strong)'
+        e.currentTarget.style.color = 'var(--text)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = 'var(--border)'
+        e.currentTarget.style.color = 'var(--text-secondary)'
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+function EditablePanel({
+  strategy,
+  propertyData,
+  form,
+  onChange,
+  onRun,
+  submitting,
+}: {
+  strategy: Strategy
+  propertyData: PropertyData
+  form: EditForm
+  onChange: (patch: Partial<EditForm>) => void
+  onRun: () => void
+  submitting?: boolean
+}) {
+  const avm = pickAvm(propertyData)
+  const listPrice = pickListPrice(propertyData)
+  const arvValues = pickArvLowMidHigh(propertyData, toNum(form.estimatedValue) ?? avm)
+
+  const sqft = toNum(form.sqft) ?? 0
+  const rehabLight = Math.round(sqft * 15)
+  const rehabStandard = Math.round(sqft * 35)
+  const rehabExtensive = Math.round(sqft * 65)
+
+  const showBrrrFlip = strategy === 'BRRRR' || strategy === 'Fix & Flip'
+  const showBuyHold = strategy === 'Buy & Hold'
+  const showHouseHack = strategy === 'House Hack'
+
+  const setArvFromConfidence = (c: ArvConfidence) => {
+    const v = c === 'Low' ? arvValues.low : c === 'High' ? arvValues.high : arvValues.mid
+    onChange({
+      arvConfidence: c,
+      ...(v && v > 0 ? { arv: String(v) } : {}),
+    })
+  }
+
+  const arvHintValue =
+    toNum(form.arv) ?? arvValues.mid ?? (avm ? Math.round(avm * 1.15) : undefined)
+
+  return (
+    <section
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border-strong)',
+        borderRadius: 12,
+        padding: 22,
+        marginTop: 16,
+      }}
+    >
+      <SectionLabel>PROPERTY DATA — VERIFY BEFORE ANALYSIS</SectionLabel>
+
+      {/* ---------------- purchase price (prominent) ---------------- */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ ...formLabelStyle, color: 'var(--indigo-hover)', fontWeight: 600, fontSize: 10 }}>
+          PURCHASE PRICE
+        </label>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={form.purchasePrice}
+          onChange={e => onChange({ purchasePrice: e.target.value })}
+          placeholder="0"
+          style={{
+            width: '100%',
+            background: 'var(--bg)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 8,
+            padding: '12px 14px',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 18,
+            fontWeight: 600,
+            color: 'var(--text)',
+            outline: 'none',
+            transition: 'border-color 140ms ease, box-shadow 140ms ease',
+          }}
+          onFocus={e => {
+            e.currentTarget.style.border = '2px solid var(--indigo)'
+            e.currentTarget.style.boxShadow = '0 0 0 3px var(--indigo-dim)'
+          }}
+          onBlur={e => {
+            e.currentTarget.style.border = '1px solid var(--border-strong)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+        />
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+          {listPrice && (
+            <QuickFillBtn
+              onClick={() => onChange({ purchasePrice: String(listPrice) })}
+              label={`↑ Use List Price  ${fmtMoneyFull(listPrice)}`}
+            />
+          )}
+          {avm && (
+            <QuickFillBtn
+              onClick={() => onChange({ purchasePrice: String(avm) })}
+              label={`↑ Use AVM  ${fmtMoneyFull(avm)}`}
+            />
+          )}
+        </div>
+      </div>
+
+      <div
+        style={{
+          borderTop: '1px solid var(--hairline)',
+          paddingTop: 18,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 12,
+        }}
+      >
+        <FormField label="AVM / Estimated value">
+          <FormInput
+            value={form.estimatedValue}
+            onChange={v => onChange({ estimatedValue: v })}
+            placeholder="0"
+            inputMode="numeric"
+          />
+        </FormField>
+        <FormField label="Estimated rent / mo">
+          <FormInput
+            value={form.estimatedRent}
+            onChange={v => onChange({ estimatedRent: v })}
+            placeholder="0"
+            inputMode="numeric"
+          />
+        </FormField>
+        <FormField label="Year built">
+          <FormInput
+            value={form.yearBuilt}
+            onChange={v => onChange({ yearBuilt: v })}
+            inputMode="numeric"
+          />
+        </FormField>
+        <FormField label="Beds">
+          <FormInput value={form.beds} onChange={v => onChange({ beds: v })} inputMode="numeric" />
+        </FormField>
+        <FormField label="Baths">
+          <FormInput value={form.baths} onChange={v => onChange({ baths: v })} inputMode="decimal" />
+        </FormField>
+        <FormField label="Sqft">
+          <FormInput value={form.sqft} onChange={v => onChange({ sqft: v })} inputMode="numeric" />
+        </FormField>
+      </div>
+
+      {/* ---------------- BRRRR / Fix & Flip ---------------- */}
+      {showBrrrFlip && (
+        <div
+          style={{
+            marginTop: 22,
+            paddingTop: 20,
+            borderTop: '1px solid var(--hairline)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 18,
+          }}
+        >
+          <div>
+            <SectionLabel>ARV CONFIDENCE</SectionLabel>
+            <PillRow
+              options={['Low', 'Mid', 'High'] as const}
+              value={form.arvConfidence}
+              onChange={setArvFromConfidence}
+              prominent
+              sublabels={{
+                Low: fmtMoneyFull(arvValues.low),
+                Mid: fmtMoneyFull(arvValues.mid),
+                High: fmtMoneyFull(arvValues.high),
+              }}
+            />
+          </div>
+
+          <FormField
+            label={
+              arvHintValue && arvHintValue > 0
+                ? `ARV (Est. ${fmtMoneyFull(arvHintValue)})`
+                : 'After repair value (ARV)'
+            }
+          >
+            <FormInput
+              value={form.arv}
+              onChange={v => onChange({ arv: v })}
+              inputMode="numeric"
+            />
+          </FormField>
+
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                marginBottom: 8,
+              }}
+            >
+              <SectionLabel>REHAB ESTIMATE</SectionLabel>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  color: 'var(--text-muted)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {sqft > 0 ? `Based on $/sqft · ${sqft.toLocaleString()} sqft` : 'Add sqft to use presets'}
+              </span>
+            </div>
+            <PillRow
+              options={['Light', 'Standard', 'Extensive'] as const}
+              value={
+                toNum(form.rehabCost) === rehabLight
+                  ? 'Light'
+                  : toNum(form.rehabCost) === rehabStandard
+                    ? 'Standard'
+                    : toNum(form.rehabCost) === rehabExtensive
+                      ? 'Extensive'
+                      : 'Standard'
+              }
+              onChange={c => {
+                const v = c === 'Light' ? rehabLight : c === 'Extensive' ? rehabExtensive : rehabStandard
+                onChange({ rehabCost: String(v) })
+              }}
+              prominent
+              sublabels={{
+                Light: sqft > 0 ? `~${fmtMoneyFull(rehabLight)}` : '$15/sqft',
+                Standard: sqft > 0 ? `~${fmtMoneyFull(rehabStandard)}` : '$35/sqft',
+                Extensive: sqft > 0 ? `~${fmtMoneyFull(rehabExtensive)}` : '$65/sqft',
+              }}
+            />
+            <div style={{ marginTop: 10 }}>
+              <FormField label="Rehab cost">
+                <FormInput
+                  value={form.rehabCost}
+                  onChange={v => onChange({ rehabCost: v })}
+                  inputMode="numeric"
+                />
+              </FormField>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- Buy & Hold ---------------- */}
+      {showBuyHold && (
+        <div
+          style={{
+            marginTop: 22,
+            paddingTop: 20,
+            borderTop: '1px solid var(--hairline)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 12,
+          }}
+        >
+          <FormField label="Down payment %">
+            <FormInput
+              value={form.downPaymentPercent}
+              onChange={v => onChange({ downPaymentPercent: v })}
+              inputMode="decimal"
+            />
+          </FormField>
+          <FormField label="Interest rate %">
+            <FormInput
+              value={form.interestRate}
+              onChange={v => onChange({ interestRate: v })}
+              inputMode="decimal"
+            />
+          </FormField>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <SectionLabel>LOAN TERM</SectionLabel>
+            <PillRow
+              options={[30, 20, 15] as const}
+              value={form.loanTerm}
+              onChange={v => onChange({ loanTerm: v })}
+              formatLabel={v => `${v}yr`}
+              prominent
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- House Hack ---------------- */}
+      {showHouseHack && (
+        <div
+          style={{
+            marginTop: 22,
+            paddingTop: 20,
+            borderTop: '1px solid var(--hairline)',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 12,
+          }}
+        >
+          <FormField label="Down payment %">
+            <FormInput
+              value={form.downPaymentPercent}
+              onChange={v => onChange({ downPaymentPercent: v })}
+              inputMode="decimal"
+            />
+          </FormField>
+          <FormField label="Number of units">
+            <FormInput value={form.units} onChange={v => onChange({ units: v })} inputMode="numeric" />
+          </FormField>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <SectionLabel>LOAN TYPE</SectionLabel>
+            <PillRow
+              options={['FHA', 'Conventional'] as const}
+              value={form.loanType}
+              onChange={v => onChange({ loanType: v })}
+              prominent
+            />
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        className="app-btn"
+        onClick={onRun}
+        disabled={submitting}
+        style={{
+          width: '100%',
+          justifyContent: 'center',
+          padding: '12px 16px',
+          fontSize: 14,
+          marginTop: 24,
+        }}
+      >
+        {submitting ? 'Running…' : 'Looks good — Run Analysis →'}
+      </button>
+    </section>
+  )
+}
+
+/* ----------------------- status bar (Fix 5 earlier) ----------------------- */
 
 const PIPELINE_STATUSES: PipelineStatus[] = ['Watching', 'Reviewing', 'Strong Buy', 'Passed']
 
@@ -622,7 +1229,7 @@ function StatusBar({
   )
 }
 
-/* ------------------- empty state content (Fix 6) ------------------- */
+/* ------------------- empty state ------------------- */
 
 const EMPTY_STATE_DEALS = [
   { address: '2847 Magnolia Ave', city: 'Memphis TN', strategy: 'BRRRR', cap: '11.8%', signal: 'STRONG BUY' as Signal },
@@ -643,11 +1250,7 @@ const STRATEGY_CARDS: {
   { name: 'House Hack', tag: 'Live-in value-add', metricLabel: 'NET COST', metricValue: '-$180/mo avg' },
 ]
 
-function AnalyzeEmpty({
-  onPickStrategy,
-}: {
-  onPickStrategy: (s: Strategy) => void
-}) {
+function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 36, marginTop: 8 }}>
       <section>
@@ -663,14 +1266,7 @@ function AnalyzeEmpty({
         >
           Recent analyses
         </div>
-        <div
-          style={{
-            display: 'flex',
-            gap: 10,
-            overflowX: 'auto',
-            paddingBottom: 6,
-          }}
-        >
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
           {EMPTY_STATE_DEALS.map(d => (
             <div
               key={d.address}
@@ -731,13 +1327,7 @@ function AnalyzeEmpty({
         >
           Strategies
         </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 12,
-          }}
-        >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           {STRATEGY_CARDS.map(s => (
             <button
               key={s.name}
@@ -835,7 +1425,7 @@ function AnalyzeEmpty({
   )
 }
 
-/* ------------------- Pro Max expandable card (Fix 4) ------------------- */
+/* ------------------- Pro Max expandable card ------------------- */
 
 function ProMaxCard({
   idx,
@@ -949,10 +1539,7 @@ function ProMaxCard({
             {[
               { label: 'CAP', value: fmtPct(parsed.metrics?.capRate) },
               { label: 'CoC', value: fmtPct(parsed.metrics?.cashOnCash) },
-              {
-                label: 'SCORE',
-                value: parsed.dealScore != null ? `${parsed.dealScore}/10` : '—',
-              },
+              { label: 'SCORE', value: parsed.dealScore != null ? `${parsed.dealScore}/10` : '—' },
             ].map(m => (
               <div key={m.label}>
                 <div
@@ -983,18 +1570,7 @@ function ProMaxCard({
 
           {expanded && (
             <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--hairline)' }}>
-              <div
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  letterSpacing: '0.14em',
-                  color: 'var(--indigo-hover)',
-                  fontWeight: 600,
-                  marginBottom: 8,
-                }}
-              >
-                FULL METRICS
-              </div>
+              <SectionLabel>FULL METRICS</SectionLabel>
               <div
                 style={{
                   display: 'grid',
@@ -1006,9 +1582,7 @@ function ProMaxCard({
               >
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>CF/MO</div>
-                  <div style={{ color: 'var(--text)', marginTop: 3 }}>
-                    {fmtMoney(parsed.cashFlow?.monthly)}
-                  </div>
+                  <div style={{ color: 'var(--text)', marginTop: 3 }}>{fmtMoney(parsed.cashFlow?.monthly)}</div>
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>5-YR ROI</div>
@@ -1016,38 +1590,16 @@ function ProMaxCard({
                 </div>
                 <div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.1em' }}>ARV</div>
-                  <div style={{ color: 'var(--text)', marginTop: 3 }}>
-                    {fmtMoney(parsed.metrics?.arvEstimate)}
-                  </div>
+                  <div style={{ color: 'var(--text)', marginTop: 3 }}>{fmtMoney(parsed.metrics?.arvEstimate)}</div>
                 </div>
               </div>
 
               {parsed.riskFlags && parsed.riskFlags.length > 0 && (
                 <>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      letterSpacing: '0.14em',
-                      color: 'var(--text-muted)',
-                      fontWeight: 600,
-                      marginTop: 14,
-                      marginBottom: 8,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Risk flags
+                  <div style={{ marginTop: 14, marginBottom: 8 }}>
+                    <SectionLabel color="var(--text-muted)">Risk flags</SectionLabel>
                   </div>
-                  <ul
-                    style={{
-                      listStyle: 'none',
-                      padding: 0,
-                      margin: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 6,
-                    }}
-                  >
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {parsed.riskFlags.map((flag, i) => (
                       <li key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                         <span
@@ -1077,19 +1629,8 @@ function ProMaxCard({
 
               {parsed.marketContext && (
                 <>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      letterSpacing: '0.14em',
-                      color: 'var(--text-muted)',
-                      fontWeight: 600,
-                      marginTop: 14,
-                      marginBottom: 6,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Market context
+                  <div style={{ marginTop: 14, marginBottom: 6 }}>
+                    <SectionLabel color="var(--text-muted)">Market context</SectionLabel>
                   </div>
                   <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
                     {parsed.marketContext}
@@ -1124,6 +1665,67 @@ async function fetchPropertyData(address: string, strategy: Strategy): Promise<P
   return (await res.json()) as PropertyData
 }
 
+/* ------------- secondary metrics (Fix 6) ------------- */
+
+type MetricCell = { label: string; value: string }
+
+function secondaryMetricsFor(
+  strategy: Strategy,
+  result: V3AnalysisResult,
+  edited: EditForm | null
+): MetricCell[] {
+  const aiFin =
+    ((result.raw as Record<string, unknown> | undefined)?.ai_analysis as Record<string, unknown> | undefined)
+      ?.financial_metrics ||
+    ((result as unknown as { ai_analysis?: { financial_metrics?: Record<string, number | null | undefined> } })
+      .ai_analysis?.financial_metrics) ||
+    {}
+  const fin = aiFin as Record<string, number | null | undefined>
+
+  if (strategy === 'Fix & Flip') {
+    const purchase = toNum(edited?.purchasePrice) ?? 0
+    const rehab = toNum(edited?.rehabCost) ?? 0
+    const closing = purchase * 0.03
+    const proForma = (result.proForma || {}) as Record<string, unknown>
+    const totalCost =
+      (proForma.totalCost as number | undefined) ?? purchase + rehab + closing
+    const projectedSale =
+      (proForma.projectedSalePrice as number | undefined) ??
+      (result.metrics?.arvEstimate ?? undefined)
+    return [
+      { label: 'TOTAL COST', value: fmtMoney(totalCost) },
+      { label: 'PROJECTED SALE', value: fmtMoney(projectedSale) },
+      { label: 'GROSS PROFIT', value: fmtMoney(fin.gross_profit) },
+      { label: 'NET PROFIT', value: fmtMoney(fin.net_profit) },
+      {
+        label: 'ROI',
+        value: fmtPct(fin.roi_percent ?? (result.metrics?.roi as number | undefined)),
+      },
+      {
+        label: 'HOLD PERIOD',
+        value:
+          (proForma.holdingPeriod as string | undefined) ||
+          '6 months',
+      },
+    ]
+  }
+
+  return [
+    {
+      label: 'NOI',
+      value: fmtYearly(result.metrics?.netOperatingIncome ?? result.metrics?.noi),
+    },
+    { label: 'GROSS RENT', value: fmtMonthly(result.cashFlow?.grossRent) },
+    { label: 'VACANCY LOSS', value: fmtMonthly(result.cashFlow?.vacancyLoss) },
+    { label: 'BREAK-EVEN ARV', value: fmtMoney(result.breakEvenArv ?? null) },
+    { label: '5-YR EQUITY', value: fmtMoney(result.fiveYearEquity ?? null) },
+    {
+      label: 'DEAL SCORE',
+      value: result.dealScore != null ? `${result.dealScore}/10` : '—',
+    },
+  ]
+}
+
 /* ============================ PAGE ============================ */
 
 export default function V3AnalyzePage() {
@@ -1153,7 +1755,7 @@ export default function V3AnalyzePage() {
   const [propData, setPropData] = useState<PropertyData | null>(null)
   const [propLoading, setPropLoading] = useState(false)
   const [propError, setPropError] = useState('')
-  const [edited, setEdited] = useState<EditableProperty | null>(null)
+  const [form, setForm] = useState<EditForm | null>(null)
 
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState('')
@@ -1170,7 +1772,6 @@ export default function V3AnalyzePage() {
   const [showRaw, setShowRaw] = useState(false)
 
   const proMax = useProMaxAnalysis()
-
   const isProMaxMode = tier === 'pro_max' && model === 'max'
 
   useEffect(() => {
@@ -1186,24 +1787,12 @@ export default function V3AnalyzePage() {
     setCalculations(null)
     setAnalysisError('')
     setRateLimit(null)
-    setEdited(null)
+    setForm(null)
     setSaveState('idle')
     try {
       const data = await fetchPropertyData(address.trim(), strategy)
       setPropData(data)
-      const source = {
-        beds: data.property?.beds ?? data.property?.bedrooms,
-        baths: data.property?.baths ?? data.property?.bathrooms,
-        sqft: data.property?.sqft ?? data.property?.squareFootage,
-        yearBuilt: data.property?.yearBuilt,
-        propertyType: data.property?.propertyType,
-        listPrice: pickPurchasePrice(data),
-        estimatedValue: data.property?.estimatedValue ?? data.comparables?.value,
-        estimatedRent: data.rental?.rentEstimate ?? data.property?.estimatedRent,
-        comparablesValue: data.comparables?.value,
-        arvMid: data.arvAnalysis?.arvMid ?? data.arvAnalysis?.arvEstimate,
-      }
-      setEdited(makeInitialEditable(strategy, source))
+      setForm(makeInitialForm(strategy, data))
     } catch (err) {
       setPropError(err instanceof Error ? err.message : 'Failed to fetch property data')
     } finally {
@@ -1211,35 +1800,23 @@ export default function V3AnalyzePage() {
     }
   }
 
-  // When strategy changes while property data is loaded, re-seed strategy-specific
-  // defaults but preserve universal overrides the user may have typed.
+  // Re-seed strategy-specific defaults when strategy changes but preserve universal
+  // overrides the user already typed.
   useEffect(() => {
-    if (!propData || !edited) return
-    setEdited(prev => {
+    if (!propData || !form) return
+    setForm(prev => {
       if (!prev) return prev
-      const source = {
-        beds: toNum(prev.beds),
-        baths: toNum(prev.baths),
-        sqft: toNum(prev.sqft),
-        yearBuilt: toNum(prev.yearBuilt),
-        propertyType: propData.property?.propertyType,
-        listPrice: toNum(prev.listPrice),
-        estimatedValue: toNum(prev.estimatedValue),
-        estimatedRent: toNum(prev.estimatedRent),
-      }
-      const seeded = makeInitialEditable(strategy, source)
+      const seeded = makeInitialForm(strategy, propData)
       return { ...seeded, ...prev, arvConfidence: seeded.arvConfidence, loanTerm: seeded.loanTerm, loanType: seeded.loanType }
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strategy])
 
   const onAnalyze = async () => {
-    if (!propData || !edited) return
-    const previewPrice = toNum(edited.listPrice) ?? pickPurchasePrice(propData) ?? 0
+    if (!propData || !form) return
+    const previewPrice = toNum(form.purchasePrice) ?? pickPurchasePrice(propData) ?? 0
     if (previewPrice < 10000) {
-      setAnalysisError(
-        'Purchase price is required. Please verify the property data above.'
-      )
+      setAnalysisError('Purchase price is required. Please verify the property data above.')
       return
     }
     setAnalysisLoading(true)
@@ -1251,7 +1828,7 @@ export default function V3AnalyzePage() {
     setExpandedModel(null)
     setSaveState('idle')
 
-    const body = buildAnalyzeBody(address, strategy, propData, edited)
+    const body = buildAnalyzeBody(address, strategy, propData, form)
 
     if (isProMaxMode) {
       proMax.resetResults()
@@ -1305,7 +1882,9 @@ export default function V3AnalyzePage() {
             cap_rate: result.metrics?.capRate,
             cash_on_cash_return: result.metrics?.cashOnCash,
             monthly_cash_flow: result.cashFlow?.monthly,
+            annual_cash_flow: result.cashFlow?.annual,
             arv: result.metrics?.arvEstimate,
+            roi: result.metrics?.roi,
           },
         },
       }
@@ -1328,12 +1907,14 @@ export default function V3AnalyzePage() {
 
   const signal = signalFromDealScore(result?.dealScore)
   const narrativeBlurred = tier === 'free' && result != null
+  const secondaryBlurred = tier === 'free' && result != null
 
-  const showEmpty = !propData && !propLoading && !propError && !result && !analysisLoading && !proMax.isRunning
+  const showEmpty =
+    !propData && !propLoading && !propError && !result && !analysisLoading && !proMax.isRunning
   const isDev = process.env.NODE_ENV === 'development'
 
-  const updateEdited = (patch: Partial<EditableProperty>) => {
-    setEdited(prev => (prev ? { ...prev, ...patch } : prev))
+  const updateForm = (patch: Partial<EditForm>) => {
+    setForm(prev => (prev ? { ...prev, ...patch } : prev))
   }
 
   return (
@@ -1407,14 +1988,14 @@ export default function V3AnalyzePage() {
         </div>
       )}
 
-      {propData && edited && (
-        <PropertyEditCard
+      {propData && form && (
+        <EditablePanel
           strategy={strategy}
-          value={edited}
-          onChange={updateEdited}
-          onRunAnalysis={onAnalyze}
+          propertyData={propData}
+          form={form}
+          onChange={updateForm}
+          onRun={onAnalyze}
           submitting={analysisLoading || proMax.isRunning}
-          arvHint={pickArv(propData)}
         />
       )}
 
@@ -1453,7 +2034,7 @@ export default function V3AnalyzePage() {
         </div>
       )}
 
-      {/* ------------- Pro Max 3-model comparison (Fix 4) ------------- */}
+      {/* ------------- Pro Max 3-model comparison ------------- */}
       {isProMaxMode && (proMax.isRunning || proMax.completedCount > 0) && (
         <section style={{ marginTop: 24 }}>
           <div
@@ -1535,18 +2116,12 @@ export default function V3AnalyzePage() {
               <SignalBadge signal={signal as Signal} />
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: 12,
-              }}
-            >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               {[
                 { label: 'CAP RATE', value: fmtPct(result.metrics?.capRate), accent: '#34D399' },
                 { label: 'CASH-ON-CASH', value: fmtPct(result.metrics?.cashOnCash), accent: '#34D399' },
                 {
-                  label: 'CF / MO',
+                  label: 'CF / MONTH',
                   value:
                     result.cashFlow?.monthlyCashFlow != null
                       ? fmtMoney(result.cashFlow.monthlyCashFlow)
@@ -1600,6 +2175,66 @@ export default function V3AnalyzePage() {
             </div>
           </section>
 
+          {/* ------------- Secondary metrics (Fix 6) ------------- */}
+          <section style={{ marginBottom: 20, position: 'relative' }}>
+            <div style={{ marginBottom: 10 }}>
+              <SectionLabel color="var(--text-muted)">
+                {strategy === 'Fix & Flip' ? 'Flip economics' : 'Full underwriting'}
+              </SectionLabel>
+            </div>
+            <div
+              style={{
+                filter: secondaryBlurred ? 'blur(4px)' : 'none',
+                pointerEvents: secondaryBlurred ? 'none' : 'auto',
+              }}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                  gap: 10,
+                }}
+              >
+                {secondaryMetricsFor(strategy, result, form).map(m => (
+                  <div
+                    key={m.label}
+                    style={{
+                      background: 'var(--bg)',
+                      border: '1px solid var(--hairline)',
+                      borderRadius: 8,
+                      padding: 14,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 9,
+                        letterSpacing: '0.12em',
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {m.label}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 20,
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        marginTop: 6,
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      {m.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {secondaryBlurred && <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />}
+          </section>
+
           {(result.narrative || (result.riskFlags && result.riskFlags.length > 0)) && (
             <section style={{ marginBottom: 20, position: 'relative' }}>
               <div
@@ -1618,18 +2253,7 @@ export default function V3AnalyzePage() {
                       marginBottom: 12,
                     }}
                   >
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 10,
-                        letterSpacing: '0.12em',
-                        color: 'var(--indigo-hover)',
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                      }}
-                    >
-                      AI NARRATIVE
-                    </div>
+                    <SectionLabel>AI NARRATIVE</SectionLabel>
                     <p style={{ margin: '10px 0 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
                       {result.narrative}
                     </p>
@@ -1649,19 +2273,17 @@ export default function V3AnalyzePage() {
                       padding: 20,
                     }}
                   >
-                    <div
+                    <SectionLabel color="var(--text-muted)">RISK FLAGS</SectionLabel>
+                    <ul
                       style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 10,
-                        letterSpacing: '0.12em',
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase',
-                        marginBottom: 10,
+                        listStyle: 'none',
+                        padding: 0,
+                        margin: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 10,
                       }}
                     >
-                      RISK FLAGS
-                    </div>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {result.riskFlags.map((flag, i) => (
                         <li key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: 'var(--text-secondary)' }}>
                           <span

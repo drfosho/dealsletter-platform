@@ -76,6 +76,19 @@ export async function POST(request: NextRequest) {
       v3_saved_at: new Date().toISOString(),
     }
 
+    const aiFinMetrics =
+      (((aiAnalysis as Record<string, unknown> | undefined)?.financial_metrics) as
+        | Record<string, number | null | undefined>
+        | undefined) || {}
+
+    const profit =
+      aiFinMetrics.net_profit ??
+      aiFinMetrics.total_profit ??
+      aiFinMetrics.gross_profit ??
+      cf.annualCashFlow ??
+      cf.annual ??
+      0
+
     const { data, error } = await supabase
       .from('analyzed_properties')
       .insert({
@@ -84,8 +97,8 @@ export async function POST(request: NextRequest) {
         deal_type: strategy,
         analysis_date: new Date().toISOString(),
         analysis_data: analysisData,
-        roi: m.roi ?? m.fiveYearROI ?? null,
-        profit: m.profit ?? cf.annualCashFlow ?? null,
+        roi: m.roi ?? m.fiveYearROI ?? 0,
+        profit,
       })
       .select('id')
       .single()
