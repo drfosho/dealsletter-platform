@@ -1,11 +1,19 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import DealCard from '@/components/v3/app/DealCard'
 import PipelineTable from '@/components/v3/app/PipelineTable'
 import MetroTile from '@/components/v3/public/MetroTile'
-import { NEW_MATCHES, PIPELINE } from '@/data/v3-deals'
 import { METROS } from '@/data/v3-metros'
+import type { Deal } from '@/data/v3-deals'
+import {
+  adaptListRecord,
+  adaptPipelineRecord,
+  type ListRecord,
+  type PipelineRecord,
+} from '@/lib/v3-deal-adapter'
+import { useV3Tier } from '@/hooks/useV3Tier'
 
 const CRITERIA = [
   { label: 'METROS', value: 'KC · Memphis · Tampa · Indy' },
@@ -15,9 +23,23 @@ const CRITERIA = [
   { label: 'MIN COC', value: '9.0%' },
 ]
 
-const FIRST_NAME = 'Kevin'
+function timeOfDayGreeting(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
 
-function Greeting() {
+function Greeting({
+  firstName,
+  recentCount,
+  scanTime,
+}: {
+  firstName: string
+  recentCount: number
+  scanTime: string
+}) {
+  const greeting = timeOfDayGreeting()
   return (
     <div style={{ marginBottom: 22 }}>
       <h2
@@ -29,8 +51,8 @@ function Greeting() {
           color: 'var(--text)',
         }}
       >
-        Good morning,{' '}
-        <span style={{ color: 'var(--indigo-hover)' }}>{FIRST_NAME}</span>.
+        {greeting},{' '}
+        <span style={{ color: 'var(--indigo-hover)' }}>{firstName}</span>.
       </h2>
       <div
         style={{
@@ -41,13 +63,25 @@ function Greeting() {
           marginTop: 8,
         }}
       >
-        Scout found <span style={{ color: '#34D399', fontWeight: 600 }}>3 new deals</span> matching your criteria overnight. · Last scan 04:24 PT · 12 metros covered
+        {recentCount > 0 ? (
+          <>
+            Scout found{' '}
+            <span style={{ color: '#34D399', fontWeight: 600 }}>
+              {recentCount} recent {recentCount === 1 ? 'analysis' : 'analyses'}
+            </span>{' '}
+            from your last 30 days.
+          </>
+        ) : (
+          <>No analyses yet — run your first deal to get started.</>
+        )}{' '}
+        · Last scan {scanTime} · 12 metros covered
       </div>
     </div>
   )
 }
 
 function ScoutStatusStrip() {
+  // TODO: wire to real Scout scan state once Scout backend lands.
   return (
     <section
       style={{
@@ -186,40 +220,179 @@ function SectionHeader({
   )
 }
 
+function EmptyState({
+  text,
+  href,
+  cta,
+}: {
+  text: string
+  href: string
+  cta: string
+}) {
+  return (
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '1px dashed var(--hairline)',
+        borderRadius: 12,
+        padding: '32px 24px',
+        textAlign: 'center',
+      }}
+    >
+      <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 14 }}>{text}</div>
+      <Link href={href} className="app-btn" style={{ padding: '8px 16px', fontSize: 12 }}>
+        {cta}
+      </Link>
+    </div>
+  )
+}
+
 export default function V3DashboardPage() {
+  const tierState = useV3Tier()
+  const [recent, setRecent] = useState<Deal[]>([])
+  const [pipeline, setPipeline] = useState<Deal[]>([])
+  const [loadingRecent, setLoadingRecent] = useState(true)
+  const [loadingPipeline, setLoadingPipeline] = useState(true)
+  const [scanTime, setScanTime] = useState('04:24 PT')
+
+  useEffect(() => {
+    const d = new Date()
+    const hh = d.getHours().toString().padStart(2, '0')
+    const mm = d.getMinutes().toString().padStart(2, '0')
+    setScanTime(`${hh}:${mm} PT`)
+  }, [])
+
+  useEffect(() => {
+    if (tierState.status !== 'ready') return
+    let cancelled = false
+
+    const loadRecent = async () => {
+      try {
+        const res = await fetch('/api/analysis/list?limit=3', { credentials: 'include' })
+        if (!res.ok) throw new Error('list')
+        const data = await res.json()
+        const list: ListRecord[] = Array.isArray(data)
+          ? data
+          : data.analyses || data.data || []
+        if (!cancelled) setRecent(list.map(adaptListRecord))
+      } catch {
+        if (!cancelled) setRecent([])
+      } finally {
+        if (!cancelled) setLoadingRecent(false)
+      }
+    }
+
+    const loadPipeline = async () => {
+      try {
+        const res = await fetch('/api/v3/pipeline', { credentials: 'include' })
+        if (!res.ok) throw new Error('pipeline')
+        const data = await res.json()
+        const list: PipelineRecord[] = data?.deals || []
+        if (!cancelled) setPipeline(list.slice(0, 7).map(adaptPipelineRecord))
+      } catch {
+        if (!cancelled) setPipeline([])
+      } finally {
+        if (!cancelled) setLoadingPipeline(false)
+      }
+    }
+
+    loadRecent()
+    loadPipeline()
+
+    return () => {
+      cancelled = true
+    }
+  }, [tierState.status])
+
+  const firstName = tierState.status === 'ready' ? tierState.firstName : 'there'
+
   return (
     <div style={{ padding: '28px 28px 80px', maxWidth: 1440, margin: '0 auto' }}>
-      <Greeting />
+      <Greeting firstName={firstName} recentCount={recent.length} scanTime={scanTime} />
       <ScoutStatusStrip />
 
       <section style={{ marginBottom: 40 }}>
         <SectionHeader
-          label="New matches · Today"
-          title="3 deals qualified overnight"
+          label="Recent analyses"
+          title={
+            loadingRecent
+              ? 'Loading…'
+              : recent.length === 0
+                ? 'No analyses yet'
+                : `Your last ${recent.length} ${recent.length === 1 ? 'analysis' : 'analyses'}`
+          }
           right={
-            <Link href="/v3/pipeline" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 12 }}>
-              View all matches →
+            <Link href="/v3/analyze" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 12 }}>
+              Run new analysis →
             </Link>
           }
         />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-          {NEW_MATCHES.map(d => (
-            <DealCard key={d.id} deal={d} />
-          ))}
-        </div>
+        {loadingRecent ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            {[0, 1, 2].map(i => (
+              <div
+                key={i}
+                style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--hairline)',
+                  borderRadius: 12,
+                  padding: 18,
+                  height: 240,
+                  opacity: 0.5,
+                }}
+              />
+            ))}
+          </div>
+        ) : recent.length === 0 ? (
+          <EmptyState
+            text="No analyses yet. Drop an address to see Dealsletter in action."
+            href="/v3/analyze"
+            cta="Run your first analysis →"
+          />
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            {recent.map(d => (
+              <DealCard key={d.id} deal={d} />
+            ))}
+          </div>
+        )}
       </section>
 
       <section style={{ marginBottom: 40 }}>
         <SectionHeader
           label="Saved pipeline"
-          title={`${PIPELINE.length} deals tracked`}
+          title={
+            loadingPipeline
+              ? 'Loading…'
+              : pipeline.length === 0
+                ? 'No deals saved yet'
+                : `${pipeline.length} ${pipeline.length === 1 ? 'deal' : 'deals'} tracked`
+          }
           right={
             <Link href="/v3/pipeline" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 12 }}>
               Open pipeline →
             </Link>
           }
         />
-        <PipelineTable deals={PIPELINE.slice(0, 5)} compact />
+        {loadingPipeline ? (
+          <div
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--hairline)',
+              borderRadius: 10,
+              height: 220,
+              opacity: 0.5,
+            }}
+          />
+        ) : pipeline.length === 0 ? (
+          <EmptyState
+            text="No deals saved yet. Analyze a deal and save it to your pipeline."
+            href="/v3/analyze"
+            cta="Run an analysis →"
+          />
+        ) : (
+          <PipelineTable deals={pipeline.slice(0, 5)} compact />
+        )}
       </section>
 
       <section>
@@ -232,6 +405,7 @@ export default function V3DashboardPage() {
             </Link>
           }
         />
+        {/* TODO: Wire Parcl metro data in the Markets build phase. */}
         <div
           style={{
             display: 'flex',

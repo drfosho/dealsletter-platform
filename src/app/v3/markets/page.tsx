@@ -1,3 +1,8 @@
+// TODO: Wire Parcl API in Markets build phase.
+// Metro grid, signal summary counts, and the drawer's sparkline/commentary
+// all currently pull from the static METROS / SIGNAL_LEGEND arrays in
+// src/data/v3-metros.ts. Replace with a nightly Parcl feed when ready.
+
 'use client'
 
 import { useMemo, useState } from 'react'

@@ -1,42 +1,53 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import SignalBadge from '@/components/v3/public/SignalBadge'
-import type { Signal } from '@/data/v3-metros'
+import { signalFromDealScore, type Signal } from '@/lib/v3-analysis-parser'
+import { dealBreakdownIssues, type DealBreakdownIssue, type DealProperty } from '@/data/deal-breakdown-issues'
 
 type Tab = 'breakdowns' | 'resources'
 
-type Issue = {
-  number: number
-  date: string
-  city: string
-  state: string
-  strategy: string
-  signal: Signal
-  cap: string
-  secondary: string
+const STRATEGY_LABEL: Record<string, string> = {
+  brrrr: 'BRRRR',
+  flip: 'Fix & Flip',
+  buyhold: 'Buy & Hold',
+  'buy-hold': 'Buy & Hold',
+  househack: 'House Hack',
+  'house-hack': 'House Hack',
 }
 
-const PAST_ISSUES: Issue[] = [
-  { number: 149, date: 'Mar 28, 2026', city: 'Charlotte', state: 'NC', strategy: 'Fix & Flip', signal: 'BUY', cap: '—', secondary: 'Profit $88K' },
-  { number: 148, date: 'Mar 21, 2026', city: 'Indianapolis', state: 'IN', strategy: 'Buy & Hold', signal: 'BUY', cap: 'Cap 9.4%', secondary: 'CF $612/mo' },
-  { number: 147, date: 'Mar 14, 2026', city: 'Kansas City', state: 'MO', strategy: 'BRRRR', signal: 'STRONG BUY', cap: 'Cap 10.2%', secondary: 'CF $890/mo' },
-]
-
-type Resource = {
-  category: string
-  title: string
-  description: string
+function strategyLabel(raw: string | undefined): string {
+  if (!raw) return 'Investment'
+  return STRATEGY_LABEL[raw] || raw.toUpperCase()
 }
 
-const RESOURCES: Resource[] = [
-  { category: 'PLAYBOOK', title: 'BRRRR Calculator Guide', description: 'Step-by-step walkthrough of the BRRRR strategy — acquisition, rehab budget, refi math, stabilized returns.' },
-  { category: 'TEMPLATE', title: 'Fix & Flip Pro Forma', description: 'Spreadsheet template with ARV, rehab, carry cost, selling cost, and profit projections.' },
-  { category: 'PLAYBOOK', title: 'Buy & Hold Underwriting', description: 'How to underwrite long-term rentals: rent comps, cap rate, cash-on-cash, vacancy, and CapEx reserves.' },
-  { category: 'PLAYBOOK', title: 'House Hack Playbook', description: 'Live-in value-add strategies for FHA buyers — 2–4 unit analysis, PITI offset, and exit scenarios.' },
-  { category: 'EXPLAINER', title: 'Cap Rate vs CoC Explained', description: 'When to use cap rate, when to use cash-on-cash, and why the two metrics disagree on leveraged deals.' },
-  { category: 'MARKET', title: 'Memphis Market Deep Dive', description: 'Submarket-by-submarket breakdown of Memphis rent growth, cap compression, and inventory trends.' },
-]
+function cashFlowPerMonth(p: DealProperty | undefined): string {
+  if (!p?.annualCashFlow) return '—'
+  return `$${Math.round(p.annualCashFlow / 12).toLocaleString()}/mo`
+}
+
+function capLabel(p: DealProperty | undefined): string {
+  if (!p?.capRate) return '—'
+  return `${p.capRate.toFixed(1)}%`
+}
+
+function cocLabel(p: DealProperty | undefined): string {
+  if (!p?.coc) return '—'
+  return `${p.coc.toFixed(1)}%`
+}
+
+function priceLabel(p: DealProperty | undefined): string {
+  if (!p?.price) return '—'
+  if (p.price >= 1_000_000) return `$${(p.price / 1_000_000).toFixed(2)}M`
+  return `$${Math.round(p.price / 1000)}K`
+}
+
+function issueSignal(issue: DealBreakdownIssue): Signal {
+  const top = issue.properties?.[0]
+  if (!top) return 'WATCH'
+  return signalFromDealScore(top.scoreValue)
+}
 
 function Tabs({ value, onChange }: { value: Tab; onChange: (v: Tab) => void }) {
   const items: { key: Tab; label: string }[] = [
@@ -82,7 +93,9 @@ function Tabs({ value, onChange }: { value: Tab; onChange: (v: Tab) => void }) {
   )
 }
 
-function FeaturedIssue() {
+function FeaturedIssue({ issue }: { issue: DealBreakdownIssue }) {
+  const top = issue.properties?.[0]
+  const signal = issueSignal(issue)
   return (
     <section
       style={{
@@ -103,7 +116,7 @@ function FeaturedIssue() {
             textTransform: 'uppercase',
           }}
         >
-          Issue #150 · Apr 4, 2026
+          Issue #{issue.issueNumber} · {issue.date}
         </span>
         <span
           style={{
@@ -121,97 +134,109 @@ function FeaturedIssue() {
         </span>
       </div>
 
-      <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--text)', marginTop: 12 }}>
-        2847 Magnolia Ave, Memphis TN
+      <div style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--text)', marginTop: 12, lineHeight: 1.3 }}>
+        {issue.title}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            letterSpacing: '0.06em',
-            color: 'var(--indigo-hover)',
-            background: 'var(--indigo-dim)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 999,
-            padding: '3px 9px',
-          }}
-        >
-          BRRRR
-        </span>
-        <SignalBadge signal="STRONG BUY" />
-      </div>
-
-      <p style={{ margin: '16px 0 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        Full BRRRR breakdown — acquisition at $178K, $42K rehab, refinance to pull out equity, stabilized at $842/mo cash flow. Three-model consensus with stress testing.
-      </p>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 12,
-          marginTop: 20,
-        }}
-      >
-        {[
-          { label: 'CAP', value: '11.8%' },
-          { label: 'CoC', value: '14.2%' },
-          { label: 'CF/MO', value: '$842' },
-          { label: 'ARV', value: '$265K' },
-        ].map(m => (
-          <div
-            key={m.label}
+      {top && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <span
             style={{
-              background: 'var(--bg)',
-              border: '1px solid var(--hairline)',
-              borderRadius: 8,
-              padding: 12,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              letterSpacing: '0.06em',
+              color: 'var(--indigo-hover)',
+              background: 'var(--indigo-dim)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 999,
+              padding: '3px 9px',
             }}
           >
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 9,
-                letterSpacing: '0.12em',
-                color: 'var(--text-muted)',
-                textTransform: 'uppercase',
-              }}
-            >
-              {m.label}
-            </div>
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 18,
-                fontWeight: 600,
-                color: 'var(--text)',
-                marginTop: 4,
-              }}
-            >
-              {m.value}
-            </div>
-          </div>
-        ))}
-      </div>
+            {strategyLabel(top.strategy)}
+          </span>
+          <SignalBadge signal={signal} />
+        </div>
+      )}
 
-      <button type="button" className="app-btn" style={{ marginTop: 20, padding: '10px 18px', fontSize: 13 }}>
+      <p style={{ margin: '16px 0 0', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+        {issue.previewText}
+      </p>
+
+      {top && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 12,
+            marginTop: 20,
+          }}
+        >
+          {[
+            { label: 'CAP', value: capLabel(top) },
+            { label: 'CoC', value: cocLabel(top) },
+            { label: 'CF/MO', value: cashFlowPerMonth(top) },
+            { label: 'PRICE', value: priceLabel(top) },
+          ].map(m => (
+            <div
+              key={m.label}
+              style={{
+                background: 'var(--bg)',
+                border: '1px solid var(--hairline)',
+                borderRadius: 8,
+                padding: 12,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  letterSpacing: '0.12em',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {m.label}
+              </div>
+              <div
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: 'var(--text)',
+                  marginTop: 4,
+                }}
+              >
+                {m.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Link
+        href={`/v2/deal-breakdown/${issue.slug}`}
+        className="app-btn"
+        style={{ marginTop: 20, padding: '10px 18px', fontSize: 13, display: 'inline-flex' }}
+      >
         Read full breakdown →
-      </button>
+      </Link>
     </section>
   )
 }
 
-function PastIssueCard({ issue }: { issue: Issue }) {
+function PastIssueCard({ issue }: { issue: DealBreakdownIssue }) {
+  const top = issue.properties?.[0]
+  const signal = issueSignal(issue)
   return (
-    <div
+    <Link
+      href={`/v2/deal-breakdown/${issue.slug}`}
       style={{
+        display: 'block',
+        textDecoration: 'none',
         background: 'var(--surface)',
         border: '1px solid var(--hairline)',
         borderRadius: 10,
         padding: 18,
-        cursor: 'pointer',
         transition: 'transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
       }}
       onMouseEnter={e => {
@@ -234,28 +259,42 @@ function PastIssueCard({ issue }: { issue: Issue }) {
           textTransform: 'uppercase',
         }}
       >
-        Issue #{issue.number} · {issue.date}
+        Issue #{issue.issueNumber} · {issue.date}
       </div>
-      <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)', marginTop: 8 }}>
-        {issue.city} {issue.state}
+      <div
+        style={{
+          fontSize: 15,
+          fontWeight: 500,
+          color: 'var(--text)',
+          marginTop: 8,
+          lineHeight: 1.35,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {issue.title}
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            letterSpacing: '0.06em',
-            color: 'var(--indigo-hover)',
-            background: 'var(--indigo-dim)',
-            border: '1px solid var(--border-strong)',
-            borderRadius: 999,
-            padding: '2px 9px',
-          }}
-        >
-          {issue.strategy}
-        </span>
-        <SignalBadge signal={issue.signal} />
-      </div>
+      {top && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              letterSpacing: '0.06em',
+              color: 'var(--indigo-hover)',
+              background: 'var(--indigo-dim)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 999,
+              padding: '2px 9px',
+            }}
+          >
+            {strategyLabel(top.strategy)}
+          </span>
+          <SignalBadge signal={signal} />
+        </div>
+      )}
       <div
         style={{
           display: 'flex',
@@ -266,12 +305,28 @@ function PastIssueCard({ issue }: { issue: Issue }) {
           color: 'var(--text-secondary)',
         }}
       >
-        <span>{issue.cap}</span>
-        <span>{issue.secondary}</span>
+        <span>Cap {capLabel(top)}</span>
+        <span>CoC {cocLabel(top)}</span>
+        <span>{cashFlowPerMonth(top)}</span>
       </div>
-    </div>
+    </Link>
   )
 }
+
+type Resource = {
+  category: string
+  title: string
+  description: string
+}
+
+const RESOURCES: Resource[] = [
+  { category: 'PLAYBOOK', title: 'BRRRR Calculator Guide', description: 'Step-by-step walkthrough of the BRRRR strategy — acquisition, rehab budget, refi math, stabilized returns.' },
+  { category: 'TEMPLATE', title: 'Fix & Flip Pro Forma', description: 'Spreadsheet template with ARV, rehab, carry cost, selling cost, and profit projections.' },
+  { category: 'PLAYBOOK', title: 'Buy & Hold Underwriting', description: 'How to underwrite long-term rentals: rent comps, cap rate, cash-on-cash, vacancy, and CapEx reserves.' },
+  { category: 'PLAYBOOK', title: 'House Hack Playbook', description: 'Live-in value-add strategies for FHA buyers — 2–4 unit analysis, PITI offset, and exit scenarios.' },
+  { category: 'EXPLAINER', title: 'Cap Rate vs CoC Explained', description: 'When to use cap rate, when to use cash-on-cash, and why the two metrics disagree on leveraged deals.' },
+  { category: 'MARKET', title: 'Memphis Market Deep Dive', description: 'Submarket-by-submarket breakdown of Memphis rent growth, cap compression, and inventory trends.' },
+]
 
 function ResourceCard({ resource }: { resource: Resource }) {
   return (
@@ -315,6 +370,13 @@ function ResourceCard({ resource }: { resource: Resource }) {
 export default function V3DealDeskPage() {
   const [tab, setTab] = useState<Tab>('breakdowns')
 
+  const sorted = useMemo(
+    () => [...dealBreakdownIssues].sort((a, b) => b.issueNumber - a.issueNumber),
+    []
+  )
+  const latest = sorted[0]
+  const rest = sorted.slice(1)
+
   return (
     <div style={{ padding: '28px 28px 80px', maxWidth: 1440, margin: '0 auto' }}>
       <div style={{ marginBottom: 18 }}>
@@ -330,7 +392,11 @@ export default function V3DealDeskPage() {
           DEAL DESK
         </div>
         <div style={{ fontSize: 22, fontWeight: 500, color: 'var(--text)', marginTop: 8 }}>
-          {tab === 'breakdowns' ? 'Issue #150 · Latest analysis' : 'Playbooks, templates, and market intel'}
+          {tab === 'breakdowns'
+            ? latest
+              ? `Issue #${latest.issueNumber} · Latest analysis`
+              : 'Deal Breakdowns'
+            : 'Playbooks, templates, and market intel'}
         </div>
       </div>
 
@@ -338,18 +404,20 @@ export default function V3DealDeskPage() {
 
       {tab === 'breakdowns' ? (
         <>
-          <FeaturedIssue />
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 14,
-            }}
-          >
-            {PAST_ISSUES.map(issue => (
-              <PastIssueCard key={issue.number} issue={issue} />
-            ))}
-          </div>
+          {latest && <FeaturedIssue issue={latest} />}
+          {rest.length > 0 && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 14,
+              }}
+            >
+              {rest.map(issue => (
+                <PastIssueCard key={issue.slug} issue={issue} />
+              ))}
+            </div>
+          )}
         </>
       ) : (
         <div

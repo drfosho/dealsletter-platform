@@ -1,43 +1,58 @@
 'use client'
 
+import { useState } from 'react'
 import SignalBadge from '@/components/v3/public/SignalBadge'
-import type { Deal } from '@/data/v3-deals'
+import type { Deal, PipelineStatus } from '@/data/v3-deals'
 
 type Column = {
   key: string
   name: string
   accent: string
+  status: PipelineStatus
   match: (d: Deal) => boolean
 }
+
+const STATUS_OPTIONS: PipelineStatus[] = ['Watching', 'Reviewing', 'Strong Buy', 'Passed']
 
 const COLUMNS: Column[] = [
   {
     key: 'watching',
     name: 'Watching',
     accent: 'var(--text-secondary)',
+    status: 'Watching',
     match: d => d.status === 'Watching' || d.status === 'Saved',
   },
   {
     key: 'reviewing',
     name: 'Reviewing',
     accent: 'var(--indigo-hover)',
+    status: 'Reviewing',
     match: d => d.status === 'Reviewing',
   },
   {
     key: 'strong-buy',
     name: 'Strong Buy',
     accent: '#34D399',
+    status: 'Strong Buy',
     match: d => d.status === 'Strong Buy',
   },
   {
     key: 'passed',
     name: 'Passed',
     accent: '#F87171',
+    status: 'Passed',
     match: d => d.status === 'Passed',
   },
 ]
 
-function KanbanCard({ deal }: { deal: Deal }) {
+function KanbanCard({
+  deal,
+  onStatusChange,
+}: {
+  deal: Deal
+  onStatusChange?: (dealId: string, status: PipelineStatus) => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
   const cap = deal.cap != null ? `${deal.cap.toFixed(1)}%` : '—'
   const coc = deal.coc != null ? `${deal.coc.toFixed(1)}%` : '—'
   const cf = deal.cashFlow != null ? `$${deal.cashFlow}` : '—'
@@ -46,6 +61,7 @@ function KanbanCard({ deal }: { deal: Deal }) {
   return (
     <div
       style={{
+        position: 'relative',
         background: 'var(--bg)',
         border: '1px solid var(--hairline)',
         borderRadius: 8,
@@ -72,11 +88,33 @@ function KanbanCard({ deal }: { deal: Deal }) {
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            flex: 1,
           }}
         >
           {deal.address}
         </span>
         <SignalBadge signal={deal.signal} />
+        {onStatusChange && (
+          <button
+            type="button"
+            aria-label="Change status"
+            onClick={e => {
+              e.stopPropagation()
+              setMenuOpen(v => !v)
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '0 4px',
+              fontSize: 14,
+              lineHeight: 1,
+            }}
+          >
+            ⋯
+          </button>
+        )}
       </div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
         {deal.city} {deal.state}
@@ -138,11 +176,62 @@ function KanbanCard({ deal }: { deal: Deal }) {
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 8 }}>
         Added {deal.addedDate}
       </div>
+
+      {menuOpen && onStatusChange && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: 34,
+            right: 8,
+            background: 'var(--elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+            padding: 4,
+            zIndex: 5,
+            display: 'flex',
+            flexDirection: 'column',
+            minWidth: 132,
+          }}
+        >
+          {STATUS_OPTIONS.map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => {
+                onStatusChange(deal.id, s)
+                setMenuOpen(false)
+              }}
+              disabled={s === deal.status}
+              style={{
+                background: s === deal.status ? 'var(--indigo-dim)' : 'transparent',
+                color: s === deal.status ? 'var(--indigo-hover)' : 'var(--text)',
+                border: 'none',
+                textAlign: 'left',
+                padding: '7px 10px',
+                borderRadius: 6,
+                cursor: s === deal.status ? 'default' : 'pointer',
+                fontSize: 12,
+                fontFamily: 'var(--font-mono)',
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-export default function KanbanBoard({ deals }: { deals: Deal[] }) {
+export default function KanbanBoard({
+  deals,
+  onStatusChange,
+}: {
+  deals: Deal[]
+  onStatusChange?: (dealId: string, status: PipelineStatus) => void
+}) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
       {COLUMNS.map(col => {
@@ -215,7 +304,9 @@ export default function KanbanBoard({ deals }: { deals: Deal[] }) {
                 Empty
               </div>
             ) : (
-              items.map(deal => <KanbanCard key={deal.id} deal={deal} />)
+              items.map(deal => (
+                <KanbanCard key={deal.id} deal={deal} onStatusChange={onStatusChange} />
+              ))
             )}
           </div>
         )
