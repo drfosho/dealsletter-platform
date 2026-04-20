@@ -46,10 +46,10 @@ export const metadata: Metadata = {
     siteName: "Dealsletter",
     images: [
       {
-        url: "/logos/v2-og-image.png",
+        url: "/logos/dealsletter-og-banner.png",
         width: 1200,
         height: 630,
-        alt: "Dealsletter V2",
+        alt: "Dealsletter \u2014 AI-Powered Real Estate Deal Analysis",
       },
     ],
     locale: "en_US",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Dealsletter \u2014 AI Real Estate Analysis",
     description: "Analyze any property in 30 seconds with AI.",
-    images: ["/logos/v2-og-image.png"],
+    images: ["/logos/dealsletter-og-banner.png"],
     creator: "@KdogBuilds",
   },
   appleWebApp: {
