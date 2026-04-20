@@ -54,7 +54,7 @@ export default function Sidebar({
     setSigningOut(true)
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/v2/login')
+    router.push('/v3/login')
   }
 
   return (

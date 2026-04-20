@@ -1,17 +1,252 @@
-export default function V3DashboardPage() {
+'use client'
+
+import Link from 'next/link'
+import DealCard from '@/components/v3/app/DealCard'
+import PipelineTable from '@/components/v3/app/PipelineTable'
+import MetroTile from '@/components/v3/public/MetroTile'
+import { NEW_MATCHES, PIPELINE } from '@/data/v3-deals'
+import { METROS } from '@/data/v3-metros'
+
+const CRITERIA = [
+  { label: 'METROS', value: 'KC · Memphis · Tampa · Indy' },
+  { label: 'STRATEGY', value: 'BRRRR · Buy & Hold' },
+  { label: 'MAX PRICE', value: '$400K' },
+  { label: 'MIN CAP', value: '7.0%' },
+  { label: 'MIN COC', value: '9.0%' },
+]
+
+const FIRST_NAME = 'Kevin'
+
+function Greeting() {
   return (
-    <div style={{ padding: '28px 28px 80px' }}>
-      <div
+    <div style={{ marginBottom: 22 }}>
+      <h2
         style={{
-          fontFamily: 'var(--v3-font-mono)',
-          fontSize: 11,
-          letterSpacing: '0.14em',
-          color: 'var(--v3-text-muted)',
-          textTransform: 'uppercase',
+          margin: 0,
+          fontSize: 22,
+          fontWeight: 500,
+          letterSpacing: '-0.01em',
+          color: 'var(--text)',
         }}
       >
-        Deal Scout · Placeholder
+        Good morning,{' '}
+        <span style={{ color: 'var(--indigo-hover)' }}>{FIRST_NAME}</span>.
+      </h2>
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 12,
+          letterSpacing: '0.02em',
+          color: 'var(--text-secondary)',
+          marginTop: 8,
+        }}
+      >
+        Scout found <span style={{ color: '#34D399', fontWeight: 600 }}>3 new deals</span> matching your criteria overnight. · Last scan 04:24 PT · 12 metros covered
       </div>
+    </div>
+  )
+}
+
+function ScoutStatusStrip() {
+  return (
+    <section
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 12,
+        padding: 18,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 22,
+        flexWrap: 'wrap',
+        marginBottom: 32,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: 'var(--blue)',
+            boxShadow: '0 0 0 6px rgba(59,130,246,0.12)',
+            animation: 'v3-pulse 1.8s ease-in-out infinite',
+          }}
+        />
+        <div>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              letterSpacing: '0.12em',
+              color: 'var(--blue)',
+              fontWeight: 600,
+            }}
+          >
+            SCOUT IS LIVE
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              color: 'var(--text-secondary)',
+              marginTop: 3,
+            }}
+          >
+            Next scan in 19h 36m
+          </div>
+        </div>
+      </div>
+
+      <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--hairline)' }} />
+
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+          gap: 14,
+        }}
+      >
+        {CRITERIA.map(c => (
+          <div key={c.label}>
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                letterSpacing: '0.1em',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
+              {c.label}
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 12,
+                fontWeight: 500,
+                color: 'var(--text)',
+                marginTop: 3,
+              }}
+            >
+              {c.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button type="button" className="app-btn-ghost" style={{ padding: '8px 14px', fontSize: 12 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        Configure Scout
+      </button>
+    </section>
+  )
+}
+
+function SectionHeader({
+  label,
+  title,
+  right,
+}: {
+  label: string
+  title: string
+  right?: React.ReactNode
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        gap: 16,
+        marginBottom: 18,
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.12em',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+          }}
+        >
+          {label}
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 500, color: 'var(--text)', marginTop: 6 }}>{title}</div>
+      </div>
+      {right}
+    </div>
+  )
+}
+
+export default function V3DashboardPage() {
+  return (
+    <div style={{ padding: '28px 28px 80px', maxWidth: 1440, margin: '0 auto' }}>
+      <Greeting />
+      <ScoutStatusStrip />
+
+      <section style={{ marginBottom: 40 }}>
+        <SectionHeader
+          label="New matches · Today"
+          title="3 deals qualified overnight"
+          right={
+            <Link href="/v3/pipeline" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 12 }}>
+              View all matches →
+            </Link>
+          }
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          {NEW_MATCHES.map(d => (
+            <DealCard key={d.id} deal={d} />
+          ))}
+        </div>
+      </section>
+
+      <section style={{ marginBottom: 40 }}>
+        <SectionHeader
+          label="Saved pipeline"
+          title={`${PIPELINE.length} deals tracked`}
+          right={
+            <Link href="/v3/pipeline" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 12 }}>
+              Open pipeline →
+            </Link>
+          }
+        />
+        <PipelineTable deals={PIPELINE.slice(0, 5)} compact />
+      </section>
+
+      <section>
+        <SectionHeader
+          label="Market intel · Live"
+          title="Your watchlist"
+          right={
+            <Link href="/v3/markets" className="app-btn-ghost" style={{ padding: '7px 14px', fontSize: 12 }}>
+              All 48 markets →
+            </Link>
+          }
+        />
+        <div
+          style={{
+            display: 'flex',
+            gap: 10,
+            overflowX: 'auto',
+            paddingBottom: 8,
+          }}
+        >
+          {METROS.map(m => (
+            <div key={m.metro} style={{ flex: '0 0 auto', minWidth: 220 }}>
+              <MetroTile metro={m} />
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

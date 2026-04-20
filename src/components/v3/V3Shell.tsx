@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
@@ -11,11 +11,21 @@ type AuthState =
   | { status: 'authed'; email: string | null; tier: string }
   | { status: 'unauthed' }
 
+// Routes inside /v3/* that should skip the auth guard and the shell chrome.
+const BARE_V3_ROUTES = ['/v3/login', '/v3/signup']
+
+function isBareRoute(pathname: string): boolean {
+  return BARE_V3_ROUTES.some(p => pathname === p || pathname.startsWith(p + '/'))
+}
+
 export default function V3Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname() || ''
+  const bare = isBareRoute(pathname)
   const [auth, setAuth] = useState<AuthState>({ status: 'loading' })
 
   useEffect(() => {
+    if (bare) return
     let cancelled = false
 
     const load = async () => {
@@ -28,7 +38,7 @@ export default function V3Shell({ children }: { children: React.ReactNode }) {
 
       if (!session?.user) {
         setAuth({ status: 'unauthed' })
-        router.replace('/v2/login')
+        router.replace('/v3/login')
         return
       }
 
@@ -50,7 +60,11 @@ export default function V3Shell({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [router])
+  }, [router, bare])
+
+  if (bare) {
+    return <>{children}</>
+  }
 
   if (auth.status === 'loading' || auth.status === 'unauthed') {
     return (
