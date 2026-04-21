@@ -42,6 +42,16 @@ const MODEL_OPTIONS: { key: ModelTier; label: string; sub: string }[] = [
 
 type ArvConfidence = 'Low' | 'Mid' | 'High'
 
+const PROPERTY_TYPES = ['Single Family', 'Multi-Family', 'Condo', 'Townhouse'] as const
+type PropertyTypeOpt = (typeof PROPERTY_TYPES)[number]
+
+type UnitRent = {
+  unitNumber: number
+  bedrooms: string
+  bathrooms: string
+  monthlyRent: string
+}
+
 type EditForm = {
   purchasePrice: string
   estimatedValue: string
@@ -53,7 +63,9 @@ type EditForm = {
   arv: string
   arvConfidence: ArvConfidence
   rehabCost: string
-  units: string
+  propertyType: string
+  unitCount: string
+  unitRents: UnitRent[]
 }
 
 type PropertyData = {
@@ -205,6 +217,37 @@ function pickArv(pd: PropertyData): number | undefined {
   return pickArvLowMidHigh(pd, pickAvm(pd)).mid
 }
 
+function inferPropertyTypeOpt(raw: string | undefined): string {
+  const pt = (raw || '').toLowerCase()
+  if (pt.includes('condo')) return 'Condo'
+  if (pt.includes('town')) return 'Townhouse'
+  if (
+    pt.includes('duplex') ||
+    pt.includes('triplex') ||
+    pt.includes('fourplex') ||
+    pt.includes('quadplex') ||
+    pt.includes('multi') ||
+    pt.includes('4-plex') ||
+    pt.includes('4 plex') ||
+    pt.includes('2 unit') ||
+    pt.includes('3 unit') ||
+    pt.includes('4 unit')
+  ) {
+    return 'Multi-Family'
+  }
+  return 'Single Family'
+}
+
+function seedUnitRents(count: number, totalRent: number, beds: string, baths: string): UnitRent[] {
+  const perUnit = count > 0 ? Math.round(totalRent / count) : 0
+  return Array.from({ length: Math.max(1, count) }, (_, i) => ({
+    unitNumber: i + 1,
+    bedrooms: beds,
+    bathrooms: baths,
+    monthlyRent: perUnit > 0 ? String(perUnit) : '',
+  }))
+}
+
 function makeInitialForm(strategy: Strategy, pd: PropertyData): EditForm {
   const avm = pickAvm(pd)
   const purchase = pickPurchasePrice(pd) ?? avm ?? 0
@@ -214,18 +257,23 @@ function makeInitialForm(strategy: Strategy, pd: PropertyData): EditForm {
   const sqft = pd.property?.sqft ?? pd.property?.squareFootage
   const rent = pd.rental?.rentEstimate ?? pd.property?.estimatedRent
   const units = inferUnitCount(pd.property?.propertyType)
+  const propertyType = inferPropertyTypeOpt(pd.property?.propertyType)
+  const bedsStr = beds != null ? String(beds) : ''
+  const bathsStr = baths != null ? String(baths) : ''
   return {
     purchasePrice: purchase ? String(purchase) : '',
     estimatedValue: avm ? String(avm) : purchase ? String(purchase) : '',
     estimatedRent: rent != null ? String(rent) : '',
-    beds: beds != null ? String(beds) : '',
-    baths: baths != null ? String(baths) : '',
+    beds: bedsStr,
+    baths: bathsStr,
     sqft: sqft != null ? String(sqft) : '',
     yearBuilt: pd.property?.yearBuilt != null ? String(pd.property.yearBuilt) : '',
     arv: arvMid ? String(arvMid) : '',
     arvConfidence: 'Mid',
     rehabCost: strategy === 'Fix & Flip' || strategy === 'BRRRR' ? '40000' : '0',
-    units: String(units),
+    propertyType,
+    unitCount: String(units),
+    unitRents: seedUnitRents(units, typeof rent === 'number' ? rent : 0, bedsStr, bathsStr),
   }
 }
 
@@ -241,7 +289,6 @@ function buildAnalyzeBody(
   const purchasePrice = toNum(form.purchasePrice) ?? pickPurchasePrice(propertyData) ?? 0
   const estimatedValue =
     toNum(form.estimatedValue) ?? pickAvm(propertyData) ?? purchasePrice
-  const monthlyRent = toNum(form.estimatedRent) ?? propertyData.rental?.rentEstimate
   const arv = toNum(form.arv) ?? pickArv(propertyData) ?? estimatedValue
   const rehab = toNum(form.rehabCost) ?? 0
   const dpPercent = toNum(params.downPaymentPercent) ?? 20
@@ -253,10 +300,16 @@ function buildAnalyzeBody(
   const sellClosingPct = toNum(params.sellClosingCosts) ?? 6
   const propertyTax = toNum(params.propertyTax)
   const insurance = toNum(params.insurance)
-  const units =
-    strategy === 'House Hack'
-      ? toNum(form.units) || inferUnitCount(propertyData.property?.propertyType)
-      : 1
+
+  const units = Math.max(1, toNum(form.unitCount) || 1)
+  const isMultifamily = units > 1
+  const rentRollTotal = isMultifamily
+    ? form.unitRents.reduce((sum, u) => sum + (toNum(u.monthlyRent) || 0), 0)
+    : 0
+  const monthlyRent =
+    isMultifamily && rentRollTotal > 0
+      ? rentRollTotal
+      : toNum(form.estimatedRent) ?? propertyData.rental?.rentEstimate
 
   const mergedPropertyData = {
     ...propertyData,
@@ -267,6 +320,7 @@ function buildAnalyzeBody(
       squareFootage:
         toNum(form.sqft) ?? propertyData.property?.squareFootage ?? propertyData.property?.sqft,
       yearBuilt: toNum(form.yearBuilt) ?? propertyData.property?.yearBuilt,
+      propertyType: form.propertyType || propertyData.property?.propertyType,
       estimatedValue,
     },
     rental: {
@@ -278,6 +332,15 @@ function buildAnalyzeBody(
       value: estimatedValue,
     },
   }
+
+  const unitBreakdown = isMultifamily
+    ? form.unitRents.slice(0, units).map(u => ({
+        unitNumber: u.unitNumber,
+        bedrooms: toNum(u.bedrooms) || 2,
+        bathrooms: toNum(u.bathrooms) || 1,
+        monthlyRent: toNum(u.monthlyRent) || 0,
+      }))
+    : undefined
 
   return {
     address,
@@ -307,6 +370,7 @@ function buildAnalyzeBody(
     units,
     monthlyRent,
     propertyData: mergedPropertyData,
+    ...(unitBreakdown ? { unitBreakdown } : {}),
   }
 }
 
@@ -756,7 +820,44 @@ function EditablePanel({
   const rehabExtensive = Math.round(sqft * 65)
 
   const showBrrrFlip = strategy === 'BRRRR' || strategy === 'Fix & Flip'
-  const showHouseHack = strategy === 'House Hack'
+
+  const unitCount = Math.max(1, toNum(form.unitCount) || 1)
+  const isMultifamily = unitCount > 1
+  const rentRollTotal = form.unitRents.reduce((sum, u) => sum + (toNum(u.monthlyRent) || 0), 0)
+
+  const setUnitCount = (raw: string) => {
+    const parsed = parseInt(raw, 10)
+    const next = Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, 50) : 1
+    let rents = form.unitRents.slice()
+    if (next > rents.length) {
+      const add = Array.from({ length: next - rents.length }, (_, i) => ({
+        unitNumber: rents.length + i + 1,
+        bedrooms: form.beds,
+        bathrooms: form.baths,
+        monthlyRent: rents[0]?.monthlyRent || '',
+      }))
+      rents = [...rents, ...add]
+    } else if (next < rents.length) {
+      rents = rents.slice(0, next)
+    }
+    onChange({ unitCount: String(next), unitRents: rents })
+  }
+
+  const updateUnitRent = (idx: number, patch: Partial<UnitRent>) => {
+    const next = form.unitRents.map((u, i) => (i === idx ? { ...u, ...patch } : u))
+    onChange({ unitRents: next })
+  }
+
+  const removeUnit = (idx: number) => {
+    if (form.unitRents.length <= 1) return
+    const next = form.unitRents.filter((_, i) => i !== idx).map((u, i) => ({ ...u, unitNumber: i + 1 }))
+    onChange({ unitRents: next, unitCount: String(next.length) })
+  }
+
+  const applyFirstUnitRentToAll = () => {
+    const first = form.unitRents[0]?.monthlyRent || ''
+    onChange({ unitRents: form.unitRents.map(u => ({ ...u, monthlyRent: first })) })
+  }
 
   const setArvFromConfidence = (c: ArvConfidence) => {
     const v = c === 'Low' ? arvValues.low : c === 'High' ? arvValues.high : arvValues.mid
@@ -867,6 +968,277 @@ function EditablePanel({
         </PField>
       </div>
 
+      {/* Property type selector */}
+      <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline)' }}>
+        <PField label="Property Type">
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {PROPERTY_TYPES.map(pt => {
+              const active = (form.propertyType || 'Single Family') === pt
+              return (
+                <button
+                  key={pt}
+                  type="button"
+                  onClick={() => {
+                    const inferredCount = pt === 'Multi-Family' ? Math.max(unitCount, 2) : 1
+                    const patch: Partial<EditForm> = { propertyType: pt }
+                    if (pt === 'Multi-Family' && unitCount < 2) {
+                      const rents = seedUnitRents(
+                        inferredCount,
+                        toNum(form.estimatedRent) || 0,
+                        form.beds,
+                        form.baths
+                      )
+                      patch.unitCount = String(inferredCount)
+                      patch.unitRents = rents
+                    } else if (pt !== 'Multi-Family' && unitCount > 1) {
+                      patch.unitCount = '1'
+                      patch.unitRents = form.unitRents.slice(0, 1)
+                    }
+                    onChange(patch)
+                  }}
+                  style={{
+                    background: active ? 'var(--indigo-dim)' : 'var(--elevated)',
+                    color: active ? 'var(--indigo-hover)' : 'var(--text-secondary)',
+                    border: `1px solid ${active ? 'var(--border-strong)' : 'var(--border)'}`,
+                    borderRadius: 8,
+                    padding: '7px 14px',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 11,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 140ms ease',
+                  }}
+                >
+                  {pt}
+                </button>
+              )
+            })}
+          </div>
+        </PField>
+      </div>
+
+      {/* Units + rent roll (all strategies) */}
+      <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hairline)' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMultifamily ? '120px 1fr' : '120px 1fr',
+            gap: 14,
+            alignItems: 'end',
+          }}
+        >
+          <PField label="Number of Units">
+            <PInput
+              value={form.unitCount}
+              onChange={setUnitCount}
+              inputMode="numeric"
+              placeholder="1"
+            />
+          </PField>
+          {!isMultifamily ? (
+            <PField label="Monthly Rent">
+              <PInput
+                value={form.estimatedRent}
+                onChange={v => onChange({ estimatedRent: v })}
+                inputMode="numeric"
+                placeholder="0"
+              />
+            </PField>
+          ) : (
+            <div>
+              <label style={pFieldLabel}>Total Rent / mo (sum of rent roll)</label>
+              <div
+                style={{
+                  ...pFieldInput,
+                  fontWeight: 600,
+                  color: rentRollTotal > 0 ? '#34D399' : 'var(--text-muted)',
+                }}
+              >
+                ${rentRollTotal.toLocaleString()}/mo
+              </div>
+            </div>
+          )}
+        </div>
+
+        {isMultifamily && (
+          <div style={{ marginTop: 14 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
+              <SectionLabel color="var(--text-muted)">RENT ROLL</SectionLabel>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                  color: rentRollTotal > 0 ? '#34D399' : 'var(--text-muted)',
+                  fontWeight: 600,
+                }}
+              >
+                Total: ${rentRollTotal.toLocaleString()}/mo
+              </span>
+            </div>
+            <div
+              style={{
+                background: 'var(--bg)',
+                border: '1px solid var(--hairline)',
+                borderRadius: 10,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '56px 72px 72px 1fr 40px',
+                  gap: 8,
+                  padding: '8px 12px',
+                  background: 'var(--elevated)',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  letterSpacing: '0.1em',
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                <span>Unit</span>
+                <span>Beds</span>
+                <span>Baths</span>
+                <span style={{ textAlign: 'right' }}>Rent/mo</span>
+                <span />
+              </div>
+              {form.unitRents.map((u, idx) => {
+                const cellStyle: React.CSSProperties = {
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid var(--hairline)',
+                  padding: '4px 6px',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 13,
+                  color: 'var(--text)',
+                  outline: 'none',
+                  width: '100%',
+                }
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '56px 72px 72px 1fr 40px',
+                      gap: 8,
+                      padding: '10px 12px',
+                      alignItems: 'center',
+                      borderTop: idx > 0 ? '1px solid var(--hairline)' : 'none',
+                    }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
+                      Unit {u.unitNumber}
+                    </span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={u.bedrooms}
+                      onChange={e => updateUnitRent(idx, { bedrooms: e.target.value })}
+                      placeholder="2"
+                      style={cellStyle}
+                    />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={u.bathrooms}
+                      onChange={e => updateUnitRent(idx, { bathrooms: e.target.value })}
+                      placeholder="1"
+                      style={cellStyle}
+                    />
+                    <div style={{ position: 'relative' }}>
+                      <span
+                        style={{
+                          position: 'absolute',
+                          left: 6,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          fontSize: 12,
+                          color: 'var(--text-muted)',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        $
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={u.monthlyRent}
+                        onChange={e => updateUnitRent(idx, { monthlyRent: e.target.value })}
+                        placeholder="0"
+                        style={{
+                          ...cellStyle,
+                          paddingLeft: 16,
+                          textAlign: 'right',
+                          fontWeight: 600,
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeUnit(idx)}
+                      disabled={form.unitRents.length <= 1}
+                      title="Remove unit"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        padding: 4,
+                        color: 'var(--text-muted)',
+                        cursor: form.unitRents.length <= 1 ? 'not-allowed' : 'pointer',
+                        opacity: form.unitRents.length <= 1 ? 0.3 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+            {form.unitRents.length > 1 && (
+              <button
+                type="button"
+                onClick={applyFirstUnitRentToAll}
+                style={{
+                  marginTop: 8,
+                  background: 'transparent',
+                  border: 'none',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                  color: 'var(--indigo-hover)',
+                  cursor: 'pointer',
+                  padding: '4px 0',
+                }}
+              >
+                ↑↓ Apply Unit 1 rent to all units
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {showBrrrFlip && (
         <div
           style={{
@@ -955,19 +1327,6 @@ function EditablePanel({
         </div>
       )}
 
-      {showHouseHack && (
-        <div
-          style={{
-            marginTop: 22,
-            paddingTop: 20,
-            borderTop: '1px solid var(--hairline)',
-          }}
-        >
-          <PField label="Number of units">
-            <PInput value={form.units} onChange={v => onChange({ units: v })} inputMode="numeric" />
-          </PField>
-        </div>
-      )}
     </section>
   )
 }
@@ -1391,7 +1750,7 @@ function secondaryMetricsFor(
         label: 'EFFECTIVE HOUSING',
         value: fmtMonthly(result.cashFlow?.monthly != null ? -result.cashFlow.monthly : undefined),
       },
-      { label: 'UNITS', value: form?.units || '1' },
+      { label: 'UNITS', value: form?.unitCount || '1' },
       {
         label: 'DEAL SCORE',
         value: result.dealScore != null ? `${result.dealScore}/10` : '—',
@@ -1413,6 +1772,189 @@ function secondaryMetricsFor(
       label: 'DEAL SCORE',
       value: result.dealScore != null ? `${result.dealScore}/10` : '—',
     },
+  ]
+}
+
+/* -------------------------- waterfall tables -------------------------- */
+
+type WaterfallRow =
+  | { kind: 'line'; label: string; value: string; emphasis?: boolean; accent?: string }
+  | { kind: 'separator' }
+  | { kind: 'subtle'; label: string }
+
+function WaterfallTable({ title, rows }: { title: string; rows: WaterfallRow[] }) {
+  return (
+    <div
+      style={{
+        background: 'var(--bg)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 10,
+        padding: 18,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.14em',
+          color: 'var(--indigo-hover)',
+          textTransform: 'uppercase',
+          fontWeight: 600,
+          marginBottom: 14,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {rows.map((r, i) => {
+          if (r.kind === 'separator') {
+            return (
+              <div
+                key={i}
+                style={{
+                  borderTop: '1px dashed var(--hairline)',
+                  margin: '6px 0',
+                }}
+              />
+            )
+          }
+          if (r.kind === 'subtle') {
+            return (
+              <div
+                key={i}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                  color: 'var(--text-muted)',
+                  padding: '3px 0 3px 12px',
+                }}
+              >
+                {r.label}
+              </div>
+            )
+          }
+          return (
+            <div
+              key={i}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
+                padding: '6px 0',
+                background: r.emphasis ? 'var(--indigo-dim)' : 'transparent',
+                borderRadius: r.emphasis ? 6 : 0,
+                paddingLeft: r.emphasis ? 10 : 0,
+                paddingRight: r.emphasis ? 10 : 0,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 13,
+              }}
+            >
+              <span
+                style={{
+                  color: r.emphasis ? 'var(--indigo-hover)' : 'var(--text-secondary)',
+                  fontWeight: r.emphasis ? 600 : 400,
+                }}
+              >
+                {r.label}
+              </span>
+              <span
+                style={{
+                  color: r.accent || (r.emphasis ? 'var(--indigo-hover)' : 'var(--text)'),
+                  fontWeight: r.emphasis ? 700 : 500,
+                }}
+              >
+                {r.value}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function buildBRRRRWaterfall(
+  purchase: number,
+  rehab: number,
+  closingPct: number,
+  arv: number,
+  monthlyCF: number,
+  cashOnCash: number | undefined
+): WaterfallRow[] {
+  const closing = purchase * (closingPct / 100)
+  const totalIn = purchase + rehab + closing
+  const refi = arv * 0.75
+  const cashLeftIn = Math.max(0, totalIn - refi)
+  return [
+    { kind: 'line', label: 'Purchase Price', value: fmtMoneyFull(purchase) },
+    { kind: 'line', label: 'Rehab Cost', value: `+ ${fmtMoneyFull(rehab)}` },
+    { kind: 'line', label: `Closing Costs (${closingPct}%)`, value: `+ ${fmtMoneyFull(closing)}` },
+    { kind: 'line', label: '= Total In', value: fmtMoneyFull(totalIn), emphasis: false, accent: 'var(--text)' },
+    { kind: 'separator' },
+    { kind: 'line', label: 'ARV', value: fmtMoneyFull(arv) },
+    { kind: 'subtle', label: '× 75% LTV' },
+    { kind: 'line', label: '= Refi Proceeds', value: fmtMoneyFull(refi), accent: 'var(--text)' },
+    { kind: 'separator' },
+    {
+      kind: 'line',
+      label: 'Cash Left In Deal',
+      value: fmtMoneyFull(cashLeftIn),
+      emphasis: true,
+    },
+    { kind: 'line', label: 'Monthly Cash Flow', value: fmtMoneyFull(monthlyCF), accent: monthlyCF >= 0 ? '#34D399' : '#F87171' },
+    { kind: 'line', label: 'Cash-on-Cash', value: fmtPct(cashOnCash), accent: '#34D399' },
+  ]
+}
+
+function buildFlipWaterfall(
+  purchase: number,
+  rehab: number,
+  closingPct: number,
+  sellClosingPct: number,
+  holdingMonths: number,
+  dpPct: number,
+  rate: number,
+  arv: number
+): WaterfallRow[] {
+  const closing = purchase * (closingPct / 100)
+  const loanBalance = purchase * (1 - dpPct / 100)
+  const monthlyInterest = (loanBalance * (rate / 100)) / 12
+  const holdingCost = monthlyInterest * holdingMonths
+  const totalCost = purchase + rehab + closing + holdingCost
+  const sellClosing = arv * (sellClosingPct / 100)
+  const netSale = arv - sellClosing
+  const grossProfit = arv - totalCost
+  const netProfit = netSale - totalCost
+  const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0
+  const maxOffer = arv * 0.85 - rehab
+  return [
+    { kind: 'line', label: 'Purchase Price', value: fmtMoneyFull(purchase) },
+    { kind: 'line', label: 'Rehab Cost', value: `+ ${fmtMoneyFull(rehab)}` },
+    { kind: 'line', label: `Closing Costs (${closingPct}%)`, value: `+ ${fmtMoneyFull(closing)}` },
+    {
+      kind: 'line',
+      label: `Holding Costs (${holdingMonths}mo)`,
+      value: `+ ${fmtMoneyFull(holdingCost)}`,
+    },
+    { kind: 'line', label: '= Total Project Cost', value: fmtMoneyFull(totalCost), accent: 'var(--text)' },
+    { kind: 'separator' },
+    { kind: 'line', label: 'ARV', value: fmtMoneyFull(arv) },
+    {
+      kind: 'line',
+      label: `− Sell Closing (${sellClosingPct}%)`,
+      value: fmtMoneyFull(sellClosing),
+    },
+    { kind: 'line', label: '= Net Sale Proceeds', value: fmtMoneyFull(netSale), accent: 'var(--text)' },
+    { kind: 'separator' },
+    { kind: 'line', label: 'Gross Profit', value: fmtMoneyFull(grossProfit) },
+    {
+      kind: 'line',
+      label: 'Net Profit',
+      value: fmtMoneyFull(netProfit),
+      accent: netProfit >= 0 ? '#34D399' : '#F87171',
+      emphasis: true,
+    },
+    { kind: 'line', label: 'ROI', value: fmtPct(roi), accent: '#34D399' },
+    { kind: 'line', label: 'Max Offer (85% rule)', value: fmtMoneyFull(maxOffer) },
   ]
 }
 
@@ -1678,8 +2220,10 @@ export default function V3AnalyzePage() {
   const renderResultsView = (
     viewResult: V3AnalysisResult,
     viewCalc: Record<string, unknown> | null,
-    modelLabel?: string
+    modelLabel?: string,
+    accentColor?: string
   ) => {
+    const accent = accentColor || 'var(--indigo-hover)'
     const signal = signalFromDealScore(viewResult.dealScore)
     const narrativeBlurred = tier === 'free'
     const secondaryBlurred = tier === 'free'
@@ -1720,8 +2264,9 @@ export default function V3AnalyzePage() {
                   fontFamily: 'var(--font-mono)',
                   fontSize: 10,
                   letterSpacing: '0.12em',
-                  color: 'var(--text-muted)',
+                  color: modelLabel ? accent : 'var(--text-muted)',
                   textTransform: 'uppercase',
+                  fontWeight: modelLabel ? 600 : 500,
                 }}
               >
                 {modelLabel ? `${modelLabel} · Deal score` : 'Deal score'}
@@ -1812,6 +2357,39 @@ export default function V3AnalyzePage() {
                 interestRate={rate}
                 loanTermYears={term}
                 monthlyCashFlow={monthlyCF}
+              />
+            )}
+          </section>
+        )}
+
+        {/* Waterfall (strategy-specific) */}
+        {(strategy === 'BRRRR' || strategy === 'Fix & Flip') && purchase > 0 && arv > 0 && (
+          <section style={{ marginBottom: 20 }}>
+            {strategy === 'BRRRR' ? (
+              <WaterfallTable
+                title="BRRRR Waterfall"
+                rows={buildBRRRRWaterfall(
+                  purchase,
+                  rehab,
+                  closingPct,
+                  arv,
+                  monthlyCF,
+                  viewResult.metrics?.cashOnCash ?? undefined
+                )}
+              />
+            ) : (
+              <WaterfallTable
+                title="Fix & Flip Waterfall"
+                rows={buildFlipWaterfall(
+                  purchase,
+                  rehab,
+                  closingPct,
+                  sellClosingPct,
+                  holdingMonths,
+                  dpPct,
+                  rate,
+                  arv
+                )}
               />
             )}
           </section>
@@ -2367,11 +2945,16 @@ export default function V3AnalyzePage() {
             ← Back to comparison
           </button>
           <StatusBar value={dealStatus} onChange={setDealStatus} onSave={onSaveToPipeline} saveState={saveState} />
-          {renderResultsView(
-            expandedModel.parsedResult as V3AnalysisResult,
-            expandedModel.serverCalculations as Record<string, unknown> | null,
-            expandedModel.modelLabel
-          )}
+          {(() => {
+            const expandedIdx = proMax.modelResults.findIndex(m => m.modelId === expandedModel.modelId)
+            const expandedCfg = expandedIdx >= 0 ? PRO_MAX_MODELS[expandedIdx] : undefined
+            return renderResultsView(
+              expandedModel.parsedResult as V3AnalysisResult,
+              expandedModel.serverCalculations as Record<string, unknown> | null,
+              expandedModel.modelLabel,
+              expandedCfg?.accentColor
+            )
+          })()}
         </div>
       )}
 
@@ -2406,8 +2989,12 @@ export default function V3AnalyzePage() {
               const parsed = mr.parsedResult as V3AnalysisResult | null
               const s = parsed ? signalFromDealScore(parsed.dealScore) : null
               const clickable = mr.status === 'complete' && parsed != null
+              const accent = cfg?.accentColor || '#6366F1'
+              const tintBg = cfg?.bgColor || 'var(--surface)'
+              const tintBorder = cfg?.borderColor || 'var(--hairline)'
 
-              // Strategy-specific preview metrics
+              // Strategy-specific 3 preview metrics
+              const fin = parsed ? aiFinOf(parsed) : {}
               const preview: { label: string; value: string }[] =
                 strategy === 'Fix & Flip'
                   ? [
@@ -2415,7 +3002,8 @@ export default function V3AnalyzePage() {
                         label: 'SCORE',
                         value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
                       },
-                      { label: 'NET PROFIT', value: fmtMoney(aiFinOf(parsed || {} as V3AnalysisResult).net_profit) },
+                      { label: 'NET PROFIT', value: fmtMoney(fin.net_profit) },
+                      { label: 'ROI', value: fmtPct((fin.roi_percent as number | undefined) ?? parsed?.metrics?.roi) },
                     ]
                   : strategy === 'BRRRR'
                     ? [
@@ -2424,6 +3012,7 @@ export default function V3AnalyzePage() {
                           value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
                         },
                         { label: 'CoC', value: fmtPct(parsed?.metrics?.cashOnCash) },
+                        { label: 'CF/MO', value: fmtMoney(parsed?.cashFlow?.monthly ?? parsed?.cashFlow?.monthlyCashFlow) },
                       ]
                     : strategy === 'House Hack'
                       ? [
@@ -2432,19 +3021,28 @@ export default function V3AnalyzePage() {
                             value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
                           },
                           {
-                            label: 'SAVINGS',
+                            label: 'MONTHLY COST',
                             value: fmtMonthly(
                               parsed?.cashFlow?.monthly != null ? -parsed.cashFlow.monthly : undefined
                             ),
                           },
+                          { label: 'OFFSET %', value: fmtPct(fin.offset_percent as number | undefined) },
                         ]
                       : [
                           {
                             label: 'SCORE',
                             value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
                           },
-                          { label: 'CF/MO', value: fmtMoney(parsed?.cashFlow?.monthly) },
+                          { label: 'CF/MO', value: fmtMoney(parsed?.cashFlow?.monthly ?? parsed?.cashFlow?.monthlyCashFlow) },
+                          { label: 'CAP RATE', value: fmtPct(parsed?.metrics?.capRate) },
                         ]
+
+              const latencySec =
+                mr.latencyMs != null ? (mr.latencyMs / 1000).toFixed(1) : null
+              const fullNarrative = parsed?.narrative || parsed?.recommendation || ''
+              const firstSentenceMatch = fullNarrative.match(/^([^.!?]+[.!?])\s*(.*)$/)
+              const firstSentence = firstSentenceMatch ? firstSentenceMatch[1] : fullNarrative
+              const restNarrative = firstSentenceMatch ? firstSentenceMatch[2] : ''
 
               return (
                 <button
@@ -2455,24 +3053,27 @@ export default function V3AnalyzePage() {
                   style={{
                     position: 'relative',
                     textAlign: 'left',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--hairline)',
+                    background: tintBg,
+                    border: `1px solid ${tintBorder}`,
                     borderRadius: 10,
                     padding: 20,
+                    paddingTop: 22,
                     overflow: 'hidden',
-                    minHeight: 220,
+                    minHeight: 240,
                     cursor: clickable ? 'pointer' : 'default',
-                    transition: 'border-color 180ms ease, transform 180ms ease',
+                    transition: 'border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease',
                   }}
                   onMouseEnter={e => {
                     if (clickable) {
-                      e.currentTarget.style.borderColor = 'var(--border-strong)'
+                      e.currentTarget.style.borderColor = accent
                       e.currentTarget.style.transform = 'translateY(-2px)'
+                      e.currentTarget.style.boxShadow = `0 6px 18px ${tintBorder}`
                     }
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'var(--hairline)'
+                    e.currentTarget.style.borderColor = tintBorder
                     e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
                   <div
@@ -2482,20 +3083,67 @@ export default function V3AnalyzePage() {
                       left: 0,
                       right: 0,
                       height: 3,
-                      background: cfg?.accentColor || '#6366F1',
+                      background: accent,
                     }}
                   />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)' }}>
-                        {cfg?.roleLabel || `Model ${i + 1}`}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 10,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13, color: accent }}>{cfg?.icon || '◆'}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                          {cfg?.roleLabel || `Model ${i + 1}`}
+                        </span>
                       </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: 10,
+                          color: 'var(--text-muted)',
+                          marginTop: 3,
+                        }}
+                      >
                         {mr.modelLabel}
                       </div>
                     </div>
-                    {s && <SignalBadge signal={s} />}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      {s && <SignalBadge signal={s} />}
+                      {latencySec && (
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 9,
+                            letterSpacing: '0.06em',
+                            color: 'var(--text-muted)',
+                          }}
+                        >
+                          {latencySec}s
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {cfg?.roleDescription && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--text-muted)',
+                        lineHeight: 1.5,
+                        marginBottom: 10,
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      {cfg.roleDescription}
+                    </div>
+                  )}
+
                   {mr.status === 'error' && <AlertBox kind="error">{mr.error || 'Model failed'}</AlertBox>}
                   {parsed && (
                     <>
@@ -2503,24 +3151,25 @@ export default function V3AnalyzePage() {
                         style={{
                           margin: 0,
                           fontSize: 13,
-                          color: 'var(--text-secondary)',
                           lineHeight: 1.6,
                           display: '-webkit-box',
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical',
                           overflow: 'hidden',
+                          color: 'var(--text-secondary)',
                         }}
                       >
-                        {parsed.narrative || parsed.recommendation || 'No narrative returned.'}
+                        <span style={{ color: accent, fontWeight: 500 }}>{firstSentence}</span>
+                        {restNarrative ? ` ${restNarrative}` : ''}
                       </p>
                       <div
                         style={{
-                          borderTop: '1px solid var(--hairline)',
+                          borderTop: `1px solid ${tintBorder}`,
                           marginTop: 14,
                           paddingTop: 12,
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(2, 1fr)',
-                          gap: 12,
+                          gridTemplateColumns: 'repeat(3, 1fr)',
+                          gap: 10,
                         }}
                       >
                         {preview.map(p => (
@@ -2557,7 +3206,7 @@ export default function V3AnalyzePage() {
                             fontFamily: 'var(--font-mono)',
                             fontSize: 10,
                             letterSpacing: '0.1em',
-                            color: 'var(--indigo-hover)',
+                            color: accent,
                           }}
                         >
                           View full analysis →

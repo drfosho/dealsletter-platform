@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import type { Deal, PipelineStatus } from '@/data/v3-deals'
 
@@ -45,6 +46,13 @@ const COLUMNS: Column[] = [
   },
 ]
 
+function statusBadgeColors(status: PipelineStatus): { bg: string; color: string } {
+  if (status === 'Strong Buy') return { bg: 'rgba(16,185,129,0.12)', color: '#34D399' }
+  if (status === 'Reviewing') return { bg: 'rgba(99,102,241,0.14)', color: 'var(--indigo-hover)' }
+  if (status === 'Passed') return { bg: 'rgba(239,68,68,0.12)', color: '#F87171' }
+  return { bg: 'rgba(153,148,184,0.08)', color: 'var(--text-secondary)' }
+}
+
 function KanbanCard({
   deal,
   onStatusChange,
@@ -52,14 +60,25 @@ function KanbanCard({
   deal: Deal
   onStatusChange?: (dealId: string, status: PipelineStatus) => void
 }) {
+  const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const cap = deal.cap != null ? `${deal.cap.toFixed(1)}%` : '—'
   const coc = deal.coc != null ? `${deal.coc.toFixed(1)}%` : '—'
   const cf = deal.cashFlow != null ? `$${deal.cashFlow}` : '—'
   const cfColor = deal.cashFlow != null && deal.cashFlow < 0 ? 'var(--red)' : 'var(--text)'
+  const statusBadge = statusBadgeColors(deal.status)
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push('/v3/analyze')}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          router.push('/v3/analyze')
+        }
+      }}
       style={{
         position: 'relative',
         background: 'var(--bg)',
@@ -67,15 +86,17 @@ function KanbanCard({
         borderRadius: 8,
         padding: 12,
         cursor: 'pointer',
-        transition: 'transform 180ms ease, border-color 180ms ease',
+        transition: 'transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
       }}
       onMouseEnter={e => {
         e.currentTarget.style.transform = 'translateY(-1px)'
-        e.currentTarget.style.borderColor = 'var(--border)'
+        e.currentTarget.style.borderColor = 'var(--border-strong)'
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.12)'
       }}
       onMouseLeave={e => {
         e.currentTarget.style.transform = 'translateY(0)'
         e.currentTarget.style.borderColor = 'var(--hairline)'
+        e.currentTarget.style.boxShadow = 'none'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
@@ -120,22 +141,39 @@ function KanbanCard({
         {deal.city} {deal.state}
       </div>
 
-      <span
-        style={{
-          display: 'inline-block',
-          marginTop: 8,
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9,
-          letterSpacing: '0.06em',
-          color: 'var(--indigo-hover)',
-          background: 'var(--indigo-dim)',
-          border: '1px solid var(--border-strong)',
-          borderRadius: 999,
-          padding: '2px 7px',
-        }}
-      >
-        {deal.strategy}
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+        <span
+          style={{
+            display: 'inline-block',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.06em',
+            color: 'var(--indigo-hover)',
+            background: 'var(--indigo-dim)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: 999,
+            padding: '2px 7px',
+          }}
+        >
+          {deal.strategy}
+        </span>
+        <span
+          style={{
+            display: 'inline-block',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: statusBadge.color,
+            background: statusBadge.bg,
+            borderRadius: 4,
+            padding: '2px 7px',
+          }}
+        >
+          {deal.status}
+        </span>
+      </div>
 
       <div
         style={{
