@@ -8,37 +8,100 @@ function fmtAxis(n: number): string {
 
 type ChartPoint = { x: number; y: number }
 
-function computePath(points: ChartPoint[], w: number, h: number, pad: number): string {
-  if (points.length === 0) return ''
-  const xs = points.map(p => p.x)
-  const ys = points.map(p => p.y)
-  const minY = Math.min(0, ...ys)
-  const maxY = Math.max(...ys, 1)
-  const minX = Math.min(...xs)
-  const maxX = Math.max(...xs, minX + 1)
-  const scaleX = (x: number) => pad + ((x - minX) / (maxX - minX)) * (w - 2 * pad)
-  const scaleY = (y: number) => h - pad - ((y - minY) / (maxY - minY)) * (h - 2 * pad)
-  return points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.x).toFixed(1)} ${scaleY(p.y).toFixed(1)}`)
-    .join(' ')
-}
-
 function ChartFrame({
   children,
   height = 200,
+  minY = 0,
+  maxY = 100,
 }: {
   children: (d: { w: number; h: number; pad: number }) => React.ReactNode
   height?: number
+  minY?: number
+  maxY?: number
 }) {
   const w = 800
   const h = height
-  const pad = 36
+  const pad = 52
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height, display: 'block' }}>
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{
+        width: '100%',
+        height: 'auto',
+        display: 'block',
+        maxHeight: height * 1.5,
+      }}
+    >
       <line x1={pad} y1={h - pad} x2={w - pad} y2={h - pad} stroke="var(--hairline)" strokeWidth="1" />
       <line x1={pad} y1={pad} x2={pad} y2={h - pad} stroke="var(--hairline)" strokeWidth="1" />
+
+      {[0.25, 0.5, 0.75].map(f => {
+        const val = minY + f * (maxY - minY)
+        return (
+          <text
+            key={f}
+            x={pad - 4}
+            y={h - pad - f * (h - 2 * pad) + 4}
+            textAnchor="end"
+            fontFamily="var(--font-mono)"
+            fontSize="9"
+            fill="var(--text-muted)"
+          >
+            {fmtAxis(val)}
+          </text>
+        )
+      })}
+
       {children({ w, h, pad })}
     </svg>
+  )
+}
+
+function Legend({
+  items,
+}: {
+  items: { color: string; label: string; dashed?: boolean }[]
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 16, marginBottom: 8, flexWrap: 'wrap' }}>
+      {items.map(it => (
+        <div key={it.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div
+            style={{
+              width: 20,
+              height: 0,
+              borderTop: `2px ${it.dashed ? 'dashed' : 'solid'} ${it.color}`,
+            }}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--text-muted)',
+            }}
+          >
+            {it.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function CardTopAccent() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 2,
+        background: 'linear-gradient(90deg, var(--indigo), transparent)',
+        borderRadius: '12px 12px 0 0',
+      }}
+    />
   )
 }
 
@@ -99,12 +162,14 @@ export function FlipChart({
   return (
     <div
       style={{
+        position: 'relative',
         background: 'var(--surface)',
         border: '1px solid var(--hairline)',
         borderRadius: 12,
         padding: 18,
       }}
     >
+      <CardTopAccent />
       <div
         style={{
           display: 'flex',
@@ -150,7 +215,15 @@ export function FlipChart({
         </div>
       </div>
 
-      <ChartFrame height={200}>
+      <Legend
+        items={[
+          { color: 'var(--green)', label: 'Net sale' },
+          { color: 'var(--indigo-hover)', label: 'Total in' },
+          { color: profit >= 0 ? 'var(--green)' : 'var(--red)', label: 'Profit gap', dashed: true },
+        ]}
+      />
+
+      <ChartFrame height={220} minY={minY} maxY={maxY}>
         {({ w, h, pad }) => {
           const scaleX = (x: number) => pad + (x / months) * (w - 2 * pad)
           const scaleY = (y: number) =>
@@ -158,9 +231,18 @@ export function FlipChart({
           const costPath = costs
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.x).toFixed(1)} ${scaleY(p.y).toFixed(1)}`)
             .join(' ')
+          const baselineY = scaleY(minY)
+          const costFillPath = `${costPath} L ${scaleX(months).toFixed(1)} ${baselineY.toFixed(1)} L ${scaleX(0).toFixed(1)} ${baselineY.toFixed(1)} Z`
 
           return (
             <>
+              <defs>
+                <linearGradient id="flip-cost-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--indigo)" stopOpacity="0.15" />
+                  <stop offset="100%" stopColor="var(--indigo)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
               {[0.25, 0.5, 0.75].map(f => (
                 <line
                   key={f}
@@ -172,6 +254,8 @@ export function FlipChart({
                   strokeDasharray="2 4"
                 />
               ))}
+
+              <path d={costFillPath} fill="url(#flip-cost-fill)" />
 
               <line
                 x1={scaleX(0)}
@@ -204,6 +288,22 @@ export function FlipChart({
               >
                 Total in {fmtAxis(lastCost)}
               </text>
+
+              <line
+                x1={scaleX(months)}
+                y1={scaleY(netSale)}
+                x2={scaleX(months)}
+                y2={scaleY(lastCost)}
+                stroke={profit >= 0 ? 'var(--green)' : 'var(--red)'}
+                strokeWidth="1"
+                strokeDasharray="3 2"
+                opacity="0.5"
+              />
+
+              <circle cx={scaleX(0)} cy={scaleY(costs[0].y)} r="3" fill="var(--indigo-hover)" />
+              <circle cx={scaleX(months)} cy={scaleY(lastCost)} r="3" fill="var(--indigo-hover)" />
+              <circle cx={scaleX(0)} cy={scaleY(netSale)} r="3" fill="var(--green)" />
+              <circle cx={scaleX(months)} cy={scaleY(netSale)} r="3" fill="var(--green)" />
 
               <text
                 x={pad}
@@ -282,19 +382,37 @@ export function HoldChart({
   const finalCf = cfPoints[cfPoints.length - 1].y
   const finalEquity = equityPoints[equityPoints.length - 1].y
 
+  let crossoverYear: number | null = null
+  for (let y = 1; y <= years; y++) {
+    if (equityPoints[y].y >= cfPoints[y].y && equityPoints[y - 1].y < cfPoints[y - 1].y) {
+      crossoverYear = y
+      break
+    }
+  }
+
   const allY = [...cfPoints.map(p => p.y), ...equityPoints.map(p => p.y), 0]
   const minY = Math.min(0, ...allY)
   const maxY = Math.max(...allY, 1)
 
+  const legendItems: { color: string; label: string; dashed?: boolean }[] = [
+    { color: 'var(--indigo-hover)', label: 'Equity' },
+    { color: 'var(--green)', label: 'Cumulative CF' },
+  ]
+  if (crossoverYear !== null) {
+    legendItems.push({ color: 'var(--amber)', label: 'Crossover', dashed: true })
+  }
+
   return (
     <div
       style={{
+        position: 'relative',
         background: 'var(--surface)',
         border: '1px solid var(--hairline)',
         borderRadius: 12,
         padding: 18,
       }}
     >
+      <CardTopAccent />
       <div
         style={{
           display: 'flex',
@@ -358,11 +476,14 @@ export function HoldChart({
         </div>
       </div>
 
-      <ChartFrame height={220}>
+      <Legend items={legendItems} />
+
+      <ChartFrame height={240} minY={minY} maxY={maxY}>
         {({ w, h, pad }) => {
           const scaleX = (x: number) => pad + (x / years) * (w - 2 * pad)
           const scaleY = (y: number) =>
             h - pad - ((y - minY) / (maxY - minY || 1)) * (h - 2 * pad)
+          const baselineY = scaleY(minY)
 
           const cfPath = cfPoints
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.x).toFixed(1)} ${scaleY(p.y).toFixed(1)}`)
@@ -371,8 +492,22 @@ export function HoldChart({
             .map((p, i) => `${i === 0 ? 'M' : 'L'} ${scaleX(p.x).toFixed(1)} ${scaleY(p.y).toFixed(1)}`)
             .join(' ')
 
+          const cfFill = `${cfPath} L ${scaleX(years).toFixed(1)} ${baselineY.toFixed(1)} L ${scaleX(0).toFixed(1)} ${baselineY.toFixed(1)} Z`
+          const eqFill = `${eqPath} L ${scaleX(years).toFixed(1)} ${baselineY.toFixed(1)} L ${scaleX(0).toFixed(1)} ${baselineY.toFixed(1)} Z`
+
           return (
             <>
+              <defs>
+                <linearGradient id="hold-equity-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--indigo)" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="var(--indigo)" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="hold-cf-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--green)" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="var(--green)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
               {[0.25, 0.5, 0.75].map(f => (
                 <line
                   key={f}
@@ -384,6 +519,34 @@ export function HoldChart({
                   strokeDasharray="2 4"
                 />
               ))}
+
+              <path d={cfFill} fill="url(#hold-cf-fill)" />
+              <path d={eqFill} fill="url(#hold-equity-fill)" />
+
+              {crossoverYear !== null && (
+                <>
+                  <line
+                    x1={scaleX(crossoverYear)}
+                    y1={pad}
+                    x2={scaleX(crossoverYear)}
+                    y2={h - pad}
+                    stroke="var(--amber)"
+                    strokeWidth="1"
+                    strokeDasharray="3 3"
+                    opacity="0.6"
+                  />
+                  <text
+                    x={scaleX(crossoverYear)}
+                    y={pad - 4}
+                    textAnchor="middle"
+                    fontFamily="var(--font-mono)"
+                    fontSize="9"
+                    fill="var(--amber)"
+                  >
+                    Y{crossoverYear} crossover
+                  </text>
+                </>
+              )}
 
               <path d={eqPath} stroke="var(--indigo-hover)" strokeWidth="2" fill="none" />
               <path d={cfPath} stroke="var(--green)" strokeWidth="2" fill="none" />
