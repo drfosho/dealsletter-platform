@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import type { Deal } from '@/data/v3-deals'
 
@@ -48,6 +49,7 @@ function Metric({ label, value, color }: { label: string; value: string; color?:
 }
 
 export default function DealCard({ deal }: { deal: Deal }) {
+  const router = useRouter()
   const cap = deal.cap !== null ? `${deal.cap.toFixed(1)}%` : '—'
   const coc = deal.coc !== null ? `${deal.coc.toFixed(1)}%` : '—'
   const cfValue = deal.cashFlow !== null ? `$${deal.cashFlow.toLocaleString()}` : '—'
@@ -55,6 +57,15 @@ export default function DealCard({ deal }: { deal: Deal }) {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push('/v3/analyze')}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          router.push('/v3/analyze')
+        }
+      }}
       style={{
         position: 'relative',
         overflow: 'hidden',
@@ -178,7 +189,10 @@ export default function DealCard({ deal }: { deal: Deal }) {
           type="button"
           className="app-btn-ghost"
           style={{ padding: '6px 12px', fontSize: 12 }}
-          onClick={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation()
+            router.push('/v3/analyze')
+          }}
         >
           Open →
         </button>

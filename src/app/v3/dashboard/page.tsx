@@ -7,12 +7,7 @@ import PipelineTable from '@/components/v3/app/PipelineTable'
 import MetroTile from '@/components/v3/public/MetroTile'
 import { METROS } from '@/data/v3-metros'
 import type { Deal } from '@/data/v3-deals'
-import {
-  adaptListRecord,
-  adaptPipelineRecord,
-  type ListRecord,
-  type PipelineRecord,
-} from '@/lib/v3-deal-adapter'
+import { adaptPipelineRecord, type PipelineRecord } from '@/lib/v3-deal-adapter'
 import { useV3Tier } from '@/hooks/useV3Tier'
 
 const CRITERIA = [
@@ -266,38 +261,31 @@ export default function V3DashboardPage() {
     if (tierState.status !== 'ready') return
     let cancelled = false
 
-    const loadRecent = async () => {
-      try {
-        const res = await fetch('/api/analysis/list?limit=3', { credentials: 'include' })
-        if (!res.ok) throw new Error('list')
-        const data = await res.json()
-        const list: ListRecord[] = Array.isArray(data)
-          ? data
-          : data.analyses || data.data || []
-        if (!cancelled) setRecent(list.map(adaptListRecord))
-      } catch {
-        if (!cancelled) setRecent([])
-      } finally {
-        if (!cancelled) setLoadingRecent(false)
-      }
-    }
-
-    const loadPipeline = async () => {
+    const load = async () => {
       try {
         const res = await fetch('/api/v3/pipeline', { credentials: 'include' })
         if (!res.ok) throw new Error('pipeline')
         const data = await res.json()
         const list: PipelineRecord[] = data?.deals || []
-        if (!cancelled) setPipeline(list.slice(0, 7).map(adaptPipelineRecord))
+        const deals = list.map(adaptPipelineRecord)
+        if (!cancelled) {
+          setRecent(deals.slice(0, 3))
+          setPipeline(deals.slice(0, 7))
+        }
       } catch {
-        if (!cancelled) setPipeline([])
+        if (!cancelled) {
+          setRecent([])
+          setPipeline([])
+        }
       } finally {
-        if (!cancelled) setLoadingPipeline(false)
+        if (!cancelled) {
+          setLoadingRecent(false)
+          setLoadingPipeline(false)
+        }
       }
     }
 
-    loadRecent()
-    loadPipeline()
+    load()
 
     return () => {
       cancelled = true
@@ -345,9 +333,9 @@ export default function V3DashboardPage() {
           </div>
         ) : recent.length === 0 ? (
           <EmptyState
-            text="No analyses yet. Drop an address to see Dealsletter in action."
+            text="No analyses yet."
             href="/v3/analyze"
-            cta="Run your first analysis →"
+            cta="Run your first deal →"
           />
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
