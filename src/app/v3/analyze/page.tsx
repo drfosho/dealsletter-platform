@@ -1593,6 +1593,46 @@ function aiFinOf(result: V3AnalysisResult): Record<string, number | null | undef
   return fromRaw || {}
 }
 
+function pickHhNumber(result: V3AnalysisResult, keys: string[]): number | undefined {
+  const raw = (result.raw || {}) as Record<string, unknown>
+  const rawMetrics = (raw.metrics || {}) as Record<string, unknown>
+  const rawCash = (raw.cashFlow || raw.cash_flow || {}) as Record<string, unknown>
+  const fin = aiFinOf(result) as Record<string, unknown>
+  const sources: Array<Record<string, unknown>> = [raw, rawMetrics, rawCash, fin]
+  for (const src of sources) {
+    for (const k of keys) {
+      const v = src[k]
+      if (typeof v === 'number' && Number.isFinite(v)) return v
+    }
+  }
+  return undefined
+}
+
+function houseHackCashFlow(result: V3AnalysisResult): number | undefined {
+  // cashFlow convention: positive = savings, negative = cost
+  const direct =
+    (result.cashFlow?.monthly as number | undefined) ??
+    (result.cashFlow?.monthlyCashFlow as number | undefined)
+  if (typeof direct === 'number' && Number.isFinite(direct)) return direct
+  const savings = pickHhNumber(result, [
+    'monthlyHousingSavings',
+    'monthly_housing_savings',
+    'housingOffset',
+    'housing_offset',
+  ])
+  if (savings != null) return savings
+  const cost = pickHhNumber(result, [
+    'effectiveMortgage',
+    'effective_mortgage',
+    'outOfPocketHousingCost',
+    'out_of_pocket_housing_cost',
+    'effectiveHousingCost',
+    'effective_housing_cost',
+  ])
+  if (cost != null) return -Math.abs(cost)
+  return undefined
+}
+
 function primaryMetricsFor(
   strategy: Strategy,
   result: V3AnalysisResult,
@@ -1644,11 +1684,14 @@ function primaryMetricsFor(
   }
 
   if (strategy === 'House Hack') {
-    const cf = result.cashFlow?.monthly ?? result.cashFlow?.monthlyCashFlow ?? null
-    const coc = result.metrics?.cashOnCash
+    const cf = houseHackCashFlow(result)
+    const coc =
+      result.metrics?.cashOnCash ??
+      pickHhNumber(result, ['housingROI', 'housing_roi', 'housingCocReturn', 'housing_coc_return'])
     const monthlyHousingCost = cf != null ? -cf : undefined
     const offsetPct =
-      (fin.offset_percent as number | undefined) ?? undefined
+      (fin.offset_percent as number | undefined) ??
+      pickHhNumber(result, ['offsetPercent', 'offset_percent'])
     return [
       {
         label: 'MONTHLY HOUSING',
@@ -1744,11 +1787,16 @@ function secondaryMetricsFor(
   }
 
   if (strategy === 'House Hack') {
+    const grossRent =
+      result.cashFlow?.grossRent ??
+      pickHhNumber(result, ['grossRent', 'gross_rent'])
+    const cf = houseHackCashFlow(result)
+    const effectiveHousing = cf != null ? -cf : undefined
     return [
-      { label: 'GROSS RENT', value: fmtMonthly(result.cashFlow?.grossRent) },
+      { label: 'GROSS RENT', value: fmtMonthly(grossRent) },
       {
         label: 'EFFECTIVE HOUSING',
-        value: fmtMonthly(result.cashFlow?.monthly != null ? -result.cashFlow.monthly : undefined),
+        value: fmtMonthly(effectiveHousing),
       },
       { label: 'UNITS', value: form?.unitCount || '1' },
       {
@@ -3015,19 +3063,21 @@ export default function V3AnalyzePage() {
                         { label: 'CF/MO', value: fmtMoney(parsed?.cashFlow?.monthly ?? parsed?.cashFlow?.monthlyCashFlow) },
                       ]
                     : strategy === 'House Hack'
-                      ? [
-                          {
-                            label: 'SCORE',
-                            value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
-                          },
-                          {
-                            label: 'MONTHLY COST',
-                            value: fmtMonthly(
-                              parsed?.cashFlow?.monthly != null ? -parsed.cashFlow.monthly : undefined
-                            ),
-                          },
-                          { label: 'OFFSET %', value: fmtPct(fin.offset_percent as number | undefined) },
-                        ]
+                      ? (() => {
+                          const hhCf = parsed ? houseHackCashFlow(parsed) : undefined
+                          const monthlyCost = hhCf != null ? -hhCf : undefined
+                          const offsetPct =
+                            (fin.offset_percent as number | undefined) ??
+                            (parsed ? pickHhNumber(parsed, ['offsetPercent', 'offset_percent']) : undefined)
+                          return [
+                            {
+                              label: 'SCORE',
+                              value: parsed?.dealScore != null ? `${parsed.dealScore}/10` : '—',
+                            },
+                            { label: 'MONTHLY COST', value: fmtMonthly(monthlyCost) },
+                            { label: 'OFFSET %', value: fmtPct(offsetPct) },
+                          ]
+                        })()
                       : [
                           {
                             label: 'SCORE',

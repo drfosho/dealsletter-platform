@@ -2997,6 +2997,13 @@ interface FinancialData {
   // House Hack-specific metrics
   outOfPocketHousingCost?: number;
   monthlyHousingSavings?: number;
+  effectiveMortgage?: number;
+  effectiveHousingCost?: number;
+  offsetPercent?: number;
+  grossRent?: number;
+  housingROI?: number;
+  housingCocReturn?: number;
+  housingOffset?: number;
   // Multifamily metrics
   units?: number;
   rentPerUnit?: number;
@@ -3193,6 +3200,108 @@ function extractFinancialData(text: string): FinancialData {
     }
   }
   
+  // House-hack specific extraction. AI responses for house hack use fields like
+  // effectiveMortgage, outOfPocketHousingCost, monthlyHousingSavings, housingOffset,
+  // housingROI, housingCocReturn, offsetPercent, grossRent, effectiveHousingCost.
+  // Patterns tolerate camelCase literals ("effectiveMortgage: 1200"), JSON-quoted
+  // ("\"effectiveMortgage\": 1200"), snake_case ("effective_mortgage: 1200"), and
+  // human-readable labels ("Effective Mortgage: $1,200").
+  const hhMoneyPatterns = {
+    effectiveMortgage: [
+      /"?effectiveMortgage"?\s*[:=]\s*\$?([\d,.-]+)/i,
+      /effective[\s_-]+mortgage[:\s]+\$?([\d,.-]+)/i,
+    ],
+    outOfPocketHousingCost: [
+      /"?outOfPocketHousingCost"?\s*[:=]\s*\$?([\d,.-]+)/i,
+      /out[\s_-]?of[\s_-]?pocket[\s_-]+housing[\s_-]+cost[:\s]+\$?([\d,.-]+)/i,
+    ],
+    monthlyHousingSavings: [
+      /"?monthlyHousingSavings"?\s*[:=]\s*\$?([\d,.-]+)/i,
+      /monthly[\s_-]+housing[\s_-]+savings[:\s]+\$?([\d,.-]+)/i,
+    ],
+    housingOffset: [
+      /"?housingOffset"?\s*[:=]\s*\$?([\d,.-]+)/i,
+      /housing[\s_-]+offset[:\s]+\$?([\d,.-]+)/i,
+    ],
+    grossRent: [
+      /"?grossRent"?\s*[:=]\s*\$?([\d,.-]+)/i,
+      /gross[\s_-]+rent[:\s]+\$?([\d,.-]+)/i,
+    ],
+    effectiveHousingCost: [
+      /"?effectiveHousingCost"?\s*[:=]\s*\$?([\d,.-]+)/i,
+      /effective[\s_-]+housing[\s_-]+cost[:\s]+\$?([\d,.-]+)/i,
+    ],
+  };
+  const hhPercentPatterns = {
+    housingROI: [
+      /"?housingROI"?\s*[:=]\s*([\d.-]+)%?/i,
+      /housing[\s_-]+roi[:\s]+([\d.-]+)%?/i,
+    ],
+    housingCocReturn: [
+      /"?housingCocReturn"?\s*[:=]\s*([\d.-]+)%?/i,
+      /housing[\s_-]+coc[\s_-]+return[:\s]+([\d.-]+)%?/i,
+      /housing[\s_-]+cash[\s_-]?on[\s_-]?cash[:\s]+([\d.-]+)%?/i,
+    ],
+    offsetPercent: [
+      /"?offsetPercent"?\s*[:=]\s*([\d.-]+)%?/i,
+      /"?offset_percent"?\s*[:=]\s*([\d.-]+)%?/i,
+      /offset[\s_-]+percent[:\s]+([\d.-]+)%?/i,
+    ],
+  };
+  for (const [key, patternArray] of Object.entries(hhMoneyPatterns)) {
+    for (const pattern of patternArray) {
+      const match = text.match(pattern);
+      if (match) {
+        const value = parseFloat(match[1].replace(/,/g, ''));
+        if (!isNaN(value)) {
+          (data as any)[key] = value;
+          console.log(`[extractFinancialData] Found house-hack ${key}: ${value}`);
+          break;
+        }
+      }
+    }
+  }
+  for (const [key, patternArray] of Object.entries(hhPercentPatterns)) {
+    for (const pattern of patternArray) {
+      const match = text.match(pattern);
+      if (match) {
+        const value = parseFloat(match[1]);
+        if (!isNaN(value)) {
+          (data as any)[key] = value;
+          console.log(`[extractFinancialData] Found house-hack ${key}: ${value}`);
+          break;
+        }
+      }
+    }
+  }
+
+  // Map house-hack fields into standard metrics.
+  // cashFlow convention: positive = savings, negative = cost.
+  if (data.cashFlow == null) {
+    if (typeof data.monthlyHousingSavings === 'number') {
+      data.cashFlow = data.monthlyHousingSavings;
+    } else if (typeof data.housingOffset === 'number') {
+      data.cashFlow = data.housingOffset;
+    } else if (typeof data.effectiveMortgage === 'number') {
+      data.cashFlow = -Math.abs(data.effectiveMortgage);
+    } else if (typeof data.outOfPocketHousingCost === 'number') {
+      data.cashFlow = -Math.abs(data.outOfPocketHousingCost);
+    }
+  }
+  if (data.cocReturn == null) {
+    if (typeof data.housingROI === 'number') {
+      data.cocReturn = data.housingROI;
+    } else if (typeof data.housingCocReturn === 'number') {
+      data.cocReturn = data.housingCocReturn;
+    }
+  }
+  if (data.monthlyRent == null && typeof data.grossRent === 'number') {
+    data.monthlyRent = data.grossRent;
+  }
+  if (data.effectiveMortgage == null && typeof data.effectiveHousingCost === 'number') {
+    data.effectiveMortgage = data.effectiveHousingCost;
+  }
+
   // If we still don't have values, use the calculated values from the context
   // This is a fallback based on the calculations we provided to Claude
   if (!data.cashFlow && text.includes('Monthly Cash Flow:')) {
@@ -3203,9 +3312,9 @@ function extractFinancialData(text: string): FinancialData {
       data.cashFlow = parseFloat(contextMatch[1].replace(/,/g, ''));
     }
   }
-  
+
   // Log final extracted data
   console.log('[extractFinancialData] Final extracted data:', data);
-  
+
   return data;
 }
