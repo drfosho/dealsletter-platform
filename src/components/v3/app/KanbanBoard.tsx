@@ -99,20 +99,22 @@ function KanbanCard({
         e.currentTarget.style.boxShadow = 'none'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 6 }}>
         <span
           style={{
+            display: 'inline-block',
             fontFamily: 'var(--font-mono)',
-            fontSize: 12,
-            fontWeight: 500,
-            color: 'var(--text)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            flex: 1,
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: statusBadge.color,
+            background: statusBadge.bg,
+            borderRadius: 4,
+            padding: '2px 7px',
           }}
         >
-          {deal.address}
+          {deal.status}
         </span>
         <SignalBadge signal={deal.signal} />
         {onStatusChange && (
@@ -137,6 +139,19 @@ function KanbanCard({
           </button>
         )}
       </div>
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 12,
+          fontWeight: 500,
+          color: 'var(--text)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}
+      >
+        {deal.address}
+      </div>
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>
         {deal.city} {deal.state}
       </div>
@@ -156,22 +171,6 @@ function KanbanCard({
           }}
         >
           {deal.strategy}
-        </span>
-        <span
-          style={{
-            display: 'inline-block',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: statusBadge.color,
-            background: statusBadge.bg,
-            borderRadius: 4,
-            padding: '2px 7px',
-          }}
-        >
-          {deal.status}
         </span>
       </div>
 

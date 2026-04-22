@@ -15,6 +15,10 @@ export type DealParams = {
   sellClosingCosts: string
   propertyTax: string
   insurance: string
+  vacancyRate: string
+  maintenancePercent: string
+  capexPercent: string
+  propertyManagementPercent: string
 }
 
 export const DEFAULT_DEAL_PARAMS: DealParams = {
@@ -28,6 +32,10 @@ export const DEFAULT_DEAL_PARAMS: DealParams = {
   sellClosingCosts: '6',
   propertyTax: '',
   insurance: '',
+  vacancyRate: '8',
+  maintenancePercent: '10',
+  capexPercent: '10',
+  propertyManagementPercent: '8',
 }
 
 export function dealDefaultsFor(strategy: DealStrategy): DealParams {
@@ -125,6 +133,12 @@ const inputStyle: React.CSSProperties = {
   transition: 'border-color 140ms ease',
 }
 
+const compactInputStyle: React.CSSProperties = {
+  ...inputStyle,
+  padding: '8px 10px',
+  fontSize: 13,
+}
+
 function Field({ label, hint, children }: { label: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
     <div>
@@ -139,10 +153,12 @@ function NumberInput({
   value,
   onChange,
   placeholder,
+  compact,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
+  compact?: boolean
 }) {
   return (
     <input
@@ -151,7 +167,7 @@ function NumberInput({
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      style={inputStyle}
+      style={compact ? compactInputStyle : inputStyle}
       onFocus={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
       onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
     />
@@ -308,6 +324,7 @@ export default function DealParametersPanel({
   const showRentalRow =
     strategy === 'Buy & Hold' || strategy === 'BRRRR' || strategy === 'House Hack'
   const showSellClosing = strategy === 'Fix & Flip' || strategy === 'BRRRR'
+  const showOperatingCosts = strategy === 'Buy & Hold' || strategy === 'BRRRR'
 
   const maxOffer = arv > 0 && rehab >= 0 ? arv * 0.85 - rehab : 0
   const refiProceeds = arv > 0 ? arv * 0.75 : 0
@@ -496,6 +513,44 @@ export default function DealParametersPanel({
               value={value.insurance}
               onChange={v => onChange({ insurance: v })}
               placeholder="0"
+            />
+          </Field>
+        </div>
+      )}
+
+      {/* Operating costs — rental strategies */}
+      {showOperatingCosts && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <Field label="Vacancy (default 8%)">
+            <NumberInput
+              compact
+              value={value.vacancyRate}
+              onChange={v => onChange({ vacancyRate: v })}
+              placeholder="8"
+            />
+          </Field>
+          <Field label="Maintenance % of rent (default 10%)">
+            <NumberInput
+              compact
+              value={value.maintenancePercent}
+              onChange={v => onChange({ maintenancePercent: v })}
+              placeholder="10"
+            />
+          </Field>
+          <Field label="CapEx reserve % of rent (default 10%)">
+            <NumberInput
+              compact
+              value={value.capexPercent}
+              onChange={v => onChange({ capexPercent: v })}
+              placeholder="10"
+            />
+          </Field>
+          <Field label="Property management (default 8%, 0 if self-managing)">
+            <NumberInput
+              compact
+              value={value.propertyManagementPercent}
+              onChange={v => onChange({ propertyManagementPercent: v })}
+              placeholder="8"
             />
           </Field>
         </div>

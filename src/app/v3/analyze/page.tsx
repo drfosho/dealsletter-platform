@@ -367,6 +367,10 @@ function buildAnalyzeBody(
     sellClosingCostsPercent: sellClosingPct,
     propertyTax,
     insurance,
+    vacancyRate: toNum(params.vacancyRate) ?? 8,
+    maintenancePercent: toNum(params.maintenancePercent) ?? 10,
+    capexPercent: toNum(params.capexPercent) ?? 10,
+    propertyManagementPercent: toNum(params.propertyManagementPercent) ?? 8,
     units,
     monthlyRent,
     propertyData: mergedPropertyData,
@@ -1807,15 +1811,38 @@ function secondaryMetricsFor(
   }
 
   // Buy & Hold
+  const monthlyRent = toNum(form?.estimatedRent) ?? 0
+  const vacancyPct = toNum(params.vacancyRate) ?? 8
+  const rawCash = (result.cashFlow || {}) as Record<string, unknown>
+  const rawResult = result as unknown as Record<string, unknown>
+  const grossRent =
+    result.cashFlow?.grossRent ??
+    (rawCash.gross as number | undefined) ??
+    (monthlyRent > 0 ? monthlyRent : undefined)
+  const vacancyLoss =
+    result.cashFlow?.vacancyLoss ??
+    (rawCash.vacancy as number | undefined) ??
+    (monthlyRent > 0 ? -(monthlyRent * (vacancyPct / 100)) : undefined)
+  const noi =
+    result.metrics?.netOperatingIncome ??
+    result.metrics?.noi ??
+    (rawCash.netOperatingIncome as number | undefined) ??
+    null
+  const breakEvenArv =
+    result.breakEvenArv ??
+    (rawResult.break_even_arv as number | undefined) ??
+    (rawResult.breakEven as number | undefined) ??
+    null
+  const fiveYearEquity =
+    result.fiveYearEquity ??
+    (rawResult.five_year_equity as number | undefined) ??
+    null
   return [
-    {
-      label: 'NOI',
-      value: fmtYearly(result.metrics?.netOperatingIncome ?? result.metrics?.noi),
-    },
-    { label: 'GROSS RENT', value: fmtMonthly(result.cashFlow?.grossRent) },
-    { label: 'VACANCY LOSS', value: fmtMonthly(result.cashFlow?.vacancyLoss) },
-    { label: 'BREAK-EVEN ARV', value: fmtMoney(result.breakEvenArv ?? null) },
-    { label: '5-YR EQUITY', value: fmtMoney(result.fiveYearEquity ?? null) },
+    { label: 'GROSS RENT', value: fmtMonthly(grossRent) },
+    { label: 'VACANCY LOSS', value: fmtMonthly(vacancyLoss) },
+    { label: 'NOI', value: fmtYearly(noi) },
+    { label: 'BREAK-EVEN ARV', value: fmtMoney(breakEvenArv) },
+    { label: '5-YR EQUITY', value: fmtMoney(fiveYearEquity) },
     {
       label: 'DEAL SCORE',
       value: result.dealScore != null ? `${result.dealScore}/10` : '—',
