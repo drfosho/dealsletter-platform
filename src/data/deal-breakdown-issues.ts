@@ -43,6 +43,314 @@ export interface DealBreakdownIssue {
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
   {
+    slug: 'issue-152-berkeley-student-housing-sf-house-hack-san-diego-duplex-spring-valley-48',
+    issueNumber: 152,
+    date: 'April 2026',
+    title: 'Berkeley Student Housing + SF House Hack + San Diego Duplex + Spring Valley 48-Unit',
+    previewText: 'Berkeley 18-bed student housing at $400/bed below market. SF SOMA house hack for $135K down. San Diego City Heights duplex with ADU play. Spring Valley 48-unit — great asset, 1.06 DCR.',
+    ctaStrategy: 'buyhold',
+    sponsor: undefined,
+    properties: [
+      {
+        address: '2633 Regent St',
+        city: 'Berkeley, CA 94704',
+        price: 2500000,
+        units: 3,
+        capRate: 5.67,
+        coc: 0,
+        cashRequired: 700000,
+        annualCashFlow: 58836,
+        verdict: 'Conditional buy — elite student market, breakeven at Day 1 until rents repositioned to market',
+        score: '6/10',
+        scoreValue: 6,
+        tag: 'STUDENT HOUSING',
+        tagColor: '#7F77DD',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/2633-Regent-St-Berkeley-CA/40217185/',
+        opportunity: 'A 10-year operating student housing business in Elmwood Berkeley — 18 beds grossing $250,000/yr with an established brand and direct walking distance to UC Berkeley. Current $1,157/bed average sits $250–$400 below the 94704 market rate, and annual student lease cycles give a new owner a full rent reset every August — the clean market-rate path that California rent control eliminates on traditional LTR properties.',
+        risk: 'Day 1 math is breakeven — 5.67% cap against 6.5% debt produces near-zero cash flow until repositioning is executed over 1–2 lease cycles. Managing 18 individual student leases demands active experienced oversight, and Berkeley\'s local rent ordinance must be verified against the by-the-room structure before close to preserve the annual turnover advantage.',
+        fullVerdict: 'Exceptional student housing asset in the wrong hands — transformational in the right ones. Conditional buy for an experienced operator who can verify rent control compliance, push rents to market through natural August cycles, and hold 10+ years in one of the most supply-constrained university markets in the country.',
+      },
+      {
+        address: '519 Natoma St',
+        city: 'San Francisco, CA 94103',
+        price: 1698000,
+        units: 4,
+        capRate: 4.4,
+        coc: 0,
+        cashRequired: 135840,
+        annualCashFlow: -41244,
+        verdict: 'Buy with legal clearance — $135K into a $1.7M SOMA 4-unit, effective housing cost at market rent',
+        score: '7.5/10',
+        scoreValue: 7.5,
+        tag: 'SF HOUSE HACK',
+        tagColor: '#7F77DD',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/519-Natoma-St-San-Francisco-CA/40199061/',
+        opportunity: 'Owner-occupied financing at 5% down unlocks a $1.698M SOMA 4-unit for $135,840 total cash — the same building requires $424,500 from an investor. Three remodeled 1BR units generate $8,136/month, reducing effective housing cost to $3,437/mo in a market where comparable 1BR rentals run $3,200–$4,000+. You\'re paying market rate to live in SOMA and receiving a $1.7M San Francisco asset, three income streams, and long-term equity compounding in return.',
+        risk: 'SF Rent Control likely applies — the owner move-in eviction process on Unit D requires legal compliance, relocation assistance, and a 36-month primary residency commitment before the unit can ever be re-rented at market rate. Any two-unit vacancy period materially increases monthly out-of-pocket exposure, and true effective housing cost with maintenance reserves runs closer to $3,800–4,000/mo.',
+        fullVerdict: 'One of the most efficient entries into San Francisco real estate at this price point — conditional on legal clearance of the owner move-in process. Get a local SF attorney to confirm the path on Unit D before submitting. If cleared, straightforward buy for any SF-based professional who would otherwise be paying market rent with nothing to show for it.',
+      },
+      {
+        address: '3613-15 Central Ave',
+        city: 'San Diego, CA 92105',
+        price: 825000,
+        units: 2,
+        capRate: 3.11,
+        coc: 0,
+        cashRequired: 66000,
+        annualCashFlow: -45654,
+        verdict: 'Conditional buy — ADU permit is the move that makes this deal, not the Day 1 cash flow',
+        score: '6/10',
+        scoreValue: 6,
+        tag: 'SD HOUSE HACK',
+        tagColor: '#EF9F27',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/3613-Central-Ave-San-Diego-CA/40216597/',
+        opportunity: 'Owner-occupied financing at 5% down turns a $206K investor entry into a $66K door — the mechanical advantage that makes San Diego real estate accessible at this price point. Unit B at $2,300/mo offsets a meaningful portion of the $4,952 mortgage, and the double-car garage plus existing unpermitted 1BR represent an immediately actionable ADU play that, once permitted and rented at $1,600/mo, drops effective housing cost to approximately $2,200/month — below City Heights market rent.',
+        risk: 'Without the ADU, effective housing cost of $3,805/mo runs $1,700+ above what renting a comparable 2BR in City Heights costs. The unpermitted unit is a liability until permitted — do not rent it in its current status. SD permitting timelines run 6–18 months, and a single vacancy in Unit B puts the full $4,952 mortgage on the owner with zero offset.',
+        fullVerdict: 'Conditional buy for a long-term San Diego holder with the financial stability to carry $3,805/mo effective housing cost and the initiative to activate the ADU immediately post-close. The wealth accumulation math works over a 5–10 year hold — but only if the owner executes the ADU play and treats this as an equity-building position, not a cash flow investment.',
+      },
+      {
+        address: '9249 Birch St',
+        city: 'Spring Valley, CA 91977',
+        price: 16390000,
+        units: 48,
+        capRate: 6.03,
+        coc: 1.21,
+        cashRequired: 4589200,
+        annualCashFlow: 55680,
+        verdict: 'Conditional — quality 2025-renovated asset, 1.06 DCR leaves almost no operational cushion',
+        score: '5/10',
+        scoreValue: 5,
+        tag: 'LONG-TERM PLAY',
+        tagColor: '#EF9F27',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/9249-Birch-St-Spring-Valley-CA/40215393/',
+        opportunity: 'A 2025-renovated 48-unit with new roof, in-unit laundry, A/C, and contemporary finishes in an established Spring Valley workforce corridor. The 65% two-bedroom unit mix drives tenant retention, and a garage/storage ADU conversion creates a 49th income unit at a 15%+ return on conversion capital — $520,000 in asset value for ~$200K deployed. The 10-year equity trajectory reaches $13M+ on a San Diego County hold in a supply-constrained East County submarket.',
+        risk: 'A 1.06 DCR means four vacancies away from not covering debt service. California Prop 13 means the current owner\'s property tax basis may significantly understate what a new buyer pays post-purchase at $16.39M. If taxes reset and true expenses run 35%+ of EGI, this deal goes cash flow negative. The 27.1% expense ratio needs T-12 verification — industry standard for a 48-unit in California runs 35–45% of EGI.',
+        fullVerdict: 'Conditional buy for a large patient capital operator who can verify the expense basis, confirm property tax assumptions, carry reserves beyond the $4.59M cash in, and hold 10+ years while rent growth closes the gap between cap rate and debt cost. The asset quality justifies the thesis — the margin does not justify shortcuts on due diligence.',
+      },
+    ],
+    content: `
+## This Week's Deals
+
+Four California deals — a Berkeley student housing operation, a SOMA San Francisco house hack, a San Diego City Heights duplex with ADU potential, and a fully renovated 48-unit in Spring Valley. Different strategies, same thread: California real estate rewards patience and punishes shortcuts on due diligence.
+
+---
+
+## 🎓 2633 Regent St — Berkeley By-the-Room Student Housing
+
+**Elmwood, Berkeley, CA 94704 · 3 Structures / 18 Beds · $2,500,000**
+
+This isn't a traditional multifamily — it's a student housing business. Ten years of operating history, an established brand, and structural demand permanence from UC Berkeley's 45,000-student enrollment in a neighborhood that cannot be replicated.
+
+### The Three-Scenario Model
+
+| Metric | Current (18 Beds) | Proforma (21 Beds) | Market Rate ($1,500/bed) |
+|--------|-------------------|-------------------|--------------------------|
+| Cap Rate | 5.67% | 8.04% | 9.05% |
+| CoC | ~0% | 8.4% | 12.0% |
+| DCR | 1.00 | 1.41 | 1.59 |
+| Annual CF | -$614 | $58,836 | $84,036 |
+
+### The Numbers
+
+| Metric | Value |
+|--------|-------|
+| Down Payment (25%) | $625,000 |
+| Total Cash In | $700,000 |
+| Current Gross Income | $250,000/yr (verified) |
+| Current Avg Rent | $1,157/bed/mo |
+| Market Rate | $1,400–$1,600/bed |
+| Upside per Bed | $243–$443/mo |
+
+### Why the Annual Lease Structure Matters
+
+Unlike AB 1482-protected long-term tenants who can never realistically be reset to market, student leases turn naturally every August. Every vacancy is a market-rate opportunity. The rent control trap that plagues most California multifamily simply does not apply here — the operating structure is the competitive advantage.
+
+**Current $1,157/bed in Elmwood Berkeley is $250–$400 below comparable student rooms in the 94704 zip.** The upside is sitting in the existing lease structure, not in a speculative thesis.
+
+### Risk
+
+Day 1 math is breakeven — 5.67% cap against 6.5% debt produces near-zero cash flow until repositioning executes. Berkeley's local rent control ordinance is more aggressive than state AB 1482 and needs to be verified against the by-the-room lease structure before close. Managing 18 individual student leases requires active, experienced oversight.
+
+### Verdict: 6/10 — Conditional Buy
+
+Exceptional asset in the wrong hands — transformational in the right ones. Experienced student housing operators only.
+
+---
+
+## 🏙️ 519 Natoma St — SOMA San Francisco House Hack
+
+**San Francisco, CA 94103 · 4 Units (3 Rental + Owner-Occupied) · $1,698,000**
+**Cash In: $135,840 (5% owner-occupied financing)**
+
+The negative numbers in the model are not the story. The story is: $135,840 into a $1.698M SOMA 4-unit.
+
+### The House Hack Math
+
+| Metric | Value |
+|--------|-------|
+| Full Mortgage Payment | $9,671/mo |
+| Rental Income (3 units) | -$8,136/mo |
+| **Effective Housing Cost** | **$3,437/mo** |
+| Comparable 1BR rent in SOMA | $3,200–$4,000/mo |
+| Down Payment Required (investor) | $424,500 |
+| Down Payment Required (owner-occ) | $84,900 |
+
+### Unit Mix
+
+| Unit | Type | Monthly Rent | Status |
+|------|------|-------------|--------|
+| A | 1BR/1BA | $2,900 | Tenant — retain |
+| B | 1BR/1BA | $2,636 | Tenant — retain |
+| C | 1BR/1BA | $2,600 | Tenant — retain |
+| D | 1BR/1BA | Lowest | Owner moves in |
+
+You are paying $3,437/month to live in SOMA — at or below what the rental market charges for a single 1BR in the same neighborhood. Except you own a $1.7M San Francisco asset and your three tenants pay down your mortgage every month.
+
+### The 10-Year Picture
+
+| Year | Effective Housing Cost | Property Value | Total Equity |
+|------|----------------------|----------------|-------------|
+| 1 | $41,244/yr | $1,698,000 | $84,900 |
+| 5 | $29,800/yr | $1,984,573 | $410,000 |
+| 10 | $13,400/yr | $2,414,000 | $980,000 |
+
+By Year 10 rent growth has nearly eliminated your monthly housing cost — you're essentially living in SOMA for free while sitting on nearly $1M in equity.
+
+### The Critical Legal Gate
+
+**SF Rent Control likely covers this building.** The owner move-in eviction process on Unit D requires: intent to occupy as primary residence for 36+ months, relocation assistance to the displaced tenant, and strict notification compliance. Get a San Francisco real estate attorney to clear this process before submitting any offer.
+
+One call to a local attorney is the only gate between you and a very strong long-term buy.
+
+### Verdict: 7.5/10 — Buy (Legal Clearance Required)
+
+Cleared legally — buy immediately.
+
+---
+
+## 🌴 3613-15 Central Ave — San Diego City Heights House Hack
+
+**San Diego, CA 92105 · 2 Legal Units + Unpermitted ADU · $825,000**
+**Cash In: $66,000 (5% owner-occupied financing)**
+
+The honest version of this deal: effective housing cost runs $1,700–$1,900 above market rent for a 2BR in City Heights. That's the price of ownership — and in San Diego, the wealth accumulation math covers it.
+
+### The Real Comparison
+
+| Option | Monthly Cost | What You Get |
+|--------|-------------|-------------|
+| Rent a 2BR in City Heights | $1,900–$2,100 | No equity, no ownership |
+| This house hack | $3,805 effective | $825K asset, appreciation, paydown |
+| Traditional investor purchase | $4,952 + $231K down | Full rental income |
+
+### The ADU Play — This Changes Everything
+
+| Scenario | Action | Effective Housing Cost |
+|----------|--------|----------------------|
+| Current (Unit B only) | $2,300/mo offset | $3,805/mo |
+| ADU permitted + rented | +$1,600/mo income | ~$2,200/mo |
+| Full execution | Units B + ADU rented | Deal turns positive |
+
+**Permitting the ADU is Priority 1 after close.** SD permitting runs 6–18 months — do not model ADU income in Year 1. But if legalized, the house hack goes from paying a premium to own to living in City Heights below market rent.
+
+### The 5-Year Equity Case
+
+| Year | Property Value | Total Equity |
+|------|----------------|-------------|
+| 1 | $825,000 | $41,250 |
+| 5 | $1,004,000 | $345,000 |
+| 10 | $1,221,000 | $770,000 |
+
+$345,000 in equity on a $66,000 investment by Year 5. Do not rent the unpermitted unit without permits — the liability is not worth it.
+
+### Verdict: 6/10 — Conditional Buy
+
+Wealth-building tool, not housing cost arbitrage. Know which one you're buying.
+
+---
+
+## 🏢 Birch Terrace Apartments — Spring Valley 48-Unit
+
+**9249 Birch St, Spring Valley, CA 91977 · 48 Units · $16,390,000**
+
+A quality asset in a structurally difficult position at today's rates. The same story as the Vegas 48-unit from last week — great real estate, wrong rate environment for the price.
+
+### The Numbers
+
+| Metric | Value |
+|--------|-------|
+| Down Payment (25%) | $4,097,500 |
+| Total Cash In | $4,589,200 |
+| NOI | $988,236/yr |
+| Annual Cash Flow | $55,680 ($4,640/mo) |
+| Cap Rate | 6.03% |
+| CoC Year 1 | 1.21% |
+| DCR | 1.06 |
+| Price Per Unit | $341,458 |
+
+### The Critical Property Tax Flag
+
+California Prop 13 means the current owner's taxes are based on their historical purchase price — not $16.39M.
+
+| Scenario | Annual Taxes | Adjusted DCR | Adjusted CoC |
+|----------|-------------|-------------|-------------|
+| OM as-presented | Unknown basis | 1.06 | 1.21% |
+| Tax reset at purchase | ~$180,290 | 0.95–0.97 | Negative |
+| Tax reset + 2 vacancies | ~$180,290 | 0.94 | Negative |
+
+**Demand the actual current tax bill before submitting any offer.** This single line item determines whether the deal cash flows or goes negative on Day 1.
+
+### Unit Mix
+
+| Type | Units | Est. Market Rent | Monthly Gross |
+|------|-------|-----------------|---------------|
+| 1BR/1BA | 16 | ~$2,200 | $35,200 |
+| 2BR/1BA | 31 | ~$2,600 | $80,600 |
+| 3BR/1.5BA | 1 | ~$3,100 | $3,100 |
+
+### The ADU Opportunity
+
+Garage and storage unit conversion to 2BR ADU (~800 SF):
+- Conversion cost: $150,000–$250,000
+- Additional income: $2,600/mo ($31,200/yr)
+- Capitalized value at 6% cap: +$520,000
+- Return on conversion capital: 15.6%
+
+### Long-Term Equity
+
+| Year | CoC | Property Value | Total Equity |
+|------|-----|----------------|-------------|
+| 5 | 4.3% | $19,161,000 | $7,254,000 |
+| 10 | 8.4% | $23,308,000 | $13,050,000 |
+| 20 | 16.4% | $34,500,000 | $28,200,000 |
+
+The long-hold equity story is real. This is an asset that takes 3–5 years to grow into its purchase price at current rates.
+
+### Verdict: 5/10 — Conditional
+
+Only if: (1) T-12 obtained and verified, (2) property tax bill at current assessed value confirmed, (3) expense ratio stress-tested at 35% EGI still produces positive cash flow, and (4) buyer has $500K+ in reserves beyond the $4.59M cash in.
+
+---
+
+## Deal Rankings
+
+| Property | Strategy | Cash In | Key Return | Score | Verdict |
+|----------|----------|---------|-----------|-------|---------|
+| 519 Natoma St SF | House Hack | $135K | $3,437/mo effective rent | 7.5/10 | ✅ Buy |
+| 2633 Regent St Berkeley | Student Housing | $700K | 8.4% CoC repositioned | 6/10 | ⚠️ Conditional |
+| 3613 Central Ave SD | House Hack | $66K | ADU play required | 6/10 | ⚠️ Conditional |
+| Birch Terrace Spring Valley | Buy & Hold | $4.59M | 1.21% CoC | 5/10 | ⚠️ Conditional |
+
+---
+
+*Model any of these deals yourself at dealsletter.io — house hack, multifamily, fix & flip, BRRRR, and STR analysis powered by live market data. 3 free analyses/month, no card needed.*
+  `,
+  },
+  {
     slug: 'issue-151-kc-multifamily-vegas-48-sonoma-oakland-flip',
     issueNumber: 151,
     date: 'April 2026',
