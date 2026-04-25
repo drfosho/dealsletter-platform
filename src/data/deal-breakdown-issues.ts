@@ -43,6 +43,334 @@ export interface DealBreakdownIssue {
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
   {
+    slug: 'issue-153-chicago-15unit-vegas-100unit-cape-coral-str-vista-adu',
+    issueNumber: 153,
+    date: 'April 2026',
+    title: 'Chicago 20% CoC 15-Unit + Vegas 100-Unit Condo Play + Cape Coral STR + Vista ADU House Hack',
+    previewText: 'Chicago 15-unit at 20.7% CoC and 1.91 DCR. Vegas 100-unit with individual parcel condo conversion exit. Cape Coral 5-unit STR play near Jaycee Park. Vista ADU house hack with approved permits.',
+    ctaStrategy: 'buyhold',
+    sponsor: undefined,
+    properties: [
+      {
+        address: '3725 W Grand Ave',
+        city: 'Chicago, IL 60651',
+        price: 1600000,
+        units: 15,
+        capRate: 10.9,
+        coc: 20.7,
+        cashRequired: 400000,
+        annualCashFlow: 82926,
+        verdict: 'Conditional buy — appraisal, PCA, and lease abstracts required before closing',
+        score: '7/10',
+        scoreValue: 7,
+        tag: 'MIDWEST CASH FLOW',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/3725-W-Grand-Ave-Chicago-IL/40285920/',
+        opportunity: 'A tenant-heated 15-unit generating $6,911/month net cash flow at a 10.9% cap rate on $400K invested — the kind of cash-on-cash return that simply does not exist in coastal markets at this price point. The 1.91 DCR provides genuine operational cushion across multiple simultaneous vacancies, and 100-amp electrical upgrades and renovated interiors reduce the most common near-term capex triggers on a Humboldt Park multifamily.',
+        risk: 'Comparable sales in the area ran $54,900–$99,999 against a $1,600,000 purchase price — a gap that requires a mandatory third-party MAI appraisal before any offer proceeds. The 1929 construction carries deferred maintenance exposure beyond the 5% CapEx reserve, and all 15 units showing identical $1,434 rents suggests estimated rather than verified lease data.',
+        fullVerdict: 'Conditional buy with a clear verification checklist: MAI appraisal, property condition assessment, and individual lease abstracts. If the income is real and the building condition matches the listing — buy at asking price. The cash flow and DCR justify the price if verified.',
+      },
+      {
+        address: '3909-3949 N Nellis Blvd',
+        city: 'Las Vegas, NV 89115',
+        price: 17000000,
+        units: 100,
+        capRate: 6.55,
+        coc: 3.06,
+        cashRequired: 4760000,
+        annualCashFlow: 145746,
+        verdict: 'Conditional buy — right operator, right capital, right time horizon. Condo conversion is the real exit.',
+        score: '6.5/10',
+        scoreValue: 6.5,
+        tag: 'CONDO CONVERSION PLAY',
+        tagColor: '#7F77DD',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/3909-3949-N-Nellis-Blvd-Las-Vegas-NV/40285640/',
+        opportunity: 'Individual parcel numbers on all 100 units create a condo conversion path to $20M–$25M gross exit on a $17M basis — a structural advantage this asset carries that no standard apartment building can replicate. The 84-unit 2BR/2BA mix with oversized 1,005 SF units, in-unit W/D on every door, gated access, and $118,400/yr in ancillary income positions this asset well above standard Sunrise Manor inventory.',
+        risk: '22 of 100 units are currently vacant — you are buying a lease-up project, not a stabilized asset. The bridge from 78% to 95%+ occupancy requires 6–12 months of active leasing and $150,000–$200,000 in reserves beyond the $4.76M cash-in. At full stabilization the 1.15 DCR still leaves narrow debt service cushion.',
+        fullVerdict: 'Conditional buy for a well-capitalized Las Vegas operator with local leasing capacity, verified stabilization path, and a 7–10 year hold conviction anchored by the condo conversion exit. Verify T-12 expenses, confirm 17-unit lease-up with a local PM, and bring reserves beyond the investment capital.',
+      },
+      {
+        address: '4015 SE 19th Ave',
+        city: 'Cape Coral, FL 33904',
+        price: 950000,
+        units: 5,
+        capRate: 6.82,
+        coc: 4.0,
+        cashRequired: 266000,
+        annualCashFlow: 10762,
+        verdict: 'Conditional buy — get FL insurance quotes first, rebuild the expense model, confirm STR activation path',
+        score: '6.5/10',
+        scoreValue: 6.5,
+        tag: 'STR PLAY — FL ALLOWABLE',
+        tagColor: '#1D9E75',
+        strategy: 'str',
+        listingUrl: 'https://www.loopnet.com/Listing/4015-SE-19th-Ave-Cape-Coral-FL/40284114/',
+        opportunity: 'SE Cape Coral STR-allowable zoning and proximity to the renovated Jaycee Park waterfront position this 5-unit for short-term rental returns that LTR cannot match — 4 two-bedroom units converted to STR at 55% occupancy push gross revenue from $107,400 to $160,560 annually, producing 11.6% CoC and a 1.57 DCR. Updated roof and mechanicals reduce near-term capex risk.',
+        risk: 'The OM shows $12,955 in total annual expenses — a 12.1% expense ratio that does not survive contact with Florida\'s post-Ian insurance market. Rebuild the full expense stack before submitting any offer. Realistic LTR expenses run $37,000+/yr, compressing CoC to 4% and leaving a 1.2 DCR that requires 3–6 months of reserves.',
+        fullVerdict: 'Conditional buy for an active SW Florida operator who can execute the STR play and has verified the full expense stack with real insurance quotes. The upside is real — the OM-presented numbers are not. Know which deal you\'re buying before you submit.',
+      },
+      {
+        address: '615-617 Truly Ter',
+        city: 'Vista, CA 92084',
+        price: 1200000,
+        units: 2,
+        capRate: 4.1,
+        coc: 0,
+        cashRequired: 96000,
+        annualCashFlow: 0,
+        verdict: 'Conditional buy — ADU permits approved, get owner move-in clearance and GC bid before close',
+        score: '7.5/10',
+        scoreValue: 7.5,
+        tag: 'ADU DEVELOPMENT PLAY',
+        tagColor: '#7F77DD',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/615-617-Truly-Terrace-Vista-CA/40268410/',
+        opportunity: 'City of Vista-approved permits for the 615A ADU conversion eliminate the most unpredictable element of California development — the permitting process. At 5% down the owner enters a $1.2M North County San Diego asset for $60,000, rents Unit 615 at $2,860 immediately, and executes the 820 SF ADU build to bring effective housing cost to $3,009/mo. Zoning supports a 4th unit outright and a 5th via Bonus Density Rules — documented $1.2M → $2.1M+ asset value path.',
+        risk: 'Unit 617 is currently tenant-occupied — owner move-in requires California AB 1482-compliant just-cause procedures and potential relocation assistance. Phase 1 carrying cost of $5,484/mo runs $2,800 above Vista market rent until the ADU is built. Validate the $100K ADU build estimate with a GC bid — SD County costs may push total build to $125–170K.',
+        fullVerdict: 'Conditional buy for a North County SD owner-operator who can execute the owner move-in legally, validate ADU construction costs with a GC bid, and budget Phase 1 carrying costs. The approved permits and multi-phase ADU expansion path make this one of the cleaner development-backed house hacks in the San Diego market.',
+      },
+    ],
+    content: `
+## This Week's Deals
+
+Four properties across four markets — a Chicago 15-unit with exceptional cash flow numbers, a Las Vegas 100-unit with a condo conversion exit, a Cape Coral STR play near Jaycee Park, and a Vista ADU house hack with City-approved permits already in hand.
+
+---
+
+## 🏢 3725 W Grand Ave — Chicago 15-Unit Midwest Cash Flow
+
+**Humboldt Park, Chicago, IL 60651 · 15 Units · $1,600,000 ($106,667/unit)**
+**Claude Sonnet Auto — 7/10**
+
+One of the strongest cash-flowing multifamily deals we've seen at this price point in any major market. The income math is exceptional. The comp mismatch is the verification gate.
+
+### The Numbers
+
+| Metric | Value |
+|--------|-------|
+| Down Payment (25%) | $400,000 |
+| Total Cash In | $400,000 |
+| Gross Rent | $21,510/mo (15 × $1,434) |
+| Annual Cash Flow | $82,926 ($6,911/mo) |
+| Cap Rate | 10.9% |
+| CoC Year 1 | 20.7% |
+| DCR | 1.91 |
+| NOI | $173,946/yr |
+| Price Per Unit | $106,667 |
+
+### Why the Income Math Works
+
+**10.9% cap against 6.5% debt = positive leverage.** Every financed dollar is working productively for the investor. The 1.91 DCR means the deal can absorb multiple simultaneous vacancies and still cover debt service. $6,911/month in take-home net cash flow on a $400,000 investment — 20.7% cash-on-cash — clears the 8% benchmark by more than double.
+
+**Tenant-heated building.** Tenants pay heat. This eliminates one of the most volatile operating expense lines in Midwest multifamily — a genuine structural advantage on a 15-unit.
+
+**100-amp electrical per unit already upgraded.** One of the most expensive and common capital items on pre-WWII Chicago buildings is done.
+
+### The Comp Mismatch — The Only Gate
+
+The platform flagged this HIGH severity. Nearby comparable sales: $54,900–$99,999. Purchase price: $1,600,000.
+
+| Explanation | Implication |
+|-------------|-------------|
+| Comps are SFR/1–2 unit, not 15-unit MF | Income approach at 10.9% cap is correct methodology |
+| Comps are genuinely comparable 15-unit MF | $1.6M is dramatically overpriced |
+
+The income-based valuation is almost certainly correct — a stabilized 15-unit generating $173,946 NOI is not valued like a single-family home. But a mandatory third-party MAI appraisal with income approach methodology is non-negotiable before closing $1.6M on a 1929 Humboldt Park building.
+
+### The 30-Year Picture
+
+| Year | Annual CF | CoC | Property Value |
+|------|-----------|-----|----------------|
+| 5 | $93,400 | 23.4% | $1,799,600 |
+| 10 | $108,300 | 27.1% | $2,088,000 |
+| 20 | $145,700 | 36.4% | $2,813,000 |
+| 30 | $196,000 | 49.0% | $3,788,000 |
+
+Total wealth impact approaching $7M by Year 30.
+
+### Risk
+
+All 15 units showing identical $1,434/month is a red flag — request individual lease abstracts before any offer. 1929 construction requires a full property condition assessment and $50–100K in reserves beyond the down payment. Chicago's RLTO adds tenant protection complexity on any vacancy or dispute.
+
+### Verdict: 7/10 — Conditional Buy
+
+Get the MAI appraisal. Get the PCA. Get the lease abstracts. All three clear: move fast — Humboldt Park deals at 10.9% cap on verified income don't sit.
+
+---
+
+## 🏢 Terravita Apartments — Vegas 100-Unit Condo Conversion Play
+
+**3909-3949 N Nellis Blvd, Las Vegas, NV 89115 · 100 Units · $17,000,000**
+
+The structural differentiator: every one of the 100 units carries its own individual parcel number. This is the condo conversion optionality that makes this deal genuinely multi-layered.
+
+### Current Reality vs. Pro Forma
+
+| Scenario | Vacancy | Monthly CF | DCR |
+|----------|---------|-----------|-----|
+| Current (22 vacant) | 22% | -$17,540 | 0.78 |
+| Halfway stabilized | 11% | -$2,700 | 0.97 |
+| Pro Forma (5 vacant) | 5% | $12,146 | 1.15 |
+
+**You are buying a lease-up project, not a stabilized asset.** 22 units vacant means the bridge from current to pro forma requires leasing 17 units and $150–200K in reserves to cover the monthly deficit during stabilization.
+
+### The Numbers (Stabilized Pro Forma)
+
+| Metric | Value |
+|--------|-------|
+| Down Payment (25%) | $4,250,000 |
+| Total Cash In | $4,760,000 |
+| NOI (stabilized) | $1,112,862/yr |
+| Annual Cash Flow | $145,746 ($12,146/mo) |
+| Cap Rate | 6.55% |
+| CoC | 3.06% |
+| DCR | 1.15 |
+| Price Per Unit | $170,000 |
+
+### Unit Mix
+
+| Type | Units | SF | Pro Forma Rent |
+|------|-------|----|----------------|
+| 1BR/1BA | 16 | 555–770 SF | $1,175/mo |
+| 2BR/2BA | 84 | 906–1,005 SF | $1,350/mo |
+
+73 of the 84 two-bedroom units are oversized at 1,005 SF. In-unit W/D on all 100 units — $9,500/mo in W/D rental income alone.
+
+### The Condo Conversion Exit
+
+| Exit Strategy | Projected Value |
+|--------------|----------------|
+| Hold as rental (10+ yr) | ~$18.5M at 6% exit cap |
+| Partial condo sale | $20M–$25M gross |
+| Full condo conversion | $22M–$28M gross |
+
+A buyer who stabilizes first then converts to condos has a legitimate path to $20M–$25M+ exit on a $17M basis. That's the upside that makes this deal interesting beyond its near-term cash flow math.
+
+### Verdict: 6.5/10 — Conditional Buy
+
+Right operator, right capital, right time horizon — this is a buy. Requires: local LV PM confirming 17-unit lease-up is executable in 6–12 months, full T-12 itemized expenses, $150–200K in reserves beyond the $4.76M cash-in, and 7–10 year hold conviction.
+
+---
+
+## 🌴 Cape Cottages SE — Cape Coral 5-Unit STR Play
+
+**4015 SE 19th Ave, Cape Coral, FL 33904 · 5 Units · $950,000**
+
+STR-allowable zoning in SE Cape Coral near the newly renovated Jaycee Park waterfront. The OM expense structure is the problem — not the asset.
+
+### The Expense Problem
+
+| Expense Line | OM Pro Forma | Realistic Build |
+|-------------|-------------|----------------|
+| Property Tax | $6,400 | $6,400 |
+| Property Insurance (post-Ian) | Included in $6,555 | $10,000–$15,000 |
+| Property Management (8%) | Included | $8,592 |
+| Maintenance + CapEx (10%) | Included | $10,740 |
+| Landscaping/misc | Included | $1,500 |
+| **Total** | **$12,955** | **$37,232+** |
+
+Post-Ian SW Florida insurance on a 5-unit in Cape Coral runs $10,000–$15,000/yr alone. The OM's $6,555 for ALL operating expenses beyond taxes is not a realistic number.
+
+### Three Scenarios
+
+| Metric | OM Pro Forma | Realistic LTR | STR Play |
+|--------|-------------|--------------|---------|
+| Cap Rate | 9.94% | 6.82% | 8.93% |
+| CoC | 15.2% | 4.0% | 11.6% |
+| DCR | 1.748 | 1.199 | 1.569 |
+| Annual CF | $40,409 | $10,762 | $30,816 |
+
+### The STR Thesis
+
+SE Cape Coral allows short-term rentals — not universal in FL municipalities.
+
+| 4 units STR at 55% occupancy | Value |
+|------------------------------|-------|
+| ADR | $155/night |
+| Nights/month | ~16.5 |
+| Revenue per unit | $2,558/mo |
+| Total STR gross | $10,232/mo |
+| vs. LTR at market | $7,000/mo |
+| **Additional gross revenue** | **+$3,232/mo** |
+
+Florida state preemption protects STR rights from outright municipal bans. Jaycee Park proximity is a legitimate booking draw — waterfront park, boat launch, year-round events.
+
+### Verdict: 6.5/10 — Conditional Buy
+
+Get binding FL insurance quotes first. Everything flows from that number. If realistic LTR (4% CoC, 1.2 DCR) is acceptable as a foundation with STR upside on top — this is a buy. If you need the OM-projected 15% CoC — this is not the deal.
+
+---
+
+## 🏠 615-617 Truly Terrace — Vista ADU House Hack
+
+**Vista, CA 92084 · 2 Current / 3 Post-ADU / 4–5 Potential · $1,200,000**
+**5% Down Owner-Occupied · $60,000 Initial Cash In**
+
+ADU permits already approved by the City of Vista. The hardest part of California development is done for the buyer.
+
+### The Three-Phase Model
+
+| Phase | Status | Effective Housing Cost |
+|-------|--------|----------------------|
+| Phase 1 — 615 rented, owner in 617 | Day 1 | $5,484/mo |
+| Phase 2 — 615 + 615A rented | 6–12 months | $3,009/mo |
+| Phase 3 — All 3 units rented | Full investment | -$887/mo (negative) |
+
+**Phase 2 is the target state.** $3,009/month — roughly $300–600 above Vista market rent — while two tenants cover 79% of the mortgage and the owner holds a $1.3M+ San Diego County asset.
+
+### The ADU Math
+
+| Item | Value |
+|------|-------|
+| Permit status | ✅ Approved by City of Vista |
+| OM build estimate | $100,000 |
+| Realistic SD County cost | $123,000–$168,000 |
+| Projected ADU rent | $2,775/mo |
+| Asset value created (6% cap) | ~$555,000 |
+| Net forced appreciation | ~$400,000 |
+
+Even at $168K build cost: $555K in asset value for $168K deployed = 3.3x forced appreciation multiple.
+
+### Full Value-Add Stack
+
+| Lever | Impact |
+|-------|--------|
+| ADU 615A build | +$2,775/mo / +$555K asset value |
+| 4th ADU (zoning approved) | +$2,750–$3,250/mo / +$500K+ |
+| 5th ADU (Bonus Density) | Additional unit — longer timeline |
+| Full build-out path | $1.2M → $2.1M+ asset value |
+
+### Long-Term Projections
+
+| Year | Effective Housing Cost | Property Value | Total Equity |
+|------|----------------------|----------------|-------------|
+| 1 (post-ADU) | $3,009/mo | $1,400,000+ | $200,000+ |
+| 5 | $2,440/mo | $1,825,000 | $680,000 |
+| 10 | $1,890/mo | $2,220,000 | $1,220,000 |
+
+### Verdict: 7.5/10 — Conditional Buy
+
+Three gates before close: (1) real estate attorney clears owner move-in on 617, (2) GC bid validates the $100K ADU build estimate, (3) Phase 1 carrying cost of $5,484/mo explicitly budgeted for 6–12 months. All three check out — strong buy for the right North County SD owner-operator.
+
+---
+
+## Deal Rankings
+
+| Property | Strategy | Cash In | Key Return | Score | Verdict |
+|----------|----------|---------|-----------|-------|---------|
+| Chicago 15-Unit | Buy & Hold | $400K | 20.7% CoC | 7/10 | ⚠️ Conditional |
+| Vista ADU House Hack | House Hack | $96K | $3,009/mo eff. cost | 7.5/10 | ⚠️ Conditional |
+| Terravita LV 100-Unit | Buy & Hold | $4.76M | Condo exit | 6.5/10 | ⚠️ Conditional |
+| Cape Coral STR | STR | $266K | 11.6% CoC (STR) | 6.5/10 | ⚠️ Conditional |
+
+---
+
+*Model any of these deals yourself at dealsletter.io — multifamily, house hack, STR, BRRRR, and fix & flip analysis with live market data. 3 free analyses/month, no card needed.*
+  `,
+  },
+  {
     slug: 'issue-152-berkeley-student-housing-sf-house-hack-san-diego-duplex-spring-valley-48',
     issueNumber: 152,
     date: 'April 2026',
