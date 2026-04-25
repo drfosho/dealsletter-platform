@@ -43,6 +43,187 @@ export interface DealBreakdownIssue {
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
   {
+    slug: 'issue-153-vista-adu-house-hack',
+    issueNumber: 153,
+    date: 'April 2026',
+    title: 'Vista ADU House Hack — $60K Down, Approved Permits, $400K Forced Appreciation Path',
+    previewText: 'City of Vista-approved ADU permits already in hand. $60K down into a $1.2M North County SD asset. Build 615A, drop effective housing cost to $3,009/mo, create $400K in forced appreciation.',
+    ctaStrategy: 'buyhold',
+    sponsor: undefined,
+    properties: [
+      {
+        address: '615-617 Truly Ter',
+        city: 'Vista, CA 92084',
+        price: 1200000,
+        units: 2,
+        capRate: 4.1,
+        coc: 0,
+        cashRequired: 96000,
+        annualCashFlow: 0,
+        verdict: 'Conditional buy — ADU permits approved, owner move-in clearance and GC bid required before close',
+        score: '7.5/10',
+        scoreValue: 7.5,
+        tag: 'ADU DEVELOPMENT PLAY',
+        tagColor: '#7F77DD',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/615-617-Truly-Terrace-Vista-CA/40268410/',
+        opportunity: 'City of Vista-approved permits for the 615A ADU conversion eliminate the most unpredictable element of California development — the permitting process. At 5% down the owner enters a $1.2M North County San Diego asset for $60,000, rents Unit 615 at $2,860 immediately, and executes the 820 SF ADU build over 6–12 months to bring effective housing cost to $3,009/mo — near Vista market rate. Zoning supports a 4th unit outright and a 5th via Bonus Density Rules, creating a documented $1.2M → $2.1M+ asset value path.',
+        risk: 'Unit 617 is currently tenant-occupied — owner move-in requires California AB 1482-compliant just-cause procedures and potential relocation assistance. Phase 1 carrying cost of $5,484/mo runs $2,800 above Vista market rent until the ADU is built. Validate the $100K ADU build estimate with a GC bid — SD County construction costs may push total build to $125–170K.',
+        fullVerdict: 'Conditional buy for a North County SD owner-operator who can execute the owner move-in legally, validate ADU construction costs with a GC bid, and budget Phase 1 carrying costs. The approved permits and multi-phase ADU expansion path make this one of the cleaner development-backed house hacks in the San Diego market.',
+      },
+    ],
+    content: `
+## This Week's Deal
+
+One property this issue — but it's layered enough to deserve the full breakdown. A Vista, CA house hack with City-approved ADU permits already in hand, documented zoning for a 4th unit, and a Bonus Density Rules pathway to a 5th. This is a phased development opportunity dressed as a house hack entry point.
+
+---
+
+## 🏠 615-617 Truly Terrace — Vista ADU House Hack
+
+**Vista, CA 92084 · 2 Current Units / 3 Post-ADU / 4–5 Potential · $1,200,000**
+**5% Down Owner-Occupied · $60,000 Initial Cash In**
+
+### The Setup
+
+Three structures, three phases, one entry point:
+
+| Unit | Config | SF | Status | Rent |
+|------|--------|----|--------|------|
+| 615 | 2BD/1BA | 845 SF | Rented — Day 1 income | $2,860/mo |
+| 617 | 2BD/1BA | 735 SF | Owner moves in | $2,430 market value |
+| 615A | 2BD/1BA | 820 SF | Permits approved — build required | $2,775 projected |
+
+### The Financing Advantage
+
+| Line Item | Amount |
+|-----------|--------|
+| Purchase Price | $1,200,000 |
+| Down Payment (5% owner-occ) | $60,000 |
+| Purchase Costs | $36,000 |
+| **Phase 1 Total Cash In** | **$96,000** |
+| ADU Build Cost (615A) | $100,000–$168,000 |
+| **Phase 2 Total Cash In** | **$196,000–$264,000** |
+
+An investor buying this same property needs $300,000+ at 25% down. Owner-occupied financing gets you in for $96,000. Same asset, one third the entry cost.
+
+---
+
+### The Three-Phase Model
+
+**Phase 1 — Owner in 617, 615 Rented (Day 1)**
+
+| Line Item | Monthly |
+|-----------|---------|
+| Full Mortgage | $7,207 |
+| Rental Income (615) | -$2,860 |
+| Expenses | +$1,137 |
+| **Effective Housing Cost** | **$5,484/mo** |
+| Vista market rent (2BR) | $2,400–$2,700 |
+| Premium over renting | +$2,800–$3,000/mo |
+
+Phase 1 is the most expensive version. Owner pays $5,484/mo — roughly $2,800 above Vista market rent. This is a known 6–12 month holding cost while 615A gets built. Treat it as temporary, not permanent.
+
+**Phase 2 — ADU Complete, 615 + 615A Rented (Target State)**
+
+| Line Item | Monthly |
+|-----------|---------|
+| Full Mortgage | $7,207 |
+| Rental Income (615) | -$2,860 |
+| Rental Income (615A) | -$2,775 |
+| Expenses | +$1,437 |
+| **Effective Housing Cost** | **$3,009/mo** |
+| Vista market rent (2BR) | $2,400–$2,700 |
+| Premium over renting | +$309–$609/mo |
+
+**Phase 2 is where the deal makes sense.** $3,009/month effective housing cost — roughly $300–600 above Vista market rent — while two tenants cover 79% of the mortgage and the owner holds a $1.3M+ San Diego County asset. Achievable within 6–12 months of close.
+
+**Phase 3 — All 3 Units Rented (Full Investment)**
+
+| Line Item | Monthly |
+|-----------|---------|
+| Gross Rent (all 3) | $8,165 |
+| Expenses + Vacancy | -$1,845 |
+| NOI | $6,320 |
+| Debt Service | -$7,207 |
+| **Net Cash Flow** | **-$887/mo** |
+
+Phase 3 runs cash flow negative at 6.5% financing. The house hack owner-occupancy structure is what makes this deal work. It is not a pure income play at current rates.
+
+---
+
+### The ADU — Critical Path
+
+The 615A ADU is the entire investment thesis. Permits are already approved — this removes the most time-consuming, uncertain part of California ADU development.
+
+| Item | Detail |
+|------|--------|
+| Permit status | ✅ Approved by City of Vista |
+| OM build estimate | $100,000 |
+| Realistic SD County cost | $123,000–$168,000 |
+| Projected rent | $2,775/mo |
+| Build timeline | 4–8 months (plan for 6) |
+| Asset value created | ~$555,000 at 6% cap |
+| Net forced appreciation | ~$400,000 |
+
+**The OM's $100K build estimate deserves scrutiny.** SD County ADU conversions of existing structures typically run $150–250/SF in 2026 dollars. Get an actual GC bid before closing. Even at $168K, the math works: $555K in asset value for $168K deployed = 3.3x forced appreciation multiple.
+
+### Full Value-Add Stack
+
+| Lever | Action | Impact |
+|-------|--------|--------|
+| ADU 615A | Build approved 2BR/1BA | +$2,775/mo / +$555K value |
+| 4th ADU | Existing zoning allows | +$2,750–$3,250/mo / +$500K+ |
+| 5th ADU | Bonus Density Rules pathway | Additional unit — longer timeline |
+| Rent growth | 3%/yr natural trajectory | Effective cost drops annually |
+
+Full build-out path: **$1.2M entry → 5 units → $2.1M+ asset value.** At current SD County construction costs, executing Phases 1–3 requires $300–400K in total build capital and generates $900K+ in projected forced appreciation.
+
+---
+
+### Long-Term Projections
+
+| Year | Effective Housing Cost | Property Value | Total Equity |
+|------|----------------------|----------------|-------------|
+| 1 (pre-ADU) | $5,484/mo | $1,200,000 | $60,000 |
+| 1 (post-ADU) | $3,009/mo | $1,400,000+ | $200,000+ |
+| 3 | $2,710/mo | $1,573,000 | $438,000 |
+| 5 | $2,440/mo | $1,825,000 | $680,000 |
+| 10 | $1,890/mo | $2,220,000 | $1,220,000 |
+
+By Year 5, rent growth has dropped effective housing cost below $2,500/mo while the asset appreciates to $1.8M+ — on a $60,000 initial down payment.
+
+---
+
+### The Risks to Know Going In
+
+**Owner move-in on 617 is a legal process, not a simple key exchange.** 617 is currently tenant-occupied. California owner move-in requires just-cause basis, relocation assistance documentation, and a genuine 12+ month primary residence commitment. Get a local real estate attorney to clear this before submitting any offer — not after.
+
+**AB 1482 applicability.** Verify the build year of 615 and 617. Pre-2009 units are subject to California's 5%+CPI annual rent cap and just-cause eviction requirements. Vista has no local rent control, but state law applies.
+
+**Phase 1 carrying cost is real.** If construction takes 12 months, that's approximately $65,808 in above-market housing cost during build. Budget for it explicitly — it's a known cost, not a surprise.
+
+**Expense structure is lean.** The OM shows only taxes, insurance, and trash — no maintenance, no CapEx reserves. Add $300–500/mo for realistic operating overhead.
+
+---
+
+### Verdict: 7.5/10 — Conditional Buy
+
+The ADU permits being already approved transforms a speculative development play into an executable construction project — the hardest part of California ADU development is done for the buyer.
+
+**Three gates before close:**
+1. Real estate attorney clears the owner move-in process on 617
+2. GC bid validates the $100K ADU build estimate (budget for up to $168K)
+3. Phase 1 carrying cost of $5,484/mo explicitly budgeted for 6–12 months
+
+If all three check out — strong buy for the right North County SD owner-operator.
+
+---
+
+*Analyze your own house hack at dealsletter.io — the only analyzer that models by-unit rent splits, owner-occupied units at $0, and effective housing cost vs. renting side by side. 3 free analyses/month, no card needed.*
+  `,
+  },
+  {
     slug: 'issue-152-berkeley-student-housing-sf-house-hack-san-diego-duplex-spring-valley-48',
     issueNumber: 152,
     date: 'April 2026',
