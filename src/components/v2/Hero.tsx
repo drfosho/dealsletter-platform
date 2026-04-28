@@ -132,6 +132,21 @@ export default function Hero({
             cash flow & ROI in 30 seconds.
           </p>
 
+          {/* Origin story */}
+          <p style={{
+            fontSize: 13,
+            color: '#4e4a6a',
+            marginTop: 12,
+            marginBottom: 32,
+            lineHeight: 1.6,
+          }}>
+            Started as a newsletter.{' '}
+            <span style={{ color: '#9994b8' }}>
+              2,200+ subscribers. 150+ issues.
+            </span>
+            {' '}Now it&apos;s a platform.
+          </p>
+
           {/* Search bar */}
           <div style={{ marginBottom: 16 }}>
             <SearchBar userTier={null} />
@@ -171,7 +186,6 @@ export default function Hero({
             marginTop: 4
           }}>
             {[
-              '10K+ properties analyzed',
               'BRRRR · Flip · Buy & Hold · Hack',
               'Under 30 second results'
             ].map((item, i) => (
@@ -271,6 +285,19 @@ export default function Hero({
           Enter any address. Get cap rate, cash flow & ROI in 30 seconds.
         </p>
 
+        <p style={{
+          fontSize: 13,
+          color: '#4e4a6a',
+          marginTop: 12,
+          lineHeight: 1.6,
+        }}>
+          Started as a newsletter.{' '}
+          <span style={{ color: '#9994b8' }}>
+            2,200+ subscribers. 150+ issues.
+          </span>
+          {' '}Now it&apos;s a platform.
+        </p>
+
         <div className="mt-10 w-full">
           <SearchBar userTier={null} />
         </div>
@@ -290,8 +317,6 @@ export default function Hero({
           className="mt-12 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
           style={{ color: '#7a7693', fontSize: 14 }}
         >
-          <span>10,000+ properties analyzed</span>
-          <span style={{ color: '#7F77DD' }}>·</span>
           <span>BRRRR · Fix & Flip · Buy & Hold · House Hack</span>
           <span style={{ color: '#7F77DD' }}>·</span>
           <span>Results in under 30 seconds</span>
