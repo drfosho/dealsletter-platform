@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import NavBar from "@/components/v2/NavBar";
 import Footer from "@/components/v2/Footer";
 import SearchBar from "@/components/v2/SearchBar";
+import UpgradeModal from "@/components/v2/UpgradeModal";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -620,6 +621,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ background: "#0d0d14", minHeight: "100vh" }}>
+      <UpgradeModal tier={userTier} />
       <style>{`
         @keyframes skeleton-pulse {
           from { opacity: 0.4; }

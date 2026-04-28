@@ -1554,62 +1554,56 @@ export default function AnalysisResults({
 
   const ProFormaSection = (
     <div key="proforma">
-      <TierGate
-        tier={tier}
-        requiredTier="pro"
-        ctaLabel="full waterfall breakdown"
-      >
-        {isFlip && calc ? (
-          <CardWrapper>
-            <SectionLabel text="Pro Forma — Flip Waterfall" />
-            <ProFormaRow label="Purchase Price" value={$(calc.purchasePrice ?? purchasePrice)} prefix="-" />
-            {calc.acquisitionLoan != null && (
-              <ProFormaRow label="Hard Money Loan" value={$(calc.acquisitionLoan)} prefix="+" />
-            )}
-            <ProFormaRow label="Rehab Cost" value={$(calc.renovationCosts ?? calc.rehabCost)} prefix="-" />
-            {calc.rehabHoldback != null && calc.rehabHoldback > 0 && (
-              <ProFormaRow label="Rehab Loan Draw" value={$(calc.rehabHoldback)} prefix="+" />
-            )}
-            <ProFormaRow label={`Interest (${calc.holdingMonths ?? '?'}mo)`} value={$(calc.holdingCosts)} prefix="-" />
-            {calc.pointsCost != null && (
-              <ProFormaRow label="Points" value={$(calc.pointsCost)} prefix="-" />
-            )}
-            <ProFormaRow label="Buy Closing Costs" value={$(calc.closingCosts)} prefix="-" />
-            <ProFormaRow label="Total Cash Invested" value={$(calc.cashRequired)} bold />
-            <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
-            <ProFormaRow label="Sale Price (ARV)" value={$(calc.arv)} prefix="+" />
-            <ProFormaRow label="Sell Closing Costs" value={$(calc.sellingCosts)} prefix="-" />
-            <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
-            <ProFormaRow label="NET PROFIT" value={$(calc.netProfit)} bold />
-            <ProFormaRow label="ROI on Cash" value={pct(calc.roi)} bold isLast />
-          </CardWrapper>
-        ) : (
-          (() => {
-            const rows: { label: string; value: string }[] = [];
-            const ti = calc?.totalInvestment ?? fm?.total_investment;
-            if (ti != null) rows.push({ label: "Total Investment", value: $(ti) });
-            const rent = fm?.monthly_rent ?? v2m?.monthlyRent;
-            if (rent != null) rows.push({ label: "Gross Rent", value: $(rent) + "/mo" });
-            const noi = fm?.annual_noi ?? v2m?.noi;
-            if (noi != null) rows.push({ label: "Net Operating Income", value: $(noi) + "/yr" });
-            const holdCosts = fm?.holding_costs;
-            if (holdCosts != null) rows.push({ label: "Holding Costs", value: $(holdCosts) });
-            const profit = fm?.total_profit;
-            if (profit != null) rows.push({ label: "Total Profit (5yr)", value: $(profit) });
+      {isFlip && calc ? (
+        <CardWrapper>
+          <SectionLabel text="Pro Forma — Flip Waterfall" />
+          <ProFormaRow label="Purchase Price" value={$(calc.purchasePrice ?? purchasePrice)} prefix="-" />
+          {calc.acquisitionLoan != null && (
+            <ProFormaRow label="Hard Money Loan" value={$(calc.acquisitionLoan)} prefix="+" />
+          )}
+          <ProFormaRow label="Rehab Cost" value={$(calc.renovationCosts ?? calc.rehabCost)} prefix="-" />
+          {calc.rehabHoldback != null && calc.rehabHoldback > 0 && (
+            <ProFormaRow label="Rehab Loan Draw" value={$(calc.rehabHoldback)} prefix="+" />
+          )}
+          <ProFormaRow label={`Interest (${calc.holdingMonths ?? '?'}mo)`} value={$(calc.holdingCosts)} prefix="-" />
+          {calc.pointsCost != null && (
+            <ProFormaRow label="Points" value={$(calc.pointsCost)} prefix="-" />
+          )}
+          <ProFormaRow label="Buy Closing Costs" value={$(calc.closingCosts)} prefix="-" />
+          <ProFormaRow label="Total Cash Invested" value={$(calc.cashRequired)} bold />
+          <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
+          <ProFormaRow label="Sale Price (ARV)" value={$(calc.arv)} prefix="+" />
+          <ProFormaRow label="Sell Closing Costs" value={$(calc.sellingCosts)} prefix="-" />
+          <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
+          <ProFormaRow label="NET PROFIT" value={$(calc.netProfit)} bold />
+          <ProFormaRow label="ROI on Cash" value={pct(calc.roi)} bold isLast />
+        </CardWrapper>
+      ) : (
+        (() => {
+          const rows: { label: string; value: string }[] = [];
+          const ti = calc?.totalInvestment ?? fm?.total_investment;
+          if (ti != null) rows.push({ label: "Total Investment", value: $(ti) });
+          const rent = fm?.monthly_rent ?? v2m?.monthlyRent;
+          if (rent != null) rows.push({ label: "Gross Rent", value: $(rent) + "/mo" });
+          const noi = fm?.annual_noi ?? v2m?.noi;
+          if (noi != null) rows.push({ label: "Net Operating Income", value: $(noi) + "/yr" });
+          const holdCosts = fm?.holding_costs;
+          if (holdCosts != null) rows.push({ label: "Holding Costs", value: $(holdCosts) });
+          const profit = fm?.total_profit;
+          if (profit != null) rows.push({ label: "Total Profit (5yr)", value: $(profit) });
 
-            if (rows.length === 0) return null;
+          if (rows.length === 0) return null;
 
-            return (
-              <CardWrapper>
-                <SectionLabel text="Pro Forma" />
-                {rows.map((r, i) => (
-                  <ProFormaRow key={r.label} label={r.label} value={r.value} isLast={i === rows.length - 1} />
-                ))}
-              </CardWrapper>
-            );
-          })()
-        )}
-      </TierGate>
+          return (
+            <CardWrapper>
+              <SectionLabel text="Pro Forma" />
+              {rows.map((r, i) => (
+                <ProFormaRow key={r.label} label={r.label} value={r.value} isLast={i === rows.length - 1} />
+              ))}
+            </CardWrapper>
+          );
+        })()
+      )}
 
       {(isBuyHold || isHouseHack) && calc?.expenseBreakdown && (
         <ExpenseBreakdown
@@ -1623,13 +1617,7 @@ export default function AnalysisResults({
 
   const ChartSection = (
     <div key="chart">
-      <TierGate
-        tier={tier}
-        requiredTier="pro"
-        ctaLabel="5-year projections"
-      >
-        <ProjectionChart strategy={strategy} calculations={calc} result={result} />
-      </TierGate>
+      <ProjectionChart strategy={strategy} calculations={calc} result={result} />
     </div>
   );
 
@@ -1656,77 +1644,25 @@ export default function AnalysisResults({
           Risk factors identified — review before proceeding
         </div>
       )}
-      {riskItems.length > 0 && (() => {
-        const highCount = riskItems.filter((r) => r.severity === "high").length;
-        const medCount = riskItems.filter((r) => r.severity === "medium").length;
-        const lowCount = riskItems.filter((r) => r.severity === "low").length;
-        const breakdown = [
-          highCount > 0 ? `${highCount} high` : null,
-          medCount > 0 ? `${medCount} medium` : null,
-          lowCount > 0 ? `${lowCount} low` : null,
-        ].filter(Boolean).join(", ");
-        const summary =
-          `${riskItems.length} risk${riskItems.length === 1 ? "" : "s"} identified` +
-          (breakdown ? ` — ${breakdown}` : "");
-
-        return (
-          <div className="mb-5">
-            <SectionLabel text="Risk Flags" />
-            {hasHighRisk && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#f09595",
-                  marginBottom: 10,
-                  background: "rgba(162,45,45,0.06)",
-                  borderLeft: "2px solid #f09595",
-                  padding: "8px 12px",
-                  borderRadius: "0 6px 6px 0",
-                }}
-              >
-                High severity risk detected — review before proceeding
-              </div>
-            )}
-            {tier === "free" && (
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "#9994b8",
-                  marginBottom: 12,
-                }}
-              >
-                {summary}
-              </p>
-            )}
-            <TierGate
-              tier={tier}
-              requiredTier="pro"
-              ctaLabel="full risk breakdown"
-            >
-              {riskItems.map((ri, i) => (
-                <RiskFlag
-                  key={i}
-                  severity={ri.severity}
-                  flag={ri.flag}
-                  detail={ri.detail}
-                  isLast={i === riskItems.length - 1}
-                />
-              ))}
-            </TierGate>
-          </div>
-        );
-      })()}
+      {riskItems.length > 0 && (
+        <div className="mb-5">
+          {riskItems.map((ri, i) => (
+            <RiskFlag
+              key={i}
+              severity={ri.severity}
+              flag={ri.flag}
+              detail={ri.detail}
+              isLast={i === riskItems.length - 1}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 
   const NarrativeSection = (
     <div key="narrative">
-      <TierGate
-        tier={tier}
-        requiredTier="pro"
-        ctaLabel="full AI analysis"
-      >
-        {(result.narrative || result.full_analysis || result.summary) && (
+      {(result.narrative || result.full_analysis || result.summary) && (
           <CardWrapper>
             <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1814,27 +1750,20 @@ export default function AnalysisResults({
               </div>
             )}
           </CardWrapper>
-        )}
-      </TierGate>
+      )}
     </div>
   );
 
   const MarketSection = (
     <div key="market">
-      <TierGate
-        tier={tier}
-        requiredTier="pro"
-        ctaLabel="market analysis"
-      >
-        {result.marketContext && (
-          <CardWrapper>
-            <SectionLabel text="Market Context" />
-            <p style={{ fontSize: 14, color: "#9994b8", lineHeight: 1.8, margin: 0 }}>
-              {result.marketContext}
-            </p>
-          </CardWrapper>
-        )}
-      </TierGate>
+      {result.marketContext && (
+        <CardWrapper>
+          <SectionLabel text="Market Context" />
+          <p style={{ fontSize: 14, color: "#9994b8", lineHeight: 1.8, margin: 0 }}>
+            {result.marketContext}
+          </p>
+        </CardWrapper>
+      )}
     </div>
   );
 
@@ -1844,19 +1773,187 @@ export default function AnalysisResults({
 
   return (
     <div className="mt-8">
-      {/* Render sections in personality-based order */}
-      {modelPersonality.sectionOrder.map((sectionKey) => {
-        switch (sectionKey) {
-          case "score": return ScoreSection;
-          case "metrics": return MetricsSection;
-          case "proforma": return ProFormaSection;
-          case "chart": return ChartSection;
-          case "risks": return RisksSection;
-          case "narrative": return NarrativeSection;
-          case "market": return MarketSection;
-          default: return null;
-        }
-      })}
+      {/* Free sections (score + metrics) — risk summary — then either a single
+          consolidated upgrade gate (free tier) or the rest of the locked sections (paid). */}
+      {(() => {
+        const freeSections = ["score", "metrics"];
+        const lockedSections = modelPersonality.sectionOrder.filter(
+          (s) => !freeSections.includes(s)
+        );
+
+        const renderSection = (key: string) => {
+          switch (key) {
+            case "score": return ScoreSection;
+            case "metrics": return MetricsSection;
+            case "proforma": return ProFormaSection;
+            case "chart": return ChartSection;
+            case "risks": return RisksSection;
+            case "narrative": return NarrativeSection;
+            case "market": return MarketSection;
+            default: return null;
+          }
+        };
+
+        const highCount = riskItems.filter((r) => r.severity === "high").length;
+
+        return (
+          <>
+            {freeSections.map((s) => renderSection(s))}
+
+            {riskItems.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <SectionLabel text="Risk Flags" />
+                {hasHighRisk && (
+                  <div
+                    style={{
+                      background: "rgba(240,149,149,0.08)",
+                      border: "0.5px solid rgba(240,149,149,0.2)",
+                      borderRadius: 8,
+                      padding: "10px 14px",
+                      marginBottom: 12,
+                      fontSize: 13,
+                      color: "#f09595",
+                    }}
+                  >
+                    {"⚠"} High-severity risk detected — see full breakdown below
+                  </div>
+                )}
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "#6b6690",
+                    marginBottom: 8,
+                  }}
+                >
+                  {riskItems.length} risk factor{riskItems.length !== 1 ? "s" : ""} identified
+                  {highCount > 0 && (
+                    <span style={{ color: "#f09595" }}>
+                      {" "}— {highCount} high severity
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {tier === "free" ? (
+              <div
+                style={{
+                  background: "#13121d",
+                  border: "0.5px solid rgba(99,102,241,0.2)",
+                  borderRadius: 16,
+                  padding: "32px",
+                  marginTop: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "1.5px",
+                    textTransform: "uppercase",
+                    color: "#6366F1",
+                    marginBottom: 20,
+                  }}
+                >
+                  Unlock the full analysis
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                    marginBottom: 28,
+                  }}
+                >
+                  {[
+                    {
+                      icon: "\u{1F534}",
+                      title: "Full Risk Breakdown",
+                      desc: `${riskItems.length} risk factors with severity ratings and full explanations`,
+                    },
+                    {
+                      icon: "\u{1F4CA}",
+                      title: "Complete Pro Forma",
+                      desc: "Every line item in the waterfall — income, expenses, and NOI",
+                    },
+                    {
+                      icon: "\u{1F916}",
+                      title: "AI Narrative",
+                      desc: "Why this deal scores the way it does — full AI reasoning",
+                    },
+                    {
+                      icon: "\u{1F4C8}",
+                      title: "5-Year Projections",
+                      desc: "Cash flow growth, equity build, and wealth trajectory",
+                    },
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: "rgba(99,102,241,0.06)",
+                        border: "0.5px solid rgba(99,102,241,0.15)",
+                        borderRadius: 10,
+                        padding: "16px",
+                      }}
+                    >
+                      <div style={{ fontSize: 20, marginBottom: 8 }}>{item.icon}</div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#f0eeff",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {item.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#6b6690",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {item.desc}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => (window.location.href = "/v2/pricing")}
+                  style={{
+                    width: "100%",
+                    background: "#6366F1",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "14px",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    marginBottom: 8,
+                  }}
+                >
+                  Start 7-day free trial &rarr;
+                </button>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#4e4a6a",
+                    textAlign: "center",
+                  }}
+                >
+                  $29/mo after trial · cancel anytime
+                </div>
+              </div>
+            ) : (
+              <>{lockedSections.map((s) => renderSection(s))}</>
+            )}
+          </>
+        );
+      })()}
 
       {/* === Pro Max Upgrade CTA for Pro users === */}
       {tier === "pro" && (
