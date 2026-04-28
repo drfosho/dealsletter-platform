@@ -98,8 +98,8 @@ function AuthCallbackContent() {
                   fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
                 }, 2000)
               }
-              // Regular login - go directly to analysis
-              router.push('/v2/analyze')
+              // Regular login - go to dashboard
+              router.push('/v2/dashboard')
             }
             return
           }
@@ -139,8 +139,8 @@ function AuthCallbackContent() {
                 fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
               }, 2000)
             }
-            // Regular login - go directly to analysis
-            router.push('/v2/analyze')
+            // Regular login - go to dashboard
+            router.push('/v2/dashboard')
           }
         } else {
           // No session, redirect to login
