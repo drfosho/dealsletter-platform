@@ -262,7 +262,7 @@ function RiskFlag({
       >
         {severity}
       </span>
-      <div style={{ marginLeft: 10 }}>
+      <div style={{ marginLeft: 10, flex: 1 }}>
         <span style={{ fontSize: 13, color: "#9994b8" }}>{flag}</span>
         {detail && (
           <p style={{ fontSize: 12, color: "#4e4a6a", marginTop: 3 }}>
@@ -274,17 +274,19 @@ function RiskFlag({
   );
 }
 
+interface TierGateProps {
+  tier: string;
+  requiredTier?: string;
+  ctaLabel?: string;
+  children: React.ReactNode;
+}
+
 function TierGate({
   tier,
-  requiredTier,
+  requiredTier = "pro",
+  ctaLabel,
   children,
-  label,
-}: {
-  tier: string;
-  requiredTier: "pro" | "pro_max";
-  children: React.ReactNode;
-  label: string;
-}) {
+}: TierGateProps) {
   const hasAccess =
     requiredTier === "pro"
       ? tier === "pro" || tier === "pro_max"
@@ -304,35 +306,6 @@ function TierGate({
       >
         {children}
       </div>
-      <div
-        className="flex flex-col items-center justify-center"
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(13,13,20,0.7)",
-          borderRadius: 12,
-          border: "0.5px solid rgba(127,119,221,0.3)",
-        }}
-      >
-        <p style={{ fontSize: 13, color: "#9994b8", marginBottom: 12, textAlign: "center" }}>
-          {label}
-        </p>
-        <button
-          onClick={() => (window.location.href = "/v2/pricing")}
-          style={{
-            background: "#534AB7",
-            color: "#f0eeff",
-            border: "none",
-            borderRadius: 8,
-            padding: "9px 22px",
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-        >
-          Upgrade to unlock →
-        </button>
-      </div>
       {tier === 'free' && (
         <div style={{
           background: 'linear-gradient(180deg, transparent 0%, #0d0d14 60%)',
@@ -350,7 +323,9 @@ function TierGate({
             marginBottom: 14,
             fontWeight: 500
           }}>
-            Unlock the full analysis
+            {ctaLabel
+              ? `${ctaLabel} available on Pro`
+              : "Full analysis available on Pro"}
           </p>
           <button
             onClick={() =>
@@ -1642,9 +1617,7 @@ export default function AnalysisResults({
 
   const ChartSection = (
     <div key="chart">
-      <TierGate tier={tier} requiredTier="pro" label="5-year projections available on Pro">
-        <ProjectionChart strategy={strategy} calculations={calc} result={result} />
-      </TierGate>
+      <ProjectionChart strategy={strategy} calculations={calc} result={result} />
     </div>
   );
 
@@ -1705,8 +1678,7 @@ export default function AnalysisResults({
 
   const NarrativeSection = (
     <div key="narrative">
-      <TierGate tier={tier} requiredTier="pro" label="Full AI narrative available on Pro">
-        {(result.narrative || result.full_analysis || result.summary) && (
+      {(result.narrative || result.full_analysis || result.summary) && (
           <CardWrapper>
             <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1794,23 +1766,20 @@ export default function AnalysisResults({
               </div>
             )}
           </CardWrapper>
-        )}
-      </TierGate>
+      )}
     </div>
   );
 
   const MarketSection = (
     <div key="market">
-      <TierGate tier={tier} requiredTier="pro" label="Market analysis available on Pro">
-        {result.marketContext && (
-          <CardWrapper>
-            <SectionLabel text="Market Context" />
-            <p style={{ fontSize: 14, color: "#9994b8", lineHeight: 1.8, margin: 0 }}>
-              {result.marketContext}
-            </p>
-          </CardWrapper>
-        )}
-      </TierGate>
+      {result.marketContext && (
+        <CardWrapper>
+          <SectionLabel text="Market Context" />
+          <p style={{ fontSize: 14, color: "#9994b8", lineHeight: 1.8, margin: 0 }}>
+            {result.marketContext}
+          </p>
+        </CardWrapper>
+      )}
     </div>
   );
 
@@ -1820,19 +1789,187 @@ export default function AnalysisResults({
 
   return (
     <div className="mt-8">
-      {/* Render sections in personality-based order */}
-      {modelPersonality.sectionOrder.map((sectionKey) => {
-        switch (sectionKey) {
-          case "score": return ScoreSection;
-          case "metrics": return MetricsSection;
-          case "proforma": return ProFormaSection;
-          case "chart": return ChartSection;
-          case "risks": return RisksSection;
-          case "narrative": return NarrativeSection;
-          case "market": return MarketSection;
-          default: return null;
-        }
-      })}
+      {/* Free sections (score + metrics) — risk summary — then either a single
+          consolidated upgrade gate (free tier) or the rest of the locked sections (paid). */}
+      {(() => {
+        const freeSections = ["score", "metrics"];
+        const lockedSections = modelPersonality.sectionOrder.filter(
+          (s) => !freeSections.includes(s)
+        );
+
+        const renderSection = (key: string) => {
+          switch (key) {
+            case "score": return ScoreSection;
+            case "metrics": return MetricsSection;
+            case "proforma": return ProFormaSection;
+            case "chart": return ChartSection;
+            case "risks": return RisksSection;
+            case "narrative": return NarrativeSection;
+            case "market": return MarketSection;
+            default: return null;
+          }
+        };
+
+        const highCount = riskItems.filter((r) => r.severity === "high").length;
+
+        return (
+          <>
+            {freeSections.map((s) => renderSection(s))}
+
+            {tier === "free" && riskItems.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <SectionLabel text="Risk Flags" />
+                {hasHighRisk && (
+                  <div
+                    style={{
+                      background: "rgba(240,149,149,0.08)",
+                      border: "0.5px solid rgba(240,149,149,0.2)",
+                      borderRadius: 8,
+                      padding: "10px 14px",
+                      marginBottom: 12,
+                      fontSize: 13,
+                      color: "#f09595",
+                    }}
+                  >
+                    {"⚠"} High-severity risk detected — see full breakdown below
+                  </div>
+                )}
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "#6b6690",
+                    marginBottom: 8,
+                  }}
+                >
+                  {riskItems.length} risk factor{riskItems.length !== 1 ? "s" : ""} identified
+                  {highCount > 0 && (
+                    <span style={{ color: "#f09595" }}>
+                      {" "}— {highCount} high severity
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {tier === "free" ? (
+              <div
+                style={{
+                  background: "#13121d",
+                  border: "0.5px solid rgba(99,102,241,0.2)",
+                  borderRadius: 16,
+                  padding: "32px",
+                  marginTop: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "1.5px",
+                    textTransform: "uppercase",
+                    color: "#6366F1",
+                    marginBottom: 20,
+                  }}
+                >
+                  Unlock the full analysis
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                    marginBottom: 28,
+                  }}
+                >
+                  {[
+                    {
+                      icon: "\u{1F534}",
+                      title: "Full Risk Breakdown",
+                      desc: `${riskItems.length} risk factors with severity ratings and full explanations`,
+                    },
+                    {
+                      icon: "\u{1F4CA}",
+                      title: "Complete Pro Forma",
+                      desc: "Every line item in the waterfall — income, expenses, and NOI",
+                    },
+                    {
+                      icon: "\u{1F916}",
+                      title: "AI Narrative",
+                      desc: "Why this deal scores the way it does — full AI reasoning",
+                    },
+                    {
+                      icon: "\u{1F4C8}",
+                      title: "5-Year Projections",
+                      desc: "Cash flow growth, equity build, and wealth trajectory",
+                    },
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: "rgba(99,102,241,0.06)",
+                        border: "0.5px solid rgba(99,102,241,0.15)",
+                        borderRadius: 10,
+                        padding: "16px",
+                      }}
+                    >
+                      <div style={{ fontSize: 20, marginBottom: 8 }}>{item.icon}</div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#f0eeff",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {item.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#6b6690",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {item.desc}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => (window.location.href = "/v2/pricing")}
+                  style={{
+                    width: "100%",
+                    background: "#6366F1",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "14px",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    marginBottom: 8,
+                  }}
+                >
+                  Start 7-day free trial &rarr;
+                </button>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#4e4a6a",
+                    textAlign: "center",
+                  }}
+                >
+                  $29/mo after trial · cancel anytime
+                </div>
+              </div>
+            ) : (
+              <>{lockedSections.map((s) => renderSection(s))}</>
+            )}
+          </>
+        );
+      })()}
 
       {/* === Pro Max Upgrade CTA for Pro users === */}
       {tier === "pro" && (
