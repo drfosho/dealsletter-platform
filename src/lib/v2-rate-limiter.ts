@@ -113,9 +113,11 @@ export async function checkRateLimit(
       remaining: Math.max(0, remaining),
     };
   } catch (err) {
-    // On error, allow the request — never block users due to rate limiter bugs
-    console.error("Rate limiter error:", err);
-    return { allowed: true };
+    console.error("[RateLimit] Error — failing closed:", err);
+    return {
+      allowed: false,
+      reason: "Rate limit check failed — try again",
+    };
   }
 }
 

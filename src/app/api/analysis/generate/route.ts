@@ -19,6 +19,7 @@ import {
   type Strategy
 } from '@/lib/ai-providers';
 import { calculateBRRRR, type BRRRRInputs } from '@/utils/brrrr-calculator';
+import { FREE_MONTHLY_ANALYSIS_LIMIT } from '@/lib/constants';
 import {
   parsePrice,
   parsePercentage,
@@ -840,10 +841,20 @@ export async function POST(request: NextRequest) {
           .in('status', ['active', 'trialing'])
           .single();
 
-        const tierLimits: Record<string, number> = { free: 10, basic: 10, starter: 10, pro: 50, professional: 50, 'pro-plus': 200, 'pro_plus': 200, premium: 50, enterprise: 9999 };
+        const tierLimits: Record<string, number> = {
+          free: FREE_MONTHLY_ANALYSIS_LIMIT,
+          basic: FREE_MONTHLY_ANALYSIS_LIMIT,
+          starter: FREE_MONTHLY_ANALYSIS_LIMIT,
+          pro: 999999,
+          professional: 999999,
+          'pro-plus': 999999,
+          'pro_plus': 999999,
+          premium: 999999,
+          enterprise: 999999,
+        };
         const profileTier = profile?.subscription_tier?.toLowerCase() || 'free';
         const subsTier = subscription?.tier?.toLowerCase() || 'free';
-        const limit = Math.max(tierLimits[profileTier] ?? 10, tierLimits[subsTier] ?? 10);
+        const limit = Math.max(tierLimits[profileTier] ?? FREE_MONTHLY_ANALYSIS_LIMIT, tierLimits[subsTier] ?? FREE_MONTHLY_ANALYSIS_LIMIT);
 
         canAnalyze = analysesUsed < limit;
         usageMessage = canAnalyze ? '' : `Monthly limit of ${limit} analyses reached. Upgrade for more.`;
