@@ -171,7 +171,7 @@ export default function Hero({
             marginTop: 4
           }}>
             {[
-              '10K+ properties analyzed',
+              '2,200+ investors on the Deal Desk',
               'BRRRR · Flip · Buy & Hold · Hack',
               'Under 30 second results'
             ].map((item, i) => (
@@ -290,7 +290,7 @@ export default function Hero({
           className="mt-12 flex flex-wrap items-center justify-center gap-x-4 gap-y-2"
           style={{ color: '#7a7693', fontSize: 14 }}
         >
-          <span>10,000+ properties analyzed</span>
+          <span>2,200+ investors subscribed to the Deal Desk</span>
           <span style={{ color: '#7F77DD' }}>·</span>
           <span>BRRRR · Fix & Flip · Buy & Hold · House Hack</span>
           <span style={{ color: '#7F77DD' }}>·</span>
