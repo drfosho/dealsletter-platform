@@ -228,13 +228,11 @@ function RiskFlag({
   flag,
   detail,
   isLast,
-  tier,
 }: {
   severity: string;
   flag: string;
   detail?: string;
   isLast?: boolean;
-  tier?: string;
 }) {
   const colors: Record<string, { bg: string; fg: string }> = {
     high: { bg: "rgba(162,45,45,0.15)", fg: "#f09595" },
@@ -242,12 +240,6 @@ function RiskFlag({
     low: { bg: "rgba(29,158,117,0.15)", fg: "#1D9E75" },
   };
   const c = colors[severity] || colors.medium;
-
-  const detailEl = detail ? (
-    <p style={{ fontSize: 12, color: "#4e4a6a", marginTop: 3 }}>
-      {detail}
-    </p>
-  ) : null;
 
   return (
     <div
@@ -272,18 +264,10 @@ function RiskFlag({
       </span>
       <div style={{ marginLeft: 10, flex: 1 }}>
         <span style={{ fontSize: 13, color: "#9994b8" }}>{flag}</span>
-        {detailEl && (
-          tier === "free" || tier === "basic" ? (
-            <TierGate
-              tier={tier}
-              requiredTier="pro"
-              ctaLabel="full risk breakdown"
-            >
-              {detailEl}
-            </TierGate>
-          ) : (
-            detailEl
-          )
+        {detail && (
+          <p style={{ fontSize: 12, color: "#4e4a6a", marginTop: 3 }}>
+            {detail}
+          </p>
         )}
       </div>
     </div>
@@ -293,7 +277,6 @@ function RiskFlag({
 interface TierGateProps {
   tier: string;
   requiredTier?: string;
-  label?: string;
   ctaLabel?: string;
   children: React.ReactNode;
 }
@@ -301,7 +284,6 @@ interface TierGateProps {
 function TierGate({
   tier,
   requiredTier = "pro",
-  label,
   ctaLabel,
   children,
 }: TierGateProps) {
@@ -323,37 +305,6 @@ function TierGate({
         }}
       >
         {children}
-      </div>
-      <div
-        className="flex flex-col items-center justify-center"
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(13,13,20,0.7)",
-          borderRadius: 12,
-          border: "0.5px solid rgba(127,119,221,0.3)",
-        }}
-      >
-        {label && (
-          <p style={{ fontSize: 13, color: "#9994b8", marginBottom: 12, textAlign: "center" }}>
-            {label}
-          </p>
-        )}
-        <button
-          onClick={() => (window.location.href = "/v2/pricing")}
-          style={{
-            background: "#534AB7",
-            color: "#f0eeff",
-            border: "none",
-            borderRadius: 8,
-            padding: "9px 22px",
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: "pointer",
-          }}
-        >
-          {ctaLabel ? `See ${ctaLabel} →` : "Upgrade to unlock →"}
-        </button>
       </div>
       {tier === 'free' && (
         <div style={{
@@ -1603,14 +1554,14 @@ export default function AnalysisResults({
 
   const ProFormaSection = (
     <div key="proforma">
-      {isFlip && calc ? (
-        <CardWrapper>
-          <SectionLabel text="Pro Forma — Flip Waterfall" />
-          <TierGate
-            tier={tier}
-            requiredTier="pro"
-            ctaLabel="full waterfall breakdown"
-          >
+      <TierGate
+        tier={tier}
+        requiredTier="pro"
+        ctaLabel="full waterfall breakdown"
+      >
+        {isFlip && calc ? (
+          <CardWrapper>
+            <SectionLabel text="Pro Forma — Flip Waterfall" />
             <ProFormaRow label="Purchase Price" value={$(calc.purchasePrice ?? purchasePrice)} prefix="-" />
             {calc.acquisitionLoan != null && (
               <ProFormaRow label="Hard Money Loan" value={$(calc.acquisitionLoan)} prefix="+" />
@@ -1627,44 +1578,38 @@ export default function AnalysisResults({
             <ProFormaRow label="Total Cash Invested" value={$(calc.cashRequired)} bold />
             <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
             <ProFormaRow label="Sale Price (ARV)" value={$(calc.arv)} prefix="+" />
-            <ProFormaRow label="Sell Closing Costs" value={$(calc.sellingCosts)} prefix="-" isLast />
-          </TierGate>
-          <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
-          <ProFormaRow label="NET PROFIT" value={$(calc.netProfit)} bold />
-          <ProFormaRow label="ROI on Cash" value={pct(calc.roi)} bold isLast />
-        </CardWrapper>
-      ) : (
-        (() => {
-          const rows: { label: string; value: string }[] = [];
-          const ti = calc?.totalInvestment ?? fm?.total_investment;
-          if (ti != null) rows.push({ label: "Total Investment", value: $(ti) });
-          const rent = fm?.monthly_rent ?? v2m?.monthlyRent;
-          if (rent != null) rows.push({ label: "Gross Rent", value: $(rent) + "/mo" });
-          const noi = fm?.annual_noi ?? v2m?.noi;
-          if (noi != null) rows.push({ label: "Net Operating Income", value: $(noi) + "/yr" });
-          const holdCosts = fm?.holding_costs;
-          if (holdCosts != null) rows.push({ label: "Holding Costs", value: $(holdCosts) });
-          const profit = fm?.total_profit;
-          if (profit != null) rows.push({ label: "Total Profit (5yr)", value: $(profit) });
+            <ProFormaRow label="Sell Closing Costs" value={$(calc.sellingCosts)} prefix="-" />
+            <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
+            <ProFormaRow label="NET PROFIT" value={$(calc.netProfit)} bold />
+            <ProFormaRow label="ROI on Cash" value={pct(calc.roi)} bold isLast />
+          </CardWrapper>
+        ) : (
+          (() => {
+            const rows: { label: string; value: string }[] = [];
+            const ti = calc?.totalInvestment ?? fm?.total_investment;
+            if (ti != null) rows.push({ label: "Total Investment", value: $(ti) });
+            const rent = fm?.monthly_rent ?? v2m?.monthlyRent;
+            if (rent != null) rows.push({ label: "Gross Rent", value: $(rent) + "/mo" });
+            const noi = fm?.annual_noi ?? v2m?.noi;
+            if (noi != null) rows.push({ label: "Net Operating Income", value: $(noi) + "/yr" });
+            const holdCosts = fm?.holding_costs;
+            if (holdCosts != null) rows.push({ label: "Holding Costs", value: $(holdCosts) });
+            const profit = fm?.total_profit;
+            if (profit != null) rows.push({ label: "Total Profit (5yr)", value: $(profit) });
 
-          if (rows.length === 0) return null;
+            if (rows.length === 0) return null;
 
-          return (
-            <CardWrapper>
-              <SectionLabel text="Pro Forma" />
-              <TierGate
-                tier={tier}
-                requiredTier="pro"
-                ctaLabel="full waterfall breakdown"
-              >
+            return (
+              <CardWrapper>
+                <SectionLabel text="Pro Forma" />
                 {rows.map((r, i) => (
                   <ProFormaRow key={r.label} label={r.label} value={r.value} isLast={i === rows.length - 1} />
                 ))}
-              </TierGate>
-            </CardWrapper>
-          );
-        })()
-      )}
+              </CardWrapper>
+            );
+          })()
+        )}
+      </TierGate>
 
       {(isBuyHold || isHouseHack) && calc?.expenseBreakdown && (
         <ExpenseBreakdown
@@ -1681,7 +1626,6 @@ export default function AnalysisResults({
       <TierGate
         tier={tier}
         requiredTier="pro"
-        label="5-year projections available on Pro"
         ctaLabel="5-year projections"
       >
         <ProjectionChart strategy={strategy} calculations={calc} result={result} />
@@ -1712,36 +1656,66 @@ export default function AnalysisResults({
           Risk factors identified — review before proceeding
         </div>
       )}
-      {riskItems.length > 0 && (
-        <div className="mb-5">
-          <SectionLabel text="Risk Flags" />
-          {hasHighRisk && (
-            <div
-              style={{
-                fontSize: 12,
-                color: "#f09595",
-                marginBottom: 10,
-                background: "rgba(162,45,45,0.06)",
-                borderLeft: "2px solid #f09595",
-                padding: "8px 12px",
-                borderRadius: "0 6px 6px 0",
-              }}
-            >
-              High severity risk detected — review before proceeding
-            </div>
-          )}
-          {riskItems.map((ri, i) => (
-            <RiskFlag
-              key={i}
-              severity={ri.severity}
-              flag={ri.flag}
-              detail={ri.detail}
-              isLast={i === riskItems.length - 1}
+      {riskItems.length > 0 && (() => {
+        const highCount = riskItems.filter((r) => r.severity === "high").length;
+        const medCount = riskItems.filter((r) => r.severity === "medium").length;
+        const lowCount = riskItems.filter((r) => r.severity === "low").length;
+        const breakdown = [
+          highCount > 0 ? `${highCount} high` : null,
+          medCount > 0 ? `${medCount} medium` : null,
+          lowCount > 0 ? `${lowCount} low` : null,
+        ].filter(Boolean).join(", ");
+        const summary =
+          `${riskItems.length} risk${riskItems.length === 1 ? "" : "s"} identified` +
+          (breakdown ? ` — ${breakdown}` : "");
+
+        return (
+          <div className="mb-5">
+            <SectionLabel text="Risk Flags" />
+            {hasHighRisk && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#f09595",
+                  marginBottom: 10,
+                  background: "rgba(162,45,45,0.06)",
+                  borderLeft: "2px solid #f09595",
+                  padding: "8px 12px",
+                  borderRadius: "0 6px 6px 0",
+                }}
+              >
+                High severity risk detected — review before proceeding
+              </div>
+            )}
+            {tier === "free" && (
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "#9994b8",
+                  marginBottom: 12,
+                }}
+              >
+                {summary}
+              </p>
+            )}
+            <TierGate
               tier={tier}
-            />
-          ))}
-        </div>
-      )}
+              requiredTier="pro"
+              ctaLabel="full risk breakdown"
+            >
+              {riskItems.map((ri, i) => (
+                <RiskFlag
+                  key={i}
+                  severity={ri.severity}
+                  flag={ri.flag}
+                  detail={ri.detail}
+                  isLast={i === riskItems.length - 1}
+                />
+              ))}
+            </TierGate>
+          </div>
+        );
+      })()}
     </div>
   );
 
@@ -1750,7 +1724,6 @@ export default function AnalysisResults({
       <TierGate
         tier={tier}
         requiredTier="pro"
-        label="Full AI analysis available on Pro"
         ctaLabel="full AI analysis"
       >
         {(result.narrative || result.full_analysis || result.summary) && (
@@ -1851,7 +1824,6 @@ export default function AnalysisResults({
       <TierGate
         tier={tier}
         requiredTier="pro"
-        label="Market analysis available on Pro"
         ctaLabel="market analysis"
       >
         {result.marketContext && (
