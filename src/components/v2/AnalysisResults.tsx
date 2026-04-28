@@ -228,11 +228,13 @@ function RiskFlag({
   flag,
   detail,
   isLast,
+  tier,
 }: {
   severity: string;
   flag: string;
   detail?: string;
   isLast?: boolean;
+  tier?: string;
 }) {
   const colors: Record<string, { bg: string; fg: string }> = {
     high: { bg: "rgba(162,45,45,0.15)", fg: "#f09595" },
@@ -240,6 +242,12 @@ function RiskFlag({
     low: { bg: "rgba(29,158,117,0.15)", fg: "#1D9E75" },
   };
   const c = colors[severity] || colors.medium;
+
+  const detailEl = detail ? (
+    <p style={{ fontSize: 12, color: "#4e4a6a", marginTop: 3 }}>
+      {detail}
+    </p>
+  ) : null;
 
   return (
     <div
@@ -262,29 +270,41 @@ function RiskFlag({
       >
         {severity}
       </span>
-      <div style={{ marginLeft: 10 }}>
+      <div style={{ marginLeft: 10, flex: 1 }}>
         <span style={{ fontSize: 13, color: "#9994b8" }}>{flag}</span>
-        {detail && (
-          <p style={{ fontSize: 12, color: "#4e4a6a", marginTop: 3 }}>
-            {detail}
-          </p>
+        {detailEl && (
+          tier === "free" || tier === "basic" ? (
+            <TierGate
+              tier={tier}
+              requiredTier="pro"
+              ctaLabel="full risk breakdown"
+            >
+              {detailEl}
+            </TierGate>
+          ) : (
+            detailEl
+          )
         )}
       </div>
     </div>
   );
 }
 
+interface TierGateProps {
+  tier: string;
+  requiredTier?: string;
+  label?: string;
+  ctaLabel?: string;
+  children: React.ReactNode;
+}
+
 function TierGate({
   tier,
-  requiredTier,
-  children,
+  requiredTier = "pro",
   label,
-}: {
-  tier: string;
-  requiredTier: "pro" | "pro_max";
-  children: React.ReactNode;
-  label: string;
-}) {
+  ctaLabel,
+  children,
+}: TierGateProps) {
   const hasAccess =
     requiredTier === "pro"
       ? tier === "pro" || tier === "pro_max"
@@ -314,9 +334,11 @@ function TierGate({
           border: "0.5px solid rgba(127,119,221,0.3)",
         }}
       >
-        <p style={{ fontSize: 13, color: "#9994b8", marginBottom: 12, textAlign: "center" }}>
-          {label}
-        </p>
+        {label && (
+          <p style={{ fontSize: 13, color: "#9994b8", marginBottom: 12, textAlign: "center" }}>
+            {label}
+          </p>
+        )}
         <button
           onClick={() => (window.location.href = "/v2/pricing")}
           style={{
@@ -330,7 +352,7 @@ function TierGate({
             cursor: "pointer",
           }}
         >
-          Upgrade to unlock →
+          {ctaLabel ? `See ${ctaLabel} →` : "Upgrade to unlock →"}
         </button>
       </div>
       {tier === 'free' && (
@@ -350,7 +372,9 @@ function TierGate({
             marginBottom: 14,
             fontWeight: 500
           }}>
-            Unlock the full analysis
+            {ctaLabel
+              ? `${ctaLabel} available on Pro`
+              : "Full analysis available on Pro"}
           </p>
           <button
             onClick={() =>
@@ -1582,23 +1606,29 @@ export default function AnalysisResults({
       {isFlip && calc ? (
         <CardWrapper>
           <SectionLabel text="Pro Forma — Flip Waterfall" />
-          <ProFormaRow label="Purchase Price" value={$(calc.purchasePrice ?? purchasePrice)} prefix="-" />
-          {calc.acquisitionLoan != null && (
-            <ProFormaRow label="Hard Money Loan" value={$(calc.acquisitionLoan)} prefix="+" />
-          )}
-          <ProFormaRow label="Rehab Cost" value={$(calc.renovationCosts ?? calc.rehabCost)} prefix="-" />
-          {calc.rehabHoldback != null && calc.rehabHoldback > 0 && (
-            <ProFormaRow label="Rehab Loan Draw" value={$(calc.rehabHoldback)} prefix="+" />
-          )}
-          <ProFormaRow label={`Interest (${calc.holdingMonths ?? '?'}mo)`} value={$(calc.holdingCosts)} prefix="-" />
-          {calc.pointsCost != null && (
-            <ProFormaRow label="Points" value={$(calc.pointsCost)} prefix="-" />
-          )}
-          <ProFormaRow label="Buy Closing Costs" value={$(calc.closingCosts)} prefix="-" />
-          <ProFormaRow label="Total Cash Invested" value={$(calc.cashRequired)} bold />
-          <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
-          <ProFormaRow label="Sale Price (ARV)" value={$(calc.arv)} prefix="+" />
-          <ProFormaRow label="Sell Closing Costs" value={$(calc.sellingCosts)} prefix="-" />
+          <TierGate
+            tier={tier}
+            requiredTier="pro"
+            ctaLabel="full waterfall breakdown"
+          >
+            <ProFormaRow label="Purchase Price" value={$(calc.purchasePrice ?? purchasePrice)} prefix="-" />
+            {calc.acquisitionLoan != null && (
+              <ProFormaRow label="Hard Money Loan" value={$(calc.acquisitionLoan)} prefix="+" />
+            )}
+            <ProFormaRow label="Rehab Cost" value={$(calc.renovationCosts ?? calc.rehabCost)} prefix="-" />
+            {calc.rehabHoldback != null && calc.rehabHoldback > 0 && (
+              <ProFormaRow label="Rehab Loan Draw" value={$(calc.rehabHoldback)} prefix="+" />
+            )}
+            <ProFormaRow label={`Interest (${calc.holdingMonths ?? '?'}mo)`} value={$(calc.holdingCosts)} prefix="-" />
+            {calc.pointsCost != null && (
+              <ProFormaRow label="Points" value={$(calc.pointsCost)} prefix="-" />
+            )}
+            <ProFormaRow label="Buy Closing Costs" value={$(calc.closingCosts)} prefix="-" />
+            <ProFormaRow label="Total Cash Invested" value={$(calc.cashRequired)} bold />
+            <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
+            <ProFormaRow label="Sale Price (ARV)" value={$(calc.arv)} prefix="+" />
+            <ProFormaRow label="Sell Closing Costs" value={$(calc.sellingCosts)} prefix="-" isLast />
+          </TierGate>
           <div style={{ height: 1, background: "rgba(127,119,221,0.15)", margin: "4px 0" }} />
           <ProFormaRow label="NET PROFIT" value={$(calc.netProfit)} bold />
           <ProFormaRow label="ROI on Cash" value={pct(calc.roi)} bold isLast />
@@ -1622,9 +1652,15 @@ export default function AnalysisResults({
           return (
             <CardWrapper>
               <SectionLabel text="Pro Forma" />
-              {rows.map((r, i) => (
-                <ProFormaRow key={r.label} label={r.label} value={r.value} isLast={i === rows.length - 1} />
-              ))}
+              <TierGate
+                tier={tier}
+                requiredTier="pro"
+                ctaLabel="full waterfall breakdown"
+              >
+                {rows.map((r, i) => (
+                  <ProFormaRow key={r.label} label={r.label} value={r.value} isLast={i === rows.length - 1} />
+                ))}
+              </TierGate>
             </CardWrapper>
           );
         })()
@@ -1642,7 +1678,12 @@ export default function AnalysisResults({
 
   const ChartSection = (
     <div key="chart">
-      <TierGate tier={tier} requiredTier="pro" label="5-year projections available on Pro">
+      <TierGate
+        tier={tier}
+        requiredTier="pro"
+        label="5-year projections available on Pro"
+        ctaLabel="5-year projections"
+      >
         <ProjectionChart strategy={strategy} calculations={calc} result={result} />
       </TierGate>
     </div>
@@ -1696,6 +1737,7 @@ export default function AnalysisResults({
               flag={ri.flag}
               detail={ri.detail}
               isLast={i === riskItems.length - 1}
+              tier={tier}
             />
           ))}
         </div>
@@ -1705,7 +1747,12 @@ export default function AnalysisResults({
 
   const NarrativeSection = (
     <div key="narrative">
-      <TierGate tier={tier} requiredTier="pro" label="Full AI narrative available on Pro">
+      <TierGate
+        tier={tier}
+        requiredTier="pro"
+        label="Full AI analysis available on Pro"
+        ctaLabel="full AI analysis"
+      >
         {(result.narrative || result.full_analysis || result.summary) && (
           <CardWrapper>
             <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
@@ -1801,7 +1848,12 @@ export default function AnalysisResults({
 
   const MarketSection = (
     <div key="market">
-      <TierGate tier={tier} requiredTier="pro" label="Market analysis available on Pro">
+      <TierGate
+        tier={tier}
+        requiredTier="pro"
+        label="Market analysis available on Pro"
+        ctaLabel="market analysis"
+      >
         {result.marketContext && (
           <CardWrapper>
             <SectionLabel text="Market Context" />

@@ -9,6 +9,7 @@ import {
   useProMaxAnalysis,
   PRO_MAX_MODELS,
 } from "@/hooks/useProMaxAnalysis";
+import { FREE_MONTHLY_ANALYSIS_LIMIT } from "@/lib/constants";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -1758,7 +1759,7 @@ function AnalyzeContent() {
                 marginBottom: 10,
                 lineHeight: 1.3
               }}>
-                You've used all 3 free analyses
+                {`You've used all ${freeLimitInfo?.limit ?? FREE_MONTHLY_ANALYSIS_LIMIT} free analyses`}
               </h2>
 
               {/* Subtext */}
@@ -1768,10 +1769,12 @@ function AnalyzeContent() {
                 lineHeight: 1.6,
                 marginBottom: 8
               }}>
-                Upgrade to Pro and get unlimited
-                analyses, full AI insights, saved
-                history, and PDF exports — starting
-                at $29/month.
+                You&apos;ve found deals worth analyzing.
+                Pro gives you unlimited analyses,
+                full risk breakdowns, complete AI
+                narrative, and 5-year projections
+                — everything you need to actually
+                pull the trigger.
               </p>
 
               {/* Trial callout */}
@@ -1843,30 +1846,6 @@ function AnalyzeContent() {
                 See plans & start free trial →
               </button>
 
-              {/* Secondary — wait for reset */}
-              <button
-                onClick={() =>
-                  router.push('/v2/dashboard')
-                }
-                style={{
-                  width: '100%',
-                  background: 'transparent',
-                  color: '#4e4a6a',
-                  border: 'none',
-                  padding: '10px',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
-                }}
-              >
-                Wait until{' '}
-                {new Date(freeLimitInfo.resetDate)
-                  .toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric'
-                  })}{' '}
-                for free reset
-              </button>
             </div>
           </div>
         )}
