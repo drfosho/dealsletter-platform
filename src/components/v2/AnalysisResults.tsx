@@ -1646,6 +1646,22 @@ export default function AnalysisResults({
       )}
       {riskItems.length > 0 && (
         <div className="mb-5">
+          <SectionLabel text="Risk Flags" />
+          {hasHighRisk && (
+            <div
+              style={{
+                fontSize: 12,
+                color: "#f09595",
+                marginBottom: 10,
+                background: "rgba(162,45,45,0.06)",
+                borderLeft: "2px solid #f09595",
+                padding: "8px 12px",
+                borderRadius: "0 6px 6px 0",
+              }}
+            >
+              High severity risk detected — review before proceeding
+            </div>
+          )}
           {riskItems.map((ri, i) => (
             <RiskFlag
               key={i}
@@ -1800,7 +1816,7 @@ export default function AnalysisResults({
           <>
             {freeSections.map((s) => renderSection(s))}
 
-            {riskItems.length > 0 && (
+            {tier === "free" && riskItems.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <SectionLabel text="Risk Flags" />
                 {hasHighRisk && (
