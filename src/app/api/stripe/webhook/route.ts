@@ -360,8 +360,21 @@ export async function POST(request: NextRequest) {
                   await sendV2ProMaxWelcomeEmail(emailToSend, firstName, billingPeriod);
                   console.log('[Webhook] ✉️ V2 Pro Max welcome email sent');
                 } else if (newTier === 'pro') {
-                  await sendV2ProWelcomeEmail(emailToSend, firstName, billingPeriod);
-                  console.log('[Webhook] ✉️ V2 Pro welcome email sent');
+                  // Atomic claim — only send Pro welcome once per user
+                  const { data: claimed } = await supabase
+                    .from('user_profiles')
+                    .update({ pro_welcome_email_sent: true })
+                    .eq('id', userId)
+                    .or('pro_welcome_email_sent.is.null,pro_welcome_email_sent.eq.false')
+                    .select('id')
+                    .maybeSingle();
+
+                  if (claimed) {
+                    await sendV2ProWelcomeEmail(emailToSend, firstName, billingPeriod);
+                    console.log('[Webhook] ✉️ V2 Pro welcome email sent');
+                  } else {
+                    console.log('[Webhook] Pro welcome already sent — skipping');
+                  }
                 }
               }
             } catch (emailErr) {
@@ -482,8 +495,21 @@ export async function POST(request: NextRequest) {
                       await sendV2ProMaxWelcomeEmail(customer.email, undefined, billingPeriod);
                       console.log('[Webhook] checkout.completed - ✉️ V2 Pro Max welcome email sent');
                     } else if (tierName === 'pro') {
-                      await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
-                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                      // Atomic claim — only send Pro welcome once per user
+                      const { data: claimed } = await supabase
+                        .from('user_profiles')
+                        .update({ pro_welcome_email_sent: true })
+                        .eq('id', userId)
+                        .or('pro_welcome_email_sent.is.null,pro_welcome_email_sent.eq.false')
+                        .select('id')
+                        .maybeSingle();
+
+                      if (claimed) {
+                        await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
+                        console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                      } else {
+                        console.log('[Webhook] checkout.completed - Pro welcome already sent — skipping');
+                      }
                     }
                   } catch (emailErr) {
                     console.error('[Webhook] checkout.completed - V2 email error:', emailErr);
@@ -532,8 +558,21 @@ export async function POST(request: NextRequest) {
                       await sendV2ProMaxWelcomeEmail(customer.email, undefined, billingPeriod);
                       console.log('[Webhook] checkout.completed - ✉️ V2 Pro Max welcome email sent');
                     } else if (tierName === 'pro') {
-                      await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
-                      console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                      // Atomic claim — only send Pro welcome once per user
+                      const { data: claimed } = await supabase
+                        .from('user_profiles')
+                        .update({ pro_welcome_email_sent: true })
+                        .eq('id', userId)
+                        .or('pro_welcome_email_sent.is.null,pro_welcome_email_sent.eq.false')
+                        .select('id')
+                        .maybeSingle();
+
+                      if (claimed) {
+                        await sendV2ProWelcomeEmail(customer.email, undefined, billingPeriod);
+                        console.log('[Webhook] checkout.completed - ✉️ V2 Pro welcome email sent');
+                      } else {
+                        console.log('[Webhook] checkout.completed - Pro welcome already sent — skipping');
+                      }
                     }
                   } catch (emailErr) {
                     console.error('[Webhook] checkout.completed - V2 email error:', emailErr);
@@ -653,13 +692,13 @@ export async function POST(request: NextRequest) {
           } else {
             console.log('[Webhook] subscription.updated - ✅ User profile updated');
 
-            // Send upgrade welcome email if tier improved
+            // Send upgrade welcome email if tier improved (Pro Max only — Pro welcome only fires on first-time creation)
             const newTier = updateResult.subscription_tier;
             try {
-              const isUpgrade = newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium' || newTier === 'pro';
+              const isProMaxUpgrade = newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium';
               const isCancelling = subscription.cancel_at_period_end;
 
-              if (isUpgrade && !isCancelling) {
+              if (isProMaxUpgrade && !isCancelling) {
                 let emailToSend: string | undefined;
                 try {
                   const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
@@ -670,13 +709,8 @@ export async function POST(request: NextRequest) {
                   const interval = subscription.items?.data?.[0]?.plan?.interval || 'month';
                   const billingPeriod = interval === 'year' ? 'yearly' : 'monthly';
 
-                  if (newTier === 'pro_plus' || newTier === 'pro-plus' || newTier === 'premium') {
-                    await sendV2ProMaxWelcomeEmail(emailToSend, undefined, billingPeriod);
-                    console.log('[Webhook] ✉️ Pro Max upgrade welcome email sent');
-                  } else if (newTier === 'pro') {
-                    await sendV2ProWelcomeEmail(emailToSend, undefined, billingPeriod);
-                    console.log('[Webhook] ✉️ Pro upgrade welcome email sent');
-                  }
+                  await sendV2ProMaxWelcomeEmail(emailToSend, undefined, billingPeriod);
+                  console.log('[Webhook] ✉️ Pro Max upgrade welcome email sent');
                 }
               }
             } catch (emailErr) {

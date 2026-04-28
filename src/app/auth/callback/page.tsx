@@ -12,7 +12,7 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     // Ensure user_profiles row exists for authenticated user (fallback for missing trigger)
-    const ensureUserProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }, isSignup: boolean) => {
+    const ensureUserProfile = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }, isSignup: boolean): Promise<boolean> => {
       try {
         // Query profile — use id only (welcome_email_sent may not exist yet)
         const { data: profile } = await supabase
@@ -40,12 +40,14 @@ function AuthCallbackContent() {
           } else {
             console.log('[AuthCallback] user_profiles row created successfully')
           }
+          return true // new user
         }
 
-        // Welcome email is sent from /auth/verify-success (single trigger point)
+        return false // existing user
       } catch (err) {
         // Non-fatal — don't block auth flow for profile creation
         console.error('[AuthCallback] Error ensuring user profile:', err)
+        return false
       }
     }
 
@@ -78,7 +80,7 @@ function AuthCallbackContent() {
 
           if (sessionData.session?.user) {
             // Ensure profile row exists before redirecting
-            await ensureUserProfile(sessionData.session.user, isEmailVerification)
+            const isNewUser = await ensureUserProfile(sessionData.session.user, isEmailVerification)
 
             setStatus('success')
 
@@ -90,11 +92,12 @@ function AuthCallbackContent() {
               // Email verification flow - go to success page
               router.push('/auth/verify-success')
             } else {
-              // Fire welcome email for Google OAuth signups
-              // Non-blocking — don't await
-              setTimeout(() => {
-                fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
-              }, 2000)
+              // Fire welcome email only for brand-new Google OAuth signups
+              if (isNewUser) {
+                setTimeout(() => {
+                  fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+                }, 2000)
+              }
               // Regular login - go directly to analysis
               router.push('/v2/analyze')
             }
@@ -118,7 +121,7 @@ function AuthCallbackContent() {
           const fallbackIsSignup = hashParams.get('type') === 'signup' || searchParams.get('type') === 'signup'
 
           // Ensure profile row exists before redirecting
-          await ensureUserProfile(data.session.user, fallbackIsSignup)
+          const isNewUser = await ensureUserProfile(data.session.user, fallbackIsSignup)
 
           setStatus('success')
 
@@ -130,11 +133,12 @@ function AuthCallbackContent() {
             // Email verification flow - go to success page
             router.push('/auth/verify-success')
           } else {
-            // Fire welcome email for Google OAuth signups
-            // Non-blocking — don't await
-            setTimeout(() => {
-              fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
-            }, 2000)
+            // Fire welcome email only for brand-new Google OAuth signups
+            if (isNewUser) {
+              setTimeout(() => {
+                fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
+              }, 2000)
+            }
             // Regular login - go directly to analysis
             router.push('/v2/analyze')
           }
