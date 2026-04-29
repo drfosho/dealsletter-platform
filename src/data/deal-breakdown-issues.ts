@@ -43,6 +43,356 @@ export interface DealBreakdownIssue {
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
   {
+    slug: 'issue-154-orinda-flip-echo-park-san-diego-development-tucson-value-add',
+    issueNumber: 154,
+    date: 'April 2026',
+    title: 'Orinda Max IQ Flip + Echo Park RSO Craftsman + San Diego Development Play + Tucson Verified Income',
+    previewText: 'Orinda flip with all 3 AI models confirming $258K profit. Echo Park renovated 5-unit at $395K/unit. San Diego land play at $16,500/unit development basis. Tucson 14-unit with 3 verified income scenarios within $3,359 of each other.',
+    ctaStrategy: 'buyhold',
+    sponsor: undefined,
+    properties: [
+      {
+        address: '8 Ramona Dr',
+        city: 'Orinda, CA 94563',
+        price: 1350000,
+        units: 1,
+        capRate: 0,
+        coc: 109.1,
+        cashRequired: 237250,
+        annualCashFlow: 258746,
+        verdict: 'Buy up to $1,360,000 — get GC through the property first. All 3 AI models confirmed $258,746 net profit.',
+        score: '6.7/10',
+        scoreValue: 6.7,
+        tag: 'ORINDA FLIP — MAX IQ',
+        tagColor: '#EF9F27',
+        strategy: 'flip',
+        listingUrl: 'https://www.zillow.com/homedetails/8-Ramona-Dr-Orinda-CA-94563/18479250_zpid/',
+        opportunity: 'All three Dealsletter AI models — Claude Opus, GPT-4o, and Grok 3 — independently confirmed $258,746 in net profit and 109.1% ROI despite approaching the ARV from three distinct analytical frameworks. Orinda\'s Ivy Drive neighborhood supports a $836/SF ceiling on renovated product, and with 4 bedrooms, a flat backyard, and walkability to top-ranked Miramonte High School, this property\'s format is exactly what Orinda buyers pay top dollar for.',
+        risk: 'The conservative ARV scenario ($1,649,186) produces a loss — this is a binary execution deal where renovation quality and hold timeline directly determine profitability. The 13.03% profit margin sits below the 15% benchmark, leaving thin tolerance for unexpected costs on an original-condition home. GC verification of the $185K rehab budget before offer is non-negotiable.',
+        fullVerdict: 'Buy up to $1,360,000 for a Bay Area flip operator who can deliver a quality renovation in 6 months. Get the contractor through the door first — the "original condition" language on a 2,374 SF Orinda home needs mechanical verification before the $185K budget is committed.',
+      },
+      {
+        address: '931 Everett St',
+        city: 'Los Angeles, CA 90026',
+        price: 1975000,
+        units: 5,
+        capRate: 6.39,
+        coc: 4.7,
+        cashRequired: 651750,
+        annualCashFlow: 27851,
+        verdict: 'Buy — confirm RSO status on the 3BR rear unit, lock the financing rate, and hold',
+        score: '7/10',
+        scoreValue: 7,
+        tag: 'ECHO PARK CRAFTSMAN',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/931-Everett-St-Los-Angeles-CA/40324377/',
+        opportunity: 'Fully renovated 1917 Craftsman 5-unit priced at $395,000/unit on a comp set that runs to $600,000/unit for comparable renovated LA product. Positive leverage at 5.90% against a 6.39% cap and a 1.28 DCR provide real financial cushion from Day 1. The standalone 3BR/2BA rear home currently renting at $3,017 resets to $4,600 on natural vacancy — a single lease event worth $19,000/yr in additional gross income.',
+        risk: '1917 construction places four front units firmly under LA RSO — annual rent increases capped at 3–8% and just-cause eviction applies. Three of five units sit $450–$1,583 below current market rates with no rapid reset mechanism. RSO applicability on the rear 3BR standalone structure must be verified with local counsel before submitting — if RSO-covered, the timeline to $4,600 rent extends significantly.',
+        fullVerdict: 'Buy for a patient RSO-literate LA operator who wants a quality renovated asset at below-market pricing. Confirm financing at or near 5.90%, verify 3BR RSO status with local counsel, and hold for the natural lease turnover that unlocks the market-rate return profile.',
+      },
+      {
+        address: '1501-1505 S 40th St',
+        city: 'San Diego, CA 92113',
+        price: 1650000,
+        units: 5,
+        capRate: 5.01,
+        coc: 0,
+        cashRequired: 462000,
+        annualCashFlow: -11203,
+        verdict: 'Conditional buy for developer or ADU operator — wrong deal for passive income investor',
+        score: '7/10',
+        scoreValue: 7,
+        tag: 'LAND PLAY — DEVELOPMENT',
+        tagColor: '#7F77DD',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/1501-1505-S-40th-St-San-Diego-CA/40324341/',
+        opportunity: '17,668 SF of Complete Communities Tier 3 zoning at 6.5 FAR near Downtown San Diego — legally entitled to support 100–200+ units at $16,500/unit in land basis, a fraction of comparable entitled SD land values. Adding 5 ADUs to unused yard space for $875K creates $1.4M in net forced appreciation and flips the DCR from 0.88 to 2.12 while preserving full development optionality.',
+        risk: 'This property generates -$934/month in net cash flow at current rents and 6.5% financing — a real carrying cost requiring capital reserves. The 0.88 DCR means the property does not cover its own debt service from Day 1. AB 1482 likely limits rent increases on occupied units. The "100+ unit" development claim is explicitly unverified — confirm with a San Diego land use attorney before any offer.',
+        fullVerdict: 'Not a passive income investment — a developer\'s land acquisition at a rare price point near Downtown San Diego. Conditional buy for an operator with capital to carry negative cash flow, execute the ADU play within 12 months, and hold development optionality for a 5–7 year horizon.',
+      },
+      {
+        address: '3521 N Flowing Wells Rd',
+        city: 'Tucson, AZ 85706',
+        price: 1250000,
+        units: 14,
+        capRate: 6.78,
+        coc: 3.9,
+        cashRequired: 350000,
+        annualCashFlow: 13644,
+        verdict: 'Buy — execute the renovation program within 18 months. Verified income, real rent upside, 1.95x return on renovation capital.',
+        score: '7.5/10',
+        scoreValue: 7.5,
+        tag: 'VERIFIED INCOME — VALUE ADD',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/3521-N-Flowing-Wells-Rd-Tucson-AZ/40322993/',
+        opportunity: 'Three verified income scenarios — 2025 Actuals, T-4 Annualized, and Pro Forma — all produce NOIs of $84,165–$87,524 on the same $1.25M price. At $89,286/unit with $136/unit below market rents, a $168K standardized renovation program produces $327K in capitalized forced appreciation — a 1.95x return on renovation capital. Tenant-paid electric and gas plus RUBS billing minimize owner utility exposure in a university and workforce market.',
+        risk: 'Entry CoC of 3.9% and DCR of 1.19 leave limited financial cushion — two simultaneous vacancies approach breakeven monthly cash flow. Insurance running $2,479 below the pro forma budget needs verification at renewal. Current ownership has no reserve line in actuals, signaling potential deferred capital needs.',
+        fullVerdict: 'Buy and execute the renovation program. Allocate $168K for a standardized finish package, push rents to the verified $850/$975 targets, and hold 10+ years as Tucson\'s university-adjacent workforce demand compounds 3%+ annual rent growth on an $89,286/unit basis.',
+      },
+    ],
+    content: `
+## This Week's Deals
+
+Four properties, four markets, four distinct investment theses — an Orinda Bay Area flip validated by three AI models, a fully renovated Echo Park craftsman with RSO upside locked in below-market leases, a San Diego land play with Complete Communities Tier 3 development potential, and a Tucson 14-unit with the most honest OM underwrite we've seen this quarter.
+
+---
+
+## 🏠 8 Ramona Dr — Orinda Fix & Flip (Max IQ Analysis)
+
+**Orinda, CA 94563 · 4BD/2BA · 2,374 SF · Offer: $1,350,000**
+**Max IQ: Claude Opus 5/10 · GPT-4o 8/10 · Grok 3 7/10 · Avg 6.7/10**
+
+Every Dealsletter model agrees on the number. The disagreement is about confidence, not math.
+
+### Max IQ Model Comparison
+
+| Model | Role | Score | Verdict |
+|-------|------|-------|---------|
+| Claude Opus 4.6 | The Skeptic | 5/10 | Hold — tight margin, ARV above midpoint |
+| GPT-4o | The Sponsor | 8/10 | Buy — strong ROI, solid exit market |
+| Grok 3 | The Quant | 7/10 | Buy — 109.1% ROI despite thin margin |
+| **Avg** | | **6.7/10** | **Moderate variance — same profit, different confidence** |
+
+All three models independently confirmed **$258,746 net profit**. The math is not in dispute.
+
+### The Numbers
+
+| Metric | Value |
+|--------|-------|
+| Offer Price | $1,350,000 |
+| Total Cash Invested | $237,250 |
+| Rehab Budget | $185,000 |
+| Hold Period | 6 months |
+| ARV (optimistic) | $1,985,336 |
+| Net Profit | $258,746 |
+| ROI on Cash | 109.1% |
+| Profit Margin | 13.03% |
+
+### ARV Scenarios — The Most Important Table
+
+| Scenario | ARV | Net Profit |
+|----------|-----|-----------|
+| Conservative | $1,649,186 | **-$75,000 (loss)** |
+| Mid-Point | $1,821,750 | **+$84,000** |
+| Optimistic (buyer target) | $1,985,336 | **$258,746** |
+
+**The conservative scenario loses money.** The buyer is anchoring to the optimistic ARV — which requires a mid-to-high end renovation to achieve. Six comparable sales average $767/SF with a $836/SF ceiling. Reaching the $836/SF exit requires execution at the upper end of the comp range.
+
+### Holding Period Sensitivity
+
+| Hold Period | Net Profit | ROI |
+|-------------|-----------|-----|
+| 4 months | $286,079 | 133% |
+| 6 months (base) | $258,746 | 109% |
+| 9 months | $217,746 | 91% |
+| 12 months | $176,746 | 66% |
+| 18 months | $94,746 | 30% |
+
+The deal holds real profitability to 18 months — even with a 25% rehab overrun.
+
+### The 13.03% Margin Flag
+
+Below the 15% flip benchmark. Practically:
+
+- 10% rehab overrun (-$18,500): profit drops to $240,246 — manageable
+- 25% rehab overrun (-$46,250): profit drops to $212,496 — still strong
+- 5% ARV miss: profit drops to $159,479 — acceptable
+- Combined 25% overrun + 5% ARV miss: ~$110,000 — still positive, 46% ROI
+
+### Verdict: 6.7/10 — Buy with GC Verification
+
+Buy up to $1,360,000 — but get a GC through the property before submitting. "Original condition" on a 2,374 SF Orinda home needs mechanical verification before the $185K budget is committed.
+
+---
+
+## 🏠 931 Everett St — Echo Park Renovated Craftsman 5-Unit
+
+**Los Angeles, CA 90026 · 5 Units · $1,975,000 ($395,000/unit)**
+**4 × 1BR/1BA Fourplex + Standalone 3BR/2BA Rear House**
+
+Fully renovated — new electrical, new plumbing, reinforced foundation. The deferred maintenance risk that makes 1917 LA multifamily dangerous is already resolved.
+
+### The Rent Roll
+
+| Unit | Type | Current Rent | Market Rent | Gap |
+|------|------|-------------|-------------|-----|
+| 931 (rear) | 3BR/2BA standalone | $3,017 | $4,600 | **-$1,583** |
+| 933 | 1BR/1BA | $3,555 | $3,400 | +$155 |
+| 933½ | 1BR/1BA | $2,668 | $3,400 | -$732 |
+| 935 | 1BR/1BA | $2,912 | $3,400 | -$488 |
+| 935½ | 1BR/1BA | $2,950 | $3,400 | -$450 |
+| **Total** | | **$15,102/mo** | **$18,200/mo** | **-$3,098/mo** |
+
+### Investment Returns
+
+| Metric | Current Rents | Market Rents |
+|--------|--------------|-------------|
+| Cap Rate | 6.39% | 8.15% |
+| CoC | 4.70% | 10.54% |
+| DCR | 1.28 | 1.63 |
+| Annual Cash Flow | $27,851 | $62,471 |
+
+### Sales Comps — Pricing is Honest
+
+| Comp | Units | Sale Price | $/Unit |
+|------|-------|-----------|--------|
+| 2811 Waverly Dr | 6 | $3,460,000 | $576,667 |
+| 743 Occidental Blvd | 5 | $2,715,000 | $543,000 |
+| 2916 Marathon St | 5 | $2,375,000 | $475,000 |
+| **Subject: 931 Everett** | **5** | **$1,975,000** | **$395,000** |
+
+At $395,000/unit the subject is at the low end of a comp set running to $576,000/unit for comparable renovated LA product.
+
+### The RSO Reality
+
+Built 1917 — the four front units are almost certainly subject to LA RSO:
+
+- Annual rent increases capped at 3–8%
+- Just-cause eviction required
+- Below-market rents cannot be forcibly reset
+
+**The single most valuable event this property can produce:** when the 3BR rear unit naturally vacates, rent resets from $3,017 to $4,600 — **+$1,583/month, +$19,000/year.** That single lease event is the path from 6.39% to 8.15% cap.
+
+RSO status of the rear 3BR standalone structure must be verified with a local attorney before offer — if it's a separately permitted structure it may not be RSO-covered, which changes the reset timeline dramatically.
+
+### Verdict: 7/10 — Buy
+
+Clean buy for an experienced LA investor who understands RSO and wants a fully renovated Echo Park asset at below-comp pricing. Confirm financing at or near 5.90%, verify 3BR RSO status, and hold.
+
+---
+
+## 🏗️ 1501-1505 S 40th St — San Diego Land Play
+
+**Logan Heights/South Crest, San Diego, CA 92113 · 5 Units · $1,650,000**
+**Complete Communities Tier 3 · 6.5 FAR · 17,668 SF Lot**
+
+The income is real and cash flow negative. The land is the deal.
+
+### Current Income Reality
+
+| Metric | Value |
+|--------|-------|
+| NOI (Actual 2025) | $82,649 |
+| Cap Rate | 5.01% |
+| DCR | **0.88** |
+| Monthly Cash Flow | **-$934** |
+
+**A 0.88 DCR means this property does not cover its own debt service.** The owner contributes $934/month to hold this asset at current rents. This is the starting point.
+
+### The Development Math
+
+| Item | Value |
+|------|-------|
+| Lot Size | 17,668 SF |
+| FAR | 6.5 |
+| Max Buildable SF | 114,842 SF |
+| At 600 SF avg unit | ~191 units |
+| Land cost at 100 units | $16,500/unit |
+| Comparable entitled SD land | $40,000–$70,000/unit |
+
+At 100+ units, this is one of the most favorable land acquisition opportunities in San Diego at this price point.
+
+### Three Executable Plays
+
+**Play 1 — ADU Addition (12–24 months)**
+
+| ADUs Added | Cost | New DCR | Forced Appreciation |
+|-----------|------|---------|-------------------|
+| 3 ADUs | $525K | 1.61 | +$500K+ |
+| 5 ADUs | $875K | 2.12 | +$1.4M net |
+
+5 ADUs × $2,100/mo at 5.5% cap = **$2.29M in NOI-based value created** for $875K construction cost. Net forced appreciation: **~$1.4M on a $1.65M asset.**
+
+**Play 2 — Lot Split (1–3 years)**
+Separate the 5BD house from the fourplex. Each sells to different buyer profiles.
+
+| Asset | Est. Value |
+|-------|-----------|
+| 5BD/3BA house | $900K–$1.1M |
+| Fourplex (remaining lot) | $750K–$900K |
+| **Combined** | **$1.65M–$2.0M** |
+
+**Play 3 — Full Redevelopment (3–7 years)**
+
+| Scenario | Exit Value |
+|----------|-----------|
+| Sell entitled land (100 units) | $5M–$8M+ |
+| Build and sell 100-unit project | $25M–$40M+ |
+
+### Verdict: 7/10 — Conditional Buy (Developer/Active Operator Only)
+
+Wrong deal for a passive investor. Right deal for a developer or ADU-focused operator with capital reserves and a 3–7 year horizon. Verify the development unit count with a local SD architect before offer.
+
+---
+
+## 🏢 Flowing Wells Apartments — Tucson 14-Unit Verified Income
+
+**3521 N Flowing Wells Rd, Tucson, AZ 85706 · 14 Units · $1,250,000**
+**Cushman & Wakefield/PICOR · Three Verified Income Scenarios**
+
+The most honestly underwritten deal in this issue. Three independent income verifications. Same number every time.
+
+### Three Verified Scenarios — All Within 4%
+
+| Scenario | NOI | Cap Rate | DCR | CoC |
+|----------|-----|---------|-----|-----|
+| 2025 Actuals | $84,756 | 6.78% | 1.19 | 3.9% |
+| T-4 Annualized | $84,165 | 6.73% | 1.18 | 3.7% |
+| Marketing Pro Forma | $87,524 | 7.00% | 1.23 | 4.7% |
+
+**Three scenarios, NOIs within $3,359 of each other.** This is not a pro forma where actuals are 40% lower. The 2025 Actuals NOI and the Marketing Pro Forma NOI are separated by $2,768/year. The numbers are the numbers.
+
+### Unit Mix & Rent Gap
+
+| Type | Units | Current | Pro Forma | Gap/Unit |
+|------|-------|---------|-----------|---------|
+| 1BD/1BA | 4 | $740 | $850 | +$110 |
+| 2BD/1BA | 10 | $828 | $975 | +$147 |
+| **Total** | **14** | **$803/unit** | **$939/unit** | **+$136** |
+
+**$1,910/month in below-market rent = $22,920/yr** recoverable through a systematic renovation program.
+
+### Renovation ROI
+
+| Program | Cost | New NOI | New Value | Net Gain |
+|---------|------|---------|----------|---------|
+| Light touch | $112K | $95,000+ | $1,357,000 | +$107K net |
+| Full package | $168K | $100,000+ | $1,428,000 | +$178K net |
+
+**1.95x return on renovation capital deployed.** $168K in → $327K in capitalized value created.
+
+### Long-Term Projections
+
+| Year | Annual CF | CoC | Property Value |
+|------|-----------|-----|----------------|
+| 1 | $13,644 | 3.9% | $1,250,000 |
+| 3 (stabilized) | $34,000 | 9.7% | $1,428,000 |
+| 5 | $45,000 | 12.9% | $1,516,000 |
+| 10 | $68,000 | 19.4% | $1,760,000 |
+
+### Verdict: 7.5/10 — Buy
+
+Execute the renovation program within 18 months. Verify the insurance renewal quote ($5,921 actual vs. $8,400 pro forma needs explanation). The verified income, executable renovation, and 1.95x return on renovation capital make this one of the cleanest value-add setups at this price point.
+
+---
+
+## Deal Rankings
+
+| Property | Strategy | Cash In | Key Return | Score | Verdict |
+|----------|----------|---------|-----------|-------|---------|
+| Flowing Wells Tucson | Buy & Hold | $350K | 7.5% cap verified | 7.5/10 | ✅ Buy |
+| Echo Park LA | Buy & Hold | $651K | 6.39% cap / 8.15% market | 7/10 | ✅ Buy |
+| San Diego Land | Development | $462K | Land play — $16.5K/unit basis | 7/10 | ⚠️ Developer only |
+| Orinda Flip | Fix & Flip | $237K | 109% ROI (all 3 models) | 6.7/10 | ⚠️ GC verify first |
+
+---
+
+*Model any of these deals at dealsletter.io — fix & flip, multifamily, house hack, BRRRR, and STR analysis. Run Max IQ to see what The Skeptic, Sponsor, and Quant say about your next deal. 3 free analyses/month, no card needed.*
+  `,
+  },
+  {
     slug: 'issue-153-chicago-15unit-vegas-100unit-cape-coral-str-vista-adu',
     issueNumber: 153,
     date: 'April 2026',
