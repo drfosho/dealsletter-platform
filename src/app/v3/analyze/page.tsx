@@ -1033,11 +1033,23 @@ function EditablePanel({
           }}
         >
           <PField label="Number of Units">
-            <PInput
-              value={form.unitCount}
-              onChange={setUnitCount}
+            <input
+              type="text"
               inputMode="numeric"
+              value={form.unitCount}
+              onChange={e => {
+                const raw = e.target.value.replace(/[^0-9]/g, '')
+                onChange({ unitCount: raw })
+              }}
+              onBlur={() => {
+                const n = parseInt(form.unitCount, 10)
+                if (!Number.isFinite(n) || n < 1) setUnitCount('1')
+                else if (n > 50) setUnitCount('50')
+                else setUnitCount(String(n))
+              }}
               placeholder="1"
+              style={pFieldInput}
+              onFocus={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
             />
           </PField>
           {!isMultifamily ? (
@@ -1708,10 +1720,14 @@ function primaryMetricsFor(
       pickHhNumber(result, ['cash_on_cash', 'housingROI', 'housing_roi', 'housingCocReturn', 'housing_coc_return'])
     return [
       {
-        label: 'MONTHLY HOUSING',
+        label: 'HOUSING COST / MO',
         value:
-          monthlyHousingCost != null ? fmtMoney(Math.abs(monthlyHousingCost)) : '—',
-        accent: (monthlyHousingCost ?? 1) <= 0 ? '#34D399' : 'var(--text)',
+          monthlyHousingCost != null
+            ? monthlyHousingCost <= 0
+              ? `+${fmtMoney(Math.abs(monthlyHousingCost))}`
+              : fmtMoney(monthlyHousingCost)
+            : '—',
+        accent: (monthlyHousingCost ?? 1) <= 0 ? '#34D399' : '#FBBF24',
       },
       { label: 'OFFSET %', value: fmtPct(offsetPct), accent: 'var(--indigo-hover)' },
       { label: 'CASH-ON-CASH', value: fmtPct(coc), accent: '#34D399' },
