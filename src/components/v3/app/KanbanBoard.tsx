@@ -56,9 +56,15 @@ function statusBadgeColors(status: PipelineStatus): { bg: string; color: string 
 function KanbanCard({
   deal,
   onStatusChange,
+  isDragging,
+  onDragStart,
+  onDragEnd,
 }: {
   deal: Deal
   onStatusChange?: (dealId: string, status: PipelineStatus) => void
+  isDragging?: boolean
+  onDragStart?: () => void
+  onDragEnd?: () => void
 }) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -72,6 +78,13 @@ function KanbanCard({
     <div
       role="button"
       tabIndex={0}
+      draggable
+      onDragStart={e => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', deal.id)
+        onDragStart?.()
+      }}
+      onDragEnd={() => onDragEnd?.()}
       onClick={() => router.push('/v3/analyze')}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -85,10 +98,12 @@ function KanbanCard({
         border: '1px solid var(--hairline)',
         borderRadius: 8,
         padding: 12,
-        cursor: 'pointer',
-        transition: 'transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        opacity: isDragging ? 0.4 : 1,
+        transition: 'transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 120ms ease',
       }}
       onMouseEnter={e => {
+        if (isDragging) return
         e.currentTarget.style.transform = 'translateY(-1px)'
         e.currentTarget.style.borderColor = 'var(--border-strong)'
         e.currentTarget.style.boxShadow = '0 4px 12px rgba(99,102,241,0.12)'
@@ -269,22 +284,50 @@ export default function KanbanBoard({
   deals: Deal[]
   onStatusChange?: (dealId: string, status: PipelineStatus) => void
 }) {
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverColumn, setDragOverColumn] = useState<PipelineStatus | null>(null)
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
       {COLUMNS.map(col => {
         const items = deals.filter(col.match)
+        const over = dragOverColumn === col.status
         return (
           <div
             key={col.key}
+            onDragOver={e => {
+              if (!draggingId) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'move'
+              if (dragOverColumn !== col.status) setDragOverColumn(col.status)
+            }}
+            onDragLeave={e => {
+              const next = e.relatedTarget as Node | null
+              if (next && e.currentTarget.contains(next)) return
+              setDragOverColumn(prev => (prev === col.status ? null : prev))
+            }}
+            onDrop={e => {
+              e.preventDefault()
+              const dropId = draggingId || e.dataTransfer.getData('text/plain') || null
+              if (dropId && onStatusChange) {
+                const dragged = deals.find(d => d.id === dropId)
+                if (!dragged || dragged.status !== col.status) {
+                  onStatusChange(dropId, col.status)
+                }
+              }
+              setDraggingId(null)
+              setDragOverColumn(null)
+            }}
             style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--hairline)',
+              background: over ? 'var(--indigo-dim)' : 'var(--surface)',
+              border: `1px solid ${over ? 'var(--border-strong)' : 'var(--hairline)'}`,
               borderRadius: 10,
               padding: 14,
               minHeight: 500,
               display: 'flex',
               flexDirection: 'column',
               gap: 10,
+              transition: 'background 150ms ease, border-color 150ms ease',
             }}
           >
             <div
@@ -342,7 +385,17 @@ export default function KanbanBoard({
               </div>
             ) : (
               items.map(deal => (
-                <KanbanCard key={deal.id} deal={deal} onStatusChange={onStatusChange} />
+                <KanbanCard
+                  key={deal.id}
+                  deal={deal}
+                  onStatusChange={onStatusChange}
+                  isDragging={draggingId === deal.id}
+                  onDragStart={() => setDraggingId(deal.id)}
+                  onDragEnd={() => {
+                    setDraggingId(null)
+                    setDragOverColumn(null)
+                  }}
+                />
               ))
             )}
           </div>

@@ -1689,19 +1689,29 @@ function primaryMetricsFor(
   }
 
   if (strategy === 'House Hack') {
-    const cf = houseHackCashFlow(result)
-    const coc =
-      result.metrics?.cashOnCash ??
-      pickHhNumber(result, ['housingROI', 'housing_roi', 'housingCocReturn', 'housing_coc_return'])
-    const monthlyHousingCost = cf != null ? -cf : undefined
+    const cf =
+      houseHackCashFlow(result) ??
+      pickHhNumber(result, ['monthlyNet', 'monthly_net', 'net'])
+    const grossRent =
+      result.cashFlow?.grossRent ??
+      pickHhNumber(result, ['grossRent', 'gross_rent', 'gross', 'grossMonthly', 'gross_monthly']) ??
+      toNum(form?.estimatedRent)
+    const monthlyHousingCost = cf != null ? cf : null
     const offsetPct =
       (fin.offset_percent as number | undefined) ??
-      pickHhNumber(result, ['offsetPercent', 'offset_percent'])
+      pickHhNumber(result, ['offsetPercent', 'offset_percent']) ??
+      (grossRent != null && monthlyHousingCost != null && grossRent > 0
+        ? (grossRent / Math.max(1, grossRent - monthlyHousingCost)) * 100
+        : undefined)
+    const coc =
+      result.metrics?.cashOnCash ??
+      pickHhNumber(result, ['cash_on_cash', 'housingROI', 'housing_roi', 'housingCocReturn', 'housing_coc_return'])
     return [
       {
         label: 'MONTHLY HOUSING',
-        value: fmtMoney(monthlyHousingCost),
-        accent: (monthlyHousingCost ?? 0) <= 0 ? '#34D399' : 'var(--text)',
+        value:
+          monthlyHousingCost != null ? fmtMoney(Math.abs(monthlyHousingCost)) : '—',
+        accent: (monthlyHousingCost ?? 1) <= 0 ? '#34D399' : 'var(--text)',
       },
       { label: 'OFFSET %', value: fmtPct(offsetPct), accent: 'var(--indigo-hover)' },
       { label: 'CASH-ON-CASH', value: fmtPct(coc), accent: '#34D399' },
@@ -1794,20 +1804,24 @@ function secondaryMetricsFor(
   if (strategy === 'House Hack') {
     const grossRent =
       result.cashFlow?.grossRent ??
-      pickHhNumber(result, ['grossRent', 'gross_rent'])
-    const cf = houseHackCashFlow(result)
-    const effectiveHousing = cf != null ? -cf : undefined
+      pickHhNumber(result, ['grossRent', 'gross_rent', 'gross', 'grossMonthly', 'gross_monthly']) ??
+      toNum(form?.estimatedRent)
+    const cf =
+      houseHackCashFlow(result) ??
+      pickHhNumber(result, ['monthlyNet', 'monthly_net', 'net'])
+    const effectiveHousing = cf != null ? Math.abs(cf) : undefined
+    const units = Math.max(1, toNum(form?.unitCount) || 1)
+    const rentPerUnit = grossRent != null && units > 0 ? grossRent / units : undefined
     return [
       { label: 'GROSS RENT', value: fmtMonthly(grossRent) },
-      {
-        label: 'EFFECTIVE HOUSING',
-        value: fmtMonthly(effectiveHousing),
-      },
-      { label: 'UNITS', value: form?.unitCount || '1' },
+      { label: 'EFFECTIVE HOUSING', value: fmtMonthly(effectiveHousing) },
+      { label: 'UNITS', value: String(units) },
+      { label: 'RENT / UNIT', value: fmtMonthly(rentPerUnit) },
       {
         label: 'DEAL SCORE',
         value: result.dealScore != null ? `${result.dealScore}/10` : '—',
       },
+      { label: 'CASH-ON-CASH', value: fmtPct(result.metrics?.cashOnCash) },
     ]
   }
 
@@ -2796,22 +2810,30 @@ function V3AnalyzePageInner() {
               {showRaw ? 'Hide raw response' : 'Show raw response (dev)'}
             </button>
             {showRaw && (
-              <pre
-                style={{
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 10,
-                  background: 'var(--bg)',
-                  border: '1px solid var(--hairline)',
-                  padding: 12,
-                  borderRadius: 8,
-                  overflow: 'auto',
-                  marginTop: 8,
-                  color: 'var(--text-secondary)',
-                  maxHeight: 500,
-                }}
-              >
-                {JSON.stringify({ result: viewResult, calculations: viewCalc }, null, 2)}
-              </pre>
+              <>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 10, marginBottom: 4 }}>
+                  cashFlow keys: {Object.keys(viewResult?.cashFlow || {}).join(', ') || '—'}
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>
+                  metrics keys: {Object.keys(viewResult?.metrics || {}).join(', ') || '—'}
+                </div>
+                <pre
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    background: 'var(--bg)',
+                    border: '1px solid var(--hairline)',
+                    padding: 12,
+                    borderRadius: 8,
+                    overflow: 'auto',
+                    marginTop: 4,
+                    color: 'var(--text-secondary)',
+                    maxHeight: 500,
+                  }}
+                >
+                  {JSON.stringify({ result: viewResult, calculations: viewCalc }, null, 2)}
+                </pre>
+              </>
             )}
           </section>
         )}
