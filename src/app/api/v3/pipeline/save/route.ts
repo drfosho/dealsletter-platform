@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
       aiFinMetrics.gross_profit ??
       cf.annualCashFlow ??
       cf.annual ??
+      (cf.monthly != null ? cf.monthly * 12 : null) ??
       0
 
     const { data, error } = await supabase

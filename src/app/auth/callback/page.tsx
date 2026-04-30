@@ -95,8 +95,8 @@ function AuthCallbackContent() {
               setTimeout(() => {
                 fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
               }, 2000)
-              // Regular login - go directly to analysis
-              router.push('/v2/analyze')
+              // Regular login - go directly to v3 dashboard
+              router.push('/v3/dashboard')
             }
             return
           }
@@ -135,12 +135,12 @@ function AuthCallbackContent() {
             setTimeout(() => {
               fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
             }, 2000)
-            // Regular login - go directly to analysis
-            router.push('/v2/analyze')
+            // Regular login - go directly to v3 dashboard
+            router.push('/v3/dashboard')
           }
         } else {
           // No session, redirect to login
-          router.push('/v2/login')
+          router.push('/v3/login')
         }
       } catch (err) {
         console.error('Callback error:', err)

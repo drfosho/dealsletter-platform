@@ -2146,6 +2146,7 @@ function V3AnalyzePageInner() {
 
   const [expandedModelId, setExpandedModelId] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
+  const [inputsCollapsed, setInputsCollapsed] = useState(false)
 
   const proMax = useProMaxAnalysis()
   const isProMaxMode = tier === 'pro_max' && model === 'max'
@@ -2153,6 +2154,16 @@ function V3AnalyzePageInner() {
   useEffect(() => {
     if (result?.dealScore != null) setDealStatus(defaultStatusFromScore(result.dealScore))
   }, [result?.dealScore])
+
+  useEffect(() => {
+    if (result || proMax.completedCount > 0) {
+      setInputsCollapsed(true)
+    }
+  }, [result, proMax.completedCount])
+
+  useEffect(() => {
+    setInputsCollapsed(false)
+  }, [address])
 
   // Strategy change: reset deal params to the strategy's defaults.
   useEffect(() => {
@@ -2209,6 +2220,7 @@ function V3AnalyzePageInner() {
     setProgressSteps([])
     setExpandedModelId(null)
     setSaveState('idle')
+    setInputsCollapsed(false)
 
     const body = buildAnalyzeBody(address, strategy, propData, form, params)
 
@@ -2243,31 +2255,42 @@ function V3AnalyzePageInner() {
   }
 
   const onSaveToPipeline = async () => {
-    if (!result) return
+    const saveResult: V3AnalysisResult | null = isProMaxMode
+      ? ((expandedModel?.parsedResult as V3AnalysisResult | null) ??
+        (proMax.modelResults.find(m => m.status === 'complete')?.parsedResult as V3AnalysisResult | null) ??
+        null)
+      : result
+    if (!saveResult) return
     setSaveState('saving')
     try {
+      const monthlyCf =
+        saveResult.cashFlow?.monthly ?? saveResult.cashFlow?.monthlyCashFlow ?? null
+      const annualCf =
+        saveResult.cashFlow?.annual ??
+        saveResult.cashFlow?.annualCashFlow ??
+        (monthlyCf != null ? monthlyCf * 12 : null)
       const payload = {
         address,
         strategy,
-        metrics: result.metrics,
-        cashFlow: result.cashFlow,
-        proForma: result.proForma,
-        signal: signalFromDealScore(result.dealScore),
-        dealScore: result.dealScore,
+        metrics: saveResult.metrics,
+        cashFlow: saveResult.cashFlow,
+        proForma: saveResult.proForma,
+        signal: signalFromDealScore(saveResult.dealScore),
+        dealScore: saveResult.dealScore,
         propertyData: propData,
         status: dealStatus,
         aiAnalysis: {
-          narrative: result.narrative,
-          marketContext: result.marketContext,
-          riskFlags: result.riskFlags,
+          narrative: saveResult.narrative,
+          marketContext: saveResult.marketContext,
+          riskFlags: saveResult.riskFlags,
           financial_metrics: {
-            cap_rate: result.metrics?.capRate,
-            cash_on_cash_return: result.metrics?.cashOnCash,
-            monthly_cash_flow: result.cashFlow?.monthly,
-            annual_cash_flow: result.cashFlow?.annual,
-            arv: result.metrics?.arvEstimate,
-            roi: result.metrics?.roi,
-            ...aiFinOf(result),
+            cap_rate: saveResult.metrics?.capRate,
+            cash_on_cash_return: saveResult.metrics?.cashOnCash,
+            monthly_cash_flow: monthlyCf,
+            annual_cash_flow: annualCf,
+            arv: saveResult.metrics?.arvEstimate,
+            roi: saveResult.metrics?.roi ?? saveResult.metrics?.fiveYearROI,
+            ...aiFinOf(saveResult),
           },
         },
       }
@@ -2277,14 +2300,19 @@ function V3AnalyzePageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error('save failed')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        console.error('Save failed:', errData)
+        throw new Error('save failed')
+      }
       setSaveState('saved')
       if (saveTimeout.current) clearTimeout(saveTimeout.current)
-      saveTimeout.current = setTimeout(() => setSaveState('idle'), 3000)
-    } catch {
+      saveTimeout.current = setTimeout(() => setSaveState('idle'), 4000)
+    } catch (err) {
+      console.error('Save error:', err)
       setSaveState('error')
       if (saveTimeout.current) clearTimeout(saveTimeout.current)
-      saveTimeout.current = setTimeout(() => setSaveState('idle'), 3000)
+      saveTimeout.current = setTimeout(() => setSaveState('idle'), 4000)
     }
   }
 
@@ -2887,34 +2915,82 @@ function V3AnalyzePageInner() {
       )}
 
       {propData && form && (
-        <>
-          <EditablePanel
-            strategy={strategy}
-            propertyData={propData}
-            form={form}
-            onChange={updateForm}
-          />
-          <DealParametersPanel
-            strategy={strategy}
-            value={params}
-            onChange={updateParams}
-            purchasePrice={toNum(form.purchasePrice) ?? 0}
-            arv={toNum(form.arv) ?? 0}
-            rehab={toNum(form.rehabCost) ?? 0}
-            rentcastPropertyTax={propData.property?.propertyTaxes ?? null}
-          />
-          <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="app-btn"
-              onClick={onAnalyze}
-              disabled={analysisLoading || proMax.isRunning || isCashLoan(params.loanType) === false && !form.purchasePrice}
-              style={{ padding: '12px 22px', fontSize: 14 }}
-            >
-              {analysisLoading || proMax.isRunning ? 'Running…' : 'Run Analysis →'}
-            </button>
+        inputsCollapsed ? (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setInputsCollapsed(false)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setInputsCollapsed(false)
+              }
+            }}
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--hairline)',
+              borderRadius: 10,
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              marginBottom: 12,
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', minWidth: 0 }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {address}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-muted)' }}>
+                {strategy} · ${Number(form.purchasePrice || 0).toLocaleString()} · {params.loanType}
+              </span>
+            </div>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--indigo-hover)', flexShrink: 0 }}>
+              Edit inputs ↑
+            </span>
           </div>
-        </>
+        ) : (
+          <>
+            <EditablePanel
+              strategy={strategy}
+              propertyData={propData}
+              form={form}
+              onChange={updateForm}
+            />
+            <DealParametersPanel
+              strategy={strategy}
+              value={params}
+              onChange={updateParams}
+              purchasePrice={toNum(form.purchasePrice) ?? 0}
+              arv={toNum(form.arv) ?? 0}
+              rehab={toNum(form.rehabCost) ?? 0}
+              rentcastPropertyTax={propData.property?.propertyTaxes ?? null}
+            />
+            <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="app-btn"
+                onClick={onAnalyze}
+                disabled={analysisLoading || proMax.isRunning || isCashLoan(params.loanType) === false && !form.purchasePrice}
+                style={{ padding: '12px 22px', fontSize: 14 }}
+              >
+                {analysisLoading || proMax.isRunning ? 'Running…' : 'Run Analysis →'}
+              </button>
+              {(result || proMax.completedCount > 0) && (
+                <button
+                  type="button"
+                  className="app-btn-ghost"
+                  onClick={() => setInputsCollapsed(true)}
+                  style={{ padding: '12px 16px', fontSize: 14 }}
+                >
+                  Back to results ↓
+                </button>
+              )}
+            </div>
+          </>
+        )
       )}
 
       {(analysisLoading || proMax.isRunning) && (
