@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { label: 'Saved Deals', href: '/v3/pipeline' },
   { label: 'Market Intel', href: '/v3/markets' },
   { label: 'Deal Desk', href: '/v3/deal-desk' },
+  { label: 'Profile', href: '/v3/profile' },
 ]
 
 function initialsFor(email: string | null | undefined): string {
@@ -213,49 +214,68 @@ export default function Sidebar({
           paddingTop: 12,
         }}
       >
-        <div
+        <Link
+          href="/v3/profile"
           style={{
-            width: 30,
-            height: 30,
-            borderRadius: 6,
-            background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 11,
-            fontWeight: 600,
-            color: '#fff',
-            letterSpacing: '0.02em',
-            flexShrink: 0,
+            gap: 10,
+            flex: 1,
+            minWidth: 0,
+            textDecoration: 'none',
+            color: 'inherit',
+            padding: '4px 6px',
+            margin: '-4px -6px',
+            borderRadius: 6,
+            transition: 'background 120ms ease',
           }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--v3-elevated)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          {initialsFor(email)}
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
           <div
             style={{
-              fontSize: 12.5,
-              color: 'var(--v3-text)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              width: 30,
+              height: 30,
+              borderRadius: 6,
+              background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#fff',
+              letterSpacing: '0.02em',
+              flexShrink: 0,
             }}
           >
-            {nameFor(email)}
+            {initialsFor(email)}
           </div>
-          <div
-            style={{
-              fontFamily: 'var(--v3-font-mono)',
-              fontSize: 9.5,
-              letterSpacing: '0.1em',
-              color: 'var(--v3-indigo-hover)',
-              textTransform: 'uppercase',
-              marginTop: 1,
-            }}
-          >
-            {tier}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontSize: 12.5,
+                color: 'var(--v3-text)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {nameFor(email)}
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--v3-font-mono)',
+                fontSize: 9.5,
+                letterSpacing: '0.1em',
+                color: 'var(--v3-indigo-hover)',
+                textTransform: 'uppercase',
+                marginTop: 1,
+              }}
+            >
+              {tier}
+            </div>
           </div>
-        </div>
+        </Link>
         <button
           onClick={handleSignOut}
           disabled={signingOut}

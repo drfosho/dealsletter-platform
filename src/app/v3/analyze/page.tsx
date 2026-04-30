@@ -2914,6 +2914,30 @@ function V3AnalyzePageInner() {
         </div>
       )}
 
+      {tier === 'free' && propData && (
+        <div
+          style={{
+            background: 'var(--elevated)',
+            border: '1px solid var(--hairline)',
+            borderRadius: 8,
+            padding: '8px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            marginBottom: 12,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            color: 'var(--text-muted)',
+          }}
+        >
+          <span>Free plan · 3 analyses/month</span>
+          <Link href="/pricing" style={{ color: 'var(--indigo-hover)', textDecoration: 'none' }}>
+            Upgrade for unlimited →
+          </Link>
+        </div>
+      )}
+
       {propData && form && (
         inputsCollapsed ? (
           <div

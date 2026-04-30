@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 const PAGE_META: Record<string, { title: string; subtitle: string }> = {
@@ -20,6 +21,19 @@ function metaFor(pathname: string): { title: string; subtitle: string } {
 export default function Topbar() {
   const pathname = usePathname() || ''
   const { title, subtitle } = metaFor(pathname)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!notifOpen) return
+    const onDocClick = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [notifOpen])
 
   return (
     <header
@@ -68,39 +82,87 @@ export default function Topbar() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button
-          type="button"
-          aria-label="Notifications"
-          style={{
-            width: 34,
-            height: 34,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: '1px solid var(--v3-hairline)',
-            borderRadius: 8,
-            cursor: 'pointer',
-            color: 'var(--v3-text-secondary)',
-            padding: 0,
-            transition: 'color 120ms ease, background 120ms ease, border-color 120ms ease',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = 'var(--v3-text)'
-            e.currentTarget.style.background = 'var(--v3-elevated)'
-            e.currentTarget.style.borderColor = 'var(--v3-border)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = 'var(--v3-text-secondary)'
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.borderColor = 'var(--v3-hairline)'
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-        </button>
+        <div ref={notifRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            aria-label="Notifications"
+            aria-expanded={notifOpen}
+            onClick={() => setNotifOpen(v => !v)}
+            style={{
+              width: 34,
+              height: 34,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: notifOpen ? 'var(--v3-elevated)' : 'transparent',
+              border: `1px solid ${notifOpen ? 'var(--v3-border)' : 'var(--v3-hairline)'}`,
+              borderRadius: 8,
+              cursor: 'pointer',
+              color: notifOpen ? 'var(--v3-text)' : 'var(--v3-text-secondary)',
+              padding: 0,
+              transition: 'color 120ms ease, background 120ms ease, border-color 120ms ease',
+            }}
+            onMouseEnter={e => {
+              if (notifOpen) return
+              e.currentTarget.style.color = 'var(--v3-text)'
+              e.currentTarget.style.background = 'var(--v3-elevated)'
+              e.currentTarget.style.borderColor = 'var(--v3-border)'
+            }}
+            onMouseLeave={e => {
+              if (notifOpen) return
+              e.currentTarget.style.color = 'var(--v3-text-secondary)'
+              e.currentTarget.style.background = 'transparent'
+              e.currentTarget.style.borderColor = 'var(--v3-hairline)'
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+          </button>
+          {notifOpen && (
+            <div
+              role="dialog"
+              aria-label="Notifications"
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 8,
+                width: 280,
+                background: 'var(--v3-elevated)',
+                border: '1px solid var(--v3-border)',
+                borderRadius: 10,
+                padding: 16,
+                zIndex: 100,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: 'var(--v3-font-mono)',
+                  fontSize: 10,
+                  letterSpacing: '0.12em',
+                  color: 'var(--v3-text-muted)',
+                  marginBottom: 10,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Notifications
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: 'var(--v3-text-secondary)',
+                  textAlign: 'center',
+                  padding: '16px 0',
+                }}
+              >
+                No new notifications
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

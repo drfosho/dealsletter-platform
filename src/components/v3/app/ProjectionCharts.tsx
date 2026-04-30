@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 function fmtAxis(n: number): string {
   if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
   if (Math.abs(n) >= 1000) return `$${Math.round(n / 1000)}K`
@@ -126,6 +128,7 @@ export function FlipChart({
   holdingMonths: number
   arv: number
 }) {
+  const [hoverX, setHoverX] = useState<number | null>(null)
   const months = Math.max(1, Math.round(holdingMonths))
   const loanBalance = purchasePrice * (1 - downPaymentPercent / 100)
   const monthlyInterest = (loanBalance * (interestRate / 100)) / 12
@@ -223,6 +226,15 @@ export function FlipChart({
         ]}
       />
 
+      <div
+        style={{ position: 'relative' }}
+        onMouseMove={e => {
+          const rect = e.currentTarget.getBoundingClientRect()
+          const svgX = ((e.clientX - rect.left) / rect.width) * 800
+          setHoverX(svgX)
+        }}
+        onMouseLeave={() => setHoverX(null)}
+      >
       <ChartFrame height={220} minY={minY} maxY={maxY}>
         {({ w, h, pad }) => {
           const scaleX = (x: number) => pad + (x / months) * (w - 2 * pad)
@@ -233,6 +245,55 @@ export function FlipChart({
             .join(' ')
           const baselineY = scaleY(minY)
           const costFillPath = `${costPath} L ${scaleX(months).toFixed(1)} ${baselineY.toFixed(1)} L ${scaleX(0).toFixed(1)} ${baselineY.toFixed(1)} Z`
+
+          let crosshair: React.ReactNode = null
+          if (hoverX !== null) {
+            const clampedX = Math.max(pad, Math.min(w - pad, hoverX))
+            const monthIdx = Math.max(
+              0,
+              Math.min(months, Math.round(((clampedX - pad) / (w - 2 * pad)) * months))
+            )
+            const costAtMonth = costs[monthIdx]?.y ?? 0
+            const tipW = 130
+            const tipH = 56
+            const tipX = clampedX > w / 2 ? clampedX - tipW - 8 : clampedX + 8
+            const tipY = pad + 8
+            crosshair = (
+              <>
+                <line
+                  x1={clampedX}
+                  y1={pad}
+                  x2={clampedX}
+                  y2={h - pad}
+                  stroke="var(--text-muted)"
+                  strokeWidth="1"
+                  strokeDasharray="3 3"
+                  opacity="0.6"
+                />
+                <circle cx={clampedX} cy={scaleY(costAtMonth)} r="3.5" fill="var(--indigo-hover)" />
+                <circle cx={clampedX} cy={scaleY(netSale)} r="3.5" fill="var(--green)" />
+                <g transform={`translate(${tipX}, ${tipY})`}>
+                  <rect
+                    width={tipW}
+                    height={tipH}
+                    rx="6"
+                    fill="var(--elevated)"
+                    stroke="var(--border-strong)"
+                    strokeWidth="1"
+                  />
+                  <text x="10" y="16" fontFamily="var(--font-mono)" fontSize="9" fill="var(--text-muted)">
+                    MONTH {monthIdx}
+                  </text>
+                  <text x="10" y="32" fontFamily="var(--font-mono)" fontSize="11" fontWeight="600" fill="var(--indigo-hover)">
+                    Total in {fmtAxis(costAtMonth)}
+                  </text>
+                  <text x="10" y="48" fontFamily="var(--font-mono)" fontSize="11" fontWeight="600" fill="var(--green)">
+                    Net sale {fmtAxis(netSale)}
+                  </text>
+                </g>
+              </>
+            )
+          }
 
           return (
             <>
@@ -324,10 +385,12 @@ export function FlipChart({
               >
                 Month {months}
               </text>
+              {crosshair}
             </>
           )
         }}
       </ChartFrame>
+      </div>
     </div>
   )
 }
@@ -349,6 +412,7 @@ export function HoldChart({
   monthlyCashFlow: number
   appreciationRate?: number
 }) {
+  const [hoverX, setHoverX] = useState<number | null>(null)
   if (purchasePrice <= 0) return null
   const loanBalance0 = purchasePrice * (1 - downPaymentPercent / 100)
   const n = Math.max(1, loanTermYears) * 12
@@ -478,6 +542,15 @@ export function HoldChart({
 
       <Legend items={legendItems} />
 
+      <div
+        style={{ position: 'relative' }}
+        onMouseMove={e => {
+          const rect = e.currentTarget.getBoundingClientRect()
+          const svgX = ((e.clientX - rect.left) / rect.width) * 800
+          setHoverX(svgX)
+        }}
+        onMouseLeave={() => setHoverX(null)}
+      >
       <ChartFrame height={240} minY={minY} maxY={maxY}>
         {({ w, h, pad }) => {
           const scaleX = (x: number) => pad + (x / years) * (w - 2 * pad)
@@ -494,6 +567,56 @@ export function HoldChart({
 
           const cfFill = `${cfPath} L ${scaleX(years).toFixed(1)} ${baselineY.toFixed(1)} L ${scaleX(0).toFixed(1)} ${baselineY.toFixed(1)} Z`
           const eqFill = `${eqPath} L ${scaleX(years).toFixed(1)} ${baselineY.toFixed(1)} L ${scaleX(0).toFixed(1)} ${baselineY.toFixed(1)} Z`
+
+          let crosshair: React.ReactNode = null
+          if (hoverX !== null) {
+            const clampedX = Math.max(pad, Math.min(w - pad, hoverX))
+            const yearIdx = Math.max(
+              0,
+              Math.min(years, Math.round(((clampedX - pad) / (w - 2 * pad)) * years))
+            )
+            const eqAtYear = equityPoints[yearIdx]?.y ?? 0
+            const cfAtYear = cfPoints[yearIdx]?.y ?? 0
+            const tipW = 140
+            const tipH = 56
+            const tipX = clampedX > w / 2 ? clampedX - tipW - 8 : clampedX + 8
+            const tipY = pad + 8
+            crosshair = (
+              <>
+                <line
+                  x1={clampedX}
+                  y1={pad}
+                  x2={clampedX}
+                  y2={h - pad}
+                  stroke="var(--text-muted)"
+                  strokeWidth="1"
+                  strokeDasharray="3 3"
+                  opacity="0.6"
+                />
+                <circle cx={clampedX} cy={scaleY(eqAtYear)} r="3.5" fill="var(--indigo-hover)" />
+                <circle cx={clampedX} cy={scaleY(cfAtYear)} r="3.5" fill="var(--green)" />
+                <g transform={`translate(${tipX}, ${tipY})`}>
+                  <rect
+                    width={tipW}
+                    height={tipH}
+                    rx="6"
+                    fill="var(--elevated)"
+                    stroke="var(--border-strong)"
+                    strokeWidth="1"
+                  />
+                  <text x="10" y="16" fontFamily="var(--font-mono)" fontSize="9" fill="var(--text-muted)">
+                    YEAR {yearIdx}
+                  </text>
+                  <text x="10" y="32" fontFamily="var(--font-mono)" fontSize="11" fontWeight="600" fill="var(--indigo-hover)">
+                    Equity {fmtAxis(eqAtYear)}
+                  </text>
+                  <text x="10" y="48" fontFamily="var(--font-mono)" fontSize="11" fontWeight="600" fill="var(--green)">
+                    Cum. CF {fmtAxis(cfAtYear)}
+                  </text>
+                </g>
+              </>
+            )
+          }
 
           return (
             <>
@@ -564,10 +687,12 @@ export function HoldChart({
                   {`Y${y}`}
                 </text>
               ))}
+              {crosshair}
             </>
           )
         }}
       </ChartFrame>
+      </div>
     </div>
   )
 }

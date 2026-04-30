@@ -14,30 +14,36 @@ export default function AnalysisAccordion({
   children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
+  const [hover, setHover] = useState(false)
   return (
     <section
       style={{
         background: 'var(--surface)',
-        border: '1px solid var(--hairline)',
+        border: `1px solid ${hover ? 'var(--border-strong)' : 'var(--hairline)'}`,
         borderRadius: 10,
         overflow: 'hidden',
+        transition: 'border-color 160ms ease',
       }}
     >
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        aria-expanded={open}
         style={{
           width: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: 10,
-          background: 'transparent',
+          background: hover ? 'var(--elevated)' : 'transparent',
           border: 'none',
           padding: '16px 20px',
           cursor: 'pointer',
           color: 'var(--text)',
           textAlign: 'left',
+          transition: 'background 160ms ease',
         }}
       >
         <div>
@@ -48,19 +54,24 @@ export default function AnalysisAccordion({
             </div>
           )}
         </div>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 14,
-            color: 'var(--text-muted)',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 180ms ease',
-            display: 'inline-block',
-          }}
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="var(--text-muted)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           aria-hidden
+          style={{
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 200ms ease',
+            flexShrink: 0,
+          }}
         >
-          ▾
-        </span>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </button>
       {open && (
         <div
