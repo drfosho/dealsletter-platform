@@ -59,11 +59,11 @@ export default function DealCard({ deal }: { deal: Deal }) {
     <div
       role="button"
       tabIndex={0}
-      onClick={() => router.push('/v3/analyze')}
+      onClick={() => router.push(`/v3/analyze?address=${encodeURIComponent(deal.address)}`)}
       onKeyDown={e => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          router.push('/v3/analyze')
+          router.push(`/v3/analyze?address=${encodeURIComponent(deal.address)}`)
         }
       }}
       style={{
@@ -191,7 +191,7 @@ export default function DealCard({ deal }: { deal: Deal }) {
           style={{ padding: '6px 12px', fontSize: 12 }}
           onClick={e => {
             e.stopPropagation()
-            router.push('/v3/analyze')
+            router.push(`/v3/analyze?address=${encodeURIComponent(deal.address)}`)
           }}
         >
           Open →

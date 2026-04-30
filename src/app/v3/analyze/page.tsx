@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { Suspense, useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import AnalysisAccordion from '@/components/v3/app/AnalysisAccordion'
 import AddressAutocomplete from '@/components/v3/app/AddressAutocomplete'
@@ -2093,8 +2094,9 @@ function ProFormaTable({ proForma }: { proForma: Record<string, unknown> | undef
 
 /* ============================ PAGE ============================ */
 
-export default function V3AnalyzePage() {
+function V3AnalyzePageInner() {
   const tierState = useV3Tier()
+  const searchParams = useSearchParams()
   const tier = tierState.status === 'ready' ? tierState.tier : 'free'
 
   const allowedModels: Record<ModelTier, boolean> = {
@@ -2109,6 +2111,14 @@ export default function V3AnalyzePage() {
   const [strategy, setStrategy] = useState<Strategy>('BRRRR')
   const [model, setModel] = useState<ModelTier>(defaultModel)
   const [hasInitModel, setHasInitModel] = useState(false)
+
+  useEffect(() => {
+    const addrParam = searchParams.get('address')
+    if (addrParam && !address) {
+      setAddress(addrParam)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!hasInitModel && tierState.status === 'ready') {
@@ -3306,5 +3316,13 @@ export default function V3AnalyzePage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function V3AnalyzePage() {
+  return (
+    <Suspense fallback={null}>
+      <V3AnalyzePageInner />
+    </Suspense>
   )
 }
