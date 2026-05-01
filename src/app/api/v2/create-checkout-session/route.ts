@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const stripe = new Stripe(
   process.env.STRIPE_SECRET_KEY!,
@@ -66,16 +67,147 @@ export async function POST(request: Request) {
 
     // Look up existing Stripe customer ID
     let customerId: string | undefined
+    const admin = createAdminClient()
 
     if (user) {
-      const { data: profile } = await supabase
+      const { data: profile } = await admin
         .from('user_profiles')
-        .select('stripe_customer_id')
+        .select('stripe_customer_id, subscription_status, subscription_tier')
         .eq('id', user.id)
         .single()
 
       if (profile?.stripe_customer_id) {
+        // Reuse existing customer
         customerId = profile.stripe_customer_id
+
+        // --- TRIAL DEDUP CHECK ---
+        // If already trialing or active on
+        // a paid tier, block new trial
+        const isOnPaidTier =
+          profile.subscription_tier !== 'free' &&
+          profile.subscription_tier !== null
+        const isTrialingOrActive =
+          profile.subscription_status ===
+            'trialing' ||
+          profile.subscription_status ===
+            'active'
+
+        if (isOnPaidTier && isTrialingOrActive) {
+          return NextResponse.json(
+            {
+              error: 'already_subscribed',
+              message: 'You already have an active subscription or trial.'
+            },
+            { status: 409 }
+          )
+        }
+
+        // Double-check via Stripe directly
+        // in case DB is stale
+        try {
+          const activeSubs = await stripe
+            .subscriptions.list({
+              customer: customerId,
+              status: 'trialing',
+              limit: 1,
+            })
+          if (activeSubs.data.length > 0) {
+            return NextResponse.json(
+              {
+                error: 'already_subscribed',
+                message: 'You already have an active trial.'
+              },
+              { status: 409 }
+            )
+          }
+        } catch (stripeErr) {
+          // Non-fatal — continue to checkout
+          console.error(
+            'Stripe subscription check error:',
+            stripeErr
+          )
+        }
+
+      } else if (user.email) {
+        // No customer ID saved — check Stripe
+        // by email before creating a new one
+        try {
+          const existing = await stripe
+            .customers.list({
+              email: user.email,
+              limit: 5,
+            })
+
+          if (existing.data.length > 0) {
+            // Reuse the most recent customer
+            // that has no active trial
+            let reusableCustomer: Stripe.Customer | null = null
+
+            for (const c of existing.data) {
+              const subs = await stripe
+                .subscriptions.list({
+                  customer: c.id,
+                  status: 'trialing',
+                  limit: 1,
+                })
+
+              if (subs.data.length > 0) {
+                // This customer already has
+                // an active trial — block
+                return NextResponse.json(
+                  {
+                    error: 'already_subscribed',
+                    message: 'You already have an active trial.'
+                  },
+                  { status: 409 }
+                )
+              }
+
+              if (!reusableCustomer) {
+                reusableCustomer = c
+              }
+            }
+
+            if (reusableCustomer) {
+              customerId = reusableCustomer.id
+            }
+          }
+        } catch (stripeErr) {
+          console.error(
+            'Stripe customer lookup error:',
+            stripeErr
+          )
+        }
+
+        // Create new customer if none found
+        if (!customerId) {
+          const customer = await stripe
+            .customers.create(
+              {
+                email: user.email,
+                metadata: {
+                  supabaseUserId: user.id,
+                },
+              },
+              {
+                // Idempotency key prevents
+                // duplicate customers on
+                // concurrent requests
+                idempotencyKey:
+                  `customer-${user.id}`,
+              }
+            )
+          customerId = customer.id
+        }
+
+        // Save immediately — before checkout
+        // opens, so next click finds it
+        await admin
+          .from('user_profiles')
+          .update({
+            stripe_customer_id: customerId
+          })
+          .eq('id', user.id)
       }
     }
 
@@ -107,11 +239,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // Attach customer if exists
+    // Always use explicit customer ID
+    // Never fall back to customer_email
+    // which causes Stripe to create
+    // a new customer every time
     if (customerId) {
       checkoutParams.customer = customerId
-    } else if (user?.email) {
-      checkoutParams.customer_email = user.email
+    } else {
+      // Unauthenticated user —
+      // Stripe creates customer at checkout
+      // (no dedup needed, no saved ID)
+      if (user?.email) {
+        checkoutParams.customer_email =
+          user.email
+      }
     }
 
     // Add subscription metadata + 7-day trial
