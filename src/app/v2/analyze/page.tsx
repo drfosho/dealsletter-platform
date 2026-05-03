@@ -768,138 +768,183 @@ function AnalyzeContent() {
             const ad = data.analysis_data || {};
             const ai = data.ai_analysis || {};
 
+            // Map the keys that parseAnalysisResponse actually puts on
+            // ai_analysis. Previously buildOne expected fields under
+            // parsedFullAnalysis / parsedSummary but neither is populated
+            // by /api/analysis/[id], so every chain fell to undefined.
+            const aiFinancials = ai.financial_metrics || ai.financialMetrics || {};
+
+            const aiDealScore =
+              ai.dealScore ||
+              ai.deal_score ||
+              data.deal_score ||
+              ad.dealScore ||
+              null;
+
+            const aiNarrative =
+              ai.narrative ||
+              ai.analysis ||
+              ai.investment_strategy ||
+              ai.summary ||
+              null;
+
+            const aiRiskFlags =
+              ai.riskFlags ||
+              ai.risks ||
+              ai.risk_factors ||
+              [];
+
+            const aiRecommendation =
+              ai.recommendation ||
+              ai.verdict ||
+              null;
+
+            const aiMarketContext =
+              ai.marketContext ||
+              ai.market_analysis ||
+              ai.market_context ||
+              null;
+
+            const aiProForma =
+              ai.proForma ||
+              ai.pro_forma ||
+              ai.cashFlow ||
+              null;
+
+            const aiMetrics = ai.metrics || aiFinancials || {};
+
             const savedResult: AnalysisResult = {
               dealScore:
                 parsedFullAnalysis.dealScore ||
                 parsedSummary.dealScore ||
-                ad.dealScore ||
+                aiDealScore ||
                 undefined,
               narrative:
                 parsedFullAnalysis.narrative ||
                 parsedSummary.narrative ||
-                parsedFullAnalysis.analysis ||
-                parsedSummary.analysis ||
-                parsedFullAnalysis.recommendation ||
-                parsedSummary.recommendation ||
+                aiNarrative ||
                 undefined,
               riskFlags:
                 parsedFullAnalysis.riskFlags ||
                 parsedSummary.riskFlags ||
-                ai.risks ||
-                ad.riskFlags ||
+                aiRiskFlags ||
                 [],
               metrics:
                 parsedFullAnalysis.metrics ||
                 parsedSummary.metrics ||
-                ai.financial_metrics ||
-                ad.metrics ||
+                aiMetrics ||
                 {},
               cashFlow:
                 parsedFullAnalysis.cashFlow ||
                 parsedSummary.cashFlow ||
-                ad.cashFlow ||
+                aiProForma ||
                 undefined,
               proForma:
                 parsedFullAnalysis.proForma ||
                 parsedSummary.proForma ||
-                ad.proForma ||
+                aiProForma ||
                 undefined,
               recommendation:
                 parsedFullAnalysis.recommendation ||
                 parsedSummary.recommendation ||
-                ad.recommendation ||
+                aiRecommendation ||
                 undefined,
               marketContext:
                 parsedFullAnalysis.marketContext ||
                 parsedSummary.marketContext ||
-                ad.marketContext ||
+                aiMarketContext ||
                 undefined,
             };
 
+            // Prefer saved calculatedMetrics (now persisted by generate route)
+            // over loose top-level analysis_data fields. The old chain led with
+            // ad.X (rarely populated) and used calculatedMetrics as fallback;
+            // calculatedMetrics is now the authoritative source for flips.
             const savedCalculations = {
               purchasePrice:
                 data.purchase_price ||
                 ad.purchasePrice ||
-                parsedFullAnalysis.purchasePrice,
+                ad.calculatedMetrics?.purchasePrice ||
+                0,
               rehabCost:
+                ad.calculatedMetrics?.rehabCost ||
                 ad.rehabCost ||
-                ad.rehabCosts ||
-                parsedFullAnalysis.rehabCost ||
                 data.rehab_costs ||
                 0,
               holdingCosts:
-                ad.holdingCosts ||
-                parsedFullAnalysis.holdingCosts ||
                 ad.calculatedMetrics?.holdingCosts ||
+                ad.holdingCosts ||
                 0,
               closingCosts:
-                ad.closingCosts ||
-                parsedFullAnalysis.closingCosts ||
                 ad.calculatedMetrics?.closingCosts ||
+                ad.closingCosts ||
                 0,
               buySideClosing:
-                ad.buySideClosing ||
                 ad.calculatedMetrics?.buySideClosing ||
+                ad.buySideClosing ||
                 0,
               sellingCosts:
-                ad.sellingCosts ||
-                parsedFullAnalysis.sellingCosts ||
                 ad.calculatedMetrics?.sellingCosts ||
+                ad.sellingCosts ||
                 0,
               sellSideClosing:
-                ad.sellSideClosing ||
                 ad.calculatedMetrics?.sellSideClosing ||
+                ad.sellSideClosing ||
                 0,
               downPayment:
-                ad.downPayment ||
-                parsedFullAnalysis.downPayment ||
                 ad.calculatedMetrics?.downPayment ||
+                ad.downPayment ||
                 0,
               totalProjectCost:
-                ad.totalProjectCost ||
                 ad.calculatedMetrics?.totalProjectCost ||
+                ad.totalProjectCost ||
                 0,
               pointsCost:
-                ad.pointsCost || ad.calculatedMetrics?.pointsCost || 0,
+                ad.calculatedMetrics?.pointsCost ||
+                ad.pointsCost ||
+                0,
               isHardMoney:
-                ad.isHardMoney ||
                 ad.calculatedMetrics?.isHardMoney ||
+                ad.isHardMoney ||
                 false,
-              mao70: ad.mao70 || ad.calculatedMetrics?.mao70 || 0,
-              mao85: ad.mao85 || ad.calculatedMetrics?.mao85 || 0,
+              mao70:
+                ad.calculatedMetrics?.mao70 || ad.mao70 || 0,
+              mao85:
+                ad.calculatedMetrics?.mao85 || ad.mao85 || 0,
               holdingPeriodMonths:
-                ad.holdingPeriodMonths ||
                 ad.calculatedMetrics?.holdingPeriodMonths ||
+                ad.holdingPeriodMonths ||
                 6,
+              cashRequired:
+                ad.calculatedMetrics?.cashRequired ||
+                ad.cashRequired ||
+                ad.calculatedMetrics?.totalInvestment ||
+                0,
               cashFlow:
-                parsedFullAnalysis.cashFlow?.monthly ||
-                parsedSummary.cashFlow?.monthly ||
+                ad.calculatedMetrics?.monthlyCashFlow ||
                 ad.cashFlow?.monthly ||
-                ai.financial_metrics?.monthly_cash_flow,
+                aiFinancials.monthly_cash_flow,
               roi:
-                data.roi || parsedFullAnalysis.roi || parsedSummary.roi,
+                data.roi || ad.calculatedMetrics?.roi,
               netProfit:
                 data.profit ||
-                parsedFullAnalysis.netProfit ||
-                parsedSummary.netProfit,
+                ad.calculatedMetrics?.netProfit ||
+                ad.calculatedMetrics?.profit,
               arv:
+                ad.calculatedMetrics?.arv ||
                 ad.arv ||
-                parsedFullAnalysis.arv ||
-                parsedSummary.arv ||
-                ai.financial_metrics?.arv,
+                aiFinancials.arv,
               capRate:
-                parsedFullAnalysis.capRate ||
-                parsedSummary.capRate ||
-                ai.financial_metrics?.cap_rate,
+                ad.calculatedMetrics?.capRate ||
+                aiFinancials.cap_rate,
               cashOnCash:
-                parsedFullAnalysis.cashOnCash ||
-                parsedSummary.cashOnCash ||
-                ai.financial_metrics?.cash_on_cash_return,
+                ad.calculatedMetrics?.cashOnCash ||
+                aiFinancials.cash_on_cash_return,
               totalInvestment:
-                parsedFullAnalysis.totalInvestment ||
-                parsedSummary.totalInvestment ||
-                ai.financial_metrics?.total_investment ||
-                ad.totalCashInvested,
+                ad.calculatedMetrics?.totalInvestment ||
+                aiFinancials.total_investment ||
+                ad.totalCashInvested ||
+                0,
             };
 
             return { ad, savedResult, savedCalculations };
@@ -1017,159 +1062,194 @@ function AnalyzeContent() {
         setSavedModelLabel(savedModelLabelLocal);
         setSavedTier(savedTierLocal);
 
+        // Map the keys that parseAnalysisResponse actually puts on
+        // ai_analysis. Without these the parsedFullAnalysis chain
+        // always fell to undefined for dealScore / narrative / risks.
+        const aiFinancials =
+          aiAnalysis.financial_metrics || aiAnalysis.financialMetrics || {};
+
+        const aiDealScore =
+          aiAnalysis.dealScore ||
+          aiAnalysis.deal_score ||
+          data.deal_score ||
+          analysisData.dealScore ||
+          null;
+
+        const aiNarrative =
+          aiAnalysis.narrative ||
+          aiAnalysis.analysis ||
+          aiAnalysis.investment_strategy ||
+          aiAnalysis.summary ||
+          null;
+
+        const aiRiskFlags =
+          aiAnalysis.riskFlags ||
+          aiAnalysis.risks ||
+          aiAnalysis.risk_factors ||
+          [];
+
+        const aiRecommendation =
+          aiAnalysis.recommendation ||
+          aiAnalysis.verdict ||
+          null;
+
+        const aiMarketContext =
+          aiAnalysis.marketContext ||
+          aiAnalysis.market_analysis ||
+          aiAnalysis.market_context ||
+          null;
+
+        const aiProForma =
+          aiAnalysis.proForma ||
+          aiAnalysis.pro_forma ||
+          aiAnalysis.cashFlow ||
+          null;
+
+        const aiMetrics = aiAnalysis.metrics || aiFinancials || {};
+
         const savedResult: AnalysisResult = {
           dealScore:
             parsedFullAnalysis.dealScore ||
             parsedSummary.dealScore ||
-            analysisData.dealScore ||
+            aiDealScore ||
             undefined,
 
           narrative:
             parsedFullAnalysis.narrative ||
             parsedSummary.narrative ||
-            parsedFullAnalysis.analysis ||
-            parsedSummary.analysis ||
-            parsedFullAnalysis.recommendation ||
-            parsedSummary.recommendation ||
+            aiNarrative ||
             undefined,
 
           riskFlags:
             parsedFullAnalysis.riskFlags ||
             parsedSummary.riskFlags ||
-            aiAnalysis.risks ||
-            analysisData.riskFlags ||
+            aiRiskFlags ||
             [],
 
           metrics:
             parsedFullAnalysis.metrics ||
             parsedSummary.metrics ||
-            aiAnalysis.financial_metrics ||
-            analysisData.metrics ||
+            aiMetrics ||
             {},
 
           cashFlow:
             parsedFullAnalysis.cashFlow ||
             parsedSummary.cashFlow ||
-            analysisData.cashFlow ||
+            aiProForma ||
             undefined,
 
           proForma:
             parsedFullAnalysis.proForma ||
             parsedSummary.proForma ||
-            analysisData.proForma ||
+            aiProForma ||
             undefined,
 
           recommendation:
             parsedFullAnalysis.recommendation ||
             parsedSummary.recommendation ||
-            analysisData.recommendation ||
+            aiRecommendation ||
             undefined,
 
           marketContext:
             parsedFullAnalysis.marketContext ||
             parsedSummary.marketContext ||
-            analysisData.marketContext ||
+            aiMarketContext ||
             undefined,
         };
 
-        // Build calculations from saved data
+        // Prefer saved calculatedMetrics (now persisted by generate route)
+        // over loose top-level analysis_data fields.
         const savedCalculations = {
           purchasePrice:
             data.purchase_price ||
             analysisData.purchasePrice ||
-            parsedFullAnalysis.purchasePrice,
+            analysisData.calculatedMetrics?.purchasePrice ||
+            0,
 
-          // Flip-specific fields (waterfall UI on saved load)
           rehabCost:
+            analysisData.calculatedMetrics?.rehabCost ||
             analysisData.rehabCost ||
-            analysisData.rehabCosts ||
-            parsedFullAnalysis.rehabCost ||
             data.rehab_costs ||
             0,
           holdingCosts:
-            analysisData.holdingCosts ||
-            parsedFullAnalysis.holdingCosts ||
             analysisData.calculatedMetrics?.holdingCosts ||
+            analysisData.holdingCosts ||
             0,
           closingCosts:
-            analysisData.closingCosts ||
-            parsedFullAnalysis.closingCosts ||
             analysisData.calculatedMetrics?.closingCosts ||
+            analysisData.closingCosts ||
             0,
           buySideClosing:
-            analysisData.buySideClosing ||
             analysisData.calculatedMetrics?.buySideClosing ||
+            analysisData.buySideClosing ||
             0,
           sellingCosts:
-            analysisData.sellingCosts ||
-            parsedFullAnalysis.sellingCosts ||
             analysisData.calculatedMetrics?.sellingCosts ||
+            analysisData.sellingCosts ||
             0,
           sellSideClosing:
-            analysisData.sellSideClosing ||
             analysisData.calculatedMetrics?.sellSideClosing ||
+            analysisData.sellSideClosing ||
             0,
           downPayment:
-            analysisData.downPayment ||
-            parsedFullAnalysis.downPayment ||
             analysisData.calculatedMetrics?.downPayment ||
+            analysisData.downPayment ||
             0,
           totalProjectCost:
-            analysisData.totalProjectCost ||
             analysisData.calculatedMetrics?.totalProjectCost ||
+            analysisData.totalProjectCost ||
             0,
           pointsCost:
-            analysisData.pointsCost ||
             analysisData.calculatedMetrics?.pointsCost ||
+            analysisData.pointsCost ||
             0,
           isHardMoney:
-            analysisData.isHardMoney ||
             analysisData.calculatedMetrics?.isHardMoney ||
+            analysisData.isHardMoney ||
             false,
           mao70:
-            analysisData.mao70 ||
             analysisData.calculatedMetrics?.mao70 ||
+            analysisData.mao70 ||
             0,
           mao85:
-            analysisData.mao85 ||
             analysisData.calculatedMetrics?.mao85 ||
+            analysisData.mao85 ||
             0,
           holdingPeriodMonths:
-            analysisData.holdingPeriodMonths ||
             analysisData.calculatedMetrics?.holdingPeriodMonths ||
+            analysisData.holdingPeriodMonths ||
             6,
+          cashRequired:
+            analysisData.calculatedMetrics?.cashRequired ||
+            analysisData.cashRequired ||
+            analysisData.calculatedMetrics?.totalInvestment ||
+            0,
 
           cashFlow:
-            parsedFullAnalysis.cashFlow?.monthly ||
-            parsedSummary.cashFlow?.monthly ||
+            analysisData.calculatedMetrics?.monthlyCashFlow ||
             analysisData.cashFlow?.monthly ||
-            aiAnalysis.financial_metrics?.monthly_cash_flow,
+            aiFinancials.monthly_cash_flow,
           roi:
-            data.roi ||
-            parsedFullAnalysis.roi ||
-            parsedSummary.roi,
+            data.roi || analysisData.calculatedMetrics?.roi,
           netProfit:
             data.profit ||
-            parsedFullAnalysis.netProfit ||
-            parsedSummary.netProfit,
+            analysisData.calculatedMetrics?.netProfit ||
+            analysisData.calculatedMetrics?.profit,
           arv:
+            analysisData.calculatedMetrics?.arv ||
             analysisData.arv ||
-            parsedFullAnalysis.arv ||
-            parsedSummary.arv ||
-            aiAnalysis.financial_metrics?.arv,
+            aiFinancials.arv,
           capRate:
-            parsedFullAnalysis.capRate ||
-            parsedSummary.capRate ||
-            aiAnalysis.financial_metrics?.cap_rate,
+            analysisData.calculatedMetrics?.capRate ||
+            aiFinancials.cap_rate,
           cashOnCash:
-            parsedFullAnalysis.cashOnCash ||
-            parsedSummary.cashOnCash ||
-            aiAnalysis.financial_metrics?.cash_on_cash_return,
+            analysisData.calculatedMetrics?.cashOnCash ||
+            aiFinancials.cash_on_cash_return,
           totalInvestment:
-            parsedFullAnalysis.totalInvestment ||
-            parsedSummary.totalInvestment ||
-            aiAnalysis.financial_metrics?.total_investment ||
-            analysisData.totalCashInvested,
+            analysisData.calculatedMetrics?.totalInvestment ||
+            aiFinancials.total_investment ||
+            analysisData.totalCashInvested ||
+            0,
         };
 
         // Build property data from saved
