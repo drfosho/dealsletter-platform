@@ -712,6 +712,19 @@ function AnalyzeContent() {
     loadUserTier();
   }, []);
 
+  // Re-sync savedTier when userTier resolves after a saved single-row load.
+  // Pro Max saves hardcode "pro_max" and don't need this catch-up.
+  useEffect(() => {
+    if (
+      savedAnalysisLoaded &&
+      !proMaxMode &&
+      savedTier === "free" &&
+      userTier !== "free"
+    ) {
+      setSavedTier(userTier);
+    }
+  }, [userTier, savedAnalysisLoaded, proMaxMode, savedTier]);
+
   /* ---------- Load saved analysis if id param present ------------- */
 
   useEffect(() => {
@@ -3717,7 +3730,13 @@ function AnalyzeContent() {
             selectedStrategy={selectedStrategy}
             address={address}
             editedProperty={editedProperty}
-            userTier={userTier}
+            userTier={
+              proMaxMode
+                ? userTier !== "free"
+                  ? userTier
+                  : "pro_max"
+                : userTier
+            }
           />
         ) : null}
 

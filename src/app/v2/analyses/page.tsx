@@ -111,10 +111,39 @@ export default function V2AnalysesPage() {
     load();
   }, [router]);
 
-  /* ---------- Filter / sort --------------------------------------- */
+  /* ---------- Group / filter / sort ------------------------------- */
+
+  // Collapse Pro Max sibling rows into a single Max IQ entry per proMaxRunId.
+  // Singles pass through unchanged.
+  const groupedAnalyses = useMemo(() => {
+    const groups = new Map<string, any[]>();
+    const singles: any[] = [];
+
+    for (const a of analyses) {
+      const runId = a.analysis_data?.proMaxRunId;
+      if (runId) {
+        if (!groups.has(runId)) groups.set(runId, []);
+        groups.get(runId)!.push(a);
+      } else {
+        singles.push(a);
+      }
+    }
+
+    const proMaxEntries = Array.from(groups.values()).map((group) => ({
+      ...group[0],
+      isProMaxGroup: true,
+      proMaxSiblings: group,
+      displayLabel: "Max IQ Analysis",
+    }));
+
+    return [...proMaxEntries, ...singles].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+  }, [analyses]);
 
   const filteredAnalyses = useMemo(() => {
-    let result = [...analyses];
+    let result = [...groupedAnalyses];
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -143,7 +172,7 @@ export default function V2AnalysesPage() {
     });
 
     return result;
-  }, [analyses, search, strategyFilter, sortBy, sortDir]);
+  }, [groupedAnalyses, search, strategyFilter, sortBy, sortDir]);
 
   /* ---------- Selection ------------------------------------------- */
 
@@ -359,13 +388,27 @@ export default function V2AnalysesPage() {
                       {isSelected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     </div>
                     <span style={{ background: `${strategyColor(strat)}1F`, border: `0.5px solid ${strategyColor(strat)}59`, borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 500, color: strategyColor(strat), flexShrink: 0, width: 90, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{strategyLabel(strat)}</span>
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#e8e6f0", letterSpacing: "-0.2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.address}</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#e8e6f0", letterSpacing: "-0.2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{a.address}</span>
+                      {a.isProMaxGroup && (
+                        <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "#EF9F27", background: "rgba(239,159,39,0.1)", border: "0.5px solid rgba(239,159,39,0.3)", borderRadius: 5, padding: "2px 6px", flexShrink: 0 }}>
+                          Max IQ
+                        </span>
+                      )}
+                    </span>
                     <span style={{ width: 60, textAlign: "center", fontSize: 15, fontWeight: 700, color: scoreColor(score) }}>{score ?? "\u2014"}</span>
                     <span style={{ width: 70, textAlign: "right", fontSize: 13, color: "#7F77DD" }}>{fmtPct(a.roi)}</span>
                     <span style={{ width: 90, textAlign: "right", fontSize: 13, color: cfValue != null && cfValue >= 0 ? "#1D9E75" : "#f09595" }}>{fmt$(cfValue)}</span>
                     <span style={{ width: 80, textAlign: "right", fontSize: 12, color: "#3a3758" }}>{fmtDate(a.created_at)}</span>
                     <div style={{ width: 72, display: "flex", gap: 6, justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}&id=${a.id}`)} style={{ width: 30, height: 30, borderRadius: 6, background: "rgba(83,74,183,0.1)", border: "0.5px solid rgba(127,119,221,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }} onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(83,74,183,0.2)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(83,74,183,0.1)")}>
+                      <button onClick={() => {
+                        if (a.isProMaxGroup && a.proMaxSiblings?.length > 0) {
+                          const ids = a.proMaxSiblings.map((s: any) => s.id).join(",");
+                          router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}&ids=${ids}&promax=1`);
+                        } else {
+                          router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}&id=${a.id}`);
+                        }
+                      }} style={{ width: 30, height: 30, borderRadius: 6, background: "rgba(83,74,183,0.1)", border: "0.5px solid rgba(127,119,221,0.2)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }} onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(83,74,183,0.2)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(83,74,183,0.1)")}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7F77DD" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                       </button>
                       {deletingId === a.id ? (
@@ -406,7 +449,14 @@ export default function V2AnalysesPage() {
                       </div>
                       <div style={{ display: "flex", gap: 10 }}>
                         <button onClick={() => router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}`)} style={{ background: "#534AB7", color: "#f0eeff", padding: "9px 18px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer", fontFamily: "inherit" }}>Run new analysis &rarr;</button>
-                        <button onClick={() => router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}&id=${a.id}`)} style={{ background: "transparent", border: "0.5px solid rgba(127,119,221,0.25)", color: "#9994b8", padding: "9px 18px", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>View full analysis</button>
+                        <button onClick={() => {
+                          if (a.isProMaxGroup && a.proMaxSiblings?.length > 0) {
+                            const ids = a.proMaxSiblings.map((s: any) => s.id).join(",");
+                            router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}&ids=${ids}&promax=1`);
+                          } else {
+                            router.push(`/v2/analyze?address=${encodeURIComponent(a.address)}&id=${a.id}`);
+                          }
+                        }} style={{ background: "transparent", border: "0.5px solid rgba(127,119,221,0.25)", color: "#9994b8", padding: "9px 18px", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>View full analysis</button>
                       </div>
                     </div>
                   )}
