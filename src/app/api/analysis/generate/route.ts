@@ -1511,17 +1511,54 @@ export async function POST(request: NextRequest) {
                   ...analysisRecord.analysis_data,
                   ai_analysis: aiAnalysis,
                   status: 'completed',
-                  calculatedMetrics: {
-                    roi: finalRoi,
-                    profit: finalProfit,
-                    arv: extractedArv,
-                    totalInvestment: aiAnalysis.financial_metrics?.total_investment,
-                    holdingCosts: aiAnalysis.financial_metrics?.holding_costs,
-                    profitMargin: aiAnalysis.financial_metrics?.profit_margin,
-                    monthlyCashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow,
-                    capRate: aiAnalysis.financial_metrics?.cap_rate,
-                    cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return
-                  },
+                  calculatedMetrics: (() => {
+                    // Base fields — keep AI-derived values for non-flip strategies
+                    // (calculatedMetrics for rental/BRRRR/house-hack uses different
+                    // field names: cashFlow not monthlyCashFlow, cocReturn not cashOnCash,
+                    // totalProfit not profit). Saved-load consumers fall back to
+                    // ai_analysis.financial_metrics for those, but keeping the AI
+                    // values here preserves the existing debug shape.
+                    const base = {
+                      roi: finalRoi,
+                      profit: finalProfit,
+                      arv: extractedArv,
+                      totalInvestment: aiAnalysis.financial_metrics?.total_investment,
+                      holdingCosts: aiAnalysis.financial_metrics?.holding_costs,
+                      profitMargin: aiAnalysis.financial_metrics?.profit_margin,
+                      monthlyCashFlow: aiAnalysis.financial_metrics?.monthly_cash_flow,
+                      capRate: aiAnalysis.financial_metrics?.cap_rate,
+                      cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return,
+                    };
+
+                    // Flip-specific fields — pulled from the server-computed
+                    // calculatedMetrics so the saved-analysis loader can rebuild
+                    // the waterfall UI without re-running the calculator.
+                    const cm = calculatedMetrics as any;
+                    if (body.strategy === 'flip' || cm?.netProfit !== undefined) {
+                      return {
+                        ...base,
+                        netProfit: cm?.netProfit,
+                        rehabCost: cm?.rehabCost,
+                        downPayment: cm?.downPayment,
+                        closingCosts: cm?.closingCosts,
+                        buySideClosing: cm?.buySideClosing,
+                        sellingCosts: cm?.sellingCosts,
+                        sellSideClosing: cm?.sellSideClosing,
+                        totalProjectCost: cm?.totalProjectCost,
+                        pointsCost: cm?.pointsCost,
+                        isHardMoney: cm?.isHardMoney,
+                        mao70: cm?.mao70,
+                        mao85: cm?.mao85,
+                        holdingPeriodMonths: cm?.holdingPeriodMonths,
+                        cashRequired: cm?.cashRequired,
+                        acquisitionLoan: cm?.acquisitionLoan,
+                        loanAmount: cm?.loanAmount,
+                        isFlip: true,
+                      };
+                    }
+
+                    return base;
+                  })(),
                   arv: extractedArv,
                   // Model identity (refreshed on update so Pro Max grouping works)
                   ...modelIdentityFields
