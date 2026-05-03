@@ -97,6 +97,48 @@ export function useProMaxAnalysis() {
     setIsRunning(false);
   }, []);
 
+  // Rehydrate hook state from saved sibling rows so the comparison view
+  // can render a Pro Max run reloaded from the dashboard. Missing siblings
+  // (e.g. a model that errored during the original run) fall through to
+  // their default "pending" entry so the UI surfaces the gap.
+  const loadSavedResults = useCallback(
+    (saved: Array<Partial<ProMaxModelResult> & { modelId: string }>) => {
+      const next = PRO_MAX_MODELS.map((m) => {
+        const match = saved.find((s) => s.modelId === m.id);
+        if (!match) {
+          return {
+            modelId: m.id,
+            modelLabel: m.label,
+            provider: m.provider,
+            role: m.role,
+            status: "pending" as const,
+            progressSteps: [],
+            parsedResult: null,
+            serverCalculations: null,
+            error: null,
+            latencyMs: null,
+          };
+        }
+        return {
+          modelId: m.id,
+          modelLabel: match.modelLabel ?? m.label,
+          provider: match.provider ?? m.provider,
+          role: match.role ?? m.role,
+          status: match.status ?? ("complete" as const),
+          progressSteps: match.progressSteps ?? [],
+          parsedResult: match.parsedResult ?? null,
+          serverCalculations: match.serverCalculations ?? null,
+          error: match.error ?? null,
+          latencyMs: match.latencyMs ?? null,
+        };
+      });
+      setModelResults(next);
+      setCompletedCount(next.filter((r) => r.status === "complete").length);
+      setIsRunning(false);
+    },
+    [],
+  );
+
   const runParallelAnalysis = useCallback(
     async (
       fetchBody: Record<string, any>,
@@ -105,6 +147,11 @@ export function useProMaxAnalysis() {
     ) => {
       setIsRunning(true);
       setCompletedCount(0);
+
+      // Shared run ID groups the 3 sibling rows so they can be reloaded together later.
+      const proMaxRunId = `promax_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 9)}`;
 
       // Reset all to loading
       setModelResults(
@@ -133,6 +180,7 @@ export function useProMaxAnalysis() {
             body: JSON.stringify({
               ...fetchBody,
               modelOverride: model.id,
+              proMaxRunId,
             }),
           });
 
@@ -307,6 +355,7 @@ export function useProMaxAnalysis() {
     totalModels: PRO_MAX_MODELS.length,
     resetResults,
     runParallelAnalysis,
+    loadSavedResults,
     PRO_MAX_MODELS,
   };
 }

@@ -1150,6 +1150,26 @@ export async function POST(request: NextRequest) {
       market: structuredPropertyData?.market
     });
     
+    // Resolve model selection up front so model identity can be persisted
+    // at insert time (and reused inside the stream below).
+    const modelOverride = (body as any).modelOverride as string | undefined;
+    const allowedOverride = (() => {
+      if (!modelOverride) return undefined;
+      if (modelOverride === 'gpt-4o-mini') return modelOverride;
+      if (resolvedV2Tier === 'pro_max') return modelOverride;
+      return undefined;
+    })();
+    const modelSelection = selectModel(resolvedV2Tier, body.strategy as Strategy, allowedOverride);
+    const proMaxRunId = (body as any).proMaxRunId || null;
+    const modelIdentityFields = {
+      modelLabel: modelSelection.modelLabel,
+      modelProvider: modelSelection.primary.name,
+      modelId: modelSelection.primary.model,
+      tierLabel: modelSelection.tierLabel,
+      isProMax: resolvedV2Tier === 'pro_max',
+      proMaxRunId,
+    };
+
     // Only save to database for authenticated users
     // Anonymous analyses are not persisted — that's correct behavior
     let analysisRecord: any = null;
@@ -1176,7 +1196,7 @@ export async function POST(request: NextRequest) {
         profit: 0, // Will be calculated after AI analysis
         deal_type: strategyToDealType[body.strategy] || 'Buy & Hold',
         analysis_date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-        analysis_data: {} // Will be populated after AI analysis
+        analysis_data: { ...modelIdentityFields } // Will be populated after AI analysis
       };
 
       console.log('Insert data prepared:', JSON.stringify(insertData, null, 2));
@@ -1250,7 +1270,9 @@ export async function POST(request: NextRequest) {
               loanTerm: body.loanTerms?.loanTerm || 30
             },
             // Save ARV directly so it's accessible without deep nesting
-            arv: body.arv || 0
+            arv: body.arv || 0,
+            // Model identity for saved-analysis reload and Pro Max grouping
+            ...modelIdentityFields
           }
         })
         .select()
@@ -1431,17 +1453,8 @@ export async function POST(request: NextRequest) {
             // --- Call AI model via multi-model router ---
             const baseSystemPrompt = SYSTEM_PROMPTS[body.strategy] || SYSTEM_PROMPTS.rental;
             const t_claudeStart = Date.now();
-
-            // Read optional model override
-            const modelOverride = (body as any).modelOverride as string | undefined;
-            // Security: any tier can request speed, only Pro Max can override to premium models
-            const allowedOverride = (() => {
-              if (!modelOverride) return undefined;
-              if (modelOverride === 'gpt-4o-mini') return modelOverride;
-              if (resolvedV2Tier === 'pro_max') return modelOverride;
-              return undefined;
-            })();
-            const modelSelection = selectModel(resolvedV2Tier, body.strategy as Strategy, allowedOverride);
+            // modelOverride / allowedOverride / modelSelection are computed
+            // earlier (before insert) so model identity can be persisted.
 
             // Apply role-specific suffix for Pro Max parallel models
             const roleSuffix = allowedOverride ? getModelRoleSuffix(allowedOverride, body.strategy) : '';
@@ -1509,7 +1522,9 @@ export async function POST(request: NextRequest) {
                     capRate: aiAnalysis.financial_metrics?.cap_rate,
                     cashOnCash: aiAnalysis.financial_metrics?.cash_on_cash_return
                   },
-                  arv: extractedArv
+                  arv: extractedArv,
+                  // Model identity (refreshed on update so Pro Max grouping works)
+                  ...modelIdentityFields
                 },
                 roi: finalRoi,
                 profit: finalProfit

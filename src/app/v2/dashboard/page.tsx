@@ -596,6 +596,37 @@ export default function DashboardPage() {
       ? `You've analyzed ${totalCount} ${totalCount === 1 ? "property" : "properties"}. Here's where you left off.`
       : "Enter an address below to run your first AI-powered deal analysis.";
 
+  // Group Pro Max sibling rows so the dashboard shows one card per Max IQ run
+  // instead of three (one per model). Singles are passed through unchanged.
+  const groupedAnalyses = (() => {
+    const groups = new Map<string, any[]>();
+    const singles: any[] = [];
+
+    for (const a of recentAnalyses) {
+      const runId = a.analysis_data?.proMaxRunId;
+      if (runId) {
+        if (!groups.has(runId)) groups.set(runId, []);
+        groups.get(runId)!.push(a);
+      } else {
+        singles.push(a);
+      }
+    }
+
+    const proMaxEntries = Array.from(groups.values()).map((group) => ({
+      ...group[0],
+      isProMaxGroup: true,
+      proMaxSiblings: group,
+      displayLabel: "Max IQ Analysis",
+    }));
+
+    return [...proMaxEntries, ...singles]
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      )
+      .slice(0, 6);
+  })();
+
   const tierPillText = (() => {
     const tierName =
       userTier === "pro_max" ? "Pro Max" : userTier === "pro" ? "Pro" : "Free";
@@ -813,19 +844,28 @@ export default function DashboardPage() {
                 marginBottom: 28,
               }}
             >
-              {recentAnalyses.map((a) => (
+              {groupedAnalyses.map((a) => (
                 <AnalysisHistoryCard
-                  key={a.id}
+                  key={a.isProMaxGroup ? `promax_${a.proMaxSiblings[0]?.analysis_data?.proMaxRunId}` : a.id}
                   analysis={a}
                   deletingId={deletingId}
                   setDeletingId={setDeletingId}
                   onToggleFavorite={toggleFavorite}
                   onDelete={deleteAnalysis}
-                  onClick={() =>
-                    router.push(
-                      `/v2/analyze?address=${encodeURIComponent(a.address)}&id=${a.id}`
-                    )
-                  }
+                  onClick={() => {
+                    if (a.isProMaxGroup && a.proMaxSiblings?.length > 0) {
+                      const ids = a.proMaxSiblings
+                        .map((s: any) => s.id)
+                        .join(",");
+                      router.push(
+                        `/v2/analyze?address=${encodeURIComponent(a.address)}&ids=${ids}&promax=1`
+                      );
+                    } else {
+                      router.push(
+                        `/v2/analyze?address=${encodeURIComponent(a.address)}&id=${a.id}`
+                      );
+                    }
+                  }}
                 />
               ))}
             </div>
