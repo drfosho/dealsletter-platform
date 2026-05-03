@@ -744,10 +744,17 @@ function AnalyzeContent() {
           const buildOne = (data: any) => {
             let parsedFullAnalysis: any = {};
             try {
-              if (data.full_analysis && typeof data.full_analysis === "string") {
-                parsedFullAnalysis = JSON.parse(data.full_analysis);
-              } else if (typeof data.full_analysis === "object") {
-                parsedFullAnalysis = data.full_analysis;
+              // full_analysis is nested under ai_analysis, not at top level
+              const fullAnalysisStr =
+                data.ai_analysis?.full_analysis ||
+                data.ai_analysis?.summary;
+              if (fullAnalysisStr && typeof fullAnalysisStr === "string") {
+                parsedFullAnalysis = JSON.parse(fullAnalysisStr);
+              } else if (
+                fullAnalysisStr &&
+                typeof fullAnalysisStr === "object"
+              ) {
+                parsedFullAnalysis = fullAnalysisStr;
               }
             } catch {
               parsedFullAnalysis = {};
@@ -822,55 +829,59 @@ function AnalyzeContent() {
                 ad.purchasePrice ||
                 parsedFullAnalysis.purchasePrice,
               rehabCost:
+                ad.calculatedMetrics?.rehabCost ||
                 ad.rehabCost ||
-                ad.rehabCosts ||
-                parsedFullAnalysis.rehabCost ||
                 data.rehab_costs ||
                 0,
-              holdingCosts:
-                ad.holdingCosts ||
-                parsedFullAnalysis.holdingCosts ||
-                ad.calculatedMetrics?.holdingCosts ||
+              downPayment:
+                ad.calculatedMetrics?.downPayment ||
+                ad.downPayment ||
                 0,
               closingCosts:
-                ad.closingCosts ||
-                parsedFullAnalysis.closingCosts ||
                 ad.calculatedMetrics?.closingCosts ||
+                ad.closingCosts ||
                 0,
               buySideClosing:
-                ad.buySideClosing ||
                 ad.calculatedMetrics?.buySideClosing ||
+                ad.buySideClosing ||
                 0,
               sellingCosts:
-                ad.sellingCosts ||
-                parsedFullAnalysis.sellingCosts ||
                 ad.calculatedMetrics?.sellingCosts ||
+                ad.sellingCosts ||
                 0,
               sellSideClosing:
-                ad.sellSideClosing ||
                 ad.calculatedMetrics?.sellSideClosing ||
+                ad.sellSideClosing ||
                 0,
-              downPayment:
-                ad.downPayment ||
-                parsedFullAnalysis.downPayment ||
-                ad.calculatedMetrics?.downPayment ||
+              holdingCosts:
+                ad.calculatedMetrics?.holdingCosts ||
+                ad.holdingCosts ||
                 0,
               totalProjectCost:
-                ad.totalProjectCost ||
                 ad.calculatedMetrics?.totalProjectCost ||
+                ad.totalProjectCost ||
                 0,
               pointsCost:
-                ad.pointsCost || ad.calculatedMetrics?.pointsCost || 0,
+                ad.calculatedMetrics?.pointsCost ||
+                ad.pointsCost ||
+                0,
               isHardMoney:
-                ad.isHardMoney ||
                 ad.calculatedMetrics?.isHardMoney ||
+                ad.isHardMoney ||
                 false,
-              mao70: ad.mao70 || ad.calculatedMetrics?.mao70 || 0,
-              mao85: ad.mao85 || ad.calculatedMetrics?.mao85 || 0,
+              mao70:
+                ad.calculatedMetrics?.mao70 || ad.mao70 || 0,
+              mao85:
+                ad.calculatedMetrics?.mao85 || ad.mao85 || 0,
               holdingPeriodMonths:
-                ad.holdingPeriodMonths ||
                 ad.calculatedMetrics?.holdingPeriodMonths ||
+                ad.holdingPeriodMonths ||
                 6,
+              cashRequired:
+                ad.calculatedMetrics?.cashRequired ||
+                ad.calculatedMetrics?.totalInvestment ||
+                ad.cashRequired ||
+                0,
               cashFlow:
                 parsedFullAnalysis.cashFlow?.monthly ||
                 parsedSummary.cashFlow?.monthly ||
@@ -978,13 +989,19 @@ function AnalyzeContent() {
           strategyMap[data.strategy] || data.deal_type || "Buy & Hold";
         setSelectedStrategy(strategyLabel);
 
-        // full_analysis is a JSON string that needs parsing
+        // full_analysis is nested under ai_analysis, not at top level
         let parsedFullAnalysis: any = {};
         try {
-          if (data.full_analysis && typeof data.full_analysis === "string") {
-            parsedFullAnalysis = JSON.parse(data.full_analysis);
-          } else if (typeof data.full_analysis === "object") {
-            parsedFullAnalysis = data.full_analysis;
+          const fullAnalysisStr =
+            data.ai_analysis?.full_analysis ||
+            data.ai_analysis?.summary;
+          if (fullAnalysisStr && typeof fullAnalysisStr === "string") {
+            parsedFullAnalysis = JSON.parse(fullAnalysisStr);
+          } else if (
+            fullAnalysisStr &&
+            typeof fullAnalysisStr === "object"
+          ) {
+            parsedFullAnalysis = fullAnalysisStr;
           }
         } catch {
           parsedFullAnalysis = {};
@@ -1079,65 +1096,68 @@ function AnalyzeContent() {
             analysisData.purchasePrice ||
             parsedFullAnalysis.purchasePrice,
 
-          // Flip-specific fields (waterfall UI on saved load)
+          // Flip-specific fields — calculatedMetrics is the authoritative
+          // server-computed source after the prior fix expanded what gets
+          // persisted. Loose top-level analysisData.X kept as a fallback for
+          // older rows that predated that change.
           rehabCost:
+            analysisData.calculatedMetrics?.rehabCost ||
             analysisData.rehabCost ||
-            analysisData.rehabCosts ||
-            parsedFullAnalysis.rehabCost ||
             data.rehab_costs ||
             0,
-          holdingCosts:
-            analysisData.holdingCosts ||
-            parsedFullAnalysis.holdingCosts ||
-            analysisData.calculatedMetrics?.holdingCosts ||
+          downPayment:
+            analysisData.calculatedMetrics?.downPayment ||
+            analysisData.downPayment ||
             0,
           closingCosts:
-            analysisData.closingCosts ||
-            parsedFullAnalysis.closingCosts ||
             analysisData.calculatedMetrics?.closingCosts ||
+            analysisData.closingCosts ||
             0,
           buySideClosing:
-            analysisData.buySideClosing ||
             analysisData.calculatedMetrics?.buySideClosing ||
+            analysisData.buySideClosing ||
             0,
           sellingCosts:
-            analysisData.sellingCosts ||
-            parsedFullAnalysis.sellingCosts ||
             analysisData.calculatedMetrics?.sellingCosts ||
+            analysisData.sellingCosts ||
             0,
           sellSideClosing:
-            analysisData.sellSideClosing ||
             analysisData.calculatedMetrics?.sellSideClosing ||
+            analysisData.sellSideClosing ||
             0,
-          downPayment:
-            analysisData.downPayment ||
-            parsedFullAnalysis.downPayment ||
-            analysisData.calculatedMetrics?.downPayment ||
+          holdingCosts:
+            analysisData.calculatedMetrics?.holdingCosts ||
+            analysisData.holdingCosts ||
             0,
           totalProjectCost:
-            analysisData.totalProjectCost ||
             analysisData.calculatedMetrics?.totalProjectCost ||
+            analysisData.totalProjectCost ||
             0,
           pointsCost:
-            analysisData.pointsCost ||
             analysisData.calculatedMetrics?.pointsCost ||
+            analysisData.pointsCost ||
             0,
           isHardMoney:
-            analysisData.isHardMoney ||
             analysisData.calculatedMetrics?.isHardMoney ||
+            analysisData.isHardMoney ||
             false,
           mao70:
-            analysisData.mao70 ||
             analysisData.calculatedMetrics?.mao70 ||
+            analysisData.mao70 ||
             0,
           mao85:
-            analysisData.mao85 ||
             analysisData.calculatedMetrics?.mao85 ||
+            analysisData.mao85 ||
             0,
           holdingPeriodMonths:
-            analysisData.holdingPeriodMonths ||
             analysisData.calculatedMetrics?.holdingPeriodMonths ||
+            analysisData.holdingPeriodMonths ||
             6,
+          cashRequired:
+            analysisData.calculatedMetrics?.cashRequired ||
+            analysisData.calculatedMetrics?.totalInvestment ||
+            analysisData.cashRequired ||
+            0,
 
           cashFlow:
             parsedFullAnalysis.cashFlow?.monthly ||
