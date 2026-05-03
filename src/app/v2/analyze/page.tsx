@@ -345,10 +345,14 @@ function AnalyzeContent() {
 
   const address = searchParams.get("address") || "";
   const savedAnalysisId = searchParams?.get("id") || null;
+  const savedAnalysisIds = searchParams?.get("ids") || null;
+  const isProMaxLoad = searchParams?.get("promax") === "1";
   const requestedModel = searchParams.get("model") || "speed";
   const [selectedModel, setSelectedModel] = useState("speed");
   const [isLoadingSaved, setIsLoadingSaved] = useState(false);
   const [savedAnalysisLoaded, setSavedAnalysisLoaded] = useState(false);
+  const [savedTier, setSavedTier] = useState<"free" | "pro" | "pro_max">("free");
+  const [savedModelLabel, setSavedModelLabel] = useState<string | null>(null);
 
   /* --- Property data states --- */
   const [propertyData, setPropertyData] = useState<any>(null);
@@ -451,6 +455,7 @@ function AnalyzeContent() {
     totalModels,
     resetResults: resetProMaxResults,
     runParallelAnalysis,
+    loadSavedResults: loadSavedProMaxResults,
   } = useProMaxAnalysis();
   const [proMaxMode, setProMaxMode] = useState(false);
   const [expandedModel, setExpandedModel] = useState<string | null>(null);
@@ -707,9 +712,251 @@ function AnalyzeContent() {
     loadUserTier();
   }, []);
 
+  // Re-sync savedTier when userTier resolves after a saved single-row load.
+  // Pro Max saves hardcode "pro_max" and don't need this catch-up.
+  useEffect(() => {
+    if (
+      savedAnalysisLoaded &&
+      !proMaxMode &&
+      savedTier === "free" &&
+      userTier !== "free"
+    ) {
+      setSavedTier(userTier);
+    }
+  }, [userTier, savedAnalysisLoaded, proMaxMode, savedTier]);
+
   /* ---------- Load saved analysis if id param present ------------- */
 
   useEffect(() => {
+    // Multi-ID Pro Max load takes priority when ?ids=...&promax=1 is present.
+    // Reconstructs the 3 sibling rows into the comparison view's hook state.
+    if (isProMaxLoad && savedAnalysisIds) {
+      const loadProMaxGroup = async () => {
+        setIsLoadingSaved(true);
+        try {
+          const ids = savedAnalysisIds.split(",").filter(Boolean);
+          const results = await Promise.all(
+            ids.map((id) =>
+              fetch(`/api/analysis/${id}`).then((r) => r.json()),
+            ),
+          );
+
+          const buildOne = (data: any) => {
+            let parsedFullAnalysis: any = {};
+            try {
+              if (data.full_analysis && typeof data.full_analysis === "string") {
+                parsedFullAnalysis = JSON.parse(data.full_analysis);
+              } else if (typeof data.full_analysis === "object") {
+                parsedFullAnalysis = data.full_analysis;
+              }
+            } catch {
+              parsedFullAnalysis = {};
+            }
+
+            let parsedSummary: any = {};
+            try {
+              const summary = data.ai_analysis?.summary;
+              if (summary && typeof summary === "string") {
+                parsedSummary = JSON.parse(summary);
+              } else if (typeof summary === "object") {
+                parsedSummary = summary || {};
+              }
+            } catch {
+              parsedSummary = {};
+            }
+
+            const ad = data.analysis_data || {};
+            const ai = data.ai_analysis || {};
+
+            const savedResult: AnalysisResult = {
+              dealScore:
+                parsedFullAnalysis.dealScore ||
+                parsedSummary.dealScore ||
+                ad.dealScore ||
+                undefined,
+              narrative:
+                parsedFullAnalysis.narrative ||
+                parsedSummary.narrative ||
+                parsedFullAnalysis.analysis ||
+                parsedSummary.analysis ||
+                parsedFullAnalysis.recommendation ||
+                parsedSummary.recommendation ||
+                undefined,
+              riskFlags:
+                parsedFullAnalysis.riskFlags ||
+                parsedSummary.riskFlags ||
+                ai.risks ||
+                ad.riskFlags ||
+                [],
+              metrics:
+                parsedFullAnalysis.metrics ||
+                parsedSummary.metrics ||
+                ai.financial_metrics ||
+                ad.metrics ||
+                {},
+              cashFlow:
+                parsedFullAnalysis.cashFlow ||
+                parsedSummary.cashFlow ||
+                ad.cashFlow ||
+                undefined,
+              proForma:
+                parsedFullAnalysis.proForma ||
+                parsedSummary.proForma ||
+                ad.proForma ||
+                undefined,
+              recommendation:
+                parsedFullAnalysis.recommendation ||
+                parsedSummary.recommendation ||
+                ad.recommendation ||
+                undefined,
+              marketContext:
+                parsedFullAnalysis.marketContext ||
+                parsedSummary.marketContext ||
+                ad.marketContext ||
+                undefined,
+            };
+
+            const savedCalculations = {
+              purchasePrice:
+                data.purchase_price ||
+                ad.purchasePrice ||
+                parsedFullAnalysis.purchasePrice,
+              rehabCost:
+                ad.rehabCost ||
+                ad.rehabCosts ||
+                parsedFullAnalysis.rehabCost ||
+                data.rehab_costs ||
+                0,
+              holdingCosts:
+                ad.holdingCosts ||
+                parsedFullAnalysis.holdingCosts ||
+                ad.calculatedMetrics?.holdingCosts ||
+                0,
+              closingCosts:
+                ad.closingCosts ||
+                parsedFullAnalysis.closingCosts ||
+                ad.calculatedMetrics?.closingCosts ||
+                0,
+              buySideClosing:
+                ad.buySideClosing ||
+                ad.calculatedMetrics?.buySideClosing ||
+                0,
+              sellingCosts:
+                ad.sellingCosts ||
+                parsedFullAnalysis.sellingCosts ||
+                ad.calculatedMetrics?.sellingCosts ||
+                0,
+              sellSideClosing:
+                ad.sellSideClosing ||
+                ad.calculatedMetrics?.sellSideClosing ||
+                0,
+              downPayment:
+                ad.downPayment ||
+                parsedFullAnalysis.downPayment ||
+                ad.calculatedMetrics?.downPayment ||
+                0,
+              totalProjectCost:
+                ad.totalProjectCost ||
+                ad.calculatedMetrics?.totalProjectCost ||
+                0,
+              pointsCost:
+                ad.pointsCost || ad.calculatedMetrics?.pointsCost || 0,
+              isHardMoney:
+                ad.isHardMoney ||
+                ad.calculatedMetrics?.isHardMoney ||
+                false,
+              mao70: ad.mao70 || ad.calculatedMetrics?.mao70 || 0,
+              mao85: ad.mao85 || ad.calculatedMetrics?.mao85 || 0,
+              holdingPeriodMonths:
+                ad.holdingPeriodMonths ||
+                ad.calculatedMetrics?.holdingPeriodMonths ||
+                6,
+              cashFlow:
+                parsedFullAnalysis.cashFlow?.monthly ||
+                parsedSummary.cashFlow?.monthly ||
+                ad.cashFlow?.monthly ||
+                ai.financial_metrics?.monthly_cash_flow,
+              roi:
+                data.roi || parsedFullAnalysis.roi || parsedSummary.roi,
+              netProfit:
+                data.profit ||
+                parsedFullAnalysis.netProfit ||
+                parsedSummary.netProfit,
+              arv:
+                ad.arv ||
+                parsedFullAnalysis.arv ||
+                parsedSummary.arv ||
+                ai.financial_metrics?.arv,
+              capRate:
+                parsedFullAnalysis.capRate ||
+                parsedSummary.capRate ||
+                ai.financial_metrics?.cap_rate,
+              cashOnCash:
+                parsedFullAnalysis.cashOnCash ||
+                parsedSummary.cashOnCash ||
+                ai.financial_metrics?.cash_on_cash_return,
+              totalInvestment:
+                parsedFullAnalysis.totalInvestment ||
+                parsedSummary.totalInvestment ||
+                ai.financial_metrics?.total_investment ||
+                ad.totalCashInvested,
+            };
+
+            return { ad, savedResult, savedCalculations };
+          };
+
+          const siblings = results.map((data) => {
+            const built = buildOne(data);
+            return {
+              modelId: built.ad.modelId,
+              modelLabel: built.ad.modelLabel,
+              provider: built.ad.modelProvider,
+              status: "complete" as const,
+              parsedResult: built.savedResult,
+              serverCalculations: built.savedCalculations,
+            };
+          }).filter((s) => !!s.modelId);
+
+          loadSavedProMaxResults(siblings as any);
+
+          // Common state from the first result
+          const first = results[0] || {};
+          const firstAd = first.analysis_data || {};
+          const strategyMap: Record<string, string> = {
+            rental: "Buy & Hold",
+            flip: "Fix & Flip",
+            brrrr: "BRRRR",
+            "house-hack": "House Hack",
+          };
+          setSelectedStrategy(
+            strategyMap[first.strategy] || first.deal_type || "Buy & Hold",
+          );
+
+          const propData = first.property_data || {
+            address: first.address,
+            beds: firstAd.beds,
+            baths: firstAd.baths,
+            sqft: firstAd.sqft,
+            estimatedValue: firstAd.purchasePrice,
+          };
+          setEditedProperty((prev) => ({ ...prev, ...propData }));
+
+          setSavedTier("pro_max");
+          setSavedModelLabel("Max IQ Analysis");
+          setProMaxMode(true);
+          setHasAnalyzed(true);
+          setSavedAnalysisLoaded(true);
+        } catch (err) {
+          console.error("Failed to load saved Pro Max group:", err);
+        } finally {
+          setIsLoadingSaved(false);
+        }
+      };
+
+      loadProMaxGroup();
+      return;
+    }
+
     if (!savedAnalysisId) return;
 
     const loadSavedAnalysis = async () => {
@@ -758,6 +1005,17 @@ function AnalyzeContent() {
 
         const analysisData = data.analysis_data || {};
         const aiAnalysis = data.ai_analysis || {};
+
+        // Extract model identity from saved data
+        const savedModelLabelLocal: string | null =
+          analysisData.modelLabel || analysisData.model || null;
+        const savedIsProMax = analysisData.isProMax === true;
+        const savedTierLocal: "free" | "pro" | "pro_max" = savedIsProMax
+          ? "pro_max"
+          : ((data.tier || userTier || "free") as "free" | "pro" | "pro_max");
+
+        setSavedModelLabel(savedModelLabelLocal);
+        setSavedTier(savedTierLocal);
 
         const savedResult: AnalysisResult = {
           dealScore:
@@ -820,6 +1078,67 @@ function AnalyzeContent() {
             data.purchase_price ||
             analysisData.purchasePrice ||
             parsedFullAnalysis.purchasePrice,
+
+          // Flip-specific fields (waterfall UI on saved load)
+          rehabCost:
+            analysisData.rehabCost ||
+            analysisData.rehabCosts ||
+            parsedFullAnalysis.rehabCost ||
+            data.rehab_costs ||
+            0,
+          holdingCosts:
+            analysisData.holdingCosts ||
+            parsedFullAnalysis.holdingCosts ||
+            analysisData.calculatedMetrics?.holdingCosts ||
+            0,
+          closingCosts:
+            analysisData.closingCosts ||
+            parsedFullAnalysis.closingCosts ||
+            analysisData.calculatedMetrics?.closingCosts ||
+            0,
+          buySideClosing:
+            analysisData.buySideClosing ||
+            analysisData.calculatedMetrics?.buySideClosing ||
+            0,
+          sellingCosts:
+            analysisData.sellingCosts ||
+            parsedFullAnalysis.sellingCosts ||
+            analysisData.calculatedMetrics?.sellingCosts ||
+            0,
+          sellSideClosing:
+            analysisData.sellSideClosing ||
+            analysisData.calculatedMetrics?.sellSideClosing ||
+            0,
+          downPayment:
+            analysisData.downPayment ||
+            parsedFullAnalysis.downPayment ||
+            analysisData.calculatedMetrics?.downPayment ||
+            0,
+          totalProjectCost:
+            analysisData.totalProjectCost ||
+            analysisData.calculatedMetrics?.totalProjectCost ||
+            0,
+          pointsCost:
+            analysisData.pointsCost ||
+            analysisData.calculatedMetrics?.pointsCost ||
+            0,
+          isHardMoney:
+            analysisData.isHardMoney ||
+            analysisData.calculatedMetrics?.isHardMoney ||
+            false,
+          mao70:
+            analysisData.mao70 ||
+            analysisData.calculatedMetrics?.mao70 ||
+            0,
+          mao85:
+            analysisData.mao85 ||
+            analysisData.calculatedMetrics?.mao85 ||
+            0,
+          holdingPeriodMonths:
+            analysisData.holdingPeriodMonths ||
+            analysisData.calculatedMetrics?.holdingPeriodMonths ||
+            6,
+
           cashFlow:
             parsedFullAnalysis.cashFlow?.monthly ||
             parsedSummary.cashFlow?.monthly ||
@@ -872,15 +1191,17 @@ function AnalyzeContent() {
         setHasAnalyzed(true);
         setSavedAnalysisLoaded(true);
 
-        // Set the model label if available
-        const modelLabel = analysisData.modelLabel || analysisData.model || "Balanced (Auto)";
-        setSelectedModel(
-          modelLabel.toLowerCase().includes("opus")
-            ? "max"
-            : modelLabel.toLowerCase().includes("mini")
-              ? "speed"
-              : "balanced"
-        );
+        // Set the model toggle for the UI when we know which model ran.
+        // Falls through (keeps current toggle) when no identity was saved.
+        if (savedModelLabelLocal) {
+          setSelectedModel(
+            savedModelLabelLocal.toLowerCase().includes("opus")
+              ? "max"
+              : savedModelLabelLocal.toLowerCase().includes("mini")
+                ? "speed"
+                : "balanced"
+          );
+        }
       } catch (err) {
         console.error("Failed to load saved analysis:", err);
       } finally {
@@ -889,7 +1210,8 @@ function AnalyzeContent() {
     };
 
     loadSavedAnalysis();
-  }, [savedAnalysisId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedAnalysisId, savedAnalysisIds, isProMaxLoad]);
 
   /* ---------- Strategy defaults ---------------------------------- */
 
@@ -3408,7 +3730,13 @@ function AnalyzeContent() {
             selectedStrategy={selectedStrategy}
             address={address}
             editedProperty={editedProperty}
-            userTier={userTier}
+            userTier={
+              proMaxMode
+                ? userTier !== "free"
+                  ? userTier
+                  : "pro_max"
+                : userTier
+            }
           />
         ) : null}
 
@@ -3482,8 +3810,12 @@ function AnalyzeContent() {
               address={address}
               propertyData={editedProperty}
               calculations={serverCalculations}
-              tier={userTier}
-              model={modelInfo?.modelLabel || "AI Analysis"}
+              tier={savedAnalysisLoaded ? savedTier : userTier}
+              model={
+                savedAnalysisLoaded
+                  ? savedModelLabel || "AI Analysis"
+                  : modelInfo?.modelLabel || "AI Analysis"
+              }
             />
 
             {/* Sign-in nudge for free/anonymous users */}
