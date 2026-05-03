@@ -128,18 +128,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
       // CRITICAL: Include full analysis_data so components can access all original values
       analysis_data: analysis.analysis_data || {},
-      status: analysis.analysis_data?.status || 'completed',
-      // Saved-analysis loaders parse this as the AI output object.
-      // Stringified so the existing JSON.parse path works unchanged.
-      full_analysis: (() => {
-        const ai = analysis.analysis_data?.ai_analysis;
-        if (!ai) return null;
-        return typeof ai === 'string' ? ai : JSON.stringify(ai);
-      })(),
-      deal_score:
-        analysis.analysis_data?.ai_analysis?.dealScore ||
-        analysis.analysis_data?.dealScore ||
-        null
+      status: analysis.analysis_data?.status || 'completed'
     };
 
     console.log('[Analysis GET] Financial metrics in response:', {
