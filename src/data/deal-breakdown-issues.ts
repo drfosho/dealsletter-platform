@@ -43,6 +43,324 @@ export interface DealBreakdownIssue {
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
   {
+    slug: 'issue-155-dighton-hotel-selma-18unit-harlingen-9unit-san-diego-house-hack',
+    issueNumber: 155,
+    date: 'May 2026',
+    title: 'TransAmerica Trail Hotel + Selma 18-Unit + Harlingen 9-Unit Cash Play + San Diego Detached Duplex House Hack',
+    previewText: '$25K into a 13,320 SF operating hotel on the TransAmerica Bicycle Trail. 18 brick homes in Selma at $26K/unit. 9-unit Harlingen cash play with real vs. stated cap rate. San Diego house hack — two detached homes, $265/mo above renting.',
+    ctaStrategy: 'buyhold',
+    sponsor: undefined,
+    properties: [
+      {
+        address: '244 E Long St',
+        city: 'Dighton, KS 67839',
+        price: 199900,
+        units: 15,
+        capRate: 22,
+        coc: 105,
+        cashRequired: 25000,
+        annualCashFlow: 26250,
+        verdict: 'Conditional buy — verify trailing P&L, commission building inspection, buy only if you plan to operate it yourself',
+        score: '6.5/10',
+        scoreValue: 6.5,
+        tag: 'TRAIL TOWN OPERATOR PLAY',
+        tagColor: '#7F77DD',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/244-E-Long-St-Dighton-KS/35823415/',
+        opportunity: 'The Historic Heritage Hotel sits directly on the Adventure Cycling Association\'s TransAmerica Bicycle Trail — one of North America\'s most traveled long-distance cycling routes — creating documented seasonal demand for a hotel with a structural monopoly in Dighton and no competition within 50 miles. Seller financing at 10% down and $1,500/month eliminates bank qualification entirely, the 2BR manager\'s apartment provides free on-site housing, and 20 unused rooms represent conversion upside that could triple income at modest per-room capital.',
+        risk: 'Running a furnished-room hotel in a town of 1,000 is an active daily business — front desk, housekeeping, seasonal worker relationship management, and hands-on building maintenance on 107-year-old construction. Trailing 12-month P&L verification is mandatory before the 25% cap rate claim is relied upon. Exit liquidity is measured in years, not months — this is a long hold or lifestyle asset.',
+        fullVerdict: 'Verify trailing income, commission a full building inspection with mechanical systems focus, negotiate seller financing rate, and buy only if you plan to operate it yourself. For the right owner-operator who wants a low-capital-entry lifestyle business on a famous cycling route — one of the more genuinely interesting deals available anywhere in the country at this price point.',
+      },
+      {
+        address: '3 Luker Cir',
+        city: 'Selma, AL 36701',
+        price: 474900,
+        units: 18,
+        capRate: 19.25,
+        coc: 20.3,
+        cashRequired: 182972,
+        annualCashFlow: 37146,
+        verdict: 'Conditional buy — verify rent roll, commission property condition assessment on all structures, get current insurance quote',
+        score: '5.5/10',
+        scoreValue: 5.5,
+        tag: 'HIGH YIELD — HIGH RISK',
+        tagColor: '#f09595',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/3-Luker-Cir-Selma-AL/39978975/',
+        opportunity: 'Solid brick construction with terrazzo floors, separate utility meters with tenants paying all utilities, and 9 acres delivering 19.25% cap rate at stated rents — a return profile that functioning markets simply do not produce. Cash flow remains positive at 30% stressed vacancy against debt service of $27,012/yr, and the scattered-site structure of 15 individual homes plus a triplex on one parcel provides 9 acres of land optionality.',
+        risk: 'Selma carries a specific and persistent risk profile — 40% population decline since 1990, 35%+ county poverty rate, above-average crime, municipal fiscal distress, and post-2023 tornado insurance cost increases. The $50,000 rehab across 18 individual structures is $2,778/unit — cosmetics only, not mechanical systems. A property condition assessment is non-negotiable before committing.',
+        fullVerdict: 'Conditional buy for an experienced Alabama operator who can verify the actual rent roll and occupancy, commission a building inspection on all structures, obtain a current insurance quote, and access competent local property management. For the right buyer with the right infrastructure — the CoC math at realistic vacancy is difficult to find anywhere else at this price.',
+      },
+      {
+        address: '201 E Washington Ave',
+        city: 'Harlingen, TX 78550',
+        price: 300000,
+        units: 9,
+        capRate: 11.9,
+        coc: 11.9,
+        cashRequired: 300000,
+        annualCashFlow: 35720,
+        verdict: 'Conditional buy — pull Cameron County title, confirm flood zone, identify why cash only, rebuild expense model before submitting',
+        score: '6/10',
+        scoreValue: 6,
+        tag: 'RGV CASH FLOW PLAY',
+        tagColor: '#EF9F27',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/201-E-Washington-Ave-Harlingen-TX/26458416/',
+        opportunity: 'Nine units in a growing Rio Grande Valley city at $33,333/unit with tenants paying all utilities via separate meters, a 2022 renovation reducing near-term capex risk, and current rents of $625–$675 sitting 10–20% below a fully renovated Harlingen market ceiling. At a realistic 11–14% cap rate on a clean $300K cash acquisition, this generates $35,000–$42,000/yr in annual income with no debt service and meaningful upside as leases roll toward market.',
+        risk: 'The stated 21.32% cap rate includes essentially zero operating expenses — no insurance, management, vacancy, or maintenance. Fully loaded, the real cap rate is 11–14%. The cash-only requirement signals a lender disqualifier — likely the near-zero parking ratio (0.16/1,000 SF for 9 units in car-dependent Texas), possible Cameron County flood zone designation, or a title issue that must be identified before closing.',
+        fullVerdict: 'Conditional buy pending investigation of the cash-only constraint, Cameron County title and flood zone confirmation, and verification of the 2022 renovation scope. If all three resolve cleanly — $300K cash for 9 units in a growing Texas Sun Belt market at a real 11–14% cap rate is a legitimate income-focused acquisition.',
+      },
+      {
+        address: '3041 Valle Ave',
+        city: 'San Diego, CA 92113',
+        price: 779900,
+        units: 2,
+        capRate: 0,
+        coc: 0,
+        cashRequired: 62392,
+        annualCashFlow: 0,
+        verdict: 'Buy — confirm financing, verify R-4 ADU optionality with SD planning, execute',
+        score: '7.5/10',
+        scoreValue: 7.5,
+        tag: 'BEST SD HOUSE HACK',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.zillow.com/homedetails/3041-Valle-Ave-San-Diego-CA-92113/295362032_zpid/',
+        opportunity: 'Logan Heights R-4 duplex with two fully detached 2BD/1BA homes and dedicated parking for each — no shared walls, no forced-small ADU, no lifestyle trade-off. Renting the second house at the $2,875 market rate reduces effective owner housing cost to $3,140/month at 5% down — a $265/month premium over simply renting in the same neighborhood, while building equity in a $779,900 San Diego asset on a 7,405 SF R-4 lot with development potential for 1–3 additional units.',
+        risk: 'PMI adds $432/month until approximately 20% equity is reached in 5–7 years. Logan Heights crime exceeds San Diego average — visit the property and neighborhood before committing. AB 1482 California rent control applies to the rental unit after 12 months of tenancy. R-4 ADU development potential requires City of San Diego planning confirmation before modeling additional unit upside.',
+        fullVerdict: 'Buy. Confirm financing, verify R-4 ADU optionality with SD planning, understand California AB 1482 landlord-tenant law before placing a tenant, and execute. At $265/month above renting to own a $780K San Diego asset with a development lot — this is the house hack setup most buyers are searching for and rarely find at this price.',
+      },
+    ],
+    content: `
+## This Week's Deals
+
+Four properties across four completely different markets and theses — a 107-year-old operating hotel on the TransAmerica Bicycle Trail for $25K down, 18 brick homes in Selma Alabama at $26K/unit, a 9-unit Harlingen Texas cash play with a 21% headline cap rate that needs serious expense reconstruction, and a San Diego detached duplex house hack at $265/month above renting.
+
+---
+
+## 🏨 Historic Heritage Hotel — Dighton, KS TransAmerica Trail Play
+
+**244 E Long St, Dighton, KS 67839 · 15 Active Rooms + Manager's Unit · $199,900**
+**10% Down · $1,500/mo Seller Financing · ~$25,000 Total Cash In**
+
+This is the most unusual deal in this issue — and possibly the most misunderstood at first glance.
+
+### Why Dighton?
+
+Dighton (pop. ~1,000) is the county seat of Lane County in western Kansas. Three demand drivers make a furnished-room hotel viable here:
+
+**The TransAmerica Bicycle Trail.** Dighton sits directly on the Adventure Cycling Association's TransAmerica Trail — one of North America's most traveled long-distance cycling routes running from Astoria, Oregon to Yorktown, Virginia. Thousands of cyclists cross-country annually, May through September. Dighton appears in ACA's official maps as a supported community. The Heritage Hotel is the only real option for 50+ miles in either direction.
+
+**Seasonal agricultural workers.** Western Kansas is wheat and cattle country. Harvest season brings custom cutting crews through the region. Oil and gas field workers need temporary furnished housing. These workers want a room by the week — not an apartment lease.
+
+**No competition.** The Heritage Hotel is the only hotel in Dighton. In a town with no Airbnb density and no chain competition, that is a structural monopoly.
+
+### The Numbers
+
+| Metric | Conservative | Midpoint | Optimistic |
+|--------|-------------|---------|-----------|
+| Gross Revenue | $65,000 | $82,000 | $100,000 |
+| NOI | $24,250 | $44,250 | $66,000 |
+| Debt Service | $18,000 | $18,000 | $18,000 |
+| Net Cash Flow | $6,250 | $26,250 | $48,000 |
+| CoC (on $25K) | 25% | 105% | 192% |
+
+### The Seller Financing Advantage
+
+| Item | Value |
+|------|-------|
+| Down Payment | $19,990 (10%) |
+| Monthly Payment | $1,500 |
+| Annual Debt Service | $18,000 |
+| Total Cash In | ~$25,000 |
+
+No commercial lender will touch a 107-year-old rural Kansas hotel. The seller is the bank. $19,990 down to control a potentially $44,000+/yr NOI asset is the structural advantage of this deal.
+
+### The 20 Unused Rooms — Optionality
+
+The listing mentions approximately 20 additional rooms currently out of service.
+
+| Play | Cost/Room | Added Income |
+|------|-----------|-------------|
+| Bring online as hotel rooms | $3,000–$8,000 | +$400–$600/mo per room |
+| Convert to long-term apartments | $15,000–$30,000 | +$500–$700/mo per unit |
+| Meeting/event space | $10,000–$20,000 (1–2 rooms) | $200–$500/event |
+
+Activating 10 of these 20 rooms at $500/month = $60,000/yr additional gross — potentially tripling total income.
+
+### Owner-Operator Math
+
+| Item | Value |
+|------|-------|
+| Manager's apartment (free housing) | ~$7,200/yr savings |
+| Net cash flow (midpoint) | $26,250/yr |
+| Total economic benefit | ~$33,450/yr |
+| On $25,000 invested | 134% economic return |
+
+For someone willing to relocate to rural western Kansas and run a small hotel personally — this is a legitimate path to near-complete financial independence on minimal capital.
+
+### Verdict: 6.5/10 — Conditional Buy (Owner-Operator Only)
+
+Wrong deal for a passive investor. Potentially life-changing for the right owner-operator. Verify trailing 12-month P&L, commission a building inspection on the 107-year-old structure, negotiate the seller financing rate, and buy only if you plan to operate it yourself.
+
+---
+
+## 🏘️ 3 Luker Cir — Selma, AL 18 Brick Homes
+
+**Selma, AL 36701 · 15 Individual Homes + 1 Triplex · 18 Units · $474,900**
+**$26,383/unit · Tenant-Pays-All-Utilities · 9 Acres**
+
+The 19.25% cap rate is not a mistake. It reflects an accurate risk premium for what Selma, Alabama actually is in 2026.
+
+### The Market Reality
+
+| Factor | Detail |
+|--------|--------|
+| Population | ~16,000 — down 40% from 28,000+ in 1990 |
+| Poverty rate | 35%+ (Dallas County) — more than 2x national average |
+| January 2023 tornado | Significant EF2 damage — insurance costs elevated |
+| Crime | Significantly above Alabama state and national averages |
+
+The yield is the compensation for these risks. Understanding that is the entire investment decision.
+
+### The Numbers (Stress-Tested)
+
+| Scenario | Vacancy | NOI | Net CF | CoC |
+|----------|---------|-----|--------|-----|
+| Proforma (0%) | 0% | $91,398 | $64,386 | 35.2% |
+| Optimistic (10%) | 10% | $77,778 | $50,766 | 27.7% |
+| Realistic (20%) | 20% | $64,158 | $37,146 | 20.3% |
+| Stressed (30%) | 30% | $50,538 | $23,526 | 12.9% |
+
+**Cash flow survives 30% vacancy.** At $50,538 NOI in the worst stress scenario, debt service of $27,012 is covered. The financial resilience is genuine.
+
+### The $50,000 Rehab Problem
+
+$50,000 across 18 units = **$2,778/unit** — enough for paint and cleaning, nothing else. This does not cover HVAC replacements, roofing, electrical panels, or plumbing updates on 1960s–1970s brick construction. Budget $100,000–$200,000 in realistic maintenance reserves beyond the stated rehab before closing.
+
+### The Section 8 Angle
+
+At $630/unit in Selma, the reliable tenancy model is HCV Section 8. Dallas County voucher payment standards run approximately $650–$750/month for 2BR units. Guaranteed government payment — but it requires annual HUD inspections on all 18 units and active compliance management. This is not passive.
+
+### Verdict: 5.5/10 — Conditional (Experienced Operator Only)
+
+Real yield, real risks. Verify the actual rent roll and occupancy, commission a property condition assessment on all structures, get a current insurance quote post-tornado, and only proceed if you have competent local management in Selma. Not a beginner's deal.
+
+---
+
+## 🏢 Washington Apartments — Harlingen, TX 9-Unit Cash Play
+
+**201 E Washington Ave, Harlingen, TX 78550 · 9 Units · $300,000 · Cash Only**
+**5 × 1BD + 4 × 2BD · Tenants Pay All Utilities · 2022 Renovation**
+
+The 21.32% cap rate headline and the cash-only requirement need to be analyzed together — one explains the other.
+
+### The Real Cap Rate
+
+The LoopNet financial summary shows $2,543 in total expenses — property taxes only. No insurance, no management, no maintenance, no vacancy.
+
+| Scenario | NOI | Cap Rate | CoC |
+|----------|-----|---------|-----|
+| As stated (taxes only) | $67,657 | 22.6% | 22.6% |
+| Realistic (10% vacancy, full expenses) | $27,950 | 9.3% | 9.3% |
+| Optimistic (5% vacancy) | $32,010 | 10.7% | 10.7% |
+| Full occupancy, real opex | $35,720 | 11.9% | 11.9% |
+
+**The real cap rate is 9–12%, not 21%.** Still functional for Harlingen Class C — but buyers who model the headline number will be disappointed month one.
+
+### Why Cash Only?
+
+| Reason | Likelihood |
+|--------|-----------|
+| Near-zero parking (0.16/1,000 SF = ~1 space for 9 units) | High |
+| Cameron County flood zone designation | Medium |
+| Title clouds or lien issues | Medium |
+| Building condition doesn't meet lender standards | Medium |
+
+The parking ratio is the most visible red flag. In car-dependent South Texas, ~1 parking space for 9 households disqualifies most lenders. Pull the Cameron County title and flood zone map before anything else.
+
+### The Harlingen Market
+
+| Factor | Detail |
+|--------|--------|
+| Population | ~78,000 and growing |
+| Demand drivers | UTRGV Medical School, VA hospital, retail hub, border economy |
+| Current rents | $625–$675/mo at subject — 10–20% below renovated ceiling |
+| Texas property tax | Verify the "$3,300" claim at Cameron County Appraisal District |
+
+RGV rental demand is structural. At these rents, vacancy is low. The rent upside to market adds 10–20% to income as leases roll.
+
+### Verdict: 6/10 — Conditional Buy
+
+Pull the title, confirm the flood zone, identify the cash-only reason, and rebuild the expense model from scratch. If answers come back clean — $300K cash for 9 units in Harlingen at a real 11–14% cap rate is a legitimate buy.
+
+---
+
+## 🏠 3041 Valle Ave — San Diego Detached Duplex House Hack
+
+**Logan Heights, San Diego, CA 92113 · 2 Detached 2BD/1BA Houses · $779,900**
+**R-4 Multifamily Zoning · 7,405 SF Lot · Listed 4/29/2026**
+
+Two completely separate detached homes. No shared walls. No shared hallways. Dedicated parking for each. This is the premium house hack configuration.
+
+### The House Hack Math
+
+| Metric | Conventional (5%) | FHA (3.5%) |
+|--------|-----------------|-----------|
+| Down Payment | $38,995 | $27,297 |
+| Total Cash In | $62,392 | $50,694 |
+| Full PITI + PMI/MIP | $6,015/mo | $5,923/mo |
+| Rental Income | -$2,875/mo | -$2,875/mo |
+| **Net Effective Housing Cost** | **$3,140/mo** | **$3,048/mo** |
+| Market rent to rent a comparable | $2,875/mo | $2,875/mo |
+| **Premium over renting** | **+$265/mo** | **+$173/mo** |
+
+$265/month to own instead of rent in San Diego. That is the punchline.
+
+### The R-4 Zoning — The Long-Term Play
+
+| ADU Scenario | Added Income | Capitalized Value @ 5.5% cap |
+|-------------|-------------|---------------------------|
+| 1 ADU added | +$2,200/mo | +$480,000 |
+| 2 ADUs added | +$4,400/mo | +$960,000 |
+| Full R-4 build (2–3 units) | +$6,600–$8,700/mo | +$1.4M–$1.9M |
+
+R-4 zoning on 7,405 SF in San Diego is a compounding value play that operates in the background while the owner lives in one unit with a near-market effective housing cost.
+
+### Long-Term Projections
+
+| Year | Effective Housing Cost | Property Value | Total Equity |
+|------|----------------------|----------------|-------------|
+| 1 | $3,140/mo | $779,900 | $38,995 |
+| 3 | $2,850/mo | $843,540 | $185,000 |
+| 5 | $2,600/mo | $948,600 | $350,000 |
+| 7 (PMI drops) | $2,200/mo | $1,023,000 | $520,000 |
+| 10 | $1,800/mo | $1,154,000 | $775,000 |
+
+By Year 7, PMI drops. By Year 10, effective housing cost is below a market-rate 1BR in most of San Diego while equity exceeds $775,000.
+
+### Verdict: 7.5/10 — Buy
+
+The best San Diego house hack under $800K this issue has seen. Confirm financing, verify R-4 ADU optionality with City of San Diego planning, understand AB 1482 before placing a tenant, and execute.
+
+---
+
+## Deal Rankings
+
+| Property | Market | Cash In | Key Return | Score | Verdict |
+|----------|--------|---------|-----------|-------|---------|
+| SD Duplex House Hack | San Diego, CA | $62K | $265/mo above renting | 7.5/10 | ✅ Buy |
+| Dighton Hotel | Dighton, KS | $25K | 105% CoC midpoint | 6.5/10 | ⚠️ Owner-op only |
+| Harlingen 9-Unit | Harlingen, TX | $300K | 11–14% real cap | 6/10 | ⚠️ Cash + diligence |
+| Selma 18 Homes | Selma, AL | $183K | 20.3% CoC (realistic) | 5.5/10 | ⚠️ Experienced only |
+
+---
+
+*Analyze any of these deals on Dealsletter.io — multifamily, house hack, fix and flip, BRRRR, and STR analysis with live market data. 3 free analyses/month, no card needed.*
+  `,
+  },
+  {
     slug: 'issue-154-orinda-flip-echo-park-san-diego-development-tucson-value-add',
     issueNumber: 154,
     date: 'April 2026',
