@@ -561,6 +561,8 @@ export async function POST(request: NextRequest) {
             } else {
               // Update existing profile — only set columns we know exist.
               // Reset cancellation email flags so a fresh resubscribe gets fresh emails.
+              // Reset pro_welcome_email_sent so resubscribers get a fresh Pro welcome
+              // regardless of what subscription.created sees as isNewSubscriptionCycle.
               const updatePayload = {
                 subscription_tier: tierName,
                 stripe_customer_id: customerId,
@@ -570,6 +572,7 @@ export async function POST(request: NextRequest) {
                 cancel_at_period_end: subscription.cancel_at_period_end,
                 cancellation_email_pending_sent: false,
                 cancellation_email_final_sent: false,
+                pro_welcome_email_sent: false,
                 updated_at: new Date().toISOString()
               };
 

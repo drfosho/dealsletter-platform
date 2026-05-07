@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { sendV2CancellationEmail } from '@/lib/v2-emails';
 
 // Force Node.js runtime to ensure env vars are accessible
@@ -118,7 +119,11 @@ export async function POST(_request: NextRequest) {
     // ended" email is sent separately from the customer.subscription.deleted webhook.
     const customerEmail = user.email;
     if (customerEmail) {
-      const { data: claimed } = await supabase
+      // Use admin client for the claim — RLS may block the user-scoped client
+      // from updating this column, which would silently make the claim no-op
+      // and prevent the email send. Same pattern used by other atomic claims.
+      const admin = createAdminClient();
+      const { data: claimed } = await admin
         .from('user_profiles')
         .update({ cancellation_email_pending_sent: true })
         .eq('id', user.id)
