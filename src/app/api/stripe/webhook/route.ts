@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import {
   sendProWelcomeEmail as sendV2ProWelcomeEmail,
   sendProMaxWelcomeEmail as sendV2ProMaxWelcomeEmail,
+  sendV2CancellationEmail,
   sendV2CancellationCompleteEmail,
 } from '@/lib/v2-emails';
 
@@ -238,15 +239,31 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (insertError) {
-        // Table may not exist or have wrong schema — log and proceed
-        console.warn('[Webhook] ⚠️ Dedup table error (proceeding anyway):', insertError.message, insertError.code);
+        // Table may not exist or have wrong schema — log and proceed.
+        // Use a structured payload so non-PostgrestError shapes (e.g., network/fetch
+        // failures with no .message/.code fields) still surface something useful.
+        const errAny = insertError as unknown as Record<string, unknown>;
+        console.warn('[Webhook] ⚠️ Dedup table error (proceeding anyway):', {
+          message: errAny.message ?? null,
+          code: errAny.code ?? null,
+          details: errAny.details ?? null,
+          hint: errAny.hint ?? null,
+          name: errAny.name ?? null,
+          raw: insertError,
+        });
       } else if (!insertResult) {
         // No row returned means ignoreDuplicates kicked in — this is a real duplicate
         isDuplicate = true;
       }
     } catch (dedupErr) {
       // Dedup completely failed — proceed with processing
-      console.warn('[Webhook] ⚠️ Dedup check failed (proceeding anyway):', dedupErr);
+      const errAny = dedupErr as unknown as Record<string, unknown>;
+      console.warn('[Webhook] ⚠️ Dedup check failed (proceeding anyway):', {
+        message: errAny?.message ?? null,
+        name: errAny?.name ?? null,
+        stack: (dedupErr as Error)?.stack ?? null,
+        raw: dedupErr,
+      });
     }
 
     if (isDuplicate) {
@@ -308,9 +325,25 @@ export async function POST(request: NextRequest) {
           console.log('[Webhook] subscription.created - Status:', subscription.status);
           console.log('[Webhook] subscription.created - Period end:', periodEndISO);
 
+          // Detect a genuinely new subscription cycle so we can reset the welcome
+          // flag without resetting on Stripe retries of the same subscription.
+          // (A naive unconditional reset would re-arm the welcome email on every
+          // retry of subscription.created and double-send.)
+          const { data: priorProfile } = await supabase
+            .from('user_profiles')
+            .select('stripe_subscription_id')
+            .eq('id', userId)
+            .single();
+
+          const isNewSubscriptionCycle =
+            !priorProfile?.stripe_subscription_id ||
+            priorProfile.stripe_subscription_id !== subscription.id;
+
           // Only set columns we know exist (removed analyses_this_month, trial_start, trial_end)
           // Reset cancellation email flags so a fresh subscribe-then-cancel cycle gets fresh emails.
-          const updatePayload = {
+          // Reset the welcome flag only on a new subscription cycle so a returning
+          // customer (canceled and resubscribed) gets a fresh welcome email.
+          const updatePayload: Record<string, unknown> = {
             subscription_tier: tierName,
             stripe_customer_id: subscription.customer as string,
             stripe_subscription_id: subscription.id,
@@ -321,6 +354,11 @@ export async function POST(request: NextRequest) {
             cancellation_email_final_sent: false,
             updated_at: new Date().toISOString()
           };
+
+          if (isNewSubscriptionCycle) {
+            updatePayload.pro_welcome_email_sent = false;
+            console.log('[Webhook] subscription.created - New subscription cycle, resetting welcome flag');
+          }
 
           console.log('[Webhook] subscription.created - Update payload:', JSON.stringify(updatePayload));
 
@@ -724,13 +762,43 @@ export async function POST(request: NextRequest) {
               console.error('[Webhook] Upgrade email failed:', emailErr);
             }
 
-            // NOTE: Cancellation emails are NOT sent here. customer.subscription.updated
-            // fires repeatedly during a cancel-at-period-end window (price changes,
-            // billing-detail edits, dunning), so sending here produces duplicates.
-            // The immediate "we received your cancellation" email is sent from
-            // /api/stripe/cancel-subscription. The final "your subscription has ended"
-            // email is sent from customer.subscription.deleted below — each guarded
-            // by an atomic-claim flag on user_profiles.
+            // Pending cancellation email — covers billing-portal cancels that bypass
+            // /api/stripe/cancel-subscription. Atomic claim on cancellation_email_pending_sent
+            // shares the flag with the in-app endpoint, so exactly one pending email
+            // goes out per subscription cycle regardless of cancel path.
+            // subscription.updated fires repeatedly during the cancel window (price
+            // changes, billing-detail edits, dunning) — the claim catches every retry.
+            // The final "your subscription has ended" email is sent separately from
+            // customer.subscription.deleted using the cancellation_email_final_sent flag.
+            if (subscription.cancel_at_period_end) {
+              try {
+                const { data: pendingClaimed } = await supabase
+                  .from('user_profiles')
+                  .update({ cancellation_email_pending_sent: true })
+                  .eq('id', userId)
+                  .or('cancellation_email_pending_sent.is.null,cancellation_email_pending_sent.eq.false')
+                  .select('id')
+                  .maybeSingle();
+
+                if (pendingClaimed) {
+                  const customerId = typeof subscription.customer === 'string' ? subscription.customer : null;
+                  if (customerId) {
+                    const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+                    if (customer.email) {
+                      const accessUntil = new Date(periodEndISO).toLocaleDateString('en-US', {
+                        month: 'long', day: 'numeric', year: 'numeric'
+                      });
+                      await sendV2CancellationEmail(customer.email, undefined, accessUntil);
+                      console.log('[Webhook] ✉️ V2 cancellation pending email sent (billing-portal path)');
+                    }
+                  }
+                } else {
+                  console.log('[Webhook] subscription.updated - cancellation pending email already sent — skipping');
+                }
+              } catch (emailErr) {
+                console.error('[Webhook] subscription.updated - pending cancel email failed:', emailErr);
+              }
+            }
           }
         } else {
           console.error('[Webhook] subscription.updated - ❌ Could not find user for subscription:', subscription.id);
