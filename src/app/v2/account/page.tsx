@@ -63,7 +63,9 @@ export default function V2AccountPage() {
       setUser(session.user);
 
       try {
-        const res = await fetch("/api/analysis/usage");
+        const res = await fetch("/api/analysis/usage", {
+          cache: 'no-store'
+        });
         if (res.ok) setUsageInfo(await res.json());
 
         // Check cancel_at_period_end from user_profiles table
@@ -424,7 +426,7 @@ export default function V2AccountPage() {
                     }}
                   >
                     {isTrialing
-                      ? `Trial ends ${formatDate(usageInfo?.trial_end)}`
+                      ? `Trial ends ${formatDate(usageInfo?.current_period_end)}`
                       : isPaid
                         ? formatDate(usageInfo?.current_period_end)
                         : "No billing"}
