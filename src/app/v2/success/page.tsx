@@ -88,6 +88,7 @@ export default function SuccessPage() {
         if (prev <= 1) {
           clearInterval(timer)
           if (sessionChecked) {
+            router.refresh()
             router.push(redirectTarget)
           }
           return 0

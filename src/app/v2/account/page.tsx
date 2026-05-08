@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import NavBar from "@/components/v2/NavBar";
@@ -48,43 +48,54 @@ export default function V2AccountPage() {
 
   /* ---------- Load data ------------------------------------------- */
 
+  const loadData = useCallback(async () => {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.user) {
+      router.push("/v2/login");
+      return;
+    }
+
+    setUser(session.user);
+
+    try {
+      const res = await fetch("/api/analysis/usage", {
+        cache: 'no-store'
+      });
+      if (res.ok) setUsageInfo(await res.json());
+
+      // Check cancel_at_period_end from user_profiles table
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("cancel_at_period_end, current_period_end")
+        .eq("id", session.user.id)
+        .single();
+
+      setCancelAtPeriodEnd(profile?.cancel_at_period_end || false);
+    } catch (err) {
+      console.error("Failed to load usage:", err);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [router]);
+
   useEffect(() => {
-    const loadData = async () => {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    loadData();
+  }, [loadData]);
 
-      if (!session?.user) {
-        router.push("/v2/login");
-        return;
-      }
-
-      setUser(session.user);
-
-      try {
-        const res = await fetch("/api/analysis/usage", {
-          cache: 'no-store'
-        });
-        if (res.ok) setUsageInfo(await res.json());
-
-        // Check cancel_at_period_end from user_profiles table
-        const { data: profile } = await supabase
-          .from("user_profiles")
-          .select("cancel_at_period_end, current_period_end")
-          .eq("id", session.user.id)
-          .single();
-
-        setCancelAtPeriodEnd(profile?.cancel_at_period_end || false);
-      } catch (err) {
-        console.error("Failed to load usage:", err);
-      } finally {
-        setIsLoadingData(false);
+  // Refresh on bfcache restore (returning from Stripe checkout / billing portal)
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        loadData();
       }
     };
-
-    loadData();
-  }, [router]);
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [loadData]);
 
   /* ---------- Actions --------------------------------------------- */
 

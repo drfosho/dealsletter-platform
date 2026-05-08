@@ -33,7 +33,7 @@ export async function POST(_request: NextRequest) {
     const host = requestUrl.host
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const appUrl = `${protocol}://${host}`
-    const returnUrl = `${appUrl}${returnPath}`
+    const returnUrl = `${appUrl}${returnPath}?t=${Date.now()}`
     console.log('[BillingPortal] Return URL:', returnUrl)
 
     const supabase = await createClient()
