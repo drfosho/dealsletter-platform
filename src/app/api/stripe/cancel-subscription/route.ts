@@ -140,10 +140,16 @@ export async function POST(_request: NextRequest) {
 
         const firstName = (user.user_metadata?.full_name as string | undefined)?.split(' ')[0];
 
-        sendV2CancellationEmail(customerEmail, firstName, accessUntilFormatted)
-          .catch(err => console.error('[CancelSubscription] Email error:', err));
-
-        console.log('[CancelSubscription] Cancellation email queued for:', customerEmail);
+        try {
+          await sendV2CancellationEmail(
+            customerEmail,
+            firstName,
+            accessUntilFormatted
+          );
+          console.log('[CancelSubscription] ✉️ Cancellation email sent to:', customerEmail);
+        } catch (emailErr) {
+          console.error('[CancelSubscription] Email error:', emailErr);
+        }
       } else {
         console.log('[CancelSubscription] Cancellation email already sent for this cycle — skipping');
       }

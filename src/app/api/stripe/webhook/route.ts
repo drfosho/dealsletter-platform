@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription;
 
         // Get user ID from metadata, fall back to lookup by customer email
-        let userId = subscription.metadata.supabaseUserId;
+        let userId = subscription.metadata.supabaseUserId || subscription.metadata.userId;
         console.log('[Webhook] subscription.created - Subscription ID:', subscription.id);
         console.log('[Webhook] subscription.created - User ID from metadata:', userId || 'Not found');
 
@@ -296,10 +296,12 @@ export async function POST(request: NextRequest) {
             if (authUser) {
               userId = authUser.id;
               console.log('[Webhook] subscription.created - Found user by email');
+              console.log('[Webhook] subscription.created - Updating Stripe metadata for userId:', userId);
               // Update subscription metadata for future webhooks
               await stripe.subscriptions.update(subscription.id, {
                 metadata: { ...subscription.metadata, supabaseUserId: authUser.id }
               });
+              console.log('[Webhook] subscription.created - Stripe metadata updated, proceeding to DB update');
             }
           }
         }
@@ -329,6 +331,7 @@ export async function POST(request: NextRequest) {
           // flag without resetting on Stripe retries of the same subscription.
           // (A naive unconditional reset would re-arm the welcome email on every
           // retry of subscription.created and double-send.)
+          console.log('[Webhook] subscription.created - Looking up priorProfile in DB...');
           const { data: priorProfile } = await supabase
             .from('user_profiles')
             .select('stripe_subscription_id')
@@ -339,10 +342,16 @@ export async function POST(request: NextRequest) {
             !priorProfile?.stripe_subscription_id ||
             priorProfile.stripe_subscription_id !== subscription.id;
 
-          // Only set columns we know exist (removed analyses_this_month, trial_start, trial_end)
-          // Reset cancellation email flags so a fresh subscribe-then-cancel cycle gets fresh emails.
-          // Reset the welcome flag only on a new subscription cycle so a returning
-          // customer (canceled and resubscribed) gets a fresh welcome email.
+          console.log('[Webhook] subscription.created - priorProfile result:', {
+            found: !!priorProfile,
+            stripe_subscription_id: priorProfile?.stripe_subscription_id || null,
+            isNewSubscriptionCycle
+          });
+
+          // Only set columns we know exist (removed analyses_this_month, trial_start, trial_end).
+          // Cancellation email flags and the welcome flag are reset only on a new
+          // subscription cycle — resetting them on every subscription.created retry
+          // would wipe a cancel claim that has already run.
           const updatePayload: Record<string, unknown> = {
             subscription_tier: tierName,
             stripe_customer_id: subscription.customer as string,
@@ -350,14 +359,14 @@ export async function POST(request: NextRequest) {
             subscription_status: subscription.status as string,
             current_period_end: periodEndISO,
             cancel_at_period_end: subscription.cancel_at_period_end,
-            cancellation_email_pending_sent: false,
-            cancellation_email_final_sent: false,
             updated_at: new Date().toISOString()
           };
 
           if (isNewSubscriptionCycle) {
             updatePayload.pro_welcome_email_sent = false;
-            console.log('[Webhook] subscription.created - New subscription cycle, resetting welcome flag');
+            updatePayload.cancellation_email_pending_sent = false;
+            updatePayload.cancellation_email_final_sent = false;
+            console.log('[Webhook] subscription.created - New subscription cycle, resetting welcome and cancellation flags');
           }
 
           console.log('[Webhook] subscription.created - Update payload:', JSON.stringify(updatePayload));
@@ -455,7 +464,11 @@ export async function POST(request: NextRequest) {
           console.log('[Webhook] Customer has email:', !!customer.email);
 
           // Get user ID from metadata or email
-          let userId = subscription.metadata.supabaseUserId || session.metadata?.supabaseUserId;
+          let userId =
+            subscription.metadata.supabaseUserId ||
+            subscription.metadata.userId ||
+            session.metadata?.supabaseUserId ||
+            session.metadata?.userId;
           console.log('[Webhook] checkout.completed - User ID from metadata:', userId || 'Not found');
 
           if (!userId && customer.email) {
