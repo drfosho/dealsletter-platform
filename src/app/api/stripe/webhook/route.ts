@@ -883,7 +883,7 @@ export async function POST(request: NextRequest) {
               .from('user_profiles')
               .update({ cancellation_email_final_sent: true })
               .eq('id', userId)
-              .or('cancellation_email_final_sent.is.null,cancellation_email_final_sent.eq.false')
+              .not('cancellation_email_final_sent', 'is', true)
               .select('id')
               .maybeSingle();
 

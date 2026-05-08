@@ -59,6 +59,14 @@ export default function V2AccountPage() {
       return;
     }
 
+    // When returning from Stripe billing portal (?t=...), wait for the
+    // webhook to write to DB before fetching — otherwise we race ahead
+    // and read stale tier data.
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has('t')) {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
     setUser(session.user);
 
     try {

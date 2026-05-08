@@ -51,7 +51,7 @@ export default function SuccessPage() {
           const tier = data.subscription_tier
           const status = data.subscription_status
 
-          if (status === 'active' && tier !== 'free' && tier != null) {
+          if ((status === 'active' || status === 'trialing') && tier !== 'free' && tier != null) {
             const displayName =
               tier === 'pro_plus' || tier === 'pro-plus' || tier === 'premium'
                 ? 'Pro Max'
