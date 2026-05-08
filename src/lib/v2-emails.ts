@@ -537,6 +537,73 @@ export async function sendV2CancellationEmail(
   return send(email, template.subject, template.html)
 }
 
+// --- EMAIL 5b: Cancellation complete (subscription has ended) ---
+
+export const getCancellationCompleteEmailTemplate = (firstName?: string) => ({
+  subject: 'Your Dealsletter subscription has ended',
+  html: emailWrapper(`
+    <h1 style="
+      font-size: 24px;
+      font-weight: 700;
+      color: #f0eeff;
+      letter-spacing: -0.5px;
+      margin: 0 0 8px;
+    ">
+      Subscription ended
+    </h1>
+
+    <p style="
+      font-size: 15px;
+      color: #6b6690;
+      line-height: 1.7;
+      margin: 0 0 24px;
+    ">
+      ${firstName ? `Hey ${firstName} &mdash; ` : ''}your Dealsletter subscription has ended and your account has moved to the free plan.
+    </p>
+
+    <div style="
+      background: rgba(83,74,183,0.06);
+      border: 1px solid rgba(127,119,221,0.15);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    ">
+      <p style="
+        font-size: 14px;
+        color: #6b6690;
+        line-height: 1.6;
+        margin: 0;
+      ">
+        Your analysis history and account data are saved. You can resubscribe anytime and pick up right where you left off.
+      </p>
+    </div>
+
+    <div style="margin-bottom: 28px;">
+      ${emailButton('Resubscribe &rarr;', 'https://dealsletter.io/v2/pricing')}
+    </div>
+
+    ${divider}
+
+    <p style="
+      font-size: 13px;
+      color: #3a3758;
+      line-height: 1.6;
+      margin: 0;
+    ">
+      Questions? Reach us at
+      <a href="mailto:support@dealsletter.io" style="color: #534AB7;">support@dealsletter.io</a>
+    </p>
+  `)
+})
+
+export async function sendV2CancellationCompleteEmail(
+  email: string,
+  firstName?: string
+) {
+  const template = getCancellationCompleteEmailTemplate(firstName)
+  return send(email, template.subject, template.html)
+}
+
 // -------------------------------------------------------------------
 // MANUAL STEP: Update Supabase email templates
 // -------------------------------------------------------------------

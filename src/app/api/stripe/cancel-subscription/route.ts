@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
-import { sendCancellationEmail } from '@/lib/email';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { sendV2CancellationEmail } from '@/lib/v2-emails';
 
 // Force Node.js runtime to ensure env vars are accessible
 export const runtime = 'nodejs';
@@ -112,31 +113,40 @@ export async function POST(_request: NextRequest) {
 
     console.log('[CancelSubscription] Cancellation successful, access until:', accessUntilISO);
 
-    // Send cancellation confirmation email
+    // Send cancellation confirmation email — exactly once per subscription cycle.
+    // Atomic claim on cancellation_email_pending_sent prevents duplicates if the user
+    // double-clicks cancel or the request is retried. The final "your subscription has
+    // ended" email is sent separately from the customer.subscription.deleted webhook.
     const customerEmail = user.email;
     if (customerEmail) {
-      const tierName = (await supabase
+      // Use admin client for the claim — RLS may block the user-scoped client
+      // from updating this column, which would silently make the claim no-op
+      // and prevent the email send. Same pattern used by other atomic claims.
+      const admin = createAdminClient();
+      const { data: claimed } = await admin
         .from('user_profiles')
-        .select('subscription_tier')
+        .update({ cancellation_email_pending_sent: true })
         .eq('id', user.id)
-        .single())?.data?.subscription_tier || 'pro';
+        .or('cancellation_email_pending_sent.is.null,cancellation_email_pending_sent.eq.false')
+        .select('id')
+        .maybeSingle();
 
-      const planName = tierName === 'pro-plus' || tierName === 'pro_plus'
-        ? 'Pro Plus' : 'Pro';
-      const accessUntilFormatted = accessUntilISO
-        ? new Date(accessUntilISO).toLocaleDateString('en-US', {
-            month: 'long', day: 'numeric', year: 'numeric'
-          })
-        : 'end of billing period';
+      if (claimed) {
+        const accessUntilFormatted = accessUntilISO
+          ? new Date(accessUntilISO).toLocaleDateString('en-US', {
+              month: 'long', day: 'numeric', year: 'numeric'
+            })
+          : 'the end of your billing period';
 
-      sendCancellationEmail({
-        email: customerEmail,
-        name: user.user_metadata?.full_name as string || undefined,
-        planName,
-        accessUntil: accessUntilFormatted,
-      }).catch(err => console.error('[CancelSubscription] Email error:', err));
+        const firstName = (user.user_metadata?.full_name as string | undefined)?.split(' ')[0];
 
-      console.log('[CancelSubscription] Cancellation email queued for:', customerEmail);
+        sendV2CancellationEmail(customerEmail, firstName, accessUntilFormatted)
+          .catch(err => console.error('[CancelSubscription] Email error:', err));
+
+        console.log('[CancelSubscription] Cancellation email queued for:', customerEmail);
+      } else {
+        console.log('[CancelSubscription] Cancellation email already sent for this cycle — skipping');
+      }
     }
 
     return NextResponse.json({

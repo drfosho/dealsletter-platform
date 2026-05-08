@@ -88,7 +88,7 @@ function AuthCallbackContent() {
               // Fire welcome email before redirect — session is established here
               setTimeout(() => {
                 fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
-              }, 1000)
+              }, 2000)
               // Email verification flow - go to success page
               router.push('/auth/verify-success')
             } else {
@@ -129,7 +129,7 @@ function AuthCallbackContent() {
             // Fire welcome email before redirect — session is established here
             setTimeout(() => {
               fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
-            }, 1000)
+            }, 2000)
             // Email verification flow - go to success page
             router.push('/auth/verify-success')
           } else {
