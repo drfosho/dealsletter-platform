@@ -414,7 +414,7 @@ export async function POST(request: NextRequest) {
                     .from('user_profiles')
                     .update({ pro_welcome_email_sent: true })
                     .eq('id', userId)
-                    .or('pro_welcome_email_sent.is.null,pro_welcome_email_sent.eq.false')
+                    .not('pro_welcome_email_sent', 'is', true)
                     .select('id')
                     .maybeSingle();
 
@@ -555,7 +555,7 @@ export async function POST(request: NextRequest) {
                         .from('user_profiles')
                         .update({ pro_welcome_email_sent: true })
                         .eq('id', userId)
-                        .or('pro_welcome_email_sent.is.null,pro_welcome_email_sent.eq.false')
+                        .not('pro_welcome_email_sent', 'is', true)
                         .select('id')
                         .maybeSingle();
 
@@ -585,7 +585,6 @@ export async function POST(request: NextRequest) {
                 cancel_at_period_end: subscription.cancel_at_period_end,
                 cancellation_email_pending_sent: false,
                 cancellation_email_final_sent: false,
-                pro_welcome_email_sent: false,
                 updated_at: new Date().toISOString()
               };
 
@@ -624,7 +623,7 @@ export async function POST(request: NextRequest) {
                         .from('user_profiles')
                         .update({ pro_welcome_email_sent: true })
                         .eq('id', userId)
-                        .or('pro_welcome_email_sent.is.null,pro_welcome_email_sent.eq.false')
+                        .not('pro_welcome_email_sent', 'is', true)
                         .select('id')
                         .maybeSingle();
 
