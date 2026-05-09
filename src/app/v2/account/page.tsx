@@ -64,7 +64,7 @@ export default function V2AccountPage() {
     // and read stale tier data.
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.has('t')) {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     setUser(session.user);
