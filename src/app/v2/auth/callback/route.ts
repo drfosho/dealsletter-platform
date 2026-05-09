@@ -17,10 +17,51 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fire-and-forget welcome email — don't block the redirect
-    fetch(`${requestUrl.origin}/api/email/welcome`, {
-      method: 'POST'
-    }).catch(() => {});
+    // Send welcome email directly — session is in memory here, so a self-fetch
+    // would 401 (cookies for the just-exchanged session aren't on the incoming
+    // request). Wrapped in try/catch so an email error never blocks the redirect.
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user?.id && user?.email) {
+        const { createAdminClient } = await import('@/lib/supabase/admin');
+        const admin = createAdminClient();
+
+        const { data: claimed } = await admin
+          .from('user_profiles')
+          .update({ welcome_email_sent: true })
+          .eq('id', user.id)
+          .not('welcome_email_sent', 'is', true)
+          .select('id')
+          .maybeSingle();
+
+        if (claimed) {
+          const { data: profile } = await admin
+            .from('user_profiles')
+            .select('first_name')
+            .eq('id', user.id)
+            .single();
+
+          const name =
+            (user.user_metadata?.first_name as string) ||
+            profile?.first_name ||
+            (user.user_metadata?.full_name as string)?.split(' ')[0] ||
+            undefined;
+
+          const subscribedNewsletter =
+            user.user_metadata?.newsletter_subscribed === true;
+
+          const { sendWelcomeEmail } = await import('@/lib/email');
+          await sendWelcomeEmail({
+            email: user.email,
+            name,
+            subscribedNewsletter,
+          });
+        }
+      }
+    } catch (welcomeErr) {
+      console.error('[v2/auth/callback] welcome email error:', welcomeErr);
+    }
   }
 
   // Always redirect to dashboard after successful auth
