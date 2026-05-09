@@ -88,8 +88,7 @@ export default function SuccessPage() {
         if (prev <= 1) {
           clearInterval(timer)
           if (sessionChecked) {
-            router.refresh()
-            router.push(redirectTarget)
+            window.location.href = redirectTarget
           }
           return 0
         }
@@ -226,7 +225,7 @@ export default function SuccessPage() {
           )}
 
           <button
-            onClick={() => router.push(redirectTarget)}
+            onClick={() => { window.location.href = redirectTarget }}
             style={{
               width: '100%',
               background: '#534AB7',

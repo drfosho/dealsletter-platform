@@ -59,12 +59,13 @@ export default function V2AccountPage() {
       return;
     }
 
-    // When returning from Stripe billing portal (?t=...), wait for the
-    // webhook to write to DB before fetching — otherwise we race ahead
-    // and read stale tier data.
+    // When returning from Stripe billing portal (?t=...), strip the
+    // cache-bust param and force a full reload — guarantees fresh
+    // server state and a clean re-mount, no in-memory staleness.
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.has('t')) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      window.location.replace(window.location.pathname);
+      return;
     }
 
     setUser(session.user);
