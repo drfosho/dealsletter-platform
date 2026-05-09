@@ -16,6 +16,11 @@ export async function GET(request: Request) {
         new URL("/v2/login?error=auth", requestUrl.origin)
       );
     }
+
+    // Fire-and-forget welcome email — don't block the redirect
+    fetch(`${requestUrl.origin}/api/email/welcome`, {
+      method: 'POST'
+    }).catch(() => {});
   }
 
   // Always redirect to dashboard after successful auth

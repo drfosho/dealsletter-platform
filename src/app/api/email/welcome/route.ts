@@ -30,7 +30,7 @@ export async function POST(_request: NextRequest) {
       .from('user_profiles')
       .update({ welcome_email_sent: true })
       .eq('id', user.id)
-      .or('welcome_email_sent.is.null,welcome_email_sent.eq.false')
+      .not('welcome_email_sent', 'is', true)
       .select('id')
       .maybeSingle();
 
