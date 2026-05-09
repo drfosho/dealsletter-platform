@@ -76,12 +76,12 @@ async function send(to: string, subject: string, html: string): Promise<boolean>
     return false;
   }
   try {
-    const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
+    const { data, error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html });
     if (error) {
       console.error(`[Email] Send failed (${subject}):`, error);
       return false;
     }
-    console.log(`[Email] Sent "${subject}" to ${to}`);
+    console.log(`[Email] Sent "${subject}" to ${to} — Resend ID: ${data?.id}`);
     return true;
   } catch (err) {
     console.error(`[Email] Error (${subject}):`, err);
