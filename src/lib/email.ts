@@ -4,7 +4,7 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Dealsletter <hello@dealsletter.io>';
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Dealsletter <noreply@dealsletter.io>';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://dealsletter.io';
 
 // ─── Shared email layout ─────────────────────────────────────────────
