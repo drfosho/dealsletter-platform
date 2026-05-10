@@ -483,13 +483,24 @@ export const getCancellationEmailTemplate = (
 
 // --- Send functions ---
 
-async function send(to: string, subject: string, html: string): Promise<boolean> {
+async function send(
+  to: string,
+  subject: string,
+  html: string,
+  options?: { from?: string; replyTo?: string }
+): Promise<boolean> {
   if (!resend) {
     console.warn('[V2 Email] Resend not configured — RESEND_API_KEY missing. Skipping email.')
     return false
   }
   try {
-    const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html })
+    const { error } = await resend.emails.send({
+      from: options?.from ?? FROM_EMAIL,
+      to,
+      subject,
+      html,
+      ...(options?.replyTo ? { replyTo: options.replyTo } : {}),
+    })
     if (error) {
       console.error(`[V2 Email] Send failed (${subject}):`, error)
       return false
@@ -602,6 +613,164 @@ export async function sendV2CancellationCompleteEmail(
 ) {
   const template = getCancellationCompleteEmailTemplate(firstName)
   return send(email, template.subject, template.html)
+}
+
+// --- EMAIL 6: Re-engagement ---
+
+const REENGAGEMENT_IMG_BASE =
+  'https://xsiflgnnowyvkhxjwmuu.supabase.co/storage/v1/object/public/email-assets'
+
+const REENGAGEMENT_IMG_HERO = `${REENGAGEMENT_IMG_BASE}/email-img-1-hero.png`
+const REENGAGEMENT_IMG_ANALYSIS = `${REENGAGEMENT_IMG_BASE}/email-img-2-analysis.png`
+const REENGAGEMENT_IMG_MAXIQ = `${REENGAGEMENT_IMG_BASE}/email-img-3-maxiq.png`
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+export const getReengagementEmailTemplate = (firstName?: string) => {
+  const name = firstName ? escapeHtml(firstName) : 'there'
+  return {
+    subject: "you haven't run one yet",
+    html: emailWrapper(`
+      <div style="display:none; max-height:0; overflow:hidden; font-size:0; line-height:0; color:transparent;">
+        takes 30 seconds. drop in any address and see what comes back.
+      </div>
+
+      <p style="
+        font-size: 16px;
+        color: #f0eeff;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      ">
+        Hey ${name},
+      </p>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 8px;
+      ">
+        noticed you signed up for Dealsletter but haven't run an analysis yet.
+      </p>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 24px;
+      ">
+        wanted to make sure you didn't get lost.
+      </p>
+
+      <div style="margin: 0 0 28px;">
+        <img
+          src="${REENGAGEMENT_IMG_HERO}"
+          alt=""
+          style="display:block; width:100%; max-width:600px; height:auto; border-radius:12px;"
+        />
+      </div>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 24px;
+      ">
+        it's pretty simple. drop any property address into the analyzer, pick your strategy: BRRRR, Fix and Flip, Buy and Hold, or House Hack, and you'll get a full breakdown in under 30 seconds.
+      </p>
+
+      <div style="margin: 0 0 28px;">
+        <img
+          src="${REENGAGEMENT_IMG_ANALYSIS}"
+          alt=""
+          style="display:block; width:100%; max-width:600px; height:auto; border-radius:12px;"
+        />
+      </div>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      ">
+        cap rate, cash flow, ROI, risk flags, the whole thing.
+      </p>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      ">
+        you've got 3 free analyses on your account right now. no card needed.
+      </p>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 24px;
+      ">
+        if you've got a deal you're looking at, run it. if not, grab any active listing off Zillow and see what comes back. takes 30 seconds and you'll get a feel for what the platform actually does.
+      </p>
+
+      <div style="margin: 0 0 28px;">
+        <img
+          src="${REENGAGEMENT_IMG_MAXIQ}"
+          alt=""
+          style="display:block; width:100%; max-width:600px; height:auto; border-radius:12px;"
+        />
+      </div>
+
+      <div style="margin: 0 0 28px;">
+        <a href="https://dealsletter.io/v2/analyze" style="
+          font-size: 16px;
+          font-weight: 600;
+          color: #9994b8;
+          text-decoration: none;
+        ">
+          &rarr; Run your first analysis at dealsletter.io
+        </a>
+      </div>
+
+      ${divider}
+
+      <p style="
+        font-size: 14px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      ">
+        any questions just hit reply. i read everything.
+      </p>
+
+      <p style="
+        font-size: 14px;
+        color: #e8e6f0;
+        line-height: 1.7;
+        margin: 0;
+      ">
+        - Kevin<br/>
+        <span style="font-size: 13px; color: #6b6690;">Founder, Dealsletter</span>
+      </p>
+    `),
+  }
+}
+
+export async function sendReengagementEmail(
+  email: string,
+  firstName?: string
+) {
+  const template = getReengagementEmailTemplate(firstName)
+  return send(email, template.subject, template.html, {
+    from: 'Dealsletter <main@dealsletter.io>',
+    replyTo: 'kevin@dealsletter.io',
+  })
 }
 
 // -------------------------------------------------------------------
