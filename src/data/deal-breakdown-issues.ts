@@ -43,6 +43,427 @@ export interface DealBreakdownIssue {
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
   {
+    slug: 'issue-156-kc-oz-6unit-killeen-military-galveston-str-san-diego-house-hack',
+    issueNumber: 156,
+    date: 'May 2026',
+    title: 'KC Eastside OZ 6-Unit + Killeen Military 12-Unit + Galveston Oceanfront STR + San Diego SDSU House Hack',
+    previewText: 'Renovated KC Eastside 6-unit in an Opportunity Zone at $87K/unit. Three Fort Cavazos 4-plexes at $50K/unit with BAH-funded tenants. New Galveston oceanfront lofts with STR upside. San Diego SDSU 3-unit at 3.5% FHA down.',
+    ctaStrategy: 'buyhold',
+    sponsor: undefined,
+    properties: [
+      {
+        address: '2708-2710 Benton Blvd',
+        city: 'Kansas City, MO 64128',
+        price: 527500,
+        units: 6,
+        capRate: 7.09,
+        coc: 5.6,
+        cashRequired: 147700,
+        annualCashFlow: 7373,
+        verdict: 'Conditional buy at the realistic 7% cap - request T-12, pull building permits, and confirm OZ status before committing to the headline numbers.',
+        score: '6/10',
+        scoreValue: 6,
+        tag: 'OZ TAX PLAY',
+        tagColor: '#EF9F27',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/2708-2710-Benton-Blvd-Kansas-City-MO/35769890/',
+        opportunity: 'Renovated brick 6-unit in a Kansas City Opportunity Zone with newer roof, HVAC, plumbing, and electrical at $87,917/unit. QOZ designation provides the primary upside for investors with capital gains to shelter - a 10-year hold may eliminate federal tax on all appreciation gains inside the zone, materially improving after-tax returns beyond what the cap rate alone captures.',
+        risk: 'The advertised 13.65% cap rate treats $72K gross rent as NOI with no vacancy, management, maintenance, taxes, or insurance subtracted. Full expense reconstruction produces a realistic 7.09% cap and $7,373/yr in cash flow. Verify renovation scope via permits, confirm OZ tract status through the IRS census tract tool, and request T-12 before any offer.',
+        fullVerdict: 'Conditional buy - the Opportunity Zone tax treatment and renovated brick basis in the KC Eastside corridor are the actual investment thesis. Rebuild from the T-12, verify permits, confirm QOZ status, and evaluate at the realistic 7% cap. If you have capital gains to shelter and a 10-year hold conviction, this deal warrants serious attention.',
+      },
+      {
+        address: '219, 221, 223 Hold St',
+        city: 'Killeen, TX 76541',
+        price: 600000,
+        units: 12,
+        capRate: 7.88,
+        coc: 7.84,
+        cashRequired: 168000,
+        annualCashFlow: 13181,
+        verdict: 'Buy at the normalized 7.88% cap - confirm the three-building 12-unit package structure, plan for normalized Year 1 expenses, and budget $96K to $180K in renovation capital beyond acquisition costs.',
+        score: '7.5/10',
+        scoreValue: 7.5,
+        tag: 'MILITARY MARKET VALUE-ADD',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/219-Hold-St-Killeen-TX/40269659/',
+        opportunity: 'Three 4-plex buildings at $50,000/unit adjacent to Fort Cavazos - the largest US Army installation in the country - with BAH-funded soldiers as the primary tenant base, verified T-12 NOI of $59,690, and a 29% rent gap from $564 current to $739 post-renovation market. CoC grows from 7.84% in Year 1 to 19.3% by Year 10 through natural rent growth and a light renovation program.',
+        risk: 'The headline 9.95% cap rate is built on a self-managing owner T-12 with no PM fee, no reserves, and below-market maintenance. Real normalized Year 1 expenses produce a 7.88% going-in cap. Renovation program to capture the $739/unit Year 3 target requires $96K to $180K in additional capital beyond the $168K acquisition cash-in. Confirm the three-building 12-unit package structure with the broker before any offer.',
+        fullVerdict: 'Buy at the normalized 7.88% cap. Killeen military market makes this a stable, compounding income hold. Execute the light renovation program on natural vacancy, push rents toward the $739 Year 3 target, and hold for the 10-year trajectory the OM details accurately.',
+      },
+      {
+        address: '809 Avenue K',
+        city: 'Galveston, TX 77550',
+        price: 1400000,
+        units: 8,
+        capRate: 5.83,
+        coc: 0.52,
+        cashRequired: 392000,
+        annualCashFlow: 2021,
+        verdict: 'Conditional buy for an STR operator or long-term appreciation investor - verify TWIA windstorm quote, add flood insurance, confirm lender feasibility for pre-completion purchase, and buy only if the STR strategy is part of the plan.',
+        score: '6/10',
+        scoreValue: 6,
+        tag: 'GALVESTON STR PLAY',
+        tagColor: '#EF9F27',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/809-Avenue-K-Galveston-TX/40402645/',
+        opportunity: 'New 2026 oceanfront construction with private balconies, in-unit W/D, and UTMB Hospital proximity in one of the most supply-constrained coastal markets on the Texas Gulf. Galveston draws 7M annual tourists and oceanfront 1BRs command $140 to $250/night peak - activating all 8 units as vacation rentals could push gross revenue above $200,000/yr and flip the economics from near-breakeven LTR to 14%+ CoC.',
+        risk: 'Every unit is in pre-lease with zero operating history and Q4 2026 completion still pending. The OM expense model omits property management, maintenance, reserves, and vacancy - real normalized expenses cut the cap rate from 8.87% to 5.83% and leave realistic LTR cash flow near breakeven on $392,000 invested. The $0 flood insurance line on a Galveston oceanfront building is unacceptable unhedged risk regardless of FEMA zone designation.',
+        fullVerdict: 'Conditional buy for an STR operator or Texas coastal appreciation investor. Get actual TWIA and flood insurance quotes, add both to the expense model, confirm lender will fund the pre-completion purchase, and buy only if the STR activation strategy is the plan from day one.',
+      },
+      {
+        address: '5738 Meade Ave',
+        city: 'San Diego, CA 92115',
+        price: 1449000,
+        units: 3,
+        capRate: 3.66,
+        coc: 0,
+        cashRequired: 94185,
+        annualCashFlow: 54000,
+        verdict: 'Buy via FHA 3-unit at 3.5% down - confirm the current offer status, verify FHA qualification, and move. Owner in the 4BD at $6,585/month effective housing cost with $1.29M in equity by Year 10.',
+        score: '7.5/10',
+        scoreValue: 7.5,
+        tag: 'SDSU FHA HOUSE HACK',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/5738-Meade-Ave-San-Diego-CA/40394166/',
+        opportunity: 'FHA 3-unit financing at 3.5% down puts a $1.449M College Area 3-unit within reach for $50,715 total down payment. The 4BD/2BA tenant is voluntarily vacating May 31 - no owner move-in legal process required. Section 8 on the 2BD provides SDHC-guaranteed income. SDSU enrollment of 37,000 students ensures the studio and 4BD re-lease immediately at market rates. By Year 10 equity exceeds $1.29M on a $94K investment.',
+        risk: '$11,085/month total PITI and MIP requires stable employment income even with rental offset - verify FHA qualification with a lender before falling in love with the deal. Studio is currently vacant and needs re-leasing. Normalized expenses drop the stated 5.36% cap to 3.66%, confirming this works as a housing cost offset play and not a passive income investment. Listing notes an accepted offer - verify current deal availability before investing time in diligence.',
+        fullVerdict: 'Buy via FHA 3-unit at 3.5% down. Owner in the 4BD/2BA, renting the studio and Section 8 2BD, produces $6,585/month effective housing cost in College Area San Diego on $94,185 invested. The 10-year equity trajectory on SDSU-adjacent real estate justifies every dollar of the monthly premium over renting.',
+      },
+    ],
+    content: `
+## Issue #156 - Four Deals, Four Markets
+
+This week: a renovated Kansas City Opportunity Zone 6-unit where the headline cap rate is built on a math error, three Fort Cavazos 4-plexes at $50K/unit with government-backed tenant demand, a new Galveston oceanfront 8-unit that only works if you run it as a vacation rental, and a San Diego SDSU house hack where FHA leverage does all the heavy lifting.
+
+---
+
+## Property 1 - 2708-2710 Benton Blvd | Kansas City, MO 64128
+
+**Strategy: Buy and Hold Multifamily | 6 Units | $527,500**
+
+### The Number You Need to Ignore First
+
+The listing advertises a 13.65% cap rate. The screenshot model shows $72,004 as NOI, $41,996 in annual cash flow, 31.8% CoC, and 2.40x DSCR. These numbers are internally consistent and completely wrong.
+
+The listing says "Collecting over 72K a yr." Collecting is rent language, not NOI language. The model plugged gross rent directly as NOI with zero operating expenses subtracted. Here is the math confirming it: $527,500 x 13.65% = $72,004. The seller's cap rate claim was accepted at face value.
+
+### Reconstructed Financials
+
+| Line Item | Monthly | Annual |
+|-----------|---------|--------|
+| Gross Rent (6 x $1,000) | $6,000 | $72,000 |
+| Vacancy (8%) | -$480 | -$5,760 |
+| Operating Income | $5,520 | $66,240 |
+| Property Taxes | -$583 | -$7,000 |
+| Insurance | -$500 | -$6,000 |
+| Maintenance ($750/unit) | -$375 | -$4,500 |
+| CapEx Reserve ($700/unit) | -$350 | -$4,200 |
+| Property Management (9%) | -$497 | -$5,960 |
+| Admin/misc | -$100 | -$1,200 |
+| **Total Expenses** | **-$2,405** | **-$28,860** |
+| **Realistic NOI** | **$3,115** | **$37,380** |
+
+### What the Deal Actually Is
+
+| Metric | Stated | Realistic |
+|--------|--------|-----------|
+| Cap Rate | 13.65% | 7.09% |
+| DSCR | 2.40x | 1.25x |
+| Annual Cash Flow | $41,996 | $7,373 |
+| CoC (25% down) | 31.8% | 5.6% |
+| Monthly Cash Flow | $3,500 | $614 |
+
+### Financing
+
+| Item | Amount |
+|------|--------|
+| Purchase Price | $527,500 |
+| Down Payment (25%) | $131,875 |
+| Purchase Costs (3%) | $15,825 |
+| Total Cash In | $147,700 |
+| Loan Amount (75%) | $395,625 |
+| Rate | 6.5% |
+| Monthly P&I | $2,501 |
+| Annual Debt Service | $30,007 |
+
+### The Opportunity Zone Angle
+
+If this parcel is in a Qualified Opportunity Zone - verify through the IRS OZ census tract lookup - that is a real tax benefit for investors with capital gains to shelter.
+
+| Benefit | Timeline |
+|---------|----------|
+| Defer capital gains tax | Through 2026 initial investment |
+| Step-up in basis | After 5 to 7 years |
+| Eliminate new gains tax | Hold 10+ years - capital appreciation may be tax-free |
+
+For the right investor with gains to deploy, QOZ status adds meaningful after-tax return that does not appear in any cap rate calculation.
+
+### KC 64128 Market Context
+
+The Eastside has been a focus of Kansas City equity investment initiatives, ARPA-funded programs, and Opportunity Zone capital since 2019. KC Eastside 2BD/1BA in 2026: $900 to $1,150 unrenovated, $1,050 to $1,250 for updated units. The implied $1,000/unit is market-appropriate. If the renovation quality is as described, $1,050 to $1,100 is achievable on leases rolling.
+
+### Long-Term Projections (3% appreciation / 3% rent growth)
+
+| Year | Annual CF | CoC | Property Value |
+|------|-----------|-----|----------------|
+| 1 | $7,373 | 5.6% | $527,500 |
+| 3 | $15,000 | 10.1% | $559,625 |
+| 5 | $20,000 | 13.5% | $593,000 |
+| 10 | $32,000 | 21.6% | $687,000 |
+
+### Watch Points
+
+1. The 13.65% cap rate is built on gross rent treated as NOI. Request the actual T-12 before any offer.
+2. Verify renovation scope with Jackson County building permits. Pull which systems were replaced and when.
+3. Confirm Opportunity Zone status using the IRS census tract tool. Not all 64128 parcels are in QOZ tracts.
+4. 64128 crime context: the neighborhood is improving but remains above KC average. Visit in person.
+5. Rents at $1,000/unit are market-appropriate but verify comparable active listings confirm the ceiling.
+
+### The Verdict: 6/10 - Conditional Buy
+
+The deal being advertised is built on treating gross rent as NOI. The actual deal is a renovated 6-unit brick building in KC's Eastside Opportunity Zone at $87,917/unit, a realistic 7.09% cap rate, and $7,373/year in cash flow after realistic expenses. For an OZ investor with capital gains to shelter or a KC-local operator who knows the Eastside trajectory, the basis and location are defensible. Request the T-12, pull building permits to verify renovation, and confirm QOZ status.
+
+---
+
+## Property 2 - 219, 221, 223 Hold St | Killeen, TX 76541
+
+**Strategy: Buy and Hold Multifamily (Value-Add) | 12 Units Across 3 Buildings | $600,000**
+
+### Clarify the Unit Count First
+
+LoopNet shows "4 Unit Apartment Building, $150,000/Unit." The OM covers three separate addresses - 219, 221, and 223 Hold St - totaling 12 units at $50,000/unit. This analysis uses the OM's 12-unit figure as the correct basis. Confirm with the broker before underwriting at either count.
+
+### The Two Cap Rate Problem
+
+The OM presents 9.95% cap against T-12 NOI of $59,690. But the T-12 was generated by a self-managing owner with a 32.7% expense ratio. Once you normalize for PM and full operating costs, the going-in cap changes materially.
+
+| Line Item | T-12 (Current Owner) | Year 1 Adjusted |
+|-----------|---------------------|-----------------|
+| Gross Potential Rent | $81,265 | $93,600 |
+| Property Management | $0 | $7,170 (8%) |
+| Real Estate Taxes | $6,456 | $10,800 |
+| Insurance | $4,140 | $5,400 |
+| Repairs and Maintenance | $3,173 | $6,000 |
+| Reserves | $0 | $2,400 |
+| All other expenses | $15,179 | $10,542 |
+| **Total Expenses** | **$28,948 (32.7%)** | **$42,312 (44.78%)** |
+| **NOI** | **$59,690** | **$47,309** |
+| **Cap Rate** | **9.95%** | **7.88%** |
+
+### Cash Flow - Three Scenarios With Debt Service
+
+| Scenario | NOI | Net CF | CoC | DCR |
+|----------|-----|--------|-----|-----|
+| T-12 (self-managed) | $59,690 | $25,562 | 15.2% | 1.75x |
+| Year 1 (normalized) | $47,309 | $13,181 | 7.84% | 1.39x |
+| Year 3 (stabilized) | $53,035 | $18,907 | 11.2% | 1.55x |
+| Year 10 | $66,607 | $32,479 | 19.3% | 1.95x |
+
+### The Fort Cavazos Factor
+
+Fort Cavazos (formerly Fort Hood) is the largest military installation by land area in the United States - approximately 340,000 acres, 45,000+ active-duty soldiers. The Killeen rental market is structurally tied to this installation.
+
+2026 BAH rates for Killeen MSA:
+- E-4 without dependents: ~$1,170/mo
+- E-5 with dependents: ~$1,440/mo
+
+At $650 to $739/month target rent, these units sit well within the BAH envelope for junior enlisted soldiers. Government-backed rent payment reliability.
+
+### The Rent Upside
+
+| Phase | Avg Rent | Total Monthly |
+|-------|----------|---------------|
+| T-12 (unrenovated) | $564 | $6,772 |
+| Year 1 (market, as-is) | $650 | $7,800 |
+| Year 3 (post-renovation) | $739 | $8,868 |
+
+The OM Year 3 target of $739 is actually conservative - properly renovated Fort Cavazos-adjacent 1BRs in Killeen trade at $850 to $1,050. Additional upside exists beyond what is modeled.
+
+### Financing
+
+| Item | Amount |
+|------|--------|
+| Purchase Price | $600,000 |
+| Down Payment (25%) | $150,000 |
+| Purchase Costs (3%) | $18,000 |
+| Total Cash In | $168,000 |
+| Loan Amount (75%) | $450,000 |
+| Rate | 6.5% |
+| Annual Debt Service | $34,128 |
+
+Note: add $96,000 to $180,000 in renovation capital beyond acquisition costs.
+
+### Watch Points
+
+1. Clarify the unit count with the broker immediately. 4 units at $150K vs 12 units at $50K are completely different investments.
+2. Real going-in cap is 7.88%, not 9.95%. Buy it knowing that number.
+3. Texas property tax reassesses at sale. Verify Bell County post-sale assessment on a $600K acquisition.
+4. Renovation budget not itemized in the OM. Estimate $8,000 to $15,000/unit for a kitchen-forward light update.
+5. Three separate buildings means three roofs, three HVAC systems, three water heaters. Confirm all three properties are in acceptable condition.
+
+### The Verdict: 7.5/10 - Buy
+
+Three 4-plexes at $50,000/unit adjacent to Fort Cavazos with verified T-12 income, a 29% rent gap to market, BAH-eligible tenants, and a 10-year model that grows CoC from 7.84% to 19.3%. The real going-in cap of 7.88% after normalizing the self-managed books is the number to buy at, and 7.88% in Killeen's military market is solid. Confirm the 12-unit three-building structure first, adjust for normalized Year 1 expenses, and plan for the renovation capital. If all check out, this is a straightforward buy.
+
+---
+
+## Property 3 - 809 Avenue K (Oceanfront Lofts) | Galveston, TX 77550
+
+**Strategy: Buy and Hold Multifamily (New Construction + STR) | 8 Units | $1,400,000**
+
+### Read the Rent Roll Status First
+
+Every single unit reads "In pre-lease." Not one lease is signed. Not one tenant is paying rent. The building has a Q4 2026 completion target and an NOI of $124,260 that is 100% projected. This is not an operating multifamily investment. It is a pre-construction buy-in on a developer pro forma.
+
+### The Expense Model Problem
+
+| Expense | OM Stated | Missing |
+|---------|-----------|---------|
+| Property Management | $0 | $14,660 (10%) |
+| Maintenance/Repairs | $0 | $4,800 |
+| Vacancy (5%) | $0 | $7,330 |
+| CapEx Reserve | $0 | $3,200 |
+| Marketing/Leasing | $0 | $2,000 |
+| Flood Insurance | $0 | $2,000 to $5,000 |
+
+| | OM Stated | Realistic |
+|-|-----------|-----------|
+| Total Expenses | $22,343 | $57,633 |
+| Expense Ratio | 15.3% | 39.3% |
+| NOI | $124,261 | $81,641 |
+| Cap Rate | 8.87% | 5.83% |
+
+### Cash Flow Scenarios
+
+| Scenario | NOI | Net CF | CoC | DCR |
+|----------|-----|--------|-----|-----|
+| OM stated | $124,261 | $44,641 | 11.4% | 1.56x |
+| Realistic LTR | $81,641 | $2,021 | 0.52% | 1.03x |
+| STR hybrid (4 units) | ~$88,000 | ~$8,000 | 2.0% | 1.11x |
+| Full STR (all 8 units) | ~$135,000+ | ~$55,000 | 14.0% | ~1.70x |
+
+### The STR Case
+
+Galveston draws 7M+ tourists annually. Oceanfront 1BRs with private balconies on Airbnb and VRBO:
+- Peak (June-August): $175 to $280/night
+- Shoulder (March-May, Sept-Oct): $100 to $175/night
+- Off-season (Nov-Feb): $80 to $130/night
+
+An active STR operator who activates all 8 units at 60%+ average occupancy could push gross revenue above $200,000/yr, turning a near-breakeven LTR hold into a 14%+ CoC vacation rental business.
+
+### The Galveston Risk Stack
+
+The Galveston oceanfront is one of America's most hazard-exposed real estate markets. Hurricane Ike (2008) caused $29.5 billion in damage and demonstrated the seawall provides partial but not complete protection. The OM lists $0 in flood insurance. For a $1.4M coastal asset, flood insurance costs $2,000 to $5,000/year in FEMA Zone X. This is not optional.
+
+The $4,716 TWIA windstorm premium in the OM is based on a comparable property, not an actual quote for 809 Ave K. New oceanfront 8-unit construction at $1.4M replacement value may cost $6,000 to $15,000/year in TWIA coverage. Get the actual quote before making an offer.
+
+### Watch Points
+
+1. Zero operating history. Every unit in pre-lease. The 8.87% cap rate is entirely theoretical.
+2. The stated expense ratio of 15.3% is missing PM, maintenance, reserves, and vacancy. Real ratio is 39.3%.
+3. $0 flood insurance on a Galveston oceanfront building is unhedged catastrophic risk. Budget $2,000 to $5,000/yr regardless of FEMA zone.
+4. Get an actual TWIA windstorm quote. The $4,716 OM estimate is not verified.
+5. Q4 2026 completion - if it slips to Q1-Q2 2027, no rental income during the delay.
+6. Many conventional lenders require certificate of occupancy. Confirm lender feasibility for pre-completion purchase before proceeding.
+
+### The Verdict: 6/10 - Conditional (STR Operator or Appreciation Buyer)
+
+The real deal is a 5.5 to 6.5% going-in cap on a pre-completion building with Year 1 LTR cash flow near breakeven on $392,000 invested. That is not an 8.87% cap rate investment. For an STR operator who can activate all 8 units at peak Galveston occupancy rates, the economics become genuinely compelling. For a passive LTR investor expecting to hire a PM and collect mailbox income, the realistic Year 1 return on $392K is under $5,000. Buy only if the STR strategy is the plan from day one.
+
+---
+
+## Property 4 - 5738 Meade Ave | San Diego, CA 92115
+
+**Strategy: House Hack | 3-Unit | $1,449,000 | College Area near SDSU**
+
+### The FHA Thesis
+
+2026 San Diego County FHA 3-unit loan limit: ~$1,708,000. At $1,449,000, the entire purchase fits within the limit. No jumbo. No 25% investor down payment.
+
+| Item | FHA (3.5% Down) | Conventional (5% Down) |
+|------|-----------------|------------------------|
+| Down Payment | $50,715 | $72,450 |
+| Total Cash In | $94,185 | $115,920 |
+| Monthly PITI + MIP/PMI | $11,085 | $11,264 |
+
+FHA saves $21,735 upfront at nearly identical monthly cost. The FHA path is the correct entry.
+
+### The Rent Roll
+
+| Unit | Type | Rent | Status |
+|------|------|------|--------|
+| 5738 Meade Ave | 4BD/2BA | $3,950 | Vacating 5/31/2026 |
+| 5738 Meade Ave #A | Studio | $1,700 | Vacant |
+| 4420 58th St | 2BD/1BA | $2,800 | Section 8 through 8/31/2026 |
+
+The 4BD tenant is voluntarily vacating. No AB 1482 owner move-in process. No relocation assistance. No legal complexity. This is the cleanest owner move-in scenario available in California multifamily.
+
+### The House Hack Math - Two Scenarios
+
+**Scenario A - Owner in Studio (Maximum Income Offset)**
+
+| Item | Amount |
+|------|--------|
+| Full PITI + MIP | $11,085/mo |
+| Rent: 4BD | -$3,950 |
+| Rent: 2BD Section 8 | -$2,800 |
+| Effective Housing Cost | $4,335/mo |
+
+**Scenario B - Owner in 4BD (Best Lifestyle)**
+
+| Item | Amount |
+|------|--------|
+| Full PITI + MIP | $11,085/mo |
+| Rent: Studio | -$1,700 |
+| Rent: 2BD Section 8 | -$2,800 |
+| Effective Housing Cost | $6,585/mo |
+
+Both scenarios produce identical wealth accumulation. Scenario B is worth the extra $2,250/month for any buyer who wants to actually live in the house.
+
+### Section 8 on the 2BD
+
+SDHC pays $1,491 directly. Tenant pays $1,309. Total: $2,800/month. SDHC portion arrives on the first of the month from the government regardless of the tenant's cash position. Annual HUD inspections required. Rent increases need SDHC approval.
+
+### Long-Term Projections - Scenario B (4% appreciation / 3% rent growth)
+
+| Year | Eff. Housing Cost | Property Value | Equity |
+|------|------------------|----------------|--------|
+| 1 | $6,585/mo | $1,449,000 | $72,450 |
+| 3 | $6,212/mo | $1,567,238 | $330,000 |
+| 5 | $5,862/mo | $1,694,665 | $590,000 |
+| 10 | $4,600/mo | $2,052,000 | $1,290,000 |
+
+### Watch Points
+
+1. $11,085/month total PITI and MIP - verify FHA qualification with a lender before committing time to diligence.
+2. Studio is currently vacant. Re-leasing near SDSU takes 2 to 4 weeks, but budget for the gap.
+3. Listing notes an accepted offer. Confirm current deal status before investing further time.
+4. AB 1482 likely applies based on build year - confirm. All units subject to 5% + CPI annual increase caps and just-cause eviction once re-tenanted.
+5. Utilities on the 2BD are landlord-billed to tenant on a pro-rata basis. Clarify the billing mechanics before close.
+
+### The Verdict: 7.5/10 - Buy (FHA Path, Scenario B)
+
+Three points make this deal exceptional. First, FHA at 3.5% down on a $1.449M San Diego 3-unit puts an otherwise out-of-reach asset within reach for $50,715. Second, the 4BD/2BA tenant is voluntarily vacating - the most common California house hack complication is entirely absent. Third, the College Area location delivers structural, SDSU-anchored rental demand that does not evaporate. Effective housing cost of $6,585/month in Scenario B is higher than renting - you pay $2,500 to $3,000/month above what a market-rate 4BD costs to rent. That premium funds ownership of a $1.449M San Diego asset. By Year 10, equity exceeds $1.29M on a $94K investment.
+
+---
+
+## Deal Rankings
+
+| Property | Market | Cash In | Key Return | Score | Verdict |
+|----------|--------|---------|-----------|-------|---------|
+| 219-223 Hold St | Killeen, TX | $168K + renovation | 7.84% CoC Y1 / 19.3% Y10 | 7.5/10 | Buy |
+| 5738 Meade Ave | San Diego, CA | $94K (FHA) | $6,585/mo eff. housing cost | 7.5/10 | Buy |
+| 2708 Benton Blvd | Kansas City, MO | $148K | 5.6% CoC / 7.09% cap | 6/10 | Conditional |
+| 809 Avenue K | Galveston, TX | $392K | 0.52% LTR / 14% STR | 6/10 | Conditional |
+
+---
+
+*Analyze any of these deals yourself at Dealsletter.io - run your own numbers, adjust the assumptions, and see the full breakdown in seconds.*
+  `,
+  },
+  {
     slug: 'issue-155-dighton-hotel-selma-18unit-harlingen-9unit-san-diego-house-hack',
     issueNumber: 155,
     date: 'May 2026',
