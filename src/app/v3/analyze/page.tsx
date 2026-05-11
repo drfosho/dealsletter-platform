@@ -2822,13 +2822,23 @@ function V3AnalyzePageInner() {
 
         {/* Secondary metrics */}
         {(strategy === 'Buy & Hold' || strategy === 'BRRRR') ? (
-          <section style={{ marginBottom: 20 }}>
+          <section style={{ marginBottom: 20, position: 'relative' }}>
             <div style={{ marginBottom: 10 }}>
               <SectionLabel color="var(--text-muted)">
                 {strategy === 'BRRRR' ? 'BRRRR Details' : 'Full Underwriting'}
               </SectionLabel>
             </div>
-            {renderBuyHoldWaterfall(viewResult, viewCalc, form, params)}
+            <div
+              style={{
+                filter: tier === 'free' ? 'blur(4px)' : 'none',
+                pointerEvents: tier === 'free' ? 'none' : 'auto',
+              }}
+            >
+              {renderBuyHoldWaterfall(viewResult, viewCalc, form, params)}
+            </div>
+            {tier === 'free' && (
+              <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />
+            )}
           </section>
         ) : (
           <section style={{ marginBottom: 20, position: 'relative' }}>
