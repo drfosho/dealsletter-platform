@@ -1927,10 +1927,53 @@ function renderBuyHoldWaterfall(
   const coc = result.metrics?.cashOnCash ?? null
   const dscr =
     noi > 0 && annualDebtService > 0 ? noi / annualDebtService : null
-  const breakEvenArv = result.breakEvenArv ?? null
-  const fiveYearEquity = result.fiveYearEquity ?? null
   const fiveYearROI =
-    result.metrics?.fiveYearROI ?? result.metrics?.roi ?? null
+    result.metrics?.fiveYearROI ??
+    result.metrics?.roi ??
+    (result as Record<string, unknown> & { metrics?: Record<string, unknown> })
+      .metrics?.five_year_roi as number | null | undefined ??
+    (result as Record<string, unknown>).roi as number | null | undefined ??
+    null
+
+  const fiveYearEquity =
+    result.fiveYearEquity ??
+    ((result as Record<string, unknown>).five_year_equity as number | null | undefined) ??
+    (() => {
+      // Client-side fallback: amortize the loan to month 60 and add 5y at 3%/yr appreciation.
+      const p = toNum(form?.purchasePrice) ?? 0
+      const dp = toNum(params.downPaymentPercent) ?? 25
+      const rt = toNum(params.interestRate) ?? 7.5
+      const termYears = toNum(params.loanTerm) ?? 30
+      if (p <= 0) return null
+      const loanBalance = p * (1 - dp / 100)
+      const rMo = rt / 100 / 12
+      const n = termYears * 12
+      const monthlyPayment =
+        rMo > 0
+          ? (loanBalance * (rMo * Math.pow(1 + rMo, n))) /
+            (Math.pow(1 + rMo, n) - 1)
+          : loanBalance / n
+      let bal = loanBalance
+      for (let m = 0; m < 60; m++) {
+        const interest = bal * rMo
+        const principal = Math.min(bal, monthlyPayment - interest)
+        bal = Math.max(0, bal - principal)
+      }
+      const propertyValue = p * Math.pow(1.03, 5)
+      return Math.round(propertyValue - bal)
+    })()
+
+  const breakEvenArv =
+    result.breakEvenArv ??
+    ((result as Record<string, unknown>).break_even_arv as number | null | undefined) ??
+    (() => {
+      // Client-side fallback: price at which annual NOI matches annual debt service.
+      // breakEvenArv = annualDebtService / capRate (if both known).
+      const annualDS = result.proForma?.annualDebtService ?? 0
+      const capR = (result.metrics?.capRate ?? 0) / 100
+      if (annualDS > 0 && capR > 0) return Math.round(annualDS / capR)
+      return null
+    })()
 
   const Row = ({
     label,
@@ -2524,6 +2567,7 @@ function V3AnalyzePageInner() {
       setAnalysisError('Purchase price is required. Please verify the property data above.')
       return
     }
+    setInputsCollapsed(true)
     setAnalysisLoading(true)
     setAnalysisError('')
     setRateLimit(null)
@@ -2532,7 +2576,6 @@ function V3AnalyzePageInner() {
     setProgressSteps([])
     setExpandedModelId(null)
     setSaveState('idle')
-    setInputsCollapsed(false)
 
     const body = buildAnalyzeBody(address, strategy, propData, form, params)
 

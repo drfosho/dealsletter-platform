@@ -264,15 +264,18 @@ export default function V3DashboardPage() {
     const load = async () => {
       try {
         const res = await fetch('/api/v3/pipeline', { credentials: 'include' })
-        if (!res.ok) throw new Error('pipeline')
+        console.log('[Dashboard] pipeline fetch status:', res.status)
+        if (!res.ok) throw new Error(`pipeline ${res.status}`)
         const data = await res.json()
+        console.log('[Dashboard] pipeline data:', data)
         const list: PipelineRecord[] = data?.deals || []
         const deals = list.map(adaptPipelineRecord)
         if (!cancelled) {
           setRecent(deals.slice(0, 3))
           setPipeline(deals.slice(0, 7))
         }
-      } catch {
+      } catch (err) {
+        console.error('[Dashboard] pipeline fetch error:', err)
         if (!cancelled) {
           setRecent([])
           setPipeline([])
