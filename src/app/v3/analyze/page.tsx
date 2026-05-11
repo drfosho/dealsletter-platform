@@ -1881,6 +1881,288 @@ function secondaryMetricsFor(
   ]
 }
 
+function renderBuyHoldWaterfall(
+  result: V3AnalysisResult,
+  _calc: Record<string, unknown> | null,
+  form: EditForm | null,
+  params: DealParams
+) {
+  const purchase = toNum(form?.purchasePrice) ?? 0
+  const dpPct = toNum(params.downPaymentPercent) ?? 25
+  const closingPct = toNum(params.closingCosts) ?? 3
+  const downPayment = Math.round(purchase * (dpPct / 100))
+  const closingCosts = Math.round(purchase * (closingPct / 100))
+  const cashRequired = downPayment + closingCosts
+
+  const rawCash = (result.cashFlow || {}) as Record<string, unknown>
+  const grossRent =
+    result.cashFlow?.grossRent ??
+    (rawCash.gross as number | undefined) ??
+    toNum(form?.estimatedRent) ??
+    0
+  const vacancyPct = toNum(params.vacancyRate) ?? 8
+  const vacancyLoss =
+    result.cashFlow?.vacancyLoss ?? -(grossRent * (vacancyPct / 100))
+  const effectiveGrossIncome = grossRent + vacancyLoss
+  const maintenancePct = toNum(params.maintenancePercent) ?? 10
+  const capexPct = toNum(params.capexPercent) ?? 10
+  const pmPct = toNum(params.propertyManagementPercent) ?? 8
+  const propTax = toNum(params.propertyTax) ?? 0
+  const insurance = toNum(params.insurance) ?? 0
+  const maintenance = grossRent * (maintenancePct / 100)
+  const capex = grossRent * (capexPct / 100)
+  const pm = grossRent * (pmPct / 100)
+  const totalOpEx =
+    Math.abs(vacancyLoss) + maintenance + capex + pm + propTax / 12 + insurance / 12
+  const noi =
+    result.metrics?.netOperatingIncome ??
+    result.metrics?.noi ??
+    (effectiveGrossIncome - totalOpEx) * 12
+  const annualDebtService = result.proForma?.annualDebtService ?? 0
+  const monthlyCF =
+    result.cashFlow?.monthlyCashFlow ?? result.cashFlow?.monthly ?? 0
+  const capRate =
+    result.metrics?.capRate ??
+    (noi > 0 && purchase > 0 ? (noi / purchase) * 100 : null)
+  const coc = result.metrics?.cashOnCash ?? null
+  const dscr =
+    noi > 0 && annualDebtService > 0 ? noi / annualDebtService : null
+  const breakEvenArv = result.breakEvenArv ?? null
+  const fiveYearEquity = result.fiveYearEquity ?? null
+  const fiveYearROI =
+    result.metrics?.fiveYearROI ?? result.metrics?.roi ?? null
+
+  const Row = ({
+    label,
+    value,
+    indent,
+    bold,
+    color,
+    border,
+  }: {
+    label: string
+    value: string
+    indent?: boolean
+    bold?: boolean
+    color?: string
+    border?: boolean
+  }) => (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto',
+        gap: 12,
+        padding: '9px 0',
+        borderTop: border
+          ? '1px solid var(--border-strong)'
+          : '1px solid var(--hairline)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 12,
+      }}
+    >
+      <span
+        style={{
+          color: bold ? 'var(--text)' : 'var(--text-muted)',
+          fontWeight: bold ? 600 : 400,
+          paddingLeft: indent ? 16 : 0,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          color: color || (bold ? 'var(--text)' : 'var(--text-secondary)'),
+          fontWeight: bold ? 600 : 500,
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Capital Required */}
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--hairline)',
+          borderRadius: 10,
+          padding: '4px 18px 12px',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            color: 'var(--indigo-hover)',
+            textTransform: 'uppercase',
+            padding: '12px 0 4px',
+            fontWeight: 600,
+          }}
+        >
+          Capital Required
+        </div>
+        <Row label="Purchase Price" value={fmtMoneyFull(purchase)} />
+        <Row
+          label={`Down Payment (${dpPct}%)`}
+          value={fmtMoneyFull(downPayment)}
+          indent
+        />
+        <Row
+          label={`Closing Costs (${closingPct}%)`}
+          value={fmtMoneyFull(closingCosts)}
+          indent
+        />
+        <Row
+          label="Cash to Close"
+          value={fmtMoneyFull(cashRequired)}
+          bold
+          color="var(--indigo-hover)"
+          border
+        />
+      </div>
+
+      {/* Monthly P&L */}
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--hairline)',
+          borderRadius: 10,
+          padding: '4px 18px 12px',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            color: 'var(--indigo-hover)',
+            textTransform: 'uppercase',
+            padding: '12px 0 4px',
+            fontWeight: 600,
+          }}
+        >
+          Monthly Income & Expenses
+        </div>
+        <Row label="Gross Rent" value={fmtMonthly(grossRent)} color="var(--green)" />
+        <Row
+          label={`Vacancy (${vacancyPct}%)`}
+          value={fmtMonthly(Math.abs(vacancyLoss))}
+          indent
+          color="var(--red)"
+        />
+        <Row
+          label={`Maintenance (${maintenancePct}%)`}
+          value={fmtMonthly(maintenance)}
+          indent
+          color="var(--red)"
+        />
+        <Row
+          label={`CapEx Reserve (${capexPct}%)`}
+          value={fmtMonthly(capex)}
+          indent
+          color="var(--red)"
+        />
+        <Row
+          label={`Property Mgmt (${pmPct}%)`}
+          value={fmtMonthly(pm)}
+          indent
+          color="var(--red)"
+        />
+        {propTax > 0 && (
+          <Row
+            label="Property Tax"
+            value={fmtMonthly(propTax / 12)}
+            indent
+            color="var(--red)"
+          />
+        )}
+        {insurance > 0 && (
+          <Row
+            label="Insurance"
+            value={fmtMonthly(insurance / 12)}
+            indent
+            color="var(--red)"
+          />
+        )}
+        <Row
+          label="Mortgage (PITI)"
+          value={
+            annualDebtService > 0 ? fmtMonthly(annualDebtService / 12) : '—'
+          }
+          indent
+          color="var(--red)"
+        />
+        <Row
+          label="Net Cash Flow"
+          value={fmtMonthly(monthlyCF)}
+          bold
+          color={(monthlyCF ?? 0) >= 0 ? 'var(--green)' : 'var(--red)'}
+          border
+        />
+      </div>
+
+      {/* Key Metrics */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: 10,
+        }}
+      >
+        {[
+          { label: 'CAP RATE', value: fmtPct(capRate), color: 'var(--indigo-hover)' },
+          { label: 'CASH-ON-CASH', value: fmtPct(coc), color: 'var(--indigo-hover)' },
+          {
+            label: 'DSCR',
+            value: dscr != null ? dscr.toFixed(2) : '—',
+            color: (dscr ?? 0) >= 1.25 ? 'var(--green)' : 'var(--red)',
+          },
+          { label: '5-YR ROI', value: fmtPct(fiveYearROI), color: 'var(--indigo-hover)' },
+          { label: 'BREAK-EVEN ARV', value: fmtMoney(breakEvenArv), color: 'var(--text)' },
+          { label: '5-YR EQUITY', value: fmtMoney(fiveYearEquity), color: 'var(--green)' },
+        ].map(m => (
+          <div
+            key={m.label}
+            style={{
+              background: 'var(--bg)',
+              border: '1px solid var(--hairline)',
+              borderRadius: 8,
+              padding: 14,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                letterSpacing: '0.12em',
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+              }}
+            >
+              {m.label}
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 20,
+                fontWeight: 600,
+                color: m.color,
+                marginTop: 6,
+              }}
+            >
+              {m.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /* -------------------------- waterfall tables -------------------------- */
 
 type WaterfallRow =
@@ -2539,69 +2821,78 @@ function V3AnalyzePageInner() {
         )}
 
         {/* Secondary metrics */}
-        <section style={{ marginBottom: 20, position: 'relative' }}>
-          <div style={{ marginBottom: 10 }}>
-            <SectionLabel color="var(--text-muted)">
-              {strategy === 'Fix & Flip'
-                ? 'Flip economics'
-                : strategy === 'BRRRR'
-                  ? 'BRRRR details'
+        {(strategy === 'Buy & Hold' || strategy === 'BRRRR') ? (
+          <section style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 10 }}>
+              <SectionLabel color="var(--text-muted)">
+                {strategy === 'BRRRR' ? 'BRRRR Details' : 'Full Underwriting'}
+              </SectionLabel>
+            </div>
+            {renderBuyHoldWaterfall(viewResult, viewCalc, form, params)}
+          </section>
+        ) : (
+          <section style={{ marginBottom: 20, position: 'relative' }}>
+            <div style={{ marginBottom: 10 }}>
+              <SectionLabel color="var(--text-muted)">
+                {strategy === 'Fix & Flip'
+                  ? 'Flip economics'
                   : strategy === 'House Hack'
                     ? 'House-hack breakdown'
                     : 'Full underwriting'}
-            </SectionLabel>
-          </div>
-          <div
-            style={{
-              filter: secondaryBlurred ? 'blur(4px)' : 'none',
-              pointerEvents: secondaryBlurred ? 'none' : 'auto',
-            }}
-          >
+              </SectionLabel>
+            </div>
             <div
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                gap: 10,
+                filter: secondaryBlurred ? 'blur(4px)' : 'none',
+                pointerEvents: secondaryBlurred ? 'none' : 'auto',
               }}
             >
-              {secondary.map(m => (
-                <div
-                  key={m.label}
-                  style={{
-                    background: 'var(--bg)',
-                    border: '1px solid var(--hairline)',
-                    borderRadius: 8,
-                    padding: 14,
-                  }}
-                >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                  gap: 10,
+                }}
+              >
+                {secondary.map(m => (
                   <div
+                    key={m.label}
                     style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9,
-                      letterSpacing: '0.12em',
-                      color: 'var(--text-muted)',
-                      textTransform: 'uppercase',
+                      background: 'var(--bg)',
+                      border: '1px solid var(--hairline)',
+                      borderRadius: 8,
+                      padding: 14,
                     }}
                   >
-                    {m.label}
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 9,
+                        letterSpacing: '0.12em',
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {m.label}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 20,
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        marginTop: 6,
+                      }}
+                    >
+                      {m.value}
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 20,
-                      fontWeight: 600,
-                      color: 'var(--text)',
-                      marginTop: 6,
-                    }}
-                  >
-                    {m.value}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-          {secondaryBlurred && <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />}
-        </section>
+            {secondaryBlurred && <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />}
+          </section>
+        )}
 
         {/* Max offer recommendation */}
         {(strategy === 'Fix & Flip' || strategy === 'BRRRR') && arv > 0 && (

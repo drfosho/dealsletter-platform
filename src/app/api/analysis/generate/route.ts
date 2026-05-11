@@ -54,7 +54,7 @@ Rules that cannot be broken:
 - dealScore: integer 1-10 based on the actual calculated metrics.
 
 JSON schema:
-{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"one sentence buy/pass/hold with confidence","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"short risk title","detail":"one sentence"}],"narrative":"2-3 sentences, plain text, no bullets","marketContext":"1-2 sentences on local market","dealScore":1-10,"breakEvenArv":number|null,"capitalRecoveryPercent":number|null,"effectiveMonthlyCost":number|null,"grm":number|null,"fiveYearEquity":number|null,"annualAppreciationRate":3,"projectionNotes":"one sentence on biggest variable affecting long-term projections"}
+{"strategyType":"rental"|"flip"|"brrrr"|"house-hack","recommendation":"one sentence buy/pass/hold with confidence","metrics":{"capRate":number|null,"cashOnCash":number|null,"roi":number|null,"arvEstimate":number|null,"equityCapture":number|null,"monthlyRent":number|null,"monthlyExpenses":number|null,"noi":number|null},"cashFlow":{"monthly":number|null,"annual":number|null},"proForma":{"purchasePrice":number|null,"rehabCost":number|null,"totalInvestment":number|null,"arvEstimate":number|null,"grossRent":number|null,"vacancy":number|null,"netOperatingIncome":number|null,"annualDebtService":number|null,"breakEvenOccupancy":<number, % occupancy needed to break even>,"debtServiceCoverageRatio":<number, NOI / annual debt service>},"riskFlags":[{"severity":"low"|"medium"|"high","flag":"short risk title","detail":"one sentence"}],"narrative":"2-3 sentences, plain text, no bullets","marketContext":"1-2 sentences on local market","dealScore":1-10,"breakEvenArv":<number, required for rental/brrrr — purchase price where deal cashflows at 0>,"capitalRecoveryPercent":number|null,"effectiveMonthlyCost":number|null,"grm":number|null,"fiveYearEquity":<number, required for rental/brrrr — equity = (purchasePrice * 1.03^5) - remainingLoanBalance>,"annualAppreciationRate":3,"projectionNotes":"one sentence on biggest variable affecting long-term projections"}
 
 Rules:
 - capRate/cashOnCash are percentages as numbers (6.8 not 0.068)
@@ -62,6 +62,11 @@ Rules:
 - cashFlow.monthly in dollars (negative if losing money)
 - null for metrics that don't apply to this strategy
 - Round numbers to 2 decimal places max
+- For rental and brrrr strategies: breakEvenArv, fiveYearEquity, proForma.breakEvenOccupancy, and proForma.debtServiceCoverageRatio are REQUIRED. You must calculate and return real numbers for all four. Do not return null for any of these on rental or brrrr — null is only acceptable for flip and house-hack.
+- breakEvenArv: the purchase price at which annual NOI equals annual debt service (deal cashflows at zero) given the current rent and expenses. Solve for price.
+- fiveYearEquity: (purchasePrice * 1.03^5) - remainingLoanBalance after 60 monthly payments. Assumes 3% annual appreciation and the financing terms in the inputs.
+- breakEvenOccupancy: the percent occupancy at which NOI just covers annual debt service. Formula: annualDebtService / (grossRent * 12) * 100.
+- debtServiceCoverageRatio: NOI divided by annual debt service. A value of 1.0 means NOI exactly covers debt service.
 `;
 
 // Pro Max role-specific prompt modifiers — appended when a modelOverride is active
