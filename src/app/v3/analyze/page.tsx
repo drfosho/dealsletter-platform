@@ -1444,13 +1444,6 @@ function StatusBar({
 
 /* ------------------- empty state ------------------- */
 
-const EMPTY_STATE_DEALS = [
-  { address: '2847 Magnolia Ave', city: 'Memphis TN', strategy: 'BRRRR', cap: '11.8%', signal: 'STRONG BUY' as Signal },
-  { address: '1290 N Prospect Rd', city: 'Indianapolis IN', strategy: 'Buy & Hold', cap: '9.4%', signal: 'BUY' as Signal },
-  { address: '3104 Clearwater Blvd', city: 'Tampa FL', strategy: 'BRRRR', cap: '10.1%', signal: 'STRONG BUY' as Signal },
-  { address: '412 Birch St', city: 'Kansas City MO', strategy: 'BRRRR', cap: '10.2%', signal: 'STRONG BUY' as Signal },
-]
-
 const STRATEGY_CARDS: {
   name: Strategy
   tag: string
@@ -1463,39 +1456,108 @@ const STRATEGY_CARDS: {
   { name: 'House Hack', tag: 'Live-in value-add', metricLabel: 'NET COST', metricValue: '-$180/mo avg' },
 ]
 
-function AnalyzeEmpty({ onPickStrategy }: { onPickStrategy: (s: Strategy) => void }) {
+type RecentDeal = {
+  id: string
+  address: string
+  strategy: string
+  cap: number | null
+  coc: number | null
+  signal: string
+}
+
+function AnalyzeEmpty({
+  onPickStrategy,
+  recentDeals,
+}: {
+  onPickStrategy: (s: Strategy) => void
+  recentDeals: RecentDeal[]
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 36, marginTop: 8 }}>
       <section>
         <SectionLabel color="var(--text-muted)">Recent analyses</SectionLabel>
-        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
-          {EMPTY_STATE_DEALS.map(d => (
-            <div
-              key={d.address}
-              style={{
-                flex: '0 0 auto',
-                minWidth: 200,
-                background: 'var(--surface)',
-                border: '1px solid var(--hairline)',
-                borderRadius: 8,
-                padding: 12,
-              }}
-            >
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {d.address}
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
-                {d.city} · {d.strategy}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 600, color: 'var(--indigo-hover)' }}>
-                  {d.cap}
-                </span>
-                <SignalBadge signal={d.signal} />
-              </div>
-            </div>
-          ))}
-        </div>
+        {recentDeals.length === 0 ? (
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              color: 'var(--text-muted)',
+              padding: '14px 0 4px',
+            }}
+          >
+            Your analyses will appear here.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
+            {recentDeals.map(d => {
+              const shortAddr = (d.address || '').split(',')[0] || d.address || '—'
+              return (
+                <div
+                  key={d.id}
+                  style={{
+                    flex: '0 0 auto',
+                    minWidth: 200,
+                    background: 'var(--surface)',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 8,
+                    padding: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: 'var(--text)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {shortAddr}
+                  </div>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      marginTop: 6,
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: 'var(--indigo-hover)',
+                      background: 'var(--indigo-dim)',
+                      border: '1px solid var(--hairline)',
+                      borderRadius: 4,
+                      padding: '2px 8px',
+                    }}
+                  >
+                    {d.strategy}
+                  </span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginTop: 10,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 18,
+                        fontWeight: 600,
+                        color: 'var(--indigo-hover)',
+                      }}
+                    >
+                      {d.cap != null ? `${d.cap.toFixed(1)}%` : '—'}
+                    </span>
+                    <SignalBadge signal={d.signal as Signal} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       <section>
@@ -2467,6 +2529,43 @@ function V3AnalyzePageInner() {
   const [model, setModel] = useState<ModelTier>(defaultModel)
   const [hasInitModel, setHasInitModel] = useState(false)
 
+  const [recentDeals, setRecentDeals] = useState<Array<{
+    id: string
+    address: string
+    strategy: string
+    cap: number | null
+    coc: number | null
+    signal: string
+  }>>([])
+
+  useEffect(() => {
+    fetch('/api/v3/pipeline', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => {
+        type RawDeal = {
+          id: string
+          address: string
+          strategy?: string | null
+          cap?: number | null
+          coc?: number | null
+          signal?: string | null
+          dealScore?: number | null
+        }
+        const deals: RawDeal[] = (data?.deals || []) as RawDeal[]
+        setRecentDeals(
+          deals.slice(0, 4).map(d => ({
+            id: d.id,
+            address: d.address,
+            strategy: d.strategy || 'Buy & Hold',
+            cap: d.cap ?? null,
+            coc: d.coc ?? null,
+            signal: d.signal || signalFromDealScore(d.dealScore ?? null),
+          }))
+        )
+      })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     const addrParam = searchParams.get('address')
     if (addrParam && !address) {
@@ -3262,7 +3361,7 @@ function V3AnalyzePageInner() {
         <ModelToggle value={model} onChange={setModel} allowed={allowedModels} />
       </div>
 
-      {showEmpty && <AnalyzeEmpty onPickStrategy={setStrategy} />}
+      {showEmpty && <AnalyzeEmpty onPickStrategy={setStrategy} recentDeals={recentDeals} />}
 
       {propLoading && (
         <div style={{ marginBottom: 22 }}>
