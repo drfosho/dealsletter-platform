@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import AnalysisAccordion from '@/components/v3/app/AnalysisAccordion'
 import AddressAutocomplete from '@/components/v3/app/AddressAutocomplete'
@@ -1947,7 +1947,8 @@ function renderBuyHoldWaterfall(
   result: V3AnalysisResult,
   _calc: Record<string, unknown> | null,
   form: EditForm | null,
-  params: DealParams
+  params: DealParams,
+  strategy: Strategy = 'Buy & Hold'
 ) {
   const purchase = toNum(form?.purchasePrice) ?? 0
   const dpPct = toNum(params.downPaymentPercent) ?? 25
@@ -2218,18 +2219,45 @@ function renderBuyHoldWaterfall(
           gap: 10,
         }}
       >
-        {[
-          { label: 'CAP RATE', value: fmtPct(capRate), color: 'var(--indigo-hover)' },
-          { label: 'CASH-ON-CASH', value: fmtPct(coc), color: 'var(--indigo-hover)' },
-          {
-            label: 'DSCR',
-            value: dscr != null ? dscr.toFixed(2) : '—',
-            color: (dscr ?? 0) >= 1.25 ? 'var(--green)' : 'var(--red)',
-          },
-          { label: '5-YR ROI', value: fmtPct(fiveYearROI), color: 'var(--indigo-hover)' },
-          { label: 'BREAK-EVEN ARV', value: fmtMoney(breakEvenArv), color: 'var(--text)' },
-          { label: '5-YR EQUITY', value: fmtMoney(fiveYearEquity), color: 'var(--green)' },
-        ].map(m => (
+        {(() => {
+          if (strategy === 'BRRRR') {
+            const arv = toNum(form?.arv) ?? result.metrics?.arvEstimate ?? 0
+            const refiProceeds = arv > 0 ? arv * 0.75 : null
+            const rehab = toNum(form?.rehabCost) ?? 0
+            const totalIn = purchase + rehab + closingCosts
+            const cashLeftIn =
+              refiProceeds != null ? totalIn - refiProceeds : null
+            const equityCapture = result.metrics?.equityCapture ?? null
+            return [
+              { label: 'ARV', value: fmtMoney(arv), color: 'var(--indigo-hover)' },
+              { label: 'REFI @ 75% LTV', value: fmtMoney(refiProceeds), color: 'var(--indigo-hover)' },
+              {
+                label: 'CASH LEFT IN DEAL',
+                value: fmtMoney(cashLeftIn),
+                color: (cashLeftIn ?? 0) <= 0 ? 'var(--green)' : 'var(--text)',
+              },
+              { label: 'EQUITY CAPTURE', value: fmtMoney(equityCapture), color: 'var(--green)' },
+              {
+                label: 'MONTHLY CF',
+                value: fmtMonthly(monthlyCF),
+                color: (monthlyCF ?? 0) >= 0 ? 'var(--green)' : 'var(--red)',
+              },
+              { label: 'CASH-ON-CASH', value: fmtPct(coc), color: 'var(--indigo-hover)' },
+            ]
+          }
+          return [
+            { label: 'CAP RATE', value: fmtPct(capRate), color: 'var(--indigo-hover)' },
+            { label: 'CASH-ON-CASH', value: fmtPct(coc), color: 'var(--indigo-hover)' },
+            {
+              label: 'DSCR',
+              value: dscr != null ? dscr.toFixed(2) : '—',
+              color: (dscr ?? 0) >= 1.25 ? 'var(--green)' : 'var(--red)',
+            },
+            { label: '5-YR ROI', value: fmtPct(fiveYearROI), color: 'var(--indigo-hover)' },
+            { label: 'BREAK-EVEN ARV', value: fmtMoney(breakEvenArv), color: 'var(--text)' },
+            { label: '5-YR EQUITY', value: fmtMoney(fiveYearEquity), color: 'var(--green)' },
+          ]
+        })().map(m => (
           <div
             key={m.label}
             style={{
@@ -2264,6 +2292,158 @@ function renderBuyHoldWaterfall(
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function renderFlipWaterfall(
+  result: V3AnalysisResult,
+  form: EditForm | null,
+  params: DealParams
+) {
+  const purchase = toNum(form?.purchasePrice) ?? 0
+  const rehab = toNum(form?.rehabCost) ?? 0
+  const closingPct = toNum(params.closingCosts) ?? 3
+  const sellClosingPct = toNum(params.sellClosingCosts) ?? 6
+  const dpPct = toNum(params.downPaymentPercent) ?? 10
+  const rate = toNum(params.interestRate) ?? 12
+  const holdingMonths = toNum(params.holdingMonths) ?? 6
+  const arv = toNum(form?.arv) ?? result.metrics?.arvEstimate ?? 0
+
+  const closing = Math.round(purchase * (closingPct / 100))
+  const loanBalance = Math.round(purchase * (1 - dpPct / 100))
+  const monthlyInterest = (loanBalance * (rate / 100)) / 12
+  const holdingCost = Math.round(monthlyInterest * holdingMonths)
+  const totalCost = purchase + rehab + closing + holdingCost
+  const sellClosing = Math.round(arv * (sellClosingPct / 100))
+  const netSale = arv - sellClosing
+  const grossProfit = arv - totalCost
+  const netProfit = netSale - totalCost
+  const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0
+  const maxOffer = arv > 0 ? Math.round(arv * 0.85 - rehab) : 0
+
+  const Row = ({
+    label,
+    value,
+    indent,
+    bold,
+    color,
+    border,
+  }: {
+    label: string
+    value: string
+    indent?: boolean
+    bold?: boolean
+    color?: string
+    border?: boolean
+  }) => (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto',
+        gap: 12,
+        padding: '9px 0',
+        borderTop: border
+          ? '1px solid var(--border-strong)'
+          : '1px solid var(--hairline)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 12,
+      }}
+    >
+      <span
+        style={{
+          color: bold ? 'var(--text)' : 'var(--text-muted)',
+          fontWeight: bold ? 600 : 400,
+          paddingLeft: indent ? 16 : 0,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          color: color || (bold ? 'var(--text)' : 'var(--text-secondary)'),
+          fontWeight: bold ? 600 : 500,
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  )
+
+  return (
+    <div
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 10,
+        padding: '4px 18px 12px',
+        marginBottom: 16,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          letterSpacing: '0.12em',
+          color: 'var(--indigo-hover)',
+          textTransform: 'uppercase',
+          padding: '12px 0 4px',
+          fontWeight: 600,
+        }}
+      >
+        Fix & Flip Waterfall
+      </div>
+      <Row label="Purchase Price" value={fmtMoneyFull(purchase)} />
+      <Row label="Rehab Cost" value={`+ ${fmtMoneyFull(rehab)}`} indent />
+      <Row
+        label={`Closing Costs (${closingPct}%)`}
+        value={`+ ${fmtMoneyFull(closing)}`}
+        indent
+      />
+      <Row
+        label={`Holding Costs (${holdingMonths}mo)`}
+        value={`+ ${fmtMoneyFull(holdingCost)}`}
+        indent
+      />
+      <Row
+        label="Total Project Cost"
+        value={fmtMoneyFull(totalCost)}
+        bold
+        color="var(--text)"
+        border
+      />
+      <Row label="ARV" value={fmtMoneyFull(arv)} />
+      <Row
+        label={`Sell Closing (${sellClosingPct}%)`}
+        value={`− ${fmtMoneyFull(sellClosing)}`}
+        indent
+        color="var(--red)"
+      />
+      <Row
+        label="Net Sale Proceeds"
+        value={fmtMoneyFull(netSale)}
+        bold
+        color="var(--text)"
+        border
+      />
+      <Row label="Gross Profit" value={fmtMoneyFull(grossProfit)} />
+      <Row
+        label="Net Profit"
+        value={fmtMoneyFull(netProfit)}
+        bold
+        color={netProfit >= 0 ? 'var(--green)' : 'var(--red)'}
+      />
+      <Row
+        label="ROI"
+        value={fmtPct(roi)}
+        color={roi >= 0 ? 'var(--green)' : 'var(--red)'}
+      />
+      <Row
+        label="Max Offer (85% rule)"
+        value={fmtMoneyFull(maxOffer)}
+        color="var(--indigo-hover)"
+      />
     </div>
   )
 }
@@ -2398,59 +2578,6 @@ function buildBRRRRWaterfall(
   ]
 }
 
-function buildFlipWaterfall(
-  purchase: number,
-  rehab: number,
-  closingPct: number,
-  sellClosingPct: number,
-  holdingMonths: number,
-  dpPct: number,
-  rate: number,
-  arv: number
-): WaterfallRow[] {
-  const closing = purchase * (closingPct / 100)
-  const loanBalance = purchase * (1 - dpPct / 100)
-  const monthlyInterest = (loanBalance * (rate / 100)) / 12
-  const holdingCost = monthlyInterest * holdingMonths
-  const totalCost = purchase + rehab + closing + holdingCost
-  const sellClosing = arv * (sellClosingPct / 100)
-  const netSale = arv - sellClosing
-  const grossProfit = arv - totalCost
-  const netProfit = netSale - totalCost
-  const roi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0
-  const maxOffer = arv * 0.85 - rehab
-  return [
-    { kind: 'line', label: 'Purchase Price', value: fmtMoneyFull(purchase) },
-    { kind: 'line', label: 'Rehab Cost', value: `+ ${fmtMoneyFull(rehab)}` },
-    { kind: 'line', label: `Closing Costs (${closingPct}%)`, value: `+ ${fmtMoneyFull(closing)}` },
-    {
-      kind: 'line',
-      label: `Holding Costs (${holdingMonths}mo)`,
-      value: `+ ${fmtMoneyFull(holdingCost)}`,
-    },
-    { kind: 'line', label: '= Total Project Cost', value: fmtMoneyFull(totalCost), accent: 'var(--text)' },
-    { kind: 'separator' },
-    { kind: 'line', label: 'ARV', value: fmtMoneyFull(arv) },
-    {
-      kind: 'line',
-      label: `− Sell Closing (${sellClosingPct}%)`,
-      value: fmtMoneyFull(sellClosing),
-    },
-    { kind: 'line', label: '= Net Sale Proceeds', value: fmtMoneyFull(netSale), accent: 'var(--text)' },
-    { kind: 'separator' },
-    { kind: 'line', label: 'Gross Profit', value: fmtMoneyFull(grossProfit) },
-    {
-      kind: 'line',
-      label: 'Net Profit',
-      value: fmtMoneyFull(netProfit),
-      accent: netProfit >= 0 ? '#34D399' : '#F87171',
-      emphasis: true,
-    },
-    { kind: 'line', label: 'ROI', value: fmtPct(roi), accent: '#34D399' },
-    { kind: 'line', label: 'Max Offer (85% rule)', value: fmtMoneyFull(maxOffer) },
-  ]
-}
-
 /* -------------------- pro forma + risk flags helpers -------------------- */
 
 const PRO_FORMA_FIELDS: { key: string; label: string; kind: 'money' | 'moneyYear' | 'moneyMonth' | 'pct' }[] = [
@@ -2528,6 +2655,24 @@ function V3AnalyzePageInner() {
   const [strategy, setStrategy] = useState<Strategy>('BRRRR')
   const [model, setModel] = useState<ModelTier>(defaultModel)
   const [hasInitModel, setHasInitModel] = useState(false)
+
+  const router = useRouter()
+
+  const [freeLimitReached, setFreeLimitReached] = useState(false)
+  const [freeLimitInfo, setFreeLimitInfo] = useState<{ used: number; limit: number; resetDate: string } | null>(null)
+  const [freeUsage, setFreeUsage] = useState<{ used: number; remaining: number; limit: number } | null>(null)
+
+  useEffect(() => {
+    if (tier !== 'free') return
+    fetch('/api/analysis/usage', { credentials: 'include' })
+      .then(r => r.json())
+      .then(data => setFreeUsage({
+        used: data.analyses_this_month || 0,
+        remaining: data.monthly_remaining ?? 0,
+        limit: data.monthly_limit || data.limit || 3,
+      }))
+      .catch(() => {})
+  }, [tier])
 
   const [recentDeals, setRecentDeals] = useState<Array<{
     id: string
@@ -2666,6 +2811,30 @@ function V3AnalyzePageInner() {
       setAnalysisError('Purchase price is required. Please verify the property data above.')
       return
     }
+
+    // Free-tier preflight: block before fetch if monthly cap is reached.
+    if (tier === 'free') {
+      try {
+        const usageRes = await fetch('/api/analysis/usage', { credentials: 'include' })
+        if (usageRes.ok) {
+          const usage = await usageRes.json()
+          if (usage.is_limited === true && (usage.monthly_remaining ?? 0) === 0) {
+            const now = new Date()
+            const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+            setFreeLimitInfo({
+              used: usage.analyses_this_month || 0,
+              limit: usage.monthly_limit || usage.limit || 3,
+              resetDate: next.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            })
+            setFreeLimitReached(true)
+            return
+          }
+        }
+      } catch {
+        // Soft-fail: let the API enforce the limit if the preflight breaks.
+      }
+    }
+
     setInputsCollapsed(true)
     setAnalysisLoading(true)
     setAnalysisError('')
@@ -2903,6 +3072,13 @@ function V3AnalyzePageInner() {
           </div>
         </section>
 
+        {/* Fix & Flip waterfall (above the chart, new style) */}
+        {strategy === 'Fix & Flip' && purchase > 0 && arv > 0 && (
+          <section style={{ marginBottom: 20 }}>
+            {renderFlipWaterfall(viewResult, form, params)}
+          </section>
+        )}
+
         {/* Chart */}
         {purchase > 0 && (
           <section style={{ marginBottom: 20 }}>
@@ -2929,36 +3105,20 @@ function V3AnalyzePageInner() {
           </section>
         )}
 
-        {/* Waterfall (strategy-specific) */}
-        {(strategy === 'BRRRR' || strategy === 'Fix & Flip') && purchase > 0 && arv > 0 && (
+        {/* BRRRR waterfall (legacy table below the chart) */}
+        {strategy === 'BRRRR' && purchase > 0 && arv > 0 && (
           <section style={{ marginBottom: 20 }}>
-            {strategy === 'BRRRR' ? (
-              <WaterfallTable
-                title="BRRRR Waterfall"
-                rows={buildBRRRRWaterfall(
-                  purchase,
-                  rehab,
-                  closingPct,
-                  arv,
-                  monthlyCF,
-                  viewResult.metrics?.cashOnCash ?? undefined
-                )}
-              />
-            ) : (
-              <WaterfallTable
-                title="Fix & Flip Waterfall"
-                rows={buildFlipWaterfall(
-                  purchase,
-                  rehab,
-                  closingPct,
-                  sellClosingPct,
-                  holdingMonths,
-                  dpPct,
-                  rate,
-                  arv
-                )}
-              />
-            )}
+            <WaterfallTable
+              title="BRRRR Waterfall"
+              rows={buildBRRRRWaterfall(
+                purchase,
+                rehab,
+                closingPct,
+                arv,
+                monthlyCF,
+                viewResult.metrics?.cashOnCash ?? undefined
+              )}
+            />
           </section>
         )}
 
@@ -2976,7 +3136,7 @@ function V3AnalyzePageInner() {
                 pointerEvents: tier === 'free' ? 'none' : 'auto',
               }}
             >
-              {renderBuyHoldWaterfall(viewResult, viewCalc, form, params)}
+              {renderBuyHoldWaterfall(viewResult, viewCalc, form, params, strategy)}
             </div>
             {tier === 'free' && (
               <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />
@@ -3473,6 +3633,29 @@ function V3AnalyzePageInner() {
               rehab={toNum(form.rehabCost) ?? 0}
               rentcastPropertyTax={propData.property?.propertyTaxes ?? null}
             />
+            {tier === 'free' && freeUsage && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'var(--elevated)',
+                border: '1px solid var(--hairline)',
+                borderRadius: 8,
+                padding: '8px 14px',
+                marginTop: 16,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                color: 'var(--text-muted)',
+              }}>
+                <span>
+                  {freeUsage.used} of {freeUsage.limit} free analyses used
+                  {freeUsage.remaining > 0 ? ` — ${freeUsage.remaining} remaining` : ' — limit reached'}
+                </span>
+                <a href="/pricing" style={{ color: 'var(--indigo-hover)', textDecoration: 'none' }}>
+                  Upgrade →
+                </a>
+              </div>
+            )}
             <div style={{ marginTop: 16, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button
                 type="button"
@@ -3894,6 +4077,61 @@ function V3AnalyzePageInner() {
         <div style={{ marginTop: 24 }}>
           <StatusBar value={dealStatus} onChange={setDealStatus} onSave={onSaveToPipeline} saveState={saveState} />
           {renderResultsView(result, calculations)}
+        </div>
+      )}
+
+      {/* Free-tier monthly cap modal */}
+      {freeLimitReached && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 200,
+          background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border-strong)',
+            borderRadius: 16, padding: '40px 36px', maxWidth: 440, width: '100%', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.4px', marginBottom: 10 }}>
+              {`You've used all ${freeLimitInfo?.limit ?? 3} free analyses`}
+            </div>
+            <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
+              Upgrade to Pro for unlimited analyses, full AI insights, saved history, and no caps.
+            </p>
+            <div style={{
+              background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)',
+              borderRadius: 8, padding: '10px 16px', fontSize: 13, color: '#34D399',
+              marginBottom: 24, fontWeight: 500,
+            }}>
+              7-day free trial — cancel anytime
+            </div>
+            {[
+              'Unlimited analyses, no monthly caps',
+              'Full AI narrative and deep analysis',
+              'Save and export your analyses',
+              'Auto model routing per strategy',
+            ].map(item => (
+              <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8, textAlign: 'left' }}>
+                <span style={{ color: 'var(--indigo-hover)', flexShrink: 0 }}>✓</span>
+                {item}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="app-btn"
+              style={{ width: '100%', padding: '13px 24px', fontSize: 15, marginTop: 16 }}
+              onClick={() => router.push('/pricing')}
+            >
+              See plans and start free trial →
+            </button>
+            <button
+              type="button"
+              className="app-btn-ghost"
+              style={{ width: '100%', padding: '10px', fontSize: 13, marginTop: 10, border: 'none' }}
+              onClick={() => setFreeLimitReached(false)}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
     </div>

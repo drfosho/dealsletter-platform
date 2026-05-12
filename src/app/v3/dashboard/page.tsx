@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import DealCard from '@/components/v3/app/DealCard'
 import PipelineTable from '@/components/v3/app/PipelineTable'
 import MetroTile from '@/components/v3/public/MetroTile'
@@ -242,7 +243,37 @@ function EmptyState({
   )
 }
 
+function V3DashboardPageInner() {
+  const searchParams = useSearchParams()
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('upgraded') === 'true') {
+      setShowUpgradeBanner(true)
+      window.history.replaceState({}, '', '/v3/dashboard')
+      const t = setTimeout(() => setShowUpgradeBanner(false), 6000)
+      return () => clearTimeout(t)
+    }
+  }, [searchParams])
+
+  return <V3DashboardPageBody showUpgradeBanner={showUpgradeBanner} onDismissBanner={() => setShowUpgradeBanner(false)} />
+}
+
 export default function V3DashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <V3DashboardPageInner />
+    </Suspense>
+  )
+}
+
+function V3DashboardPageBody({
+  showUpgradeBanner,
+  onDismissBanner,
+}: {
+  showUpgradeBanner: boolean
+  onDismissBanner: () => void
+}) {
   const tierState = useV3Tier()
   const [recent, setRecent] = useState<Deal[]>([])
   const [pipeline, setPipeline] = useState<Deal[]>([])
@@ -299,6 +330,26 @@ export default function V3DashboardPage() {
 
   return (
     <div style={{ padding: '28px 28px 80px', maxWidth: 1440, margin: '0 auto' }}>
+      {showUpgradeBanner && (
+        <div style={{
+          background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)',
+          borderRadius: 10, padding: '14px 18px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#34D399', marginBottom: 3 }}>
+              Welcome to Pro! Your account is now active.
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              Unlimited analyses, full AI insights, and all Pro features are now unlocked.
+            </div>
+          </div>
+          <button type="button" onClick={onDismissBanner}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 18 }}>
+            ×
+          </button>
+        </div>
+      )}
       <Greeting firstName={firstName} recentCount={recent.length} scanTime={scanTime} />
       <ScoutStatusStrip />
 
