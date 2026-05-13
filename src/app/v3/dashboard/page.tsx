@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import DealCard from '@/components/v3/app/DealCard'
 import PipelineTable from '@/components/v3/app/PipelineTable'
 import MetroTile from '@/components/v3/public/MetroTile'
@@ -31,7 +32,7 @@ function Greeting({
   recentCount,
   scanTime,
 }: {
-  firstName: string
+  firstName: string | null
   recentCount: number
   scanTime: string
 }) {
@@ -47,8 +48,15 @@ function Greeting({
           color: 'var(--text)',
         }}
       >
-        {greeting},{' '}
-        <span style={{ color: 'var(--indigo-hover)' }}>{firstName}</span>.
+        {greeting}
+        {firstName ? (
+          <>
+            ,{' '}
+            <span style={{ color: 'var(--indigo-hover)' }}>{firstName}</span>.
+          </>
+        ) : (
+          '.'
+        )}
       </h2>
       <div
         style={{
@@ -274,18 +282,57 @@ function V3DashboardPageBody({
   showUpgradeBanner: boolean
   onDismissBanner: () => void
 }) {
+  const router = useRouter()
   const tierState = useV3Tier()
+  const tier = tierState.status === 'ready' ? tierState.tier : 'free'
   const [recent, setRecent] = useState<Deal[]>([])
   const [pipeline, setPipeline] = useState<Deal[]>([])
   const [loadingRecent, setLoadingRecent] = useState(true)
   const [loadingPipeline, setLoadingPipeline] = useState(true)
   const [scanTime, setScanTime] = useState('04:24 PT')
+  const [userName, setUserName] = useState<string | null>(null)
 
   useEffect(() => {
     const d = new Date()
     const hh = d.getHours().toString().padStart(2, '0')
     const mm = d.getMinutes().toString().padStart(2, '0')
     setScanTime(`${hh}:${mm} PT`)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadName = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user || cancelled) return
+
+      const meta = session.user.user_metadata as Record<string, unknown> | null
+      const metaFirst =
+        (meta?.first_name as string | undefined) ||
+        (meta?.firstName as string | undefined)
+      const metaFull =
+        (meta?.full_name as string | undefined) ||
+        (meta?.name as string | undefined)
+
+      let resolved: string | null = null
+      if (metaFirst) resolved = metaFirst
+      else if (metaFull) resolved = metaFull.split(' ')[0]
+      else {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('full_name')
+          .eq('id', session.user.id)
+          .single()
+        const profileFull = profile?.full_name as string | undefined
+        if (profileFull) resolved = profileFull.split(' ')[0]
+      }
+
+      if (!cancelled) setUserName(resolved)
+    }
+    loadName()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -326,7 +373,7 @@ function V3DashboardPageBody({
     }
   }, [tierState.status])
 
-  const firstName = tierState.status === 'ready' ? tierState.firstName : 'there'
+  const firstName = userName
 
   return (
     <div style={{ padding: '28px 28px 80px', maxWidth: 1440, margin: '0 auto' }}>
@@ -352,6 +399,48 @@ function V3DashboardPageBody({
       )}
       <Greeting firstName={firstName} recentCount={recent.length} scanTime={scanTime} />
       <ScoutStatusStrip />
+
+      {tier === 'free' && (
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border-strong)',
+          borderRadius: 12,
+          padding: '20px 24px',
+          marginBottom: 24,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+              Start your free 7-day Pro trial
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Unlimited analyses, full AI insights, saved history, and no monthly caps.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+            <button
+              type="button"
+              className="app-btn"
+              style={{ padding: '10px 20px', fontSize: 13, whiteSpace: 'nowrap' }}
+              onClick={() => router.push('/pricing')}
+            >
+              Try Pro free →
+            </button>
+            <button
+              type="button"
+              className="app-btn-ghost"
+              style={{ padding: '10px 16px', fontSize: 13, whiteSpace: 'nowrap' }}
+              onClick={() => router.push('/pricing')}
+            >
+              See plans
+            </button>
+          </div>
+        </div>
+      )}
 
       <section style={{ marginBottom: 40 }}>
         <SectionHeader

@@ -601,35 +601,6 @@ function AlertBox({ kind, children }: { kind: 'error' | 'warn' | 'info'; childre
   )
 }
 
-function UpgradeOverlay({ message }: { message: string }) {
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        background: 'rgba(8,8,16,0.55)',
-        backdropFilter: 'blur(2px)',
-        borderRadius: 12,
-      }}
-    >
-      <div>
-        <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600 }}>{message}</div>
-        <Link
-          href="/pricing"
-          className="app-btn"
-          style={{ marginTop: 14, display: 'inline-flex', padding: '9px 16px', fontSize: 13 }}
-        >
-          Go Pro →
-        </Link>
-      </div>
-    </div>
-  )
-}
-
 function SectionLabel({ children, color }: { children: ReactNode; color?: string }) {
   return (
     <div
@@ -2961,8 +2932,6 @@ function V3AnalyzePageInner() {
   ) => {
     const accent = accentColor || 'var(--indigo-hover)'
     const signal = signalFromDealScore(viewResult.dealScore)
-    const narrativeBlurred = tier === 'free'
-    const secondaryBlurred = tier === 'free'
     const primary = primaryMetricsFor(strategy, viewResult, viewCalc, form, params)
     const secondary = secondaryMetricsFor(strategy, viewResult, viewCalc, form, params)
     const arv = toNum(form?.arv) ?? (viewResult.metrics?.arvEstimate ?? 0)
@@ -3072,6 +3041,57 @@ function V3AnalyzePageInner() {
           </div>
         </section>
 
+        {tier === 'free' ? (
+          <section style={{ position: 'relative', marginTop: 20 }}>
+            <div style={{
+              filter: 'blur(5px)',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              maxHeight: 320,
+              overflow: 'hidden',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                {['NOI', 'GROSS RENT', 'VACANCY', 'BREAK-EVEN ARV', '5-YR EQUITY', 'DSCR'].map(label => (
+                  <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--hairline)', borderRadius: 8, padding: 14 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: 'var(--text)', marginTop: 6 }}>$—</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(to bottom, rgba(8,8,16,0.3), rgba(8,8,16,0.92))',
+              borderRadius: 12,
+              padding: 24,
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+                Unlock the full analysis
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, maxWidth: 320, lineHeight: 1.5 }}>
+                Get NOI, waterfall breakdown, AI narrative, risk flags, and 30-year projections. Try Pro free for 7 days.
+              </div>
+              <button
+                type="button"
+                className="app-btn"
+                style={{ padding: '11px 24px', fontSize: 14 }}
+                onClick={() => router.push('/pricing')}
+              >
+                Start free trial →
+              </button>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+                Cancel anytime. No credit card required to try.
+              </div>
+            </div>
+          </section>
+        ) : (
+          <>
         {/* Fix & Flip waterfall (above the chart, new style) */}
         {strategy === 'Fix & Flip' && purchase > 0 && arv > 0 && (
           <section style={{ marginBottom: 20 }}>
@@ -3124,26 +3144,16 @@ function V3AnalyzePageInner() {
 
         {/* Secondary metrics */}
         {(strategy === 'Buy & Hold' || strategy === 'BRRRR') ? (
-          <section style={{ marginBottom: 20, position: 'relative' }}>
+          <section style={{ marginBottom: 20 }}>
             <div style={{ marginBottom: 10 }}>
               <SectionLabel color="var(--text-muted)">
                 {strategy === 'BRRRR' ? 'BRRRR Details' : 'Full Underwriting'}
               </SectionLabel>
             </div>
-            <div
-              style={{
-                filter: tier === 'free' ? 'blur(4px)' : 'none',
-                pointerEvents: tier === 'free' ? 'none' : 'auto',
-              }}
-            >
-              {renderBuyHoldWaterfall(viewResult, viewCalc, form, params, strategy)}
-            </div>
-            {tier === 'free' && (
-              <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />
-            )}
+            {renderBuyHoldWaterfall(viewResult, viewCalc, form, params, strategy)}
           </section>
         ) : (
-          <section style={{ marginBottom: 20, position: 'relative' }}>
+          <section style={{ marginBottom: 20 }}>
             <div style={{ marginBottom: 10 }}>
               <SectionLabel color="var(--text-muted)">
                 {strategy === 'Fix & Flip'
@@ -3155,54 +3165,46 @@ function V3AnalyzePageInner() {
             </div>
             <div
               style={{
-                filter: secondaryBlurred ? 'blur(4px)' : 'none',
-                pointerEvents: secondaryBlurred ? 'none' : 'auto',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gap: 10,
               }}
             >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                  gap: 10,
-                }}
-              >
-                {secondary.map(m => (
+              {secondary.map(m => (
+                <div
+                  key={m.label}
+                  style={{
+                    background: 'var(--bg)',
+                    border: '1px solid var(--hairline)',
+                    borderRadius: 8,
+                    padding: 14,
+                  }}
+                >
                   <div
-                    key={m.label}
                     style={{
-                      background: 'var(--bg)',
-                      border: '1px solid var(--hairline)',
-                      borderRadius: 8,
-                      padding: 14,
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      letterSpacing: '0.12em',
+                      color: 'var(--text-muted)',
+                      textTransform: 'uppercase',
                     }}
                   >
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 9,
-                        letterSpacing: '0.12em',
-                        color: 'var(--text-muted)',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {m.label}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 20,
-                        fontWeight: 600,
-                        color: 'var(--text)',
-                        marginTop: 6,
-                      }}
-                    >
-                      {m.value}
-                    </div>
+                    {m.label}
                   </div>
-                ))}
-              </div>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 20,
+                      fontWeight: 600,
+                      color: 'var(--text)',
+                      marginTop: 6,
+                    }}
+                  >
+                    {m.value}
+                  </div>
+                </div>
+              ))}
             </div>
-            {secondaryBlurred && <UpgradeOverlay message="Upgrade to Pro for full underwriting metrics" />}
           </section>
         )}
 
@@ -3259,13 +3261,8 @@ function V3AnalyzePageInner() {
 
         {/* Narrative + risk flags */}
         {(viewResult.narrative || (viewResult.riskFlags && viewResult.riskFlags.length > 0)) && (
-          <section style={{ marginBottom: 20, position: 'relative' }}>
-            <div
-              style={{
-                filter: narrativeBlurred ? 'blur(4px)' : 'none',
-                pointerEvents: narrativeBlurred ? 'none' : 'auto',
-              }}
-            >
+          <section style={{ marginBottom: 20 }}>
+            <div>
               {viewResult.narrative && (
                 <div
                   style={{
@@ -3352,7 +3349,6 @@ function V3AnalyzePageInner() {
                 </div>
               )}
             </div>
-            {narrativeBlurred && <UpgradeOverlay message="Upgrade to Pro to unlock full analysis" />}
           </section>
         )}
 
@@ -3407,6 +3403,8 @@ function V3AnalyzePageInner() {
               </p>
             </AnalysisAccordion>
           </section>
+        )}
+          </>
         )}
 
         {isDev && (

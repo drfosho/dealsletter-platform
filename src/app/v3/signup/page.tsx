@@ -11,6 +11,7 @@ import AuthShell, {
 } from '@/components/v3/public/AuthShell'
 
 function SignupInner() {
+  const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -19,6 +20,10 @@ function SignupInner() {
 
   const handleSignUp = async (e: FormEvent) => {
     e.preventDefault()
+    if (!firstName.trim()) {
+      setErrorMsg('Please enter your first name')
+      return
+    }
     if (!email || !password) {
       setErrorMsg('Please enter your email and password')
       return
@@ -31,14 +36,26 @@ function SignupInner() {
     setSubmitting(true)
     try {
       const supabase = createClient()
+      const trimmedName = firstName.trim()
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: { full_name: trimmedName, first_name: trimmedName },
+        },
       })
       if (error) {
         setErrorMsg(error.message)
         return
+      }
+      if (data.user) {
+        const { error: upsertErr } = await supabase
+          .from('user_profiles')
+          .upsert({ id: data.user.id, full_name: trimmedName }, { onConflict: 'id' })
+        if (upsertErr) {
+          console.error('[V3 Signup] user_profiles upsert failed:', upsertErr)
+        }
       }
       if (data.session) {
         window.location.href = '/v3/dashboard'
@@ -97,6 +114,21 @@ function SignupInner() {
       }
     >
       <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div>
+          <label style={authLabelStyle} htmlFor="v3-signup-first-name">First name</label>
+          <input
+            id="v3-signup-first-name"
+            type="text"
+            value={firstName}
+            onChange={e => setFirstName(e.target.value)}
+            placeholder="Kevin"
+            autoComplete="given-name"
+            required
+            style={authInputStyle}
+            onFocus={e => (e.currentTarget.style.borderColor = 'var(--border-strong)')}
+            onBlur={e => (e.currentTarget.style.borderColor = 'var(--hairline)')}
+          />
+        </div>
         <div>
           <label style={authLabelStyle} htmlFor="v3-signup-email">Email</label>
           <input
