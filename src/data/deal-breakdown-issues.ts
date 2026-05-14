@@ -43,6 +43,445 @@ export interface DealBreakdownIssue {
 
 export const dealBreakdownIssues: DealBreakdownIssue[] = [
   {
+    slug: 'issue-157-houston-oz-32unit-kc-section8-mesa-triplexes-san-diego-mount-hope-hack',
+    issueNumber: 157,
+    date: 'May 2026',
+    title: 'Houston Fifth Ward OZ 32-Unit + KC Section 8 8-Unit + Mesa Triplexes + San Diego Mount Hope House Hack',
+    previewText: 'Houston Fifth Ward 32-unit with a verified 5.02% cap and a Fannie Mae assumption that flips the deal. KC East Side 8-unit gut rehab at 100% Section 8 with two roughed-in basement units. Mesa 9-unit where Matthews showed both cap rates honestly. San Diego triplex at $1.095M with the same $1,743/mo ownership premium in every scenario.',
+    ctaStrategy: 'buyhold',
+    sponsor: undefined,
+    properties: [
+      {
+        address: '5408 Market St',
+        city: 'Houston, TX 77020',
+        price: 3500000,
+        units: 32,
+        capRate: 5.02,
+        coc: 0,
+        cashRequired: 980000,
+        annualCashFlow: 6707,
+        verdict: 'Conditional buy for an OZ investor deploying capital gains with a 10-year hold conviction - demand the cap rate explanation, secure the Fannie Mae loan note before LOI, implement RUBS at close.',
+        score: '5.5/10',
+        scoreValue: 5.5,
+        tag: 'EAST RIVER OZ PLAY',
+        tagColor: '#EF9F27',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/5408-Market-St-Houston-TX/40444206/',
+        opportunity: 'Verified 2025 NOI of $175,823 at 100% occupancy with $500K in documented 2024 capital improvements and an unimplemented RUBS opportunity adding $28-38K to NOI on Day 1. Houston Fifth Ward sits 1.5 miles from EaDo and directly in the East River 150-acre mixed-use development corridor. Opportunity Zone designation eliminates capital gains tax on appreciation for 10-year holders, and a Fannie Mae assumable loan from 2023 at a pre-2024 rate may be the only thing that converts this from cash flow negative to positive.',
+        risk: 'The 10.77% stated cap rate requires $376,950 in NOI versus $175,823 verified in 2025 actuals - a $201,127 gap with no clear explanation from the OM. The deal is cash flow negative at conventional financing (-$23,329/yr) and requires both loan assumption AND RUBS implementation to reach positive cash flow. 1955 construction needs a full property condition assessment beyond the cosmetic 2024 renovation.',
+        fullVerdict: 'Conditional buy for an OZ investor deploying capital gains with a 10-year hold conviction on the Fifth Ward and East River corridor. Get the full Fannie Mae loan note upfront, demand a reconciliation of the cap rate discrepancy from the broker, implement RUBS at close, and commission a property condition assessment on the 1955 mechanical systems.',
+      },
+      {
+        address: '5401 E 27th Ter',
+        city: 'Kansas City, MO 64128',
+        price: 600000,
+        units: 8,
+        capRate: 11.8,
+        coc: 22.6,
+        cashRequired: 180000,
+        annualCashFlow: 40740,
+        verdict: 'Conditional buy - confirm asking price first, negotiate seller financing terms in writing, verify Jackson County assessed value, and get a contractor bid on the basement unit finish. At or below $600K with reasonable seller financing terms: buy.',
+        score: '7/10',
+        scoreValue: 7,
+        tag: 'SECTION 8 VALUE-ADD KC',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/5401-E-27th-Ter-Kansas-City-MO/40482955/',
+        opportunity: '2023 down-to-studs gut renovation covering every major system - roof, plumbing, electrical, HVAC, flooring, and security cameras - eliminating capex risk for the next 7-10 years on a 100% Section 8 HCV 8-unit where 70-80% of rent arrives from KCHA on the first of the month. Seller financing at 30% down removes bank timing entirely. Two fully roughed-in basement apartments need only finish work - $70K investment creates $146K in asset value and adds $21,600/yr in additional HCV income.',
+        risk: 'No asking price published - this is the first due diligence action item. Electric heating in KC winters adds to tenant utility burden, and shared 100-gallon electric water heaters add owner utility cost. Basement unit activation requires egress windows per Missouri code, finish work, and KCHA inspection approval before generating income. Jackson County property tax reassessment post-renovation may be significantly higher than the pre-renovation bill.',
+        fullVerdict: 'Conditional buy - confirm asking price, negotiate seller financing terms targeting 5-6% rate and 30-year amortization, verify Jackson County tax assessment, and get a contractor bid on the basement unit finish including egress windows. At or below $600K with reasonable seller financing: buy.',
+      },
+      {
+        address: '1142-1150 N April Circle',
+        city: 'Mesa, AZ 85203',
+        price: 1400000,
+        units: 9,
+        capRate: 7.37,
+        coc: 6.3,
+        cashRequired: 462000,
+        annualCashFlow: 28908,
+        verdict: 'Buy at either cap rate - 8.86% for a self-managing operator or 7.37% for a PM-dependent buyer. Stabilized, honestly marketed Central Mesa 9-unit with real Phoenix appreciation upside and capex-completed mechanical systems.',
+        score: '8/10',
+        scoreValue: 8,
+        tag: 'MESA STABILIZED INCOME',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.loopnet.com/Listing/1150-N-April-Cir-Mesa-AZ/40350644/',
+        opportunity: 'Matthews disclosed both cap rates - 8.86% self-managed and 7.37% normalized - the most transparent financial presentation in this issue. Three triplex buildings on a quiet cul-de-sac in Central Mesa with private yards, carport parking, and W/D hookups on all nine units. All three roofs replaced 2018-2021, HVAC majority replaced, plumbing upgraded. The self-managing buyer captures 10.8% CoC Day 1 on stabilized Phoenix metro income with a 19.60% levered 10-year IRR and 4.94x equity multiple as the long-game.',
+        risk: 'Current rents are $84/unit above the comp average - verify the private yard and canal access amenity justification holds as six of nine leases roll in 2026-2027. T-12 maintenance at $429/unit reflects personal owner labor rather than professional management costs. 1970 construction warrants a full property condition assessment on electrical and foundation despite the major capex already completed.',
+        fullVerdict: 'Buy at either cap rate. Verify the 2026-2027 lease roll plan, confirm amenity justification for the above-comp rents, and close. Stabilized, well-maintained, honestly marketed Central Mesa 9-unit with real Phoenix appreciation upside.',
+      },
+      {
+        address: '641-43 Morrison St',
+        city: 'San Diego, CA 92102',
+        price: 1095000,
+        units: 3,
+        capRate: 0,
+        coc: 0,
+        cashRequired: 87600,
+        annualCashFlow: 60600,
+        verdict: 'Buy via conventional 5% down. Scenario A (owner in studio, $3,293/mo effective housing cost) is the mathematically optimal house hack. Verify rent roll, confirm studio ADU Certificate of Occupancy, and close.',
+        score: '7/10',
+        scoreValue: 7,
+        tag: 'MOUNT HOPE HOUSE HACK',
+        tagColor: '#1D9E75',
+        strategy: 'buyhold',
+        listingUrl: 'https://www.redfin.com/CA/San-Diego/641-Morrison-St-92102/home/196659613',
+        opportunity: 'Three genuinely distinct units - 3BD, 2BD, and newly built studio ADU - at $1.095M, well below the 5738 Meade Ave alternative at $1.449M, with the same 3-unit owner-occupied structure. Regardless of which unit the owner occupies, the monthly premium over renting your own unit is identical at $1,743/month. Five off-street parking spaces, Balboa Park proximity, and a newly built ADU likely exempt from AB 1482. By Year 10 the owner approaches living for free while holding $1M+ in equity on an $87,600 initial investment.',
+        risk: 'FHA self-sufficiency test fails for this property - 75% of $6,495 gross equals $4,871 versus $8,495 required PITI and MIP, meaning FHA requires the buyer income alone to qualify. Conventional 5% is the correct path. Public rent roll data is inconsistent across sources - request actual lease documentation before closing. Confirm the studio ADU has a valid Certificate of Occupancy before banking on that income.',
+        fullVerdict: 'Buy via conventional 5% down. Scenario A with owner in the studio produces $3,293/month effective housing cost. Scenario B with owner in the 2BD costs $650/month more for meaningfully better living space. Verify the rent roll directly, confirm the ADU CO, and close in whichever scenario matches your life.',
+      },
+    ],
+    content: `
+## Issue #157 - Four Deals, Four Markets
+
+This week: a Houston Fifth Ward 32-unit where the stated cap rate is double the verified 2025 actuals and a Fannie Mae loan assumption is the only path to positive cash flow, a KC East Side 8-unit gut rehab with 100% Section 8 and two roughed-in basement units worth $146K in value at $70K cost, a Mesa 9-unit where Matthews actually disclosed both the self-managed and normalized cap rates, and a San Diego triplex at $1.095M where the ownership premium is $1,743/month no matter which unit you live in.
+
+---
+
+## Property 1 - 5408 Market St (Wheatley Court Apartments) | Houston, TX 77020
+
+**Strategy: Buy and Hold Multifamily | 32 Units | $3,500,000**
+
+### Lead With the Discrepancy
+
+The stated 10.77% cap rate does not reconcile with the Actual 2025 financials.
+
+| Source | NOI | Cap Rate |
+|--------|-----|----------|
+| Actual 2025 (verified) | $175,823 | 5.02% |
+| LoopNet stated | $376,950 implied | 10.77% |
+| Gap | $201,127 | 5.75 points |
+
+For 10.77% to be accurate at $3.5M, the NOI would need to be $376,950 - more than double the verified 2025 figure. This requires a direct explanation from the broker before any underwriting proceeds.
+
+### Actual 2025 Financials
+
+| Line Item | Annual | Per Unit |
+|-----------|--------|----------|
+| Gross Rental Income | $345,600 | $10,800 |
+| Vacancy (7.56%) | -$26,125 | -$817 |
+| EGI | $319,475 | $9,983 |
+| Property Taxes | -$40,677 | -$1,271 |
+| Operating Expenses | -$102,975 | -$3,218 |
+| Total Expenses | -$143,652 | -$4,489 |
+| NOI | $175,823 | $5,494 |
+| Real Cap Rate | 5.02% | |
+
+The 44.96% expense ratio is credible and well-modeled. These are verified 2025 actuals, not a pro forma.
+
+### The Fannie Mae Assumption - The Only Path to Positive Cash Flow
+
+| Financing Scenario | Rate | Annual DS | Net CF | DCR |
+|-------------------|------|-----------|--------|-----|
+| New conventional | 6.5% | $199,152 | -$23,329 | 0.88x |
+| Assume at 5.0% (est.) | 5.0% | $169,116 | +$6,707 | 1.04x |
+| Assume at 4.5% (est.) | 4.5% | $159,612 | +$16,211 | 1.10x |
+| Assume at 4.0% | 4.0% | $150,420 | +$25,403 | 1.17x |
+
+At conventional 6.5% this deal loses $23,329/year from Day 1. The loan assumption is not optional.
+
+Request from the seller immediately: Fannie Mae loan note with rate, remaining term, outstanding balance, assumption fee, and lock-out period details.
+
+### The RUBS Opportunity
+
+Implementing RUBS at $100/unit/month across 32 units adds $38,400/yr to NOI immediately.
+
+NOI with RUBS: $175,823 + $38,400 = $214,223 at a 6.12% cap rate. Thin improvement but executable on Day 1.
+
+### The East River Development Thesis
+
+East River is a $400M+ 150-acre mixed-use development approximately 1-2 miles from 5408 Market St. If East River delivers the same neighborhood lift to Fifth Ward that Midway's projects delivered to EaDo - where 2BD apartments now lease for $1,400-$1,800/month - the appreciation case is real.
+
+At $1,400/unit/month stabilized: NOI approximately $297,000. Value at 6% exit cap: $4,950,000 - $1.45M above purchase price.
+
+### The Opportunity Zone Angle
+
+Houston 77020 is a Qualified Opportunity Zone. For an investor deploying $980K+ of capital gains, the 10-year tax-free appreciation on the asset combined with East River development catalyzing the neighborhood is a material return component that does not appear in any cap rate calculation.
+
+### Watch Points
+
+1. The 10.77% stated cap rate is not reconcilable with the 2025 actuals. Demand a full explanation before proceeding.
+2. Cash flow negative at conventional financing. The loan assumption is not optional - it is the only viable path to positive cash flow at this purchase price.
+3. $3.5M prices in East River appreciation that has not yet materialized. You are paying for the story, not the income.
+4. 1955 construction - the 2024 renovation was $15,625/unit, likely cosmetic. Full property condition assessment on plumbing, electrical, and structural is non-negotiable.
+5. Fannie Mae assumptions take 60-120 days. Confirm the seller will accommodate the timeline.
+
+### The Verdict: 5.5/10 - Conditional
+
+The actual deal is a 5.02% going-in cap on a 32-unit in Houston's Fifth Ward with verified income and a meaningful neighborhood transformation catalyst. For an OZ investor with capital gains to shelter and a 10-year hold conviction, the tax-free appreciation upside combined with a below-market assumed loan could produce a compelling after-tax return. For a standard income investor expecting 10.77% cap returns - this is not that deal. Demand the cap rate explanation, secure the Fannie Mae loan note before LOI, implement RUBS at close.
+
+---
+
+## Property 2 - 5401 E 27th Ter | Kansas City, MO 64128
+
+**Strategy: Buy and Hold Multifamily (Section 8) | 8 Units | Price Not Confirmed**
+
+### Confirm the Price First
+
+The LoopNet listing does not state an asking price. Everything below is scenario-based until the price is verified directly with the broker.
+
+| Price Scenario | Down (30%) | Est. Net CF (seller fin. at 7%) | CoC |
+|----------------|------------|--------------------------------|-----|
+| $750,000 | $225,000 | $31,916/yr | 14.2% |
+| $600,000 | $180,000 | $40,740/yr | 22.6% |
+| $475,000 | $142,500 | $46,556/yr | 32.7% |
+| $350,000 | $105,000 | $53,284/yr | 50.7% |
+
+At almost any reasonable price point, the deal produces strong CoC under seller financing. But the price anchors everything.
+
+### What This Building Actually Is
+
+A 2023 down-to-studs gut renovation covering every major system:
+
+- New roof
+- New windows
+- New ductwork and electric furnaces
+- New 100-amp panels per unit, full rewire
+- New PEX plumbing and drain lines throughout
+- New laminate hardwood flooring
+- Security cameras inside and out
+
+This is essentially a new building in a 1950s shell. Near-zero capex risk for 7-10 years minimum.
+
+### Section 8 HCV - Government-Backed Income
+
+All 8 units are Section 8 Housing Choice Voucher tenants. KCHA pays 70-80% of rent directly to the landlord on the first of the month regardless of individual tenant circumstances.
+
+2026 Kansas City HCV Payment Standards for 64128:
+- 1BD units: approximately $950-$1,100/month
+- 2BD units: approximately $1,150-$1,350/month
+
+Estimated gross at 2BD: $1,200 average x 8 = $9,600/month = $115,200/year
+
+### The Basement Units - The Value-Add Play
+
+Two unfinished basement apartments with complete wiring, plumbing, and drain lines already roughed in.
+
+| Metric | Per Unit | Both Units |
+|--------|----------|------------|
+| Finish cost (est.) | $35,000 | $70,000 |
+| Annual income added | $10,800 | $21,600 |
+| Value at 10% cap | $108,000 | $216,000 |
+| Net value created | $73,000 | $146,000 |
+
+$70K investment creates $146K in asset value. 2.09x return on the finish capital. The clearest value-add lever in the deal.
+
+Note: Missouri code requires egress windows for habitable basement space. This is the most expensive single variable in the finish estimate - $3,000-$8,000 per window depending on excavation.
+
+### Seller Financing - Negotiate Aggressively
+
+30% down with seller financing removes the bank entirely. Negotiate:
+
+- 5-6% interest rate (not 7-8% hard money rates)
+- 30-year amortization to minimize monthly payment
+- Balloon date with 5+ years before refinancing required
+- No prepayment penalty
+
+The difference between 6% and 7% on a $350-$525K seller note compounds significantly over the hold period.
+
+### Watch Points
+
+1. No asking price - verify with the broker before any further analysis.
+2. Seller financing terms need to be in writing before LOI. Rate, amortization, balloon date, and prepayment terms are all negotiable.
+3. Electric heating in KC winters increases tenant utility burden. Confirm KCHA payment standards cover electric-heat units.
+4. Shared 100-gallon electric water heaters are an owner expense - approximately $2,400-$3,600/year - and need to be in the underwrite.
+5. Jackson County property tax reassessment post-renovation may be significantly higher than the pre-renovation bill. Verify current assessed value.
+6. Annual HUD inspections require consistent maintenance response. Build a reserve fund to address any inspection failures quickly.
+
+### The Verdict: 7/10 - Buy (Price-Dependent)
+
+A fully renovated 2023 gut-rehab 8-unit with 100% Section 8 tenancy, two roughed-in value-add basement units, seller financing available, and electric separately metered by tenant. The HCV income stream is the anchor - government-backed, consistent, and well above what an unsubsidized Class C tenant base in 64128 would reliably produce. Confirm the price, negotiate seller financing terms aggressively, verify Jackson County tax assessment, and get a contractor bid on the basement unit finish including egress windows. At or below $600K with reasonable seller financing: move.
+
+---
+
+## Property 3 - 1142-1150 N April Circle | Mesa, AZ 85203
+
+**Strategy: Buy and Hold Multifamily | 9 Units (3 Triplexes) | $1,400,000**
+
+### Start Here - What Matthews Got Right
+
+Matthews explicitly states in the listing: "8.86% current cap rate (self-managed)." They then show in the Pro Forma Comparison that a normalized cap rate with professional management is 7.37%. This is the disclosure almost every other deal in this issue refused to make.
+
+Both cap rates are presented honestly. Both work.
+
+### The Complete Rent Roll
+
+| Unit | Type | Current Rent | Market Rent | Lease Ends |
+|------|------|-------------|-------------|------------|
+| 1149 A | 1BD/1BA | $1,250 | $1,250 | 11/30/2027 |
+| 1142 C | 2BD/1BA | $1,326 | $1,350 | 11/30/2026 |
+| 1149 B | 2BD/1BA | $1,350 | $1,350 | 11/30/2027 |
+| 1150 A | 2BD/1BA | $1,376 | $1,376 | 11/30/2027 |
+| 1142 A | 2BD/1BA | $1,379 | $1,379 | 9/30/2026 |
+| 1149 C | 2BD/1BA | $1,500 | $1,500 | 12/1/2027 |
+| 1150 B | 3BD/1BA | $1,600 | $1,600 | 11/30/2027 |
+| 1142 B | 3BD/1BA | $1,675 | $1,675 | 10/31/2026 |
+| 1150 C | 3BD/1BA | $1,675 | $1,675 | 11/30/2027 |
+
+Current rents and market rents are essentially identical. The 20-year owner has been actively managing rents to market throughout the tenancy. There is no below-market lease that pops on turnover.
+
+### The Two-Cap-Rate Reality
+
+| Scenario | NOI | Cap Rate | Net CF | CoC | DCR |
+|----------|-----|----------|--------|-----|-----|
+| T-12 (self-managed) | $124,061 | 8.86% | $49,730 | 10.8% | 1.67x |
+| Pro Forma (6% PM) | $103,239 | 7.37% | $28,908 | 6.3% | 1.39x |
+| Pro Forma + Year 3 rent growth | ~$112,000 | ~8.0% | $37,669 | 8.2% | 1.51x |
+
+The T-12 expense ratio of 17% is explained entirely by three absences: $0 management fee, $0 marketing, $0 apartment turnover prep. The owner does this work personally. The 28% normalized expense ratio is appropriate for professional management.
+
+### Financing
+
+| Item | Amount |
+|------|--------|
+| Purchase Price | $1,400,000 |
+| Down Payment (30%) | $420,000 |
+| Purchase Costs (3%) | $42,000 |
+| Total Cash In | $462,000 |
+| Loan Amount (70%) | $980,000 |
+| Rate | 6.50% |
+| Annual Debt Service | $74,331 |
+
+Note: The OM uses 70% LTV rather than the standard 75%. Verify actual lending terms with Phoenix multifamily lenders - 75% may be available, reducing cash required.
+
+### 10-Year Hold Analysis (OM Projections)
+
+| Metric | Value |
+|--------|-------|
+| Exit Cap Rate (Year 10) | 6.50% |
+| Residual Value | $2,431,155 |
+| Unlevered 10-Year IRR | 13.46% |
+| Levered 10-Year IRR | 19.60% |
+| Equity Multiple | 4.94x |
+
+The residual value verification holds: $2,431,155 at 6.5% exit cap requires Year 10 NOI of $158,025. T-12 NOI of $124,061 growing at 3%/year reaches $166,693 by Year 10. Consistent.
+
+### Central Mesa Market Context
+
+Phoenix metro continues adding 50,000-70,000 residents annually. Central Mesa has experienced consistent appreciation driven by Mesa City Center redevelopment, Tempe and ASU proximity, Mesa Light Rail connectivity, and major employer presence (Boeing, Banner Health). Class C product like these triplexes has been relatively insulated from the new Class A supply delivered in 2024-2025.
+
+The private yard and canal access amenities justify the $84/unit premium to comp average. Units without private yards in Mesa rent for $100-$200/unit less than comparable units with yards. Verify empirically but the premium has real structural support.
+
+### Watch Points
+
+1. Current rents exceed comp average by $84/unit. Verify the amenity justification holds as six of nine leases roll in 2026-2027.
+2. All six rolling leases expire within a 12-18 month window. Budget for turnover costs and potential short-term vacancy concentrated across the portfolio.
+3. 1970 construction - roofs, HVAC, and plumbing addressed but verify electrical panel age and capacity, foundation condition, and drainage.
+4. T-12 maintenance at $429/unit reflects owner self-repair. Budget the pro forma $500/unit for professional management.
+5. No management fee in T-12 is $9,346/year that only a hands-on owner-operator captures. Remote investors should underwrite at 7.37%, not 8.86%.
+
+### The Verdict: 8/10 - Buy
+
+The best-documented and most straightforwardly honest deal in this issue. Matthews showed both cap rates, itemized every expense line, provided a complete rent roll with individual square footage and lease expiration, and presented a 10-year model with credible assumptions. The deal earns the score independently: three triplex buildings in Central Mesa with private yards, recent roofs, replaced HVAC, canal access, 100% occupancy, and rents with real amenity justification for the slight premium to comps. A 7.37% going-in cap at $156,000/unit in Phoenix metro with a 19.60% levered 10-year IRR is a straightforward buy. Verify the 2026-2027 lease roll plan and close.
+
+---
+
+## Property 4 - 641-43 Morrison St | San Diego, CA 92102
+
+**Strategy: House Hack | Triplex (3BD + 2BD + Studio ADU) | $1,095,000**
+
+### The Key Insight - Same Premium in Every Scenario
+
+| Owner Unit | Effective Housing Cost | Market Rent of Unit | Monthly Premium |
+|------------|----------------------|---------------------|-----------------|
+| Studio | $3,293 | $1,550 | +$1,743 |
+| 2BD | $3,943 | $2,200 | +$1,743 |
+| 3BD | $4,593 | $2,850 | +$1,743 |
+
+The monthly premium over renting your own unit is identical at $1,743/month across all three scenarios. The choice of which unit to occupy is purely a lifestyle decision. The wealth-building outcome is the same.
+
+### The Units
+
+| Unit | Type | Market Rent |
+|------|------|-------------|
+| Main | 3BD/1BA | $2,800-$2,900 |
+| Secondary | 2BD/1BA | $2,100-$2,300 |
+| ADU | Studio (newly built) | $1,495-$1,700 |
+| Total gross | | ~$6,495/month |
+
+### Financing - Conventional 5% Is the Right Path
+
+| Item | FHA (3.5% Down) | Conventional (5% Down) |
+|------|-----------------|------------------------|
+| Down Payment | $38,325 | $54,750 |
+| Total Cash In | $71,175 | $87,600 |
+| Monthly PITI | $8,495 | $8,343 |
+
+FHA self-sufficiency test: 75% x $6,495 = $4,871 required versus $8,495 actual PITI. The test fails by $3,624/month. FHA requires buyer income alone to support the full obligation without rental income offset in DTI. Conventional 5% is the cleaner path for most buyers.
+
+### The Three Scenarios
+
+**Scenario A - Owner in Studio (Maximum Offset)**
+
+| Item | Amount |
+|------|--------|
+| Full PITI + PMI | $8,343/mo |
+| Rent from 3BD | -$2,850 |
+| Rent from 2BD | -$2,200 |
+| Effective Housing Cost | $3,293/mo |
+
+**Scenario B - Owner in 2BD (Middle Ground)**
+
+| Item | Amount |
+|------|--------|
+| Full PITI + PMI | $8,343/mo |
+| Rent from 3BD | -$2,850 |
+| Rent from Studio | -$1,550 |
+| Effective Housing Cost | $3,943/mo |
+
+**Scenario C - Owner in 3BD (Best Lifestyle)**
+
+| Item | Amount |
+|------|--------|
+| Full PITI + PMI | $8,343/mo |
+| Rent from 2BD | -$2,200 |
+| Rent from Studio | -$1,550 |
+| Effective Housing Cost | $4,593/mo |
+
+### Long-Term Projections (Scenario A / 4% appreciation / 3% rent growth)
+
+| Year | Effective Housing Cost | Property Value | Total Equity |
+|------|----------------------|----------------|--------------|
+| 1 | $3,293/mo | $1,095,000 | $54,750 |
+| 3 | $3,007/mo | $1,184,352 | $250,000 |
+| 5 | $2,745/mo | $1,282,000 | $455,000 |
+| 7 (PMI drops) | $2,200/mo | $1,385,000 | $680,000 |
+| 10 | $1,700/mo | $1,561,000 | $1,000,000+ |
+
+### Mount Hope Market Context
+
+Mount Hope sits east of Golden Hill and south of Balboa Park in 92102 - a transitional San Diego neighborhood gentrifying slowly from the north as Golden Hill and South Park pricing spills over. Good freeway access via SR-94 and I-805. Rents are below Golden Hill comps but above Southeast San Diego working class neighborhoods. Balboa Park proximity adds genuine lifestyle and tenant retention value.
+
+### Watch Points
+
+1. FHA self-sufficiency test fails. Conventional 5% is the correct financing path for most buyers.
+2. Public rent roll data is inconsistent across sources. Request actual lease agreements before any offer.
+3. Confirm the studio ADU has a valid Certificate of Occupancy. Newly built does not guarantee a CO has been issued. An unpermitted ADU cannot be legally rented.
+4. AB 1482 likely applies to the main structure units if built before 2009 - annual 5% + CPI increase caps and just-cause eviction requirements apply.
+5. Mount Hope crime is above San Diego average. Tenant quality management and property security are ongoing considerations.
+
+### The Verdict: 7/10 - Buy (Conventional 5% Down)
+
+A well-structured San Diego house hack at a more accessible price point than the College Area SDSU deal at $1.449M. The three-unit layout with a genuinely new studio ADU gives the owner real flexibility. The $1,743/month ownership premium is constant across all three scenarios - you pay that amount more than renting to own a $1.095M San Diego triplex. Against 4%+ annual appreciation ($43,800/year), the math is strongly positive from Year 1. Scenario A for maximum offset if your lifestyle allows studio living. Scenario B for $650/month more and meaningful living space. Verify the rent roll directly, confirm the ADU Certificate of Occupancy, and close.
+
+---
+
+## Deal Rankings
+
+| Property | Market | Cash In | Key Return | Score | Verdict |
+|----------|--------|---------|-----------|-------|---------|
+| 1142 N April Cir | Mesa, AZ | $462K | 7.37-8.86% cap / 10.8% CoC | 8/10 | Buy |
+| 5401 E 27th Ter | Kansas City, MO | $180K (est.) | 22.6% CoC (est. at $600K) | 7/10 | Conditional |
+| 641 Morrison St | San Diego, CA | $88K (5% conv.) | $3,293/mo eff. housing cost | 7/10 | Buy |
+| 5408 Market St | Houston, TX | $980K+ | 5.02% cap / assumption required | 5.5/10 | Conditional |
+
+---
+
+*Analyze any of these deals yourself at Dealsletter.io - run your own numbers, adjust the assumptions, and get a full AI breakdown in under 30 seconds.*
+`,
+  },
+  {
     slug: 'issue-156-kc-oz-6unit-killeen-military-galveston-str-san-diego-house-hack',
     issueNumber: 156,
     date: 'May 2026',
