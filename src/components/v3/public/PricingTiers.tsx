@@ -76,6 +76,7 @@ export default function PricingTiers() {
     >
       {TIERS.map(tier => {
         const highlight = !!tier.highlight
+        const isProMax = tier.name === 'Pro Max'
         return (
           <div
             key={tier.name}
@@ -110,6 +111,28 @@ export default function PricingTiers() {
               </span>
             )}
 
+            {isProMax && (
+              <div style={{
+                display: 'inline-flex',
+                alignSelf: 'flex-start',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(251,191,36,0.12)',
+                border: '1px solid rgba(251,191,36,0.3)',
+                borderRadius: 999,
+                padding: '4px 12px',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.1em',
+                color: '#FBBF24',
+                textTransform: 'uppercase',
+                marginBottom: 16,
+              }}>
+                ⚡ Founding Rate
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)' }}>{tier.name}</span>
               <span
@@ -141,6 +164,19 @@ export default function PricingTiers() {
                 {tier.period}
               </span>
             </div>
+
+            {isProMax && (
+              <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                color: 'var(--text-muted)',
+                letterSpacing: '0.06em',
+                marginTop: 4,
+                marginBottom: 16,
+              }}>
+                Early access pricing. Rate locks at launch.
+              </div>
+            )}
 
             <div
               style={{

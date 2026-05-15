@@ -143,11 +143,61 @@ export default function PricingPage() {
         >
           Pay for the models you run.
         </h1>
-        <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 640, lineHeight: 1.55, margin: '0 0 40px' }}>
+        <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 640, lineHeight: 1.55, margin: '0 0 16px' }}>
           Free lets you try any address. Pro unlocks full results and unlimited analyses. Pro Max runs three frontier models in parallel and enables Deal Scout.
         </p>
 
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 10,
+          background: 'var(--surface)',
+          border: '1px solid var(--hairline)',
+          borderRadius: 999,
+          padding: '8px 18px',
+          marginBottom: 40,
+          fontFamily: 'var(--font-mono)',
+          fontSize: 12,
+          color: 'var(--text-secondary)',
+        }}>
+          <span style={{ color: 'var(--indigo-hover)' }}>◆</span>
+          Built on 150+ issues of real deal analysis. Followed by 2,300+ real estate investors.
+        </div>
+
         <PricingTiers />
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          gap: 24,
+          marginTop: 16,
+          marginBottom: 8,
+          maxWidth: 900,
+        }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5, textAlign: 'center' }}>
+            {/* Free — no descriptor */}
+          </div>
+          <div style={{
+            fontSize: 12,
+            color: 'var(--text-secondary)',
+            lineHeight: 1.6,
+            textAlign: 'center',
+            padding: '0 8px',
+          }}>
+            Most investors start here. Unlimited analyses, full AI results, no blur.
+          </div>
+          <div style={{
+            fontSize: 12,
+            color: 'var(--text-secondary)',
+            lineHeight: 1.6,
+            textAlign: 'center',
+            padding: '0 8px',
+          }}>
+            For serious deal flow. Three frontier models running your deal simultaneously —
+            Claude Opus, GPT-4o, and Grok 3. Deal Scout delivers matching properties to
+            your inbox automatically.
+          </div>
+        </div>
       </section>
 
       <section style={{ padding: '40px 40px 60px', maxWidth: 1440, margin: '0 auto' }}>
@@ -220,6 +270,17 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
+        <p style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 11,
+          color: 'var(--text-muted)',
+          textAlign: 'center',
+          marginTop: 20,
+          letterSpacing: '0.04em',
+        }}>
+          Every plan includes all 4 strategies. Your tier determines the depth of analysis
+          and which models power it.
+        </p>
       </section>
 
       <section style={{ padding: '40px 40px 120px', maxWidth: 1440, margin: '0 auto' }}>
