@@ -434,10 +434,10 @@ export default function PricingPage() {
               marginBottom: 6,
             }}
           >
-            Trusted by 2,300+ real estate investors. 10,000+ properties analyzed.
+            Followed by 2,300+ real estate investors. 1,000+ deals analyzed and counting.
           </p>
           <p style={{ fontSize: 14, color: "#4e4a6a", margin: 0 }}>
-            Join investors analyzing BRRRR, Fix and Flip, Buy and Hold, and House Hack deals across every major market.
+            Join investors analyzing BRRRR, Fix &amp; Flip, Buy &amp; Hold, and House Hack deals across every major market.
           </p>
         </div>
 
@@ -880,7 +880,7 @@ export default function PricingPage() {
             Your next deal is either worth pursuing or it isn&apos;t.
           </h2>
           <p style={{ fontSize: 15, color: "#4e4a6a", marginBottom: 28 }}>
-            Find out in 30 seconds. 2,300+ investors already are.
+            Find out in 30 seconds. 2,300+ investors already follow the analysis.
           </p>
           <div
             style={{
