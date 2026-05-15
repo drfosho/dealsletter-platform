@@ -702,6 +702,31 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
+          // If the subscription has effectively ended (trial expired without a
+          // payment method attached), strip paid access immediately instead of
+          // leaving the user on 'pro' with a dead status. Mirrors the reset
+          // behavior of customer.subscription.deleted. past_due is intentionally
+          // not handled here so users keep access during the dunning window.
+          if (subscription.status === 'incomplete_expired') {
+            console.log('[Webhook] subscription.updated - 🪦 Status is', subscription.status, '— resetting tier to free');
+            const { error: resetError } = await supabase
+              .from('user_profiles')
+              .update({
+                subscription_tier: 'free',
+                subscription_status: subscription.status as string,
+                cancel_at_period_end: false,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', userId);
+
+            if (resetError) {
+              console.error('[Webhook] subscription.updated - ❌ Reset to free failed:', resetError);
+            } else {
+              console.log('[Webhook] subscription.updated - ✅ User reset to free tier');
+            }
+            break;
+          }
+
           // Check V2 price IDs first
           const updatedPriceId = subscription.items?.data?.[0]?.price?.id;
           let tierName = V2_PRICE_TIERS[updatedPriceId || ''];
@@ -858,11 +883,11 @@ export async function POST(request: NextRequest) {
         }
 
         if (userId) {
-          // Update user_profiles - reset to basic tier
+          // Update user_profiles - reset to free tier
           const { error: profileError } = await supabase
             .from('user_profiles')
             .update({
-              subscription_tier: 'basic',
+              subscription_tier: 'free',
               subscription_status: 'canceled',
               cancel_at_period_end: false,
               updated_at: new Date().toISOString()
@@ -872,7 +897,7 @@ export async function POST(request: NextRequest) {
           if (profileError) {
             console.error('[Webhook] subscription.deleted - ❌ DB Error:', profileError);
           } else {
-            console.log('[Webhook] subscription.deleted - ✅ User profile reset to basic tier');
+            console.log('[Webhook] subscription.deleted - ✅ User profile reset to free tier');
           }
 
           // Send the final "your subscription has ended" email — exactly once per

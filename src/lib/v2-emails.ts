@@ -773,6 +773,97 @@ export async function sendReengagementEmail(
   })
 }
 
+// --- EMAIL 7: Trial ending reminder ---
+
+export const getTrialEndingEmailTemplate = (
+  firstName: string | undefined,
+  daysLeft: number
+) => {
+  const name = firstName ? escapeHtml(firstName) : 'there'
+  const dayLabel = daysLeft === 1 ? '1 day' : `${daysLeft} days`
+  return {
+    subject: `your dealsletter trial ends in ${dayLabel}`,
+    html: emailWrapper(`
+      <div style="display:none; max-height:0; overflow:hidden; font-size:0; line-height:0; color:transparent;">
+        add a payment method to keep unlimited analyses and full AI breakdowns.
+      </div>
+
+      <p style="
+        font-size: 16px;
+        color: #f0eeff;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      ">
+        Hey ${name},
+      </p>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      ">
+        just a heads up, your Dealsletter Pro trial ends in ${dayLabel}.
+      </p>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 24px;
+      ">
+        if you want to keep running unlimited analyses with full AI breakdowns, add your payment info before it expires.
+      </p>
+
+      <p style="
+        font-size: 15px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 28px;
+      ">
+        took you 30 seconds to analyze your first deal. takes the same to save your access.
+      </p>
+
+      <div style="margin: 0 0 28px;">
+        ${emailButton('Add payment info &rarr;', 'https://dealsletter.io/v2/account')}
+      </div>
+
+      ${divider}
+
+      <p style="
+        font-size: 14px;
+        color: #6b6690;
+        line-height: 1.7;
+        margin: 0 0 16px;
+      ">
+        if you decide pro isn't for you, no action needed. your account stays free with 3 analyses per month.
+      </p>
+
+      <p style="
+        font-size: 14px;
+        color: #e8e6f0;
+        line-height: 1.7;
+        margin: 0;
+      ">
+        - Kevin<br/>
+        <span style="font-size: 13px; color: #6b6690;">Founder, Dealsletter</span>
+      </p>
+    `),
+  }
+}
+
+export async function sendTrialEndingEmail(
+  email: string,
+  firstName: string | undefined,
+  daysLeft: number
+) {
+  const template = getTrialEndingEmailTemplate(firstName, daysLeft)
+  return send(email, template.subject, template.html, {
+    from: 'Dealsletter <main@dealsletter.io>',
+    replyTo: 'kevin@dealsletter.io',
+  })
+}
+
 // -------------------------------------------------------------------
 // MANUAL STEP: Update Supabase email templates
 // -------------------------------------------------------------------

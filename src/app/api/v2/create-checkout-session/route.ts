@@ -256,9 +256,16 @@ export async function POST(request: Request) {
     }
 
     // Add subscription metadata + 7-day trial
-    checkoutParams.payment_method_collection = 'always'
+    // No card required up front. If the trial ends without a payment method
+    // attached, Stripe cancels the subscription via trial_settings below.
+    checkoutParams.payment_method_collection = 'if_required'
     checkoutParams.subscription_data = {
       trial_period_days: 7,
+      trial_settings: {
+        end_behavior: {
+          missing_payment_method: 'cancel'
+        }
+      },
       metadata: {
         tier,
         billingPeriod,
