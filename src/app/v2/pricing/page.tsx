@@ -422,6 +422,25 @@ export default function PricingPage() {
           )}
         </div>
 
+        {/* Social proof */}
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <p
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#e8e6f0",
+              letterSpacing: "-0.2px",
+              marginTop: 0,
+              marginBottom: 6,
+            }}
+          >
+            Trusted by 2,300+ real estate investors. 10,000+ properties analyzed.
+          </p>
+          <p style={{ fontSize: 14, color: "#4e4a6a", margin: 0 }}>
+            Join investors analyzing BRRRR, Fix and Flip, Buy and Hold, and House Hack deals across every major market.
+          </p>
+        </div>
+
         {/* SECTION 3 — Tier cards */}
         <div
           className="pricing-grid"
@@ -753,6 +772,13 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {/* Pre-FAQ tagline */}
+        <div style={{ textAlign: "center", marginBottom: 64 }}>
+          <p style={{ fontSize: 16, color: "#9994b8", margin: 0, lineHeight: 1.6 }}>
+            Start analyzing in 30 seconds. No setup. No learning curve. Drop an address, pick your strategy, get your verdict.
+          </p>
+        </div>
+
         {/* SECTION 5 — FAQ */}
         <div style={{ textAlign: "center", marginBottom: 64 }}>
           <h2
@@ -851,11 +877,10 @@ export default function PricingPage() {
               marginTop: 0,
             }}
           >
-            Start analyzing deals today.
+            Your next deal is either worth pursuing or it isn&apos;t.
           </h2>
           <p style={{ fontSize: 15, color: "#4e4a6a", marginBottom: 28 }}>
-            Free plan includes 3 analyses/month &mdash; no card required.
-            7-day free trial on paid plans. Cancel anytime.
+            Find out in 30 seconds. 2,300+ investors already are.
           </p>
           <div
             style={{
