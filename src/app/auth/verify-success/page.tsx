@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 
-export default function VerifySuccess() {
+function VerifySuccessInner() {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isNew = searchParams.get('new') === 'true'
+  const destination = isNew ? '/v3/dashboard?new=true' : '/v3/dashboard'
   const [countdown, setCountdown] = useState(5)
 
   useEffect(() => {
@@ -22,12 +25,12 @@ export default function VerifySuccess() {
   useEffect(() => {
     // Redirect when countdown reaches 0
     if (countdown <= 0) {
-      router.push('/v2/analyze')
+      router.push(destination)
     }
-  }, [countdown, router])
+  }, [countdown, router, destination])
 
   const handleGoNow = () => {
-    router.push('/v2/analyze')
+    router.push(destination)
   }
 
   if (loading) {
@@ -90,5 +93,17 @@ export default function VerifySuccess() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function VerifySuccess() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <VerifySuccessInner />
+    </Suspense>
   )
 }

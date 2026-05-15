@@ -87,8 +87,8 @@ function AuthCallbackContent() {
               setTimeout(() => {
                 fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
               }, 1000)
-              // Email verification flow - go to success page
-              router.push('/auth/verify-success')
+              // Email verification flow - go to success page (new user)
+              router.push('/auth/verify-success?new=true')
             } else {
               // Fire welcome email for Google OAuth signups
               // Non-blocking — don't await
@@ -127,8 +127,8 @@ function AuthCallbackContent() {
             setTimeout(() => {
               fetch('/api/email/welcome', { method: 'POST' }).catch(() => {})
             }, 1000)
-            // Email verification flow - go to success page
-            router.push('/auth/verify-success')
+            // Email verification flow - go to success page (new user)
+            router.push('/auth/verify-success?new=true')
           } else {
             // Fire welcome email for Google OAuth signups
             // Non-blocking — don't await

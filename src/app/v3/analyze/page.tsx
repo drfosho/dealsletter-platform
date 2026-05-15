@@ -3048,54 +3048,85 @@ function V3AnalyzePageInner() {
         </section>
 
         {tier === 'free' ? (
-          <section style={{ position: 'relative', marginTop: 20 }}>
+          <div style={{ position: 'relative', marginTop: 20, marginBottom: 20 }}>
             <div style={{
-              filter: 'blur(5px)',
+              filter: 'blur(6px)',
               pointerEvents: 'none',
               userSelect: 'none',
-              maxHeight: 320,
               overflow: 'hidden',
+              maxHeight: 280,
+              maskImage: 'linear-gradient(to bottom, black 0%, black 40%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 40%, transparent 100%)',
             }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-                {['NOI', 'GROSS RENT', 'VACANCY', 'BREAK-EVEN ARV', '5-YR EQUITY', 'DSCR'].map(label => (
-                  <div key={label} style={{ background: 'var(--surface)', border: '1px solid var(--hairline)', borderRadius: 8, padding: 14 }}>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: 'var(--text)', marginTop: 6 }}>$—</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
+                {[
+                  { label: 'GROSS RENT', val: '$2,800/mo' },
+                  { label: 'VACANCY LOSS', val: '-$224/mo' },
+                  { label: 'NOI', val: '$28,400/yr' },
+                  { label: 'BREAK-EVEN ARV', val: '$680,000' },
+                  { label: '5-YR EQUITY', val: '$142,000' },
+                  { label: 'DSCR', val: '1.18' },
+                ].map(m => (
+                  <div key={m.label} style={{
+                    background: 'var(--surface)', border: '1px solid var(--hairline)',
+                    borderRadius: 8, padding: 14,
+                  }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{m.label}</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 18, fontWeight: 600, color: 'var(--text)', marginTop: 6 }}>{m.val}</div>
                   </div>
                 ))}
               </div>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--hairline)', borderRadius: 12, padding: 20 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--indigo-hover)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>AI NARRATIVE</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                  This property presents a moderate cash flow opportunity in a stable rental market.
+                  The debt service coverage ratio of 1.18 indicates the property can service its debt
+                  with a thin but acceptable margin. Key risk factors include the local vacancy rate
+                  trending above market average and potential for near-term rent compression...
+                </div>
+              </div>
             </div>
+
             <div style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(to bottom, rgba(8,8,16,0.3), rgba(8,8,16,0.92))',
+              background: 'var(--surface)',
+              border: '1px solid var(--border-strong)',
               borderRadius: 12,
-              padding: 24,
+              padding: '28px 24px',
               textAlign: 'center',
+              marginTop: -40,
+              position: 'relative',
+              zIndex: 2,
             }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+              <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.02em' }}>
                 Unlock the full analysis
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, maxWidth: 320, lineHeight: 1.5 }}>
-                Get NOI, waterfall breakdown, AI narrative, risk flags, and 30-year projections. Try Pro free for 7 days.
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 380, margin: '0 auto 20px' }}>
+                NOI, waterfall breakdown, AI narrative, risk flags, rent comps,
+                and 30-year projections. Try Pro free for 7 days.
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="app-btn"
+                  style={{ padding: '11px 28px', fontSize: 14 }}
+                  onClick={() => router.push('/pricing')}
+                >
+                  Start free trial →
+                </button>
+                <button
+                  type="button"
+                  className="app-btn-ghost"
+                  style={{ padding: '11px 20px', fontSize: 14 }}
+                  onClick={() => router.push('/pricing')}
+                >
+                  See plans
+                </button>
               </div>
-              <button
-                type="button"
-                className="app-btn"
-                style={{ padding: '11px 24px', fontSize: 14 }}
-                onClick={() => router.push('/pricing')}
-              >
-                Start free trial →
-              </button>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                Cancel anytime. No credit card required to try.
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-muted)', marginTop: 12 }}>
+                7-day free trial · Cancel anytime · No credit card required
               </div>
             </div>
-          </section>
+          </div>
         ) : (
           <>
         {/* Fix & Flip waterfall (above the chart, new style) */}

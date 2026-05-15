@@ -254,6 +254,7 @@ function EmptyState({
 function V3DashboardPageInner() {
   const searchParams = useSearchParams()
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false)
+  const [showNewUserModal, setShowNewUserModal] = useState(false)
 
   useEffect(() => {
     if (searchParams.get('upgraded') === 'true') {
@@ -264,7 +265,23 @@ function V3DashboardPageInner() {
     }
   }, [searchParams])
 
-  return <V3DashboardPageBody showUpgradeBanner={showUpgradeBanner} onDismissBanner={() => setShowUpgradeBanner(false)} />
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      window.history.replaceState({}, '', '/v3/dashboard')
+      // Small delay so dashboard loads first
+      const t = setTimeout(() => setShowNewUserModal(true), 800)
+      return () => clearTimeout(t)
+    }
+  }, [searchParams])
+
+  return (
+    <V3DashboardPageBody
+      showUpgradeBanner={showUpgradeBanner}
+      onDismissBanner={() => setShowUpgradeBanner(false)}
+      showNewUserModal={showNewUserModal}
+      onDismissNewUserModal={() => setShowNewUserModal(false)}
+    />
+  )
 }
 
 export default function V3DashboardPage() {
@@ -278,9 +295,13 @@ export default function V3DashboardPage() {
 function V3DashboardPageBody({
   showUpgradeBanner,
   onDismissBanner,
+  showNewUserModal,
+  onDismissNewUserModal,
 }: {
   showUpgradeBanner: boolean
   onDismissBanner: () => void
+  showNewUserModal: boolean
+  onDismissNewUserModal: () => void
 }) {
   const router = useRouter()
   const tierState = useV3Tier()
@@ -554,6 +575,81 @@ function V3DashboardPageBody({
           ))}
         </div>
       </section>
+
+      {showNewUserModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: 'var(--surface)', border: '1px solid var(--border-strong)',
+            borderRadius: 16, padding: '40px 36px', maxWidth: 460, width: '100%',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14, margin: '0 auto 20px',
+              background: 'var(--indigo-dim)', border: '1px solid var(--border-strong)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24,
+            }}>
+              🏠
+            </div>
+
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.4px', marginBottom: 10 }}>
+              Welcome to Dealsletter
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 24 }}>
+              You&apos;re on the free plan. Run up to 3 analyses a month or start a
+              7-day Pro trial — unlimited analyses, full AI results, no blur.
+            </p>
+
+            <div style={{
+              background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)',
+              borderRadius: 8, padding: '10px 16px', fontSize: 13, color: '#34D399',
+              marginBottom: 24, fontWeight: 500,
+            }}>
+              7-day free trial — no credit card required
+            </div>
+
+            <div style={{ textAlign: 'left', marginBottom: 24 }}>
+              {[
+                'Unlimited analyses, no monthly caps',
+                'Full AI narrative, risk flags, and waterfall',
+                'Save deals to your pipeline',
+                'Auto model routing per strategy',
+              ].map(item => (
+                <div key={item} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8,
+                }}>
+                  <span style={{ color: 'var(--indigo-hover)', flexShrink: 0 }}>✓</span>
+                  {item}
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="app-btn"
+              style={{ width: '100%', padding: '13px 24px', fontSize: 15, marginBottom: 10 }}
+              onClick={() => { router.push('/pricing'); onDismissNewUserModal() }}
+            >
+              Start free trial →
+            </button>
+            <button
+              type="button"
+              onClick={onDismissNewUserModal}
+              style={{
+                background: 'transparent', border: 'none',
+                color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
+                padding: '8px', width: '100%',
+              }}
+            >
+              Explore free plan first
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
