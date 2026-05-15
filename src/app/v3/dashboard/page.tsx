@@ -402,6 +402,8 @@ function V3DashboardPageBody({
 
       {tier === 'free' && (
         <div style={{
+          position: 'relative',
+          zIndex: 1,
           background: 'var(--surface)',
           border: '1px solid var(--border-strong)',
           borderRadius: 12,

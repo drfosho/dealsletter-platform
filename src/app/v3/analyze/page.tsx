@@ -2632,6 +2632,11 @@ function V3AnalyzePageInner() {
   const [freeLimitReached, setFreeLimitReached] = useState(false)
   const [freeLimitInfo, setFreeLimitInfo] = useState<{ used: number; limit: number; resetDate: string } | null>(null)
   const [freeUsage, setFreeUsage] = useState<{ used: number; remaining: number; limit: number } | null>(null)
+  const [hasTriedAnalysis, setHasTriedAnalysis] = useState(false)
+
+  useEffect(() => {
+    console.log('[V3Analyze] freeLimitReached:', freeLimitReached, 'freeUsage:', freeUsage, 'hasTriedAnalysis:', hasTriedAnalysis)
+  }, [freeLimitReached, freeUsage, hasTriedAnalysis])
 
   useEffect(() => {
     if (tier !== 'free') return
@@ -2777,6 +2782,7 @@ function V3AnalyzePageInner() {
 
   const onAnalyze = async () => {
     if (!propData || !form) return
+    setHasTriedAnalysis(true)
     const previewPrice = toNum(form.purchasePrice) ?? pickPurchasePrice(propData) ?? 0
     if (previewPrice < 10000) {
       setAnalysisError('Purchase price is required. Please verify the property data above.')
@@ -4079,7 +4085,7 @@ function V3AnalyzePageInner() {
       )}
 
       {/* Free-tier monthly cap modal */}
-      {freeLimitReached && (
+      {freeLimitReached && hasTriedAnalysis && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 200,
           background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(8px)',
