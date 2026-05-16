@@ -11,7 +11,8 @@ type NavItem = {
 }
 
 const NAV: NavItem[] = [
-  { label: 'Deal Scout', href: '/v3/dashboard' },
+  { label: 'Dashboard', href: '/v3/dashboard' },
+  { label: 'Deal Scout', href: '/v3/scout' },
   { label: 'Run Analysis', href: '/v3/analyze' },
   { label: 'Saved Deals', href: '/v3/pipeline' },
   { label: 'Market Intel', href: '/v3/markets' },
@@ -49,6 +50,24 @@ export default function Sidebar({
     const hh = d.getHours().toString().padStart(2, '0')
     const mm = d.getMinutes().toString().padStart(2, '0')
     setScanTime(`${hh}:${mm} PT`)
+  }, [])
+
+  const [scoutUnread, setScoutUnread] = useState(0)
+  useEffect(() => {
+    const loadUnread = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) return
+      // For now use mock count of 2 until scout_results table exists
+      // TODO: replace with real query once scout_results table is created
+      // const { count } = await supabase
+      //   .from('scout_results')
+      //   .select('*', { count: 'exact', head: true })
+      //   .eq('user_id', session.user.id)
+      //   .eq('is_read', false)
+      setScoutUnread(2)
+    }
+    loadUnread()
   }, [])
 
   const handleSignOut = async () => {
@@ -120,13 +139,15 @@ export default function Sidebar({
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {NAV.map(item => {
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
+          const isScout = item.href === '/v3/scout'
           return (
             <Link
               key={item.href}
               href={item.href}
               style={{
                 position: 'relative',
-                display: 'block',
+                display: 'flex',
+                alignItems: 'center',
                 padding: '9px 12px',
                 borderRadius: 6,
                 fontSize: 13.5,
@@ -151,6 +172,22 @@ export default function Sidebar({
                 />
               )}
               {item.label}
+              {isScout && scoutUnread > 0 && (
+                <span style={{
+                  background: 'var(--v3-indigo)',
+                  color: '#fff',
+                  borderRadius: 999,
+                  padding: '1px 6px',
+                  fontSize: 9,
+                  fontFamily: 'var(--v3-font-mono)',
+                  fontWeight: 700,
+                  minWidth: 16,
+                  textAlign: 'center',
+                  marginLeft: 6,
+                }}>
+                  {scoutUnread}
+                </span>
+              )}
             </Link>
           )
         })}
