@@ -268,6 +268,9 @@ function V3DashboardPageInner() {
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
       window.history.replaceState({}, '', '/v3/dashboard')
+      // Persist a fallback flag so the body can re-trigger the modal
+      // even if Suspense delayed the searchParams read past first render.
+      try { localStorage.setItem('show_welcome_modal', '1') } catch {}
       // Small delay so dashboard loads first
       const t = setTimeout(() => setShowNewUserModal(true), 800)
       return () => clearTimeout(t)
@@ -312,12 +315,24 @@ function V3DashboardPageBody({
   const [loadingPipeline, setLoadingPipeline] = useState(true)
   const [scanTime, setScanTime] = useState('04:24 PT')
   const [userName, setUserName] = useState<string | null>(null)
+  const [showWelcome, setShowWelcome] = useState(false)
 
   useEffect(() => {
     const d = new Date()
     const hh = d.getHours().toString().padStart(2, '0')
     const mm = d.getMinutes().toString().padStart(2, '0')
     setScanTime(`${hh}:${mm} PT`)
+  }, [])
+
+  // Fallback trigger 1: localStorage flag set by the ?new=true handler.
+  useEffect(() => {
+    let pending: string | null = null
+    try { pending = localStorage.getItem('show_welcome_modal') } catch {}
+    if (pending === '1') {
+      try { localStorage.removeItem('show_welcome_modal') } catch {}
+      const t = setTimeout(() => setShowWelcome(true), 800)
+      return () => clearTimeout(t)
+    }
   }, [])
 
   useEffect(() => {
@@ -349,6 +364,33 @@ function V3DashboardPageBody({
       }
 
       if (!cancelled) setUserName(resolved)
+
+      // Fallback trigger 2: brand-new account + zero analyses.
+      // Catches users whose ?new=true param was lost in the redirect chain.
+      const createdAt = session.user.created_at
+      const accountAgeMs = createdAt ? Date.now() - new Date(createdAt).getTime() : Infinity
+      const isVeryNew = accountAgeMs < 5 * 60 * 1000
+
+      if (isVeryNew) {
+        const supabase2 = createClient()
+        const { count } = await supabase2
+          .from('analyzed_properties')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', session.user.id)
+
+        if (cancelled) return
+        if ((count ?? 0) === 0) {
+          const shownKey = `welcome_modal_shown_${session.user.id}`
+          let already: string | null = null
+          try { already = localStorage.getItem(shownKey) } catch {}
+          if (!already) {
+            try { localStorage.setItem(shownKey, '1') } catch {}
+            setTimeout(() => {
+              if (!cancelled) setShowWelcome(true)
+            }, 1000)
+          }
+        }
+      }
     }
     loadName()
     return () => {
@@ -576,7 +618,7 @@ function V3DashboardPageBody({
         </div>
       </section>
 
-      {showNewUserModal && (
+      {(showNewUserModal || showWelcome) && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 300,
           background: 'rgba(8,8,16,0.85)', backdropFilter: 'blur(8px)',
@@ -632,13 +674,20 @@ function V3DashboardPageBody({
               type="button"
               className="app-btn"
               style={{ width: '100%', padding: '13px 24px', fontSize: 15, marginBottom: 10 }}
-              onClick={() => { router.push('/pricing'); onDismissNewUserModal() }}
+              onClick={() => {
+                router.push('/pricing')
+                onDismissNewUserModal()
+                setShowWelcome(false)
+              }}
             >
               Start free trial →
             </button>
             <button
               type="button"
-              onClick={onDismissNewUserModal}
+              onClick={() => {
+                onDismissNewUserModal()
+                setShowWelcome(false)
+              }}
               style={{
                 background: 'transparent', border: 'none',
                 color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer',
