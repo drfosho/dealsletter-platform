@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import SignalBadge from '@/components/v3/public/SignalBadge'
 import type { Signal } from '@/lib/v3-analysis-parser'
 
@@ -150,6 +151,58 @@ export default function V3ScoutPage() {
   const [selectedResult, setSelectedResult] = useState<ScoutResult | null>(null)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [activeTab, setActiveTab] = useState<'feed' | 'config'>('feed')
+  const [, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadData = async () => {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        setLoading(false)
+        return
+      }
+
+      // Load scout config
+      const { data: configData } = await supabase
+        .from('scout_configs')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (configData) {
+        setConfig({
+          enabled: configData.enabled,
+          strategy: configData.strategy || 'BRRRR',
+          target_metros: configData.target_metros || [],
+          max_purchase_price: String(configData.max_purchase_price || '300000'),
+          min_deal_score: String(configData.min_deal_score || '7.0'),
+          min_cap_rate: String(configData.min_cap_rate || '8.0'),
+          min_coc: String(configData.min_coc || '10.0'),
+          max_rehab_budget: String(configData.max_rehab_budget || '60000'),
+          min_arv_margin: String(configData.min_arv_margin || '20'),
+          property_types: configData.property_types || ['SFR'],
+          max_days_on_market: String(configData.max_days_on_market || '30'),
+          min_beds: String(configData.min_beds || '2'),
+          zip_codes: (configData.zip_codes || []).join(', '),
+        })
+      }
+
+      // Load scout results
+      const { data: resultsData } = await supabase
+        .from('scout_results')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('run_date', { ascending: false })
+        .limit(50)
+
+      if (resultsData && resultsData.length > 0) {
+        setResults(resultsData as ScoutResult[])
+      }
+
+      setLoading(false)
+    }
+    loadData()
+  }, [])
 
   const unreadCount = results.filter(r => !r.is_read).length
 
@@ -184,10 +237,40 @@ export default function V3ScoutPage() {
 
   const handleSaveConfig = async () => {
     setSaveState('saving')
-    // TODO: save to scout_configs table
-    await new Promise(r => setTimeout(r, 800))
-    setSaveState('saved')
-    setTimeout(() => setSaveState('idle'), 2500)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error('Not logged in')
+
+      const { error } = await supabase
+        .from('scout_configs')
+        .upsert({
+          user_id: session.user.id,
+          enabled: config.enabled,
+          strategy: config.strategy,
+          target_metros: config.target_metros,
+          max_purchase_price: parseInt(config.max_purchase_price) || null,
+          min_deal_score: parseFloat(config.min_deal_score) || 7.0,
+          min_cap_rate: parseFloat(config.min_cap_rate) || null,
+          min_coc: parseFloat(config.min_coc) || null,
+          max_rehab_budget: parseInt(config.max_rehab_budget) || null,
+          min_arv_margin: parseFloat(config.min_arv_margin) || null,
+          property_types: config.property_types,
+          max_days_on_market: parseInt(config.max_days_on_market) || 30,
+          min_beds: parseInt(config.min_beds) || 2,
+          zip_codes: config.zip_codes
+            ? config.zip_codes.split(',').map(z => z.trim()).filter(Boolean)
+            : [],
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+
+      if (error) throw error
+      setSaveState('saved')
+      setTimeout(() => setSaveState('idle'), 2500)
+    } catch (err) {
+      console.error('Save config error:', err)
+      setSaveState('idle')
+    }
   }
 
   const handleAnalyzeDeal = (result: ScoutResult) => {
@@ -245,6 +328,22 @@ export default function V3ScoutPage() {
             style={{ padding: '7px 14px', fontSize: 12 }}
           >
             {config.enabled ? 'Pause' : 'Resume'}
+          </button>
+          <button
+            type="button"
+            className="app-btn"
+            style={{ padding: '7px 14px', fontSize: 12 }}
+            onClick={async () => {
+              const res = await fetch('/api/v3/scout/trigger', {
+                method: 'POST',
+                credentials: 'include',
+              })
+              if (res.ok) {
+                alert('Scout run triggered. Check back in a few minutes for results.')
+              }
+            }}
+          >
+            Run Scout now
           </button>
         </div>
       </div>
