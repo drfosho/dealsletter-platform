@@ -30,9 +30,13 @@ export const scoutNightlyRun = inngest.createFunction(
     id: 'scout-nightly-run',
     name: 'Deal Scout Nightly Run',
     concurrency: { limit: 5 },
-    triggers: [{ cron: 'TZ=America/Los_Angeles 0 2 * * *' }], // 2 AM PT nightly
+    triggers: [
+      { cron: 'TZ=America/Los_Angeles 0 2 * * *' }, // 2 AM PT nightly
+      { event: 'scout/manual.trigger' },
+    ],
   },
-  async ({ step, logger }) => {
+  async ({ step, logger, event }) => {
+    logger.info('Scout run start', { source: event?.name || 'cron' })
 
     const configs = await step.run('fetch-active-configs', async () => {
       const supabase = createServiceClient()

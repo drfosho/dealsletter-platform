@@ -23,11 +23,14 @@ export async function POST(_request: NextRequest) {
     }
 
     await inngest.send({
-      name: 'scout/nightly.run',
+      name: 'scout/manual.trigger',
       data: { triggeredBy: user.id, manual: true },
     })
 
-    return NextResponse.json({ success: true, message: 'Scout run triggered' })
+    return NextResponse.json({
+      success: true,
+      message: 'Scout run triggered. Check Inngest dashboard → Runs in ~10 seconds.',
+    })
   } catch (err) {
     console.error('Scout trigger error:', err)
     return NextResponse.json({ error: 'Failed to trigger scout' }, { status: 500 })
