@@ -240,35 +240,53 @@ export default function V3ScoutPage() {
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) throw new Error('Not logged in')
+      if (!session?.user) {
+        console.error('[Scout] No session found')
+        setSaveState('idle')
+        return
+      }
 
-      const { error } = await supabase
+      console.log('[Scout] Saving config for user:', session.user.id)
+
+      const upsertData = {
+        user_id: session.user.id,
+        enabled: config.enabled,
+        strategy: config.strategy,
+        target_metros: config.target_metros,
+        max_purchase_price: parseInt(config.max_purchase_price) || null,
+        min_deal_score: parseFloat(config.min_deal_score) || 7.0,
+        min_cap_rate: parseFloat(config.min_cap_rate) || null,
+        min_coc: parseFloat(config.min_coc) || null,
+        max_rehab_budget: parseInt(config.max_rehab_budget) || null,
+        min_arv_margin: parseFloat(config.min_arv_margin) || null,
+        property_types: config.property_types,
+        max_days_on_market: parseInt(config.max_days_on_market) || 30,
+        min_beds: parseInt(config.min_beds) || 2,
+        zip_codes: config.zip_codes
+          ? config.zip_codes.split(',').map((z: string) => z.trim()).filter(Boolean)
+          : [],
+        updated_at: new Date().toISOString(),
+      }
+
+      console.log('[Scout] Upsert data:', JSON.stringify(upsertData))
+
+      const { data, error } = await supabase
         .from('scout_configs')
-        .upsert({
-          user_id: session.user.id,
-          enabled: config.enabled,
-          strategy: config.strategy,
-          target_metros: config.target_metros,
-          max_purchase_price: parseInt(config.max_purchase_price) || null,
-          min_deal_score: parseFloat(config.min_deal_score) || 7.0,
-          min_cap_rate: parseFloat(config.min_cap_rate) || null,
-          min_coc: parseFloat(config.min_coc) || null,
-          max_rehab_budget: parseInt(config.max_rehab_budget) || null,
-          min_arv_margin: parseFloat(config.min_arv_margin) || null,
-          property_types: config.property_types,
-          max_days_on_market: parseInt(config.max_days_on_market) || 30,
-          min_beds: parseInt(config.min_beds) || 2,
-          zip_codes: config.zip_codes
-            ? config.zip_codes.split(',').map(z => z.trim()).filter(Boolean)
-            : [],
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id' })
+        .upsert(upsertData, { onConflict: 'user_id' })
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('[Scout] Save error:', error.code, error.message, error.details)
+        alert(`Save failed: ${error.message}`)
+        setSaveState('idle')
+        return
+      }
+
+      console.log('[Scout] Save successful:', data)
       setSaveState('saved')
       setTimeout(() => setSaveState('idle'), 2500)
     } catch (err) {
-      console.error('Save config error:', err)
+      console.error('[Scout] Unexpected error:', err)
       setSaveState('idle')
     }
   }
