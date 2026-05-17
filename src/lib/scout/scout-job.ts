@@ -158,7 +158,7 @@ async function processUserConfig(config: ScoutConfig, logger: any) {
 
   if (passed.length === 0) return { dealsFound: 0 }
 
-  const toAnalyze = passed.slice(0, 5)
+  const toAnalyze = passed.slice(0, 8)
   const analyzedDeals: ScoutResult[] = []
 
   for (const candidate of toAnalyze) {
