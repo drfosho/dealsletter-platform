@@ -50,13 +50,12 @@ export async function searchZillowProperties(params: {
 
   for (const target of searchTargets.slice(0, 3)) {
     try {
+      // Temporarily strip filters and limit to 5 items to confirm the upstream
+      // shape during integration. Restore once the response shape is verified.
       const body: Record<string, unknown> = {
         type: listingType,
-        max_items: params.maxItems || 20,
-        filters: {
-          price: { max: params.maxPrice },
-          beds: { min: params.minBeds },
-        },
+        max_items: 5,
+        filters: {},
       }
 
       if (target.search) body.search = target.search
@@ -75,12 +74,22 @@ export async function searchZillowProperties(params: {
         }
       )
 
+      console.log('[Zillow] Response status:', res.status)
+      const rawText = await res.text()
+      console.log('[Zillow] Raw response first 500 chars:', rawText.slice(0, 500))
+
       if (!res.ok) {
-        console.error('[Zillow] Search failed:', res.status, await res.text())
+        console.error('[Zillow] Search failed:', res.status, rawText.slice(0, 500))
         continue
       }
 
-      const data = await res.json()
+      let data: any
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        console.error('[Zillow] Failed to parse response as JSON')
+        continue
+      }
 
       if (data.job_id) {
         const jobResults = await pollZillowJob(data.job_id)

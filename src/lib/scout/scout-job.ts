@@ -108,6 +108,11 @@ async function processUserConfig(config: ScoutConfig, logger: any) {
         })
       }
       logger.info(`[${metro}] Zillow: ${zillowProps.length} properties found`)
+      if (zillowProps.length > 0) {
+        logger.info(`[${metro}] Zillow sample:`, JSON.stringify(zillowProps[0]))
+      } else {
+        logger.warn(`[${metro}] Zillow returned 0 properties - checking raw response`)
+      }
     } catch (err) {
       logger.error(`[${metro}] Zillow search failed:`, err)
     }
